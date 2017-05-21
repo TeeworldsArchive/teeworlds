@@ -34,6 +34,7 @@ teeworlds*
 teeworlds_srv*
 !other/bash-completion/teeworlds_srv
 testrunner
+uuid*
 versionsrv*
 
 # IDE project files

@@ -32,8 +32,10 @@
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
 #include <engine/shared/protocol.h>
+#include <engine/shared/protocol_ex.h>
 #include <engine/shared/ringbuffer.h>
 #include <engine/shared/snapshot.h>
+#include <engine/shared/uuid_manager.h>
 
 #include <game/version.h>
 
@@ -627,7 +629,7 @@ const void *CClient::SnapGetItem(int SnapID, int Index, CSnapItem *pItem) const
 	dbg_assert(SnapID >= 0 && SnapID < NUM_SNAPSHOT_TYPES, "invalid SnapID");
 	const CSnapshotItem *i = m_aSnapshots[SnapID]->m_pAltSnap->GetItem(Index);
 	pItem->m_DataSize = m_aSnapshots[SnapID]->m_pAltSnap->GetItemSize(Index);
-	pItem->m_Type = i->Type();
+	pItem->m_Type = m_aSnapshots[SnapID]->m_pAltSnap->GetItemType(Index);
 	pItem->m_ID = i->ID();
 	return i->Data();
 }
@@ -646,8 +648,7 @@ const void *CClient::SnapFindItem(int SnapID, int Type, int ID) const
 		return 0x0;
 
 	CSnapshot* pAltSnap = m_aSnapshots[SnapID]->m_pAltSnap;
-	int Key = (Type<<16)|(ID&0xffff);
-	int Index = pAltSnap->GetItemIndex(Key);
+	int Index = pAltSnap->GetItemIndex(Type, ID);
 	if(Index != -1)
 		return pAltSnap->GetItem(Index)->Data();
 
@@ -1143,14 +1144,29 @@ void CClient::ProcessConnlessPacket(CNetChunk *pPacket)
 
 void CClient::ProcessServerPacket(CNetChunk *pPacket)
 {
-	CMsgUnpacker Unpacker(pPacket->m_pData, pPacket->m_DataSize);
-	if(Unpacker.Error())
-		return;
+	CUnpacker Unpacker;
+	Unpacker.Reset(pPacket->m_pData, pPacket->m_DataSize);
+	CMsgPacker Packer(NETMSG_EX);
 
-	if(Unpacker.System())
+	// unpack msgid and system flag
+	int Msg;
+	bool Sys;
+	CUuid Uuid;
+
+	int Result = UnpackMessageID(&Msg, &Sys, &Uuid, &Unpacker, &Packer, m_pConfig->m_Debug);
+	if(Result == UNPACKMESSAGE_ERROR)
+	{
+		return;
+	}
+	else if(Result == UNPACKMESSAGE_ANSWER)
+	{
+		SendMsg(&Packer, MSGFLAG_VITAL);
+	}
+
+	if(Sys)
 	{
 		// system message
-		if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_MAP_CHANGE)
+		if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAP_CHANGE)
 		{
 			const char *pMap = Unpacker.GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES);
 			int MapCrc = Unpacker.GetInt();
@@ -1223,7 +1239,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				}
 			}
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_MAP_DATA)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAP_DATA)
 		{
 			if(!m_MapdownloadFileTemp)
 				return;
@@ -1273,7 +1289,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 					m_pConsole->Print(IConsole::OUTPUT_LEVEL_DEBUG, "client/network", "requested next chunk package");
 			}
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_SERVERINFO)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_SERVERINFO)
 		{
 			CServerInfo Info = {0};
 			net_addr_str(&pPacket->m_Address, Info.m_aAddress, sizeof(Info.m_aAddress), true);
@@ -1284,16 +1300,16 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				m_CurrentServerInfo.m_NetAddr = m_ServerAddress;
 			}
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_CON_READY)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_CON_READY)
 		{
 			GameClient()->OnConnected();
 		}
-		else if(Unpacker.Type() == NETMSG_PING)
+		else if(Msg == NETMSG_PING)
 		{
 			CMsgPacker Msg(NETMSG_PING_REPLY, true);
 			SendMsg(&Msg, MSGFLAG_FLUSH);
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_RCON_CMD_ADD)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_RCON_CMD_ADD)
 		{
 			const char *pName = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 			const char *pHelp = Unpacker.GetString(CUnpacker::SANITIZE_CC);
@@ -1301,30 +1317,30 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			if(Unpacker.Error() == 0)
 				m_pConsole->RegisterTemp(pName, pParams, CFGFLAG_SERVER, pHelp);
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_RCON_CMD_REM)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_RCON_CMD_REM)
 		{
 			const char *pName = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 			if(Unpacker.Error() == 0)
 				m_pConsole->DeregisterTemp(pName);
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_MAPLIST_ENTRY_ADD)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAPLIST_ENTRY_ADD)
 		{
 			const char *pName = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 			if(Unpacker.Error() == 0)
 				m_pConsole->RegisterTempMap(pName);
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_MAPLIST_ENTRY_REM)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAPLIST_ENTRY_REM)
 		{
 			const char *pName = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 			if(Unpacker.Error() == 0)
 				m_pConsole->DeregisterTempMap(pName);
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_RCON_AUTH_ON)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_RCON_AUTH_ON)
 		{
 			m_RconAuthed = 1;
 			m_UseTempRconCommands = 1;
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_RCON_AUTH_OFF)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_RCON_AUTH_OFF)
 		{
 			m_RconAuthed = 0;
 			if(m_UseTempRconCommands)
@@ -1332,19 +1348,19 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			m_UseTempRconCommands = 0;
 			m_pConsole->DeregisterTempMapAll();
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_RCON_LINE)
+		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_RCON_LINE)
 		{
 			const char *pLine = Unpacker.GetString();
 			if(Unpacker.Error() == 0)
 				GameClient()->OnRconLine(pLine);
 		}
-		else if(Unpacker.Type() == NETMSG_PING_REPLY)
+		else if(Msg == NETMSG_PING_REPLY)
 		{
 			char aBuf[256];
 			str_format(aBuf, sizeof(aBuf), "latency %.2f", (time_get() - m_PingStartTime)*1000 / (float)time_freq());
 			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client/network", aBuf);
 		}
-		else if(Unpacker.Type() == NETMSG_INPUTTIMING)
+		else if(Msg == NETMSG_INPUTTIMING)
 		{
 			int InputPredTick = Unpacker.GetInt();
 			int TimeLeft = Unpacker.GetInt();
@@ -1364,7 +1380,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			if(Target)
 				m_PredictedTime.Update(&m_InputtimeMarginGraph, Target, TimeLeft, 1);
 		}
-		else if(Unpacker.Type() == NETMSG_SNAP || Unpacker.Type() == NETMSG_SNAPSINGLE || Unpacker.Type() == NETMSG_SNAPEMPTY)
+		else if(Msg == NETMSG_SNAP || Msg == NETMSG_SNAPSINGLE || Msg == NETMSG_SNAPEMPTY)
 		{
 			// we are not allowed to process snapshot yet
 			if(State() < IClient::STATE_LOADING)
@@ -1375,7 +1391,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 
 			int NumParts = 1;
 			int Part = 0;
-			if(Unpacker.Type() == NETMSG_SNAP)
+			if(Msg == NETMSG_SNAP)
 			{
 				NumParts = Unpacker.GetInt();
 				Part = Unpacker.GetInt();
@@ -1386,7 +1402,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			int PartSize = 0;
 			int Crc = 0;
 			const char *pData = 0;
-			if(Unpacker.Type() != NETMSG_SNAPEMPTY)
+			if(Msg != NETMSG_SNAPEMPTY)
 			{
 				Crc = Unpacker.GetInt();
 				PartSize = Unpacker.GetInt();
@@ -1477,7 +1493,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 						return;
 					}
 
-					if(Unpacker.Type() != NETMSG_SNAPEMPTY && pTmpBuffer3->Crc() != Crc)
+					if(Msg != NETMSG_SNAPEMPTY && pTmpBuffer3->Crc() != Crc)
 					{
 						if(Config()->m_Debug)
 						{
@@ -1563,7 +1579,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0)
 		{
 			// game message
-			GameClient()->OnMessage(Unpacker.Type(), &Unpacker);
+			GameClient()->OnMessage(Msg, &Unpacker);
 
 			if(m_RecordGameMessage && m_DemoRecorder.IsRecording())
 				m_DemoRecorder.RecordMessage(pPacket->m_pData, pPacket->m_DataSize);
@@ -1635,12 +1651,19 @@ void CClient::OnDemoPlayerSnapshot(void *pData, int Size)
 
 void CClient::OnDemoPlayerMessage(void *pData, int Size)
 {
-	CMsgUnpacker Unpacker(pData, Size);
+	CUnpacker Unpacker;
+	Unpacker.Reset(pData, Size);
+
+	// unpack msgid and system flag
+	int Msg = Unpacker.GetInt();
+	int Sys = Msg&1;
+	Msg >>= 1;
+
 	if(Unpacker.Error())
 		return;
 
-	if(!Unpacker.System())
-		GameClient()->OnMessage(Unpacker.Type(), &Unpacker);
+	if(!Sys)
+		GameClient()->OnMessage(Msg, &Unpacker);
 }
 
 void CClient::Update()
@@ -1934,6 +1957,11 @@ void CClient::Run()
 {
 	m_LocalStartTime = time_get();
 	m_SnapshotParts = 0;
+
+	if(Config()->m_Debug)
+	{
+		g_UuidManager.DebugDump();
+	}
 
 	// init SDL
 	{

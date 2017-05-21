@@ -24,6 +24,7 @@ GameMsgIDs = Enum("GAMEMSG", ["TEAM_SWAP", "SPEC_INVALID_ID", "TEAM_SHUFFLE", "T
 RawHeader = '''
 
 #include <engine/message.h>
+#include <engine/shared/protocol_ex.h>
 
 enum
 {
@@ -229,6 +230,10 @@ Objects = [
 		NetArray(NetIntAny("m_aTuneParams"), 32),
 	]),
 
+	NetObjectEx("MyOwnObject", "my-own-object@heinrich5991.de", [
+		NetIntAny("m_Test"),
+	]),
+
 	## Events
 
 	NetEvent("Common", [
@@ -267,6 +272,10 @@ Objects = [
 		NetIntRange("m_BestTime", -1, 'max_int'),
 		NetIntRange("m_Precision", 0, 3),
 		NetFlag("m_RaceFlags", RaceFlags),
+	]),
+
+	NetObjectEx("MyOwnEvent", "my-own-event@heinrich5991.de", [
+		NetIntAny("m_Test"),
 	]),
 ]
 
@@ -481,4 +490,9 @@ Messages = [
 			NetStringStrict("m_Arguments")
 	]),
 
+	# Can't add any NetMessages here!
+
+	NetMessageEx("Sv_MyOwnMessage", "my-own-message@heinrich5991.de", [
+		NetIntAny("m_Test"),
+	]),
 ]
