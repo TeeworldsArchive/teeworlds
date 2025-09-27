@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest, ubuntu-20.04]
+        os: [ubuntu-latest, macOS-latest, windows-latest, ubuntu-22.04]
         include:
         - os: ubuntu-latest
           cmake-args: -G Ninja
@@ -16,7 +16,7 @@ jobs:
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
-        - os: ubuntu-20.04
+        - os: ubuntu-22.04
           cmake-path: /usr/bin/
           cmake-args: -G Ninja
           package-file: "*-linux_x86_64.tar.xz"
@@ -38,7 +38,7 @@ jobs:
             LDFLAGS: /WX
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -46,7 +46,7 @@ jobs:
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt-get install pkg-config cmake ninja-build libfreetype6-dev libsdl2-dev -y
+        sudo apt-get install pkg-config cmake ninja-build libfreetype6-dev libsdl2-dev libgl1-mesa-dev -y
 
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
@@ -101,7 +101,7 @@ jobs:
         mv ${{ matrix.package-file }} artifacts
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: teeworlds-${{ matrix.os }}
         path: release/artifacts
@@ -114,22 +114,22 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Checkout bam
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: matricks/bam
-        ref: 8cd08744c37666830d439ab54016c9d228c63b68
+        ref: a44a2c7dc16caae7ac457f17dfd14a87e7059c57
         path: ./bam
 
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt-get install libfreetype6-dev libsdl2-dev -y
+        sudo apt-get install libfreetype6-dev libsdl2-dev libgl1-mesa-dev -y
         cd bam
         ./make_unix.sh
 
