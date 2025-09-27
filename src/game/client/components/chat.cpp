@@ -11,6 +11,7 @@
 #include <generated/protocol.h>
 #include <generated/client_data.h>
 
+#include <game/client/animstate.h>
 #include <game/client/gameclient.h>
 #include <game/client/localization.h>
 
@@ -639,6 +640,12 @@ void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
 		pCurLine->m_TargetID = TargetID;
 		pCurLine->m_Mode = Mode;
 		pCurLine->m_NameColor = -2;
+
+		if(ClientID >= 0)
+		{
+			pCurLine->m_RenderInfo = m_pClient->m_aClients[(Mode == CHAT_WHISPER && ClientID == m_pClient->m_LocalClientID) ? TargetID : ClientID].m_RenderInfo;
+			pCurLine->m_RenderInfo.m_Size = 9.f;
+		}
 
 		// check for highlighted name
 		Highlighted = false;
@@ -1284,6 +1291,14 @@ void CChat::OnRender()
 			TextRender()->TextAdvance(&s_ChatCursor, ClientIDWidth);
 			TextRender()->TextColor(TextColorName);
 			TextRender()->TextSecondaryColor(ShadowColor);
+			if(Config()->m_ClShowSkinChat)
+			{
+				static CAnimState s_State;
+				s_State.Set(&g_pData->m_aAnimations[ANIM_BASE], 1.0f);
+				s_State.Add(&g_pData->m_aAnimations[ANIM_IDLE], 0, 1.0f);
+				RenderTools()->RenderTee(&s_State, &pLine->m_RenderInfo, EMOTE_NORMAL, vec2(1.f, 0.f), vec2(s_ChatCursor.AdvancePosition().x + FontSize / 3 * 2 - 1.f, y + FontSize / 3 * 2 + 1.f), Blend);
+				TextRender()->TextAdvance(&s_ChatCursor, FontSize + 1.f);
+			}
 			TextRender()->TextDeferred(&s_ChatCursor, pLine->m_aName, -1);
 			TextRender()->TextDeferred(&s_ChatCursor, ": ", -1);
 			NumNameGlyphs = s_ChatCursor.GlyphCount();
