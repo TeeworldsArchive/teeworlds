@@ -13,6 +13,7 @@ jobs:
         - os: ubuntu-latest
           cmake-args: -G Ninja
           package-file: "*-linux_x86_64.tar.xz"
+          archtitecture: "x86_64"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
@@ -20,18 +21,21 @@ jobs:
           cmake-path: /usr/bin/
           cmake-args: -G Ninja
           package-file: "*-linux_x86_64.tar.xz"
+          archtitecture: "x86_64"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
         - os: macOS-latest
           cmake-args: -G Ninja
           package-file: "*-macos.dmg"
+          archtitecture: "arm64"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
         - os: windows-latest
           cmake-args: -A x64
           package-file: "*-win64.zip"
+          archtitecture: "x86_64"
           env:
             CFLAGS: /WX
             CXXFLAGS: /WX
@@ -112,6 +116,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
+        include:
+        - os: ubuntu-latest
+          archtitecture: "x86_64"
+        - os: macOS-latest
+          archtitecture: "arm64"
+        - os: windows-latest
+          archtitecture: "x86_64"
 
     steps:
     - uses: actions/checkout@v4
@@ -150,12 +161,12 @@ jobs:
     - name: Build in debug mode
       run: ./bam/bam conf=debug all
     - name: Test debug
-      run: ./build/x86_64/debug/teeworlds_srv shutdown
+      run: ./build/${{ matrix.archtitecture }}/debug/teeworlds_srv shutdown
 
     - name: Build in release mode
       run: ./bam/bam conf=release all
     - name: Test release
-      run: ./build/x86_64/release/teeworlds_srv shutdown
+      run: ./build/${{ matrix.archtitecture }}/release/teeworlds_srv shutdown
 
     - name: Create MacOS app using make_release.py
       if: contains(matrix.os, 'macOS')
