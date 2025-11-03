@@ -1157,7 +1157,7 @@ void CServer::SendServerInfo(int ClientID)
 			if(m_aClients[i].m_State != CClient::STATE_EMPTY)
 			{
 				CMsgPacker Msg(NETMSG_SERVERINFO, true);
-				GenerateServerInfo(&Msg, m_aClients[ClientID].m_ServerInfoVersion, false);
+				GenerateServerInfo(&Msg, m_aClients[i].m_ServerInfoVersion, false);
 				SendMsg(&Msg, MSGFLAG_VITAL|MSGFLAG_FLUSH, i);
 			}
 		}
