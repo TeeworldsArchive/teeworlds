@@ -3,6 +3,7 @@ name: Check clang-tidy
 on:
   push:
     branches-ignore:
+      - mods
       - master
       - staging.tmp
       - trying.tmp

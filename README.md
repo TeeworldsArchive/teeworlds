@@ -1,3 +1,7 @@
+TeeworldsArchive ![GitHub Actions](https://github.com/TeeworldsArchive/teeworlds/workflows/Build/badge.svg)
+================
+Where Teeworlds lives on.
+
 <a href="https://repology.org/metapackage/teeworlds/versions">
     <img src="https://repology.org/badge/vertical-allrepos/teeworlds.svg" alt="Packaging status" align="right">
 </a>
