@@ -2673,7 +2673,8 @@ int main(int argc, const char **argv)
 	{
 		// execute config file
 		if(!pConsole->ExecuteFile(SETTINGS_FILENAME ".cfg"))
-			pConsole->ExecuteFile("settings.cfg"); // fallback to legacy naming scheme
+			if(!pConsole->ExecuteFile(SETTINGS_FILENAME_VANILLA ".cfg")) // fallback to vanilla naming scheme
+				pConsole->ExecuteFile("settings.cfg"); // fallback to legacy naming scheme
 
 		// execute autoexec file
 		pConsole->ExecuteFile("autoexec.cfg");
