@@ -309,6 +309,26 @@ bool IGameController::OnEntity(int Index, vec2 Pos)
 	return false;
 }
 
+bool IGameController::OnExtraTile(int Index, vec2 Pos)
+{
+	/*
+		Example: Do some thing like:
+
+		int Flag = -1;
+		switch(Index)
+		{
+			case TILE_START: Flag = COLFLAG_START; break;
+			case TILE_FINISH: Flag = COLFLAG_FINISH; break;
+		}
+		if(Flag == -1)
+			return false;
+		GameServer()->Collision()->SetFlagFor(Pos, Flag);
+		return true;
+	*/
+
+    return false;
+}
+
 void IGameController::OnPlayerConnect(CPlayer *pPlayer)
 {
 	int ClientID = pPlayer->GetCID();

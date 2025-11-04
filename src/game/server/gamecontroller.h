@@ -164,6 +164,7 @@ public:
 			bool?
 	*/
 	virtual bool OnEntity(int Index, vec2 Pos);
+	virtual bool OnExtraTile(int Index, vec2 Pos);
 
 	virtual void OnPlayerConnect(class CPlayer *pPlayer);
 	virtual void OnPlayerDisconnect(class CPlayer *pPlayer);
@@ -229,6 +230,7 @@ public:
 	int GetRealPlayerNum() const { return m_aTeamSize[TEAM_RED]+m_aTeamSize[TEAM_BLUE]; }
 	int GetStartTeam();
 
+	virtual void HandleCharacterTiles(class CCharacter *pChr, vec2 LastPos, vec2 NewPos) {};
 	//static void Com_Example(IConsole::IResult *pResult, void *pContext);
 	virtual void RegisterChatCommands(CCommandManager *pManager);
 };

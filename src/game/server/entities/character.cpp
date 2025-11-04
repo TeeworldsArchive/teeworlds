@@ -606,6 +606,8 @@ void CCharacter::TickDefered()
 		Die(m_pPlayer->GetCID(), WEAPON_WORLD);
 	}
 
+	GameServer()->m_pController->HandleCharacterTiles(this, StartPos, m_Pos);
+
 	// update the m_SendCore if needed
 	{
 		CNetObj_Character Predicted;

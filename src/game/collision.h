@@ -34,6 +34,11 @@ public:
 	void MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, int *pBounces) const;
 	void MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity, bool *pDeath=0) const;
 	bool TestBox(vec2 Pos, vec2 Size, int Flag=COLFLAG_SOLID) const;
+	int TestBoxAt(vec2 Pos, vec2 Size) const;
+	int TestBoxMoveAt(vec2 LastPos, vec2 NewPos, vec2 Size) const;
+
+	void SetFlagFor(float x, float y, int Flag);
+	void SetFlagFor(vec2 Pos, int Flag) { SetFlagFor(Pos.x, Pos.y, Flag); }
 };
 
 #endif
