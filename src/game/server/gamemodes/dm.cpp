@@ -6,5 +6,8 @@
 CGameControllerDM::CGameControllerDM(CGameContext *pGameServer)
 : IGameController(pGameServer)
 {
+	/*
 	m_pGameType = "DM";
+	*/
+	m_pGameType = "DM Archived";
 }

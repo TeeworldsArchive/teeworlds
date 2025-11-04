@@ -9,7 +9,10 @@
 
 CGameControllerLMS::CGameControllerLMS(CGameContext *pGameServer) : IGameController(pGameServer)
 {
+	/*
 	m_pGameType = "LMS";
+	*/
+	m_pGameType = "LMS Archived";
 	m_GameFlags = GAMEFLAG_SURVIVAL;
 }
 
