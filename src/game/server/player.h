@@ -4,7 +4,7 @@
 #define GAME_SERVER_PLAYER_H
 
 #include "alloc.h"
-
+#include "teeinfos.h"
 
 enum
 {
@@ -78,13 +78,8 @@ public:
 	int m_LastKillTick;
 	int m_LastReadyChangeTick;
 
-	// TODO: clean this up
-	struct
-	{
-		char m_aaSkinPartNames[NUM_SKINPARTS][MAX_SKIN_ARRAY_SIZE];
-		int m_aUseCustomColors[NUM_SKINPARTS];
-		int m_aSkinPartColors[NUM_SKINPARTS];
-	} m_TeeInfos;
+	// player skin
+	CTeeInfos m_TeeInfos;
 
 	int m_RespawnTick;
 	int m_DieTick;
