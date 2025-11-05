@@ -1129,20 +1129,25 @@ int CServer::GenerateServerInfoPlayers(CPacker *pPacker, int ServerInfoVersion, 
 {
 	if(ServerInfoVersion == SERVERINFO_VERSION_LEGACY)
 		return -1;
-	// pack 16 clients to one packet.
-	int ClientCount = 0;
-	for(; StartClientID < MAX_CLIENTS && ClientCount < SERVERINFO_PACKET_MAX_PLAYERS; StartClientID++)
+	while(StartClientID < MAX_CLIENTS)
 	{
 		if(m_aClients[StartClientID].m_State != CClient::STATE_EMPTY)
 		{
-			pPacker->AddInt(1); // for client to check
-			pPacker->AddString(ClientName(StartClientID), 0); // client name
-			pPacker->AddString(ClientClan(StartClientID), 0); // client clan
-			pPacker->AddInt(m_aClients[StartClientID].m_Country); // client country
-			pPacker->AddInt(m_aClients[StartClientID].m_Score); // client score
-			pPacker->AddInt(GameServer()->IsClientPlayer(StartClientID) ? 0 : 1); // flag spectator=1, bot=2 (player=0)
-			ClientCount++;
+			CPacker InfoPacker;
+			InfoPacker.Reset();
+			InfoPacker.AddInt(1); // for client to check
+			InfoPacker.AddString(ClientName(StartClientID), 0); // client name
+			InfoPacker.AddString(ClientClan(StartClientID), 0); // client clan
+			InfoPacker.AddInt(m_aClients[StartClientID].m_Country); // client country
+			InfoPacker.AddInt(m_aClients[StartClientID].m_Score); // client score
+			InfoPacker.AddInt(GameServer()->IsClientPlayer(StartClientID) ? 0 : 1); // flag spectator=1, bot=2 (player=0)
+
+			if(pPacker->Size() + InfoPacker.Size() + NET_MAX_CHUNKHEADERSIZE > NET_MAX_PAYLOAD)
+				break;
+
+			pPacker->AddRaw(InfoPacker.Data(), InfoPacker.Size());
 		}
+		StartClientID++;
 	}
 
 	return StartClientID >= MAX_CLIENTS ? -1 : StartClientID;

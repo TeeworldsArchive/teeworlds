@@ -986,27 +986,24 @@ int CClient::UnpackServerInfoPlayer(CUnpacker *pUnpacker, CServerInfo *pInfo, in
 
 	int NumPlayers = 0;
 	int NumClients = 0;
-	for(int i = 0; i < SERVERINFO_PACKET_MAX_PLAYERS; i++)
+	while(pUnpacker->GetIntOrDefault(0) && !pUnpacker->Error() && NumClients < MAX_CLIENTS)
 	{
-		if(pUnpacker->GetInt() == 0 && pUnpacker->Error())
-			break; // read done
-
-		str_utf8_copy_num(pInfo->m_aClients[i].m_aName, pUnpacker->GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES), sizeof(pInfo->m_aClients[i].m_aName), MAX_NAME_LENGTH);
-		str_utf8_copy_num(pInfo->m_aClients[i].m_aClan, pUnpacker->GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES), sizeof(pInfo->m_aClients[i].m_aClan), MAX_CLAN_LENGTH);
-		pInfo->m_aClients[i].m_Country = pUnpacker->GetInt();
-		pInfo->m_aClients[i].m_Score = pUnpacker->GetInt();
-		pInfo->m_aClients[i].m_PlayerType = pUnpacker->GetInt()&CServerInfo::CClient::PLAYERFLAG_MASK;
-		if(pInfo->m_aClients[i].m_PlayerType&CServerInfo::CClient::PLAYERFLAG_BOT)
+		str_utf8_copy_num(pInfo->m_aClients[NumClients].m_aName, pUnpacker->GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES), sizeof(pInfo->m_aClients[NumClients].m_aName), MAX_NAME_LENGTH);
+		str_utf8_copy_num(pInfo->m_aClients[NumClients].m_aClan, pUnpacker->GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES), sizeof(pInfo->m_aClients[NumClients].m_aClan), MAX_CLAN_LENGTH);
+		pInfo->m_aClients[NumClients].m_Country = pUnpacker->GetInt();
+		pInfo->m_aClients[NumClients].m_Score = pUnpacker->GetInt();
+		pInfo->m_aClients[NumClients].m_PlayerType = pUnpacker->GetInt()&CServerInfo::CClient::PLAYERFLAG_MASK;
+		if(pInfo->m_aClients[NumClients].m_PlayerType&CServerInfo::CClient::PLAYERFLAG_BOT)
 		{
-			if(pInfo->m_aClients[i].m_PlayerType&CServerInfo::CClient::PLAYERFLAG_SPEC)
+			if(pInfo->m_aClients[NumClients].m_PlayerType&CServerInfo::CClient::PLAYERFLAG_SPEC)
 				pInfo->m_NumBotSpectators++;
 			else
 				pInfo->m_NumBotPlayers++;
 		}
 
-		NumClients++;
-		if(!(pInfo->m_aClients[i].m_PlayerType&CServerInfo::CClient::PLAYERFLAG_SPEC))
+		if(!(pInfo->m_aClients[NumClients].m_PlayerType&CServerInfo::CClient::PLAYERFLAG_SPEC))
 			NumPlayers++;
+		NumClients++;
 	}
 	pInfo->m_NumPlayers = NumPlayers;
 	pInfo->m_NumClients = NumClients;
