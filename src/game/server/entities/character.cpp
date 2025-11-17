@@ -8,7 +8,9 @@
 #include <game/server/player.h>
 
 #include "character.h"
+/*
 #include "laser.h"
+*/
 #include "projectile.h"
 
 //input count
@@ -253,17 +255,22 @@ void CCharacter::FireWeapon()
 	DoWeaponSwitch();
 	vec2 Direction = normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
 
+	/*
 	bool FullAuto = false;
 	if(m_ActiveWeapon == WEAPON_GRENADE || m_ActiveWeapon == WEAPON_SHOTGUN || m_ActiveWeapon == WEAPON_LASER)
 		FullAuto = true;
-
+	*/
 
 	// check if we gonna fire
 	bool WillFire = false;
 	if(CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
 		WillFire = true;
 
+	/*
 	if(FullAuto && (m_LatestInput.m_Fire&1) && m_aWeapons[m_ActiveWeapon].m_Ammo)
+		WillFire = true;
+	*/
+	if(GameServer()->m_pController->CanCharacterWeaponFullAuto(this, m_ActiveWeapon) && (m_LatestInput.m_Fire&1) && m_aWeapons[m_ActiveWeapon].m_Ammo)
 		WillFire = true;
 
 	if(!WillFire)
@@ -282,7 +289,9 @@ void CCharacter::FireWeapon()
 		return;
 	}
 
+	/*
 	vec2 ProjStartPos = m_Pos+Direction*GetProximityRadius()*0.75f;
+	*/
 
 	if(Config()->m_Debug)
 	{
@@ -291,6 +300,7 @@ void CCharacter::FireWeapon()
 		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 	}
 
+	/*
 	switch(m_ActiveWeapon)
 	{
 		case WEAPON_HAMMER:
@@ -396,14 +406,18 @@ void CCharacter::FireWeapon()
 		} break;
 
 	}
+	*/
 
 	m_AttackTick = Server()->Tick();
 
 	if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0) // -1 == unlimited
 		m_aWeapons[m_ActiveWeapon].m_Ammo--;
 
+	m_ReloadTimer = GameServer()->m_pController->OnCharacterFireWeapon(this, Direction, m_ActiveWeapon);
+	/*
 	if(!m_ReloadTimer)
 		m_ReloadTimer = g_pData->m_Weapons.m_aId[m_ActiveWeapon].m_Firedelay * Server()->TickSpeed() / 1000;
+	*/
 }
 
 void CCharacter::HandleWeapons()
@@ -475,6 +489,14 @@ void CCharacter::SetEmote(int Emote, int Tick)
 {
 	m_EmoteType = Emote;
 	m_EmoteStop = Tick;
+}
+
+void CCharacter::DoNinjaFire(vec2 Direction, int MoveTime)
+{
+	m_NumObjectsHit = 0;
+	m_Ninja.m_ActivationDir = Direction;
+	m_Ninja.m_CurrentMoveTime = MoveTime;
+	m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
 }
 
 void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)

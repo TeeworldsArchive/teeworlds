@@ -877,6 +877,7 @@ set(EXPECTED_DATA
   editor/checker.png
   editor/cursor.png
   editor/entities.png
+  editor/entities/reinfected.png
   emoticons.png
   fonts/DejaVuSans.ttf
   fonts/SourceHanSans.ttc
@@ -1110,6 +1111,7 @@ set(EXPECTED_DATA
   ui/gametypes/lts.png
   ui/gametypes/mod.png
   ui/gametypes/race.png
+  ui/gametypes/reinfected.png
   ui/gametypes/tdm.png
   ui/gui_buttons.png
   ui/gui_cursor.png
@@ -1617,6 +1619,8 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamemodes/lts.h
   gamemodes/mod.cpp
   gamemodes/mod.h
+  gamemodes/reinfected.cpp
+  gamemodes/reinfected.h
   gamemodes/tdm.cpp
   gamemodes/tdm.h
   gameworld.cpp

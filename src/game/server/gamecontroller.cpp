@@ -3,9 +3,12 @@
 #include <engine/shared/config.h>
 
 #include <game/mapitems.h>
+#include <generated/server_data.h>
 
 #include "entities/character.h"
+#include "entities/laser.h"
 #include "entities/pickup.h"
+#include "entities/projectile.h"
 #include "gamecontext.h"
 #include "gamecontroller.h"
 #include "player.h"
@@ -1240,4 +1243,125 @@ int IGameController::GetStartTeam()
 void IGameController::RegisterChatCommands(CCommandManager *pManager)
 {
 	//pManager->AddCommand("test", "Test the command system", "r", Com_Example, this);
+}
+
+bool IGameController::CanCharacterWeaponFullAuto(CCharacter *pChr, int Weapon)
+{
+    return Weapon == WEAPON_GRENADE || Weapon == WEAPON_SHOTGUN || Weapon == WEAPON_LASER;
+}
+
+int IGameController::OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int Weapon)
+{
+	if(!pChr)
+		return 0;
+
+	int ClientID = pChr->GetPlayer()->GetCID();
+	vec2 ChrPos = pChr->GetPos();
+	vec2 ProjStartPos = ChrPos + Direction * pChr->GetProximityRadius() * 0.75f;
+
+	int ReloadTimer = 0;
+	switch(Weapon)
+	{
+		case WEAPON_HAMMER:
+		{
+			GameServer()->CreateSound(ChrPos, SOUND_HAMMER_FIRE);
+
+			CCharacter *apEnts[MAX_CLIENTS];
+			int Hits = 0;
+			int Num = GameServer()->m_World.FindEntities(ProjStartPos, pChr->GetProximityRadius()*0.5f, (CEntity**)apEnts,
+														MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
+
+			for(int i = 0; i < Num; ++i)
+			{
+				CCharacter *pTarget = apEnts[i];
+
+				if((pTarget == pChr) || GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->GetPos(), NULL, NULL))
+					continue;
+
+				// set his velocity to fast upward (for now)
+				if(length(pTarget->GetPos() - ProjStartPos) > 0.0f)
+					GameServer()->CreateHammerHit(pTarget->GetPos() - normalize(pTarget->GetPos() - ProjStartPos) * pChr->GetProximityRadius() * 0.5f);
+				else
+					GameServer()->CreateHammerHit(ProjStartPos);
+
+				vec2 Dir;
+				if(length(pTarget->GetPos() - ChrPos) > 0.0f)
+					Dir = normalize(pTarget->GetPos() - ChrPos);
+				else
+					Dir = vec2(0.f, -1.f);
+
+				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir*-1, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
+					ClientID, Weapon);
+				Hits++;
+			}
+
+			// if we Hit anything, we have to wait for the reload
+			if(Hits)
+				ReloadTimer = Server()->TickSpeed()/3;
+
+		} break;
+
+		case WEAPON_GUN:
+		{
+			new CProjectile(&GameServer()->m_World, WEAPON_GUN,
+				ClientID,
+				ProjStartPos,
+				Direction,
+				(int) (Server()->TickSpeed()*GameServer()->Tuning()->m_GunLifetime),
+				g_pData->m_Weapons.m_Gun.m_pBase->m_Damage, false, 0, -1, WEAPON_GUN);
+
+			GameServer()->CreateSound(ChrPos, SOUND_GUN_FIRE);
+		} break;
+
+		case WEAPON_SHOTGUN:
+		{
+			int ShotSpread = 2;
+
+			for(int i = -ShotSpread; i <= ShotSpread; ++i)
+			{
+				float Spreading[] = {-0.185f, -0.070f, 0, 0.070f, 0.185f};
+				float a = angle(Direction);
+				a += Spreading[i+2];
+				float v = 1-(absolute(i)/(float)ShotSpread);
+				float Speed = mix((float)GameServer()->Tuning()->m_ShotgunSpeeddiff, 1.0f, v);
+				new CProjectile(&GameServer()->m_World, WEAPON_SHOTGUN,
+					ClientID,
+					ProjStartPos,
+					vec2(cosf(a), sinf(a))*Speed,
+					(int)(Server()->TickSpeed()*GameServer()->Tuning()->m_ShotgunLifetime),
+					g_pData->m_Weapons.m_Shotgun.m_pBase->m_Damage, false, 0, -1, WEAPON_SHOTGUN);
+			}
+
+			GameServer()->CreateSound(ChrPos, SOUND_SHOTGUN_FIRE);
+		} break;
+
+		case WEAPON_GRENADE:
+		{
+			new CProjectile(&GameServer()->m_World, WEAPON_GRENADE,
+				ClientID,
+				ProjStartPos,
+				Direction,
+				(int)(Server()->TickSpeed()*GameServer()->Tuning()->m_GrenadeLifetime),
+				g_pData->m_Weapons.m_Grenade.m_pBase->m_Damage, true, 0, SOUND_GRENADE_EXPLODE, WEAPON_GRENADE);
+
+			GameServer()->CreateSound(ChrPos, SOUND_GRENADE_FIRE);
+		} break;
+
+		case WEAPON_LASER:
+		{
+			new CLaser(&GameServer()->m_World, ChrPos, Direction, GameServer()->Tuning()->m_LaserReach, ClientID);
+			GameServer()->CreateSound(ChrPos, SOUND_LASER_FIRE);
+		} break;
+
+		case WEAPON_NINJA:
+		{
+			pChr->DoNinjaFire(Direction, g_pData->m_Weapons.m_Ninja.m_Movetime * Server()->TickSpeed() / 1000);
+			GameServer()->CreateSound(ChrPos, SOUND_NINJA_FIRE);
+		} break;
+
+	}
+	if(!ReloadTimer)
+		ReloadTimer = g_pData->m_Weapons.m_aId[Weapon].m_Firedelay * Server()->TickSpeed() / 1000;
+
+	return ReloadTimer;
 }

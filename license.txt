@@ -26,6 +26,8 @@ Authors:	android272, Chi11y (chi1), Crises, Daniel, Echchouik, Fisico,
 			red_com, serpis, SkizZ, somerunce, Sonix, Stephanator, teetow,
 			Ubu, Zatline
 
+Teeworlds Archive Project: Bamcane
+
 ------------------------------------------------------------------------
 
 IMPORTANT NOTE! The source under src/engine/external are stripped

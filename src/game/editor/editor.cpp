@@ -3027,6 +3027,11 @@ void CEditor::FilelistPopulate(int StorageType)
 		Item.m_IsLink = true;
 		Item.m_StorageType = IStorage::TYPE_ALL;
 		m_CompleteFileList.add(Item);
+
+		str_copy(Item.m_aFilename, "entities/reinfected.png", sizeof(Item.m_aFilename));
+		str_copy(Item.m_aName, "Reinfected", sizeof(Item.m_aName));
+		Item.m_StorageType = IStorage::TYPE_ALL;
+		m_CompleteFileList.add(Item);
 	}
 	Storage()->ListDirectory(StorageType, m_pFileDialogPath, EditorListdirCallback, this);
 	RefreshFilteredFileList();

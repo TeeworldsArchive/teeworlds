@@ -19,6 +19,7 @@
 #include "gamemodes/lms.h"
 #include "gamemodes/lts.h"
 #include "gamemodes/mod.h"
+#include "gamemodes/reinfected.h"
 #include "gamemodes/tdm.h"
 #include "gamecontext.h"
 #include "player.h"
@@ -1121,6 +1122,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				pPlayer->m_TeeInfos.m_aSkinPartColors[p] = pMsg->m_aSkinPartColors[p];
 			}
 
+			/*
 			// update all clients
 			for(int i = 0; i < MAX_CLIENTS; ++i)
 			{
@@ -1129,8 +1131,17 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 				SendSkinChange(pPlayer->GetCID(), i);
 			}
+			*/
 
 			m_pController->OnPlayerInfoChange(pPlayer);
+			// update all clients
+			for(int i = 0; i < MAX_CLIENTS; ++i)
+			{
+				if(!m_apPlayers[i] || (!Server()->ClientIngame(i) && !m_apPlayers[i]->IsDummy()) || Server()->GetClientVersion(i) < MIN_SKINCHANGE_CLIENTVERSION)
+					continue;
+
+				SendSkinChange(pPlayer->GetCID(), i);
+			}
 		}
 		else if (MsgID == NETMSGTYPE_CL_COMMAND)
 		{
@@ -1625,6 +1636,8 @@ void CGameContext::OnInit()
 		m_pController = new CGameControllerLMS(this);
 	else if(str_comp_nocase(Config()->m_SvGametype, "lts") == 0)
 		m_pController = new CGameControllerLTS(this);
+	else if(str_comp_nocase(Config()->m_SvGametype, "reinfected") == 0)
+		m_pController = new CGameControllerReinfected(this);
 	else if(str_comp_nocase(Config()->m_SvGametype, "tdm") == 0)
 		m_pController = new CGameControllerTDM(this);
 	else
