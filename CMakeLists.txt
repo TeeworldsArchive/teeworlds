@@ -26,6 +26,7 @@ if(NOT POLICY CMP0048)
 endif()
 
 project(teeworlds VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+project(teeworlds C CXX)
 
 set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 set(ORIGINAL_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
@@ -1272,6 +1273,8 @@ set_src(BASE GLOB_RECURSE src/base
   tl/sorted_array.h
   tl/string.h
   tl/threading.h
+  uuid.c
+  uuid.h
   vmath.h
 )
 set_src(ENGINE_INTERFACE GLOB src/engine
@@ -1295,6 +1298,7 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   sound.h
   storage.h
   textrender.h
+  uuid.h
 )
 set_src(ENGINE_SHARED GLOB src/engine/shared
   compression.cpp
@@ -1343,11 +1347,16 @@ set_src(ENGINE_SHARED GLOB src/engine/shared
   packer.cpp
   packer.h
   protocol.h
+  protocol_ex.cpp
+  protocol_ex.h
+  protocol_ex_msgs.h
   ringbuffer.cpp
   ringbuffer.h
   snapshot.cpp
   snapshot.h
   storage.cpp
+  uuid_manager.cpp
+  uuid_manager.h
 )
 set(ENGINE_GENERATED_SHARED src/generated/nethash.cpp src/generated/protocol.cpp src/generated/protocol.h)
 set_src(GAME_SHARED GLOB src/game

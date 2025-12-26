@@ -1403,6 +1403,26 @@ const char *str_find_nocase(const char *haystack, const char *needle);
 const char *str_find(const char *haystack, const char *needle);
 
 /*
+	Function: str_hex_decode
+		Takes a hex string *without spaces between bytes* and returns a
+		byte array.
+
+	Parameters:
+		dst - Buffer for the byte array
+		dst_size - size of the buffer
+		data - String to decode
+
+	Returns:
+		2 - String doesn't exactly fit the buffer
+		1 - Invalid character in string
+		0 - Success
+
+	Remarks:
+		- The contents of the buffer is only valid on success
+*/
+int str_hex_decode(void *dst, int dst_size, const char *src);
+
+/*
 	Function: str_hex
 		Takes a datablock and generates a hexstring of it.
 

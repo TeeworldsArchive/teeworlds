@@ -1149,7 +1149,7 @@ void CGameClient::OnNewSnapshot()
 		{
 			IClient::CSnapItem Item;
 			const void *pData = Client()->SnapGetItem(IClient::SNAP_CURRENT, Index, &Item);
-			if(m_NetObjHandler.ValidateObj(Item.m_Type, pData, Item.m_DataSize) != 0)
+			if(Item.m_Type < CSnapshot::OFFSET_UUID_TYPE && m_NetObjHandler.ValidateObj(Item.m_Type, pData, Item.m_DataSize) != 0)
 			{
 				if(Config()->m_Debug)
 				{
