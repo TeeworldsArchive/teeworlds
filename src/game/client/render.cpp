@@ -75,7 +75,7 @@ void CRenderTools::RenderCursor(float CenterX, float CenterY, float Size)
 	Graphics()->WrapNormal();
 }
 
-void CRenderTools::RenderTee(CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, float Alpha)
+void CRenderTools::RenderTee(CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, float Alpha, bool XmasHat)
 {
 	vec2 Direction = Dir;
 	vec2 Position = Pos;
@@ -228,12 +228,12 @@ void CRenderTools::RenderTee(CAnimState *pAnim, const CTeeRenderInfo *pInfo, int
 				Graphics()->QuadsEnd();
 
 				// draw xmas hat
-				if(!OutLine && pInfo->m_HatTexture.IsValid())
+				if(XmasHat && !OutLine && pInfo->m_HatTexture.IsValid())
 				{
 					Graphics()->TextureSet(pInfo->m_HatTexture);
 					Graphics()->QuadsBegin();
 					Graphics()->QuadsSetRotation(pAnim->GetBody()->m_Angle * pi * 2);
-					Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+					Graphics()->SetColor(1.0f * Alpha, 1.0f * Alpha, 1.0f * Alpha, Alpha);
 					int Flag = Direction.x < 0.0f ? SPRITE_FLAG_FLIP_X : 0;
 					switch(pInfo->m_HatSpriteIndex)
 					{

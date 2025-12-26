@@ -1654,7 +1654,7 @@ void CGameContext::OnInit()
 		{
 			int Index = pTiles[y*pTileMap->m_Width+x].m_Index;
 
-			if(Index > TILE_NOHOOK && Index < ENTITY_OFFSET)
+			if(Index > TILE_UNHOOKABLE && Index < ENTITY_OFFSET)
 			{
 				vec2 Pos(x*32.0f+16.0f, y*32.0f+16.0f);
 				m_pController->OnExtraTile(Index, Pos);
