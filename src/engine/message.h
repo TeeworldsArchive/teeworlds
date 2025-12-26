@@ -4,6 +4,7 @@
 #define ENGINE_MESSAGE_H
 
 #include <engine/shared/packer.h>
+#include <engine/shared/uuid_manager.h>
 
 class CMsgPacker : public CPacker
 {
@@ -16,7 +17,15 @@ public:
 			m_Error = true;
 			return;
 		}
-		AddInt((Type << 1) | (System ? 1 : 0));
+		if(Type < OFFSET_UUID)
+		{
+			AddInt((Type << 1) | (System ? 1 : 0));
+		}
+		else
+		{
+			AddInt(System ? 1 : 0);
+			g_UuidManager.PackUuid(Type, this);
+		}
 	}
 };
 
@@ -24,10 +33,15 @@ class CMsgUnpacker : public CUnpacker
 {
 	int m_Type;
 	bool m_System;
+	Uuid m_Uuid;
 
 public:
+	CMsgUnpacker() = default;
+
 	CMsgUnpacker(const void *pData, int Size)
 	{
+		m_Uuid = UUID_ZEROED;
+
 		Reset(pData, Size);
 		const int Msg = GetInt();
 		if(Msg < 0)
@@ -40,10 +54,17 @@ public:
 		}
 		m_System = Msg & 1;
 		m_Type = Msg >> 1;
+		if(m_Type == 0)
+		{
+			m_Type = g_UuidManager.UnpackUuid(this, &m_Uuid);
+			if(m_Type == UUID_INVALID || m_Type == UUID_UNKNOWN)
+				m_Error = true;
+		}
 	}
 
 	int Type() const { return m_Type; }
 	bool System() const { return m_System; }
+	const Uuid *MsgUuid() const { return &m_Uuid; }
 };
 
 #endif

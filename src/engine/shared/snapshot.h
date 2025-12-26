@@ -37,6 +37,7 @@ class CSnapshot
 public:
 	enum
 	{
+		OFFSET_UUID_TYPE = 0x4000,
 		MAX_TYPE = 0x7fff,
 		MAX_ID = 0xffff,
 		MAX_PARTS	= 64,
@@ -48,6 +49,7 @@ public:
 	const CSnapshotItem *GetItem(int Index) const;
 	int GetItemSize(int Index) const;
 	int GetItemIndex(int Key) const;
+	int GetItemType(int Index) const;
 	void InvalidateItem(int Index);
 
 	int Serialize(char *pDstData) const;
@@ -127,7 +129,8 @@ class CSnapshotBuilder
 {
 	enum
 	{
-		MAX_ITEMS = 1024
+		MAX_ITEMS = 1024,
+		MAX_EXTENDED_ITEM_TYPES = 64
 	};
 
 	char m_aData[CSnapshot::MAX_SIZE];
@@ -136,7 +139,15 @@ class CSnapshotBuilder
 	int m_aOffsets[MAX_ITEMS];
 	int m_NumItems;
 
+	int m_aExtendedItemTypes[MAX_EXTENDED_ITEM_TYPES];
+	int m_NumExtendedItemTypes;
+
+	bool AddExtendedItemType(int Index);
+	int GetExtendedItemTypeIndex(int TypeID);
+
 public:
+	CSnapshotBuilder();
+
 	void Init();
 	void Init(const CSnapshot *pSnapshot);
 	bool UnserializeSnap(const char *pSrcData, int SrcSize);

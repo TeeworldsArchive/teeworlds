@@ -1,3 +1,5 @@
+/* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
+/* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "test.h"
 #include <gtest/gtest.h>
 
@@ -22,7 +24,7 @@ static void ExpectAddString5(const char *pString, int Limit, const char *pExpect
 		EXPECT_EQ(ExpectedLength, Packer.Size() - OFFSET);
 		if(ExpectedLength == Packer.Size() - OFFSET)
 		{
-			EXPECT_STREQ(pExpected, (const char *)Packer.Data() + OFFSET);
+			EXPECT_STREQ(pExpected, (const char *) Packer.Data() + OFFSET);
 		}
 	}
 }
@@ -56,7 +58,9 @@ TEST(Packer, AddStringBroken)
 	ExpectAddString5("\x80", 0, "�");
 	ExpectAddString5("\x80\x80", 0, 0);
 	ExpectAddString5("a\x80", 0, "a�");
-	ExpectAddString5("\x80""a", 0, "�a");
+	ExpectAddString5("\x80"
+			 "a",
+		0, "�a");
 	ExpectAddString5("\x80", 1, "");
 	ExpectAddString5("\x80\x80", 3, "�");
 	ExpectAddString5("\x80\x80", 5, "�");
@@ -106,7 +110,7 @@ TEST(Packer, UnpackerRawNoSize)
 	CUnpacker Unpacker;
 	Unpacker.Reset(aBuf, sizeof(aBuf));
 	EXPECT_EQ(false, Unpacker.Error());
-	EXPECT_EQ((const unsigned char *)0x0, Unpacker.GetRaw(0));
+	EXPECT_EQ((const unsigned char *) 0x0, Unpacker.GetRaw(0));
 	EXPECT_EQ(true, Unpacker.Error());
 }
 
@@ -147,9 +151,9 @@ static void TestMsgPackerUnpacker(int Type, bool System, bool ExpectError)
 
 TEST(Packer, RoundtripMsgPackerUnpacker)
 {
-	TestMsgPackerUnpacker(0, false, false);
+	TestMsgPackerUnpacker(1, false, false);
 	TestMsgPackerUnpacker(12345, true, false);
-	TestMsgPackerUnpacker(0x3FFFFFFF, true, false);
+	TestMsgPackerUnpacker(OFFSET_UUID - 1, true, false);
 }
 
 TEST(Packer, MsgPackerError)

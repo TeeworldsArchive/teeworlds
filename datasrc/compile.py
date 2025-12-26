@@ -3,10 +3,10 @@ from datatypes import *
 import content
 import network
 
-def create_enum_table(names, num):
+def create_enum_table(names, num, start = "0"):
 	lines = []
 	lines += ["enum", "{"]
-	lines += ["\t%s=0,"%names[0]]
+	lines += [f"\t{names[0]} = {start},"]
 	for name in names[1:]:
 		lines += ["\t%s,"%name]
 	lines += ["\t%s" % num, "};"]
@@ -109,9 +109,16 @@ if gen_network_header:
 		for l in create_flags_table(["%s_%s" % (e.name, v) for v in e.values]): print(l)
 		print("")
 
-	for l in create_enum_table(["NETOBJ_INVALID"]+[o.enum_name for o in network.Objects], "NUM_NETOBJTYPES"): print(l)
+	non_extended = [o for o in network.Objects if o.ex is None]
+	extended = [o for o in network.Objects if o.ex is not None]
+	for l in create_enum_table(["NETOBJTYPE_EX"]+[o.enum_name for o in non_extended], "NUM_NETOBJTYPES"): print(l)
+	for l in create_enum_table(["__NETOBJTYPE_UUID_HELPER"]+[o.enum_name for o in extended], "OFFSET_NETMSGTYPE_UUID", "OFFSET_GAME_UUID - 1"): print(l)
 	print("")
-	for l in create_enum_table(["NETMSG_INVALID"]+[o.enum_name for o in network.Messages], "NUM_NETMSGTYPES"): print(l)
+
+	non_extended = [o for o in network.Messages if o.ex is None]
+	extended = [o for o in network.Messages if o.ex is not None]
+	for l in create_enum_table(["NETMSGTYPE_EX"]+[o.enum_name for o in non_extended], "NUM_NETMSGTYPES"): print(l)
+	for l in create_enum_table(["__NETMSGTYPE_UUID_HELPER"]+[o.enum_name for o in extended], "OFFSET_MAPITEMTYPE_UUID", "OFFSET_NETMSGTYPE_UUID - 1"): print(l)
 	print("")
 
 	for item in network.Objects + network.Messages:
@@ -267,6 +274,10 @@ if gen_network_source:
 	lines += ['{']
 	lines += ['\tswitch(Type)']
 	lines += ['\t{']
+	lines += ['\tcase NETOBJTYPE_EX:']
+	lines += ['\t{']
+	lines += ['\t\treturn 0;']
+	lines += ['\t}']
 
 	for item in network.Objects:
 		base_item = None
@@ -332,6 +343,13 @@ if gen_network_source:
 	lines += ['};']
 	lines += ['']
 
+	lines += ['void RegisterGameUuids(CUuidManager *pManager)']
+	lines += ['{']
+
+	for item in network.Objects + network.Messages:
+		if item.ex is not None:
+			lines += ['\tpManager->RegisterName(%s, "%s");' % (item.enum_name, item.ex)]
+	lines += ['}']
 
 	for l in lines:
 		print(l)

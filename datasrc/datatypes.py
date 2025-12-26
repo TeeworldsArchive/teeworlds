@@ -210,7 +210,7 @@ class Flags:
 		self.values = values
 
 class NetObject:
-	def __init__(self, name, variables):
+	def __init__(self, name, variables, ex=None, fixup=True):
 		l = name.split(":")
 		self.name = l[0]
 		self.base = ""
@@ -220,6 +220,10 @@ class NetObject:
 		self.struct_name = "CNetObj_%s" % self.name
 		self.enum_name = "NETOBJTYPE_%s" % self.name.upper()
 		self.variables = variables
+		if fixup and ex != None:
+			ex = "object-{}".format(ex)
+		self.ex = ex
+
 	def emit_declaration(self):
 		if self.base:
 			lines = ["struct %s : public %s"%(self.struct_name,self.base_struct_name), "{"]
@@ -245,15 +249,17 @@ class NetObject:
 
 
 class NetEvent(NetObject):
-	def __init__(self, name, variables):
-		NetObject.__init__(self, name, variables)
+	def __init__(self, name, variables, ex=None):
+		NetObject.__init__(self, name, variables, ex=ex)
 		self.base_struct_name = "CNetEvent_%s" % self.base
 		self.struct_name = "CNetEvent_%s" % self.name
 		self.enum_name = "NETEVENTTYPE_%s" % self.name.upper()
 
 class NetMessage(NetObject):
-	def __init__(self, name, variables):
-		NetObject.__init__(self, name, variables)
+	def __init__(self, name, variables, ex=None):
+		if ex != None:
+			ex = "message-{}".format(ex)
+		NetObject.__init__(self, name, variables, ex=ex, fixup=False)
 		self.base_struct_name = "CNetMsg_%s" % self.base
 		self.struct_name = "CNetMsg_%s" % self.name
 		self.enum_name = "NETMSGTYPE_%s" % self.name.upper()
@@ -399,3 +405,15 @@ class NetArray(NetVariable):
 			self.var.name = self.base_name + "[%d]"%i
 			lines += self.var.emit_unpack_check()
 		return lines
+
+class NetObjectEx(NetObject):
+	def __init__(self, name, ex, variables):
+		NetObject.__init__(self, name, variables, ex=ex)
+
+class NetEventEx(NetEvent):
+	def __init__(self, name, ex, variables):
+		NetEvent.__init__(self, name, variables, ex=ex)
+
+class NetMessageEx(NetMessage):
+	def __init__(self, name, ex, variables):
+		NetMessage.__init__(self, name, variables, ex=ex)

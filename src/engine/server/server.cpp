@@ -23,6 +23,7 @@
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
 #include <engine/shared/protocol.h>
+#include <engine/shared/protocol_ex.h>
 #include <engine/shared/snapshot.h>
 
 #include <mastersrv/mastersrv.h>
@@ -1326,6 +1327,10 @@ void CServer::InitInterfaces(IKernel *pKernel)
 
 int CServer::Run()
 {
+	if(Config()->m_Debug)
+	{
+		g_UuidManager.DebugDump();
+	}
 	//
 	m_PrintCBIndex = Console()->RegisterPrintCallback(Config()->m_ConsoleOutputLevel, SendRconLineAuthed, this);
 
@@ -1840,7 +1845,7 @@ void CServer::SnapFreeID(int ID)
 
 void *CServer::SnapNewItem(int Type, int ID, int Size)
 {
-	dbg_assert(Type >= 0 && Type <=0xffff, "incorrect type");
+	// dbg_assert(Type >= 0 && Type <=0xffff, "incorrect type");
 	dbg_assert(ID >= 0 && ID <=0xffff, "incorrect id");
 	return ID < 0 ? 0 : m_SnapshotBuilder.NewItem(Type, ID, Size);
 }

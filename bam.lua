@@ -150,14 +150,14 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 	-- Build server launcher before adding game stuff
 	local serverlaunch = Link(settings, "serverlaunch", Compile(settings, "src/macoslaunch/server.m"))
 
+	-- Add requirements for Server & Client
+	BuildGameCommon(settings)
+
 	-- Master server, version server and tools
 	BuildEngineCommon(settings)
 	BuildMasterserver(settings)
 	BuildVersionserver(settings)
 	BuildTools(settings)
-
-	-- Add requirements for Server & Client
-	BuildGameCommon(settings)
 
 	-- Server
 	settings.link.frameworks:Add("Cocoa")
@@ -198,14 +198,14 @@ function GenerateLinuxSettings(settings, conf, arch, compiler)
 
 	GenerateCommonSettings(settings, conf, arch, compiler)
 
+	-- Add requirements for Server & Client
+	BuildGameCommon(settings)
+
 	-- Master server, version server and tools
 	BuildEngineCommon(settings)
 	BuildTools(settings)
 	BuildMasterserver(settings)
 	BuildVersionserver(settings)
-
-	-- Add requirements for Server & Client
-	BuildGameCommon(settings)
 
 	-- Server
 	BuildServer(settings)
@@ -262,14 +262,14 @@ function GenerateWindowsSettings(settings, conf, target_arch, compiler)
 
 	GenerateCommonSettings(settings, conf, target_arch, compiler)
 
+	-- Add requirements for Server & Client
+	BuildGameCommon(settings)
+
 	-- Master server, version server and tools
 	BuildEngineCommon(settings)
 	BuildMasterserver(settings)
 	BuildVersionserver(settings)
 	BuildTools(settings)
-
-	-- Add requirements for Server & Client
-	BuildGameCommon(settings)
 
 	-- Server
 	local server_settings = settings:Copy()
