@@ -201,6 +201,8 @@ public:
 	virtual const char *NetVersion() const;
 	virtual const char *NetVersionHashUsed() const;
 	virtual const char *NetVersionHashReal() const;
+
+	virtual int GetMaxPlayerSlots();
 };
 
 inline int64 CmaskAll() { return -1; }

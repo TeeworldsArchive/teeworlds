@@ -14,6 +14,7 @@ CGameControllerTDM::CGameControllerTDM(class CGameContext *pGameServer) : IGameC
 	*/
 	m_pGameType = "TDM Archived";
 	m_GameFlags = GAMEFLAG_TEAMS;
+	m_MaxPlayerSlots = 16;
 }
 
 // event

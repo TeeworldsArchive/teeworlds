@@ -1100,7 +1100,7 @@ void CServer::GenerateServerInfo(CPacker *pPacker, int ServerInfoVersion, bool I
 
 	pPacker->AddInt(Config()->m_SvSkillLevel); // server skill level
 	pPacker->AddInt(ServerInfoVersion == SERVERINFO_VERSION_LEGACY ? PlayerCount : 0); // num players
-	pPacker->AddInt(Config()->m_SvPlayerSlots); // max players
+	pPacker->AddInt(GameServer()->GetMaxPlayerSlots()); // max players
 	pPacker->AddInt(ServerInfoVersion == SERVERINFO_VERSION_LEGACY ? ClientCount : 0); // num clients
 	pPacker->AddInt(maximum(ClientCount, Config()->m_SvMaxClients)); // max clients
 

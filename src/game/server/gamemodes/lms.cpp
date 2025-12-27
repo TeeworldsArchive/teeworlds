@@ -14,6 +14,7 @@ CGameControllerLMS::CGameControllerLMS(CGameContext *pGameServer) : IGameControl
 	*/
 	m_pGameType = "LMS Archived";
 	m_GameFlags = GAMEFLAG_SURVIVAL;
+	m_MaxPlayerSlots = 16;
 }
 
 // event

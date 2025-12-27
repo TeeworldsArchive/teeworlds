@@ -41,6 +41,7 @@ IGameController::IGameController(CGameContext *pGameServer)
 	m_GameInfo.m_MatchNum = (str_length(Config()->m_SvMaprotation) && Config()->m_SvMatchesPerMap) ? Config()->m_SvMatchesPerMap : 0;
 	m_GameInfo.m_ScoreLimit = Config()->m_SvScorelimit;
 	m_GameInfo.m_TimeLimit = Config()->m_SvTimelimit;
+	m_MaxPlayerSlots = MAX_PLAYERS;
 
 	// map
 	m_aMapWish[0] = 0;
@@ -89,7 +90,7 @@ void IGameController::DoActivityCheck()
 						for(int j = 0; j < MAX_CLIENTS; ++j)
 							if(GameServer()->m_apPlayers[j] && GameServer()->m_apPlayers[j]->GetTeam() == TEAM_SPECTATORS)
 								++Spectators;
-						if(Spectators >= Config()->m_SvMaxClients - Config()->m_SvPlayerSlots)
+						if(Spectators >= Config()->m_SvMaxClients - GameServer()->GetMaxPlayerSlots())
 							Server()->Kick(i, "Kicked for inactivity");
 						else
 							DoTeamChange(GameServer()->m_apPlayers[i], TEAM_SPECTATORS);
@@ -1140,7 +1141,7 @@ bool IGameController::CanJoinTeam(int Team, int NotThisID) const
 
 	// check if there're enough player slots left
 	int TeamMod = GameServer()->m_apPlayers[NotThisID] && GameServer()->m_apPlayers[NotThisID]->GetTeam() != TEAM_SPECTATORS ? -1 : 0;
-	return TeamMod + m_aTeamSize[TEAM_RED] + m_aTeamSize[TEAM_BLUE] < Config()->m_SvPlayerSlots;
+	return TeamMod + m_aTeamSize[TEAM_RED] + m_aTeamSize[TEAM_BLUE] < GameServer()->GetMaxPlayerSlots();
 }
 
 int IGameController::ClampTeam(int Team) const
@@ -1218,7 +1219,7 @@ int IGameController::GetStartTeam()
 	}
 
 	// check if there're enough player slots left
-	if(m_aTeamSize[TEAM_RED] + m_aTeamSize[TEAM_BLUE] < Config()->m_SvPlayerSlots)
+	if(m_aTeamSize[TEAM_RED] + m_aTeamSize[TEAM_BLUE] < GameServer()->GetMaxPlayerSlots())
 	{
 		++m_aTeamSize[Team];
 		m_UnbalancedTick = TBALANCE_CHECK;

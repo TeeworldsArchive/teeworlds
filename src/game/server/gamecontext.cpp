@@ -287,7 +287,7 @@ void CGameContext::SendSettings(int ClientID)
 	Msg.m_SpecVote = Config()->m_SvVoteSpectate;
 	Msg.m_TeamLock = m_LockTeams != 0;
 	Msg.m_TeamBalance = Config()->m_SvTeambalanceTime != 0;
-	Msg.m_PlayerSlots = Config()->m_SvPlayerSlots;
+	Msg.m_PlayerSlots = GetMaxPlayerSlots();
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
 }
 
@@ -1748,5 +1748,6 @@ const char *CGameContext::Version() const { return GAME_VERSION; }
 const char *CGameContext::NetVersion() const { return GAME_NETVERSION; }
 const char *CGameContext::NetVersionHashUsed() const { return GAME_NETVERSION_HASH_FORCED; }
 const char *CGameContext::NetVersionHashReal() const { return GAME_NETVERSION_HASH; }
+int CGameContext::GetMaxPlayerSlots() { return minimum(Config()->m_SvPlayerSlots, m_pController->GetMaxPlayerSlots()); }
 
 IGameServer *CreateGameServer() { return new CGameContext; }

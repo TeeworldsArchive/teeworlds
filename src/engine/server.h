@@ -103,6 +103,8 @@ public:
 	virtual const char *NetVersionHashUsed() const = 0;
 	virtual const char *NetVersionHashReal() const = 0;
 
+	virtual int GetMaxPlayerSlots() = 0;
+
 	virtual bool TimeScore() const { return false; }
 };
 

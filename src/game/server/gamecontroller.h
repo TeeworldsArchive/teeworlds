@@ -123,6 +123,7 @@ protected:
 		int m_ScoreLimit;
 		int m_TimeLimit;
 	} m_GameInfo;
+	int m_MaxPlayerSlots;
 
 	void SendGameInfo(int ClientID);
 
@@ -220,6 +221,8 @@ public:
 	bool IsTeamChangeAllowed() const;
 	bool IsTeamplay() const { return m_GameFlags & GAMEFLAG_TEAMS; }
 	bool IsSurvival() const { return m_GameFlags & GAMEFLAG_SURVIVAL; }
+
+	int GetMaxPlayerSlots() const { return m_MaxPlayerSlots; }
 
 	const char *GetGameType() const { return m_pGameType; }
 
