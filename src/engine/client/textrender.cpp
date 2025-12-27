@@ -284,9 +284,6 @@ CGlyphMap::CGlyphMap(IGraphics *pGraphics, FT_Library FtLibrary)
 CGlyphMap::~CGlyphMap()
 {
 	FT_Stroker_Done(m_FtStroker);
-
-	for(int i = 0; i < m_Glyphs.size(); ++i)
-		delete m_Glyphs[i].m_pGlyph;
 }
 
 int CGlyphMap::GetCharGlyph(int Chr, FT_Face *pFace)
@@ -473,7 +470,7 @@ CGlyph *CGlyphMap::GetGlyph(int Chr, int FontSizeIndex, bool Render)
 	// couldn't find glyph, render a new one
 	if(r.empty())
 	{
-		Index.m_pGlyph = new CGlyph();
+		Index.m_pGlyph = (CGlyph *) m_Heap.Allocate(sizeof(CGlyph));
 		Index.m_pGlyph->m_Rendered = false;
 		Index.m_pGlyph->m_ID = Chr;
 		Index.m_pGlyph->m_FontSizeIndex = FontSizeIndex;
