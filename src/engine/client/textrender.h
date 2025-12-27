@@ -7,6 +7,8 @@
 #include <base/vmath.h>
 #include <engine/textrender.h>
 
+#include <engine/shared/memheap.h>
+
 // ft2 texture
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -91,7 +93,7 @@ class CGlyphMap
 		void Init(int Index, int X, int Y, int Width, int Height);
 		ivec2 Add(int Width, int Height);
 	};
-
+	CHeap m_Heap;
 	IGraphics *m_pGraphics;
 	FT_Stroker m_FtStroker;
 	IGraphics::CTextureHandle m_aTextures[2];
