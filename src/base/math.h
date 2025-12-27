@@ -23,8 +23,8 @@ inline float sign(float f)
 inline int round_to_int(float f)
 {
 	if(f > 0.0f)
-		return (int)(f + 0.5f);
-	return (int)(f - 0.5f);
+		return (int) (f + 0.5f);
+	return (int) (f - 0.5f);
 }
 
 template<typename T, typename TB>
@@ -54,7 +54,7 @@ inline int random_int()
 
 inline float random_float()
 {
-	return rand() / (float)RAND_MAX;
+	return rand() / (float) RAND_MAX;
 }
 
 const int fxpscale = 1 << 10;
@@ -62,11 +62,11 @@ const int fxpscale = 1 << 10;
 // float to fixed
 inline int f2fx(float v)
 {
-	return (int)(v * fxpscale);
+	return (int) (v * fxpscale);
 }
 inline float fx2f(int v)
 {
-	return v / (float)fxpscale;
+	return v / (float) fxpscale;
 }
 
 // int to fixed
@@ -93,6 +93,7 @@ inline int gcd(int a, int b)
 class fxp
 {
 	int value;
+
 public:
 	void set(int v)
 	{

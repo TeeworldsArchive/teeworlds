@@ -9,6 +9,7 @@ class CGameControllerReinfected : public IGameController
 	class CReinfectedHelper *m_pHelper;
 
 	void RefreshPlayerSkin(class CPlayer *pPlayer, bool Sync);
+
 protected:
 	const class CReinfectedHelper *Reinfected() const { return m_pHelper; }
 	class CReinfectedHelper *Reinfected() { return m_pHelper; }
@@ -16,6 +17,7 @@ protected:
 	virtual bool IsInfectionStarted();
 	virtual void StartRandomInfection();
 	void AddScoreForInfection(int InfectedID);
+
 public:
 	CGameControllerReinfected(class CGameContext *pGameServer);
 	virtual ~CGameControllerReinfected();

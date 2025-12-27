@@ -13,7 +13,7 @@ CGameControllerLTS::CGameControllerLTS(CGameContext *pGameServer) : IGameControl
 	m_pGameType = "LTS";
 	*/
 	m_pGameType = "LTS Archived";
-	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_SURVIVAL;
+	m_GameFlags = GAMEFLAG_TEAMS | GAMEFLAG_SURVIVAL;
 }
 
 // event
@@ -39,11 +39,11 @@ void CGameControllerLTS::DoWincheckRound()
 	{
 		if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS &&
 			(!GameServer()->m_apPlayers[i]->m_RespawnDisabled ||
-			(GameServer()->m_apPlayers[i]->GetCharacter() && GameServer()->m_apPlayers[i]->GetCharacter()->IsAlive())))
+				(GameServer()->m_apPlayers[i]->GetCharacter() && GameServer()->m_apPlayers[i]->GetCharacter()->IsAlive())))
 			++Count[GameServer()->m_apPlayers[i]->GetTeam()];
 	}
 
-	if(Count[TEAM_RED]+Count[TEAM_BLUE] == 0 || (m_GameInfo.m_TimeLimit > 0 && (Server()->Tick()-m_GameStartTick) >= m_GameInfo.m_TimeLimit*Server()->TickSpeed()*60))
+	if(Count[TEAM_RED] + Count[TEAM_BLUE] == 0 || (m_GameInfo.m_TimeLimit > 0 && (Server()->Tick() - m_GameStartTick) >= m_GameInfo.m_TimeLimit * Server()->TickSpeed() * 60))
 	{
 		++m_aTeamscore[TEAM_BLUE];
 		++m_aTeamscore[TEAM_RED];

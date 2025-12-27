@@ -1,17 +1,17 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#include <engine/shared/config.h>
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 #include <engine/textrender.h>
-#include <generated/protocol.h>
 #include <generated/client_data.h>
+#include <generated/protocol.h>
 
 #include <game/client/gameclient.h>
 
 #include "broadcast.h"
 #include "chat.h"
-#include "scoreboard.h"
 #include "motd.h"
+#include "scoreboard.h"
 
 static const float BROADCAST_FONTSIZE_BIG = 11.0f;
 static const float BROADCAST_FONTSIZE_SMALL = 6.5f;
@@ -54,7 +54,7 @@ void CBroadcast::RenderServerBroadcast()
 		return;
 
 	const float Height = 300;
-	const float Width = Height*Graphics()->ScreenAspect();
+	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0, 0, Width, Height);
 
 	const float Fade = 1.0f - maximum(0.0f, (DeltaTime - DisplayStartFade) / (DisplayDuration - DisplayStartFade));
@@ -63,7 +63,7 @@ void CBroadcast::RenderServerBroadcast()
 
 	CUIRect BroadcastView;
 	BroadcastView.w = Width * 0.5f;
-	BroadcastView.h = maximum(TextHeight, 2*Rounding) + 2.0f;
+	BroadcastView.h = maximum(TextHeight, 2 * Rounding) + 2.0f;
 	BroadcastView.x = BroadcastView.w * 0.5f;
 	BroadcastView.y = Height - BroadcastView.h;
 
@@ -71,7 +71,7 @@ void CBroadcast::RenderServerBroadcast()
 
 	// draw lines
 	const vec2 ShadowOffset(1.0f, 2.0f);
-	m_ServerBroadcastCursor.MoveTo(BroadcastView.x + BroadcastView.w/2, BroadcastView.y + BroadcastView.h/2 - TextHeight/2);
+	m_ServerBroadcastCursor.MoveTo(BroadcastView.x + BroadcastView.w / 2, BroadcastView.y + BroadcastView.h / 2 - TextHeight / 2);
 
 	TextRender()->DrawTextShadowed(&m_ServerBroadcastCursor, ShadowOffset, Fade, 0, m_aServerBroadcastSegments[0].m_GlyphPos);
 	for(int i = 0; i < m_NumSegments; ++i)
@@ -92,11 +92,11 @@ void CBroadcast::RenderClientBroadcast()
 		return;
 
 	const float Height = 300;
-	const float Width = Height*Graphics()->ScreenAspect();
+	const float Width = Height * Graphics()->ScreenAspect();
 
 	Graphics()->MapScreen(0, 0, Width, Height);
 
-	m_ClientBroadcastCursor.MoveTo(300*Graphics()->ScreenAspect() / 2, 40.0f);
+	m_ClientBroadcastCursor.MoveTo(300 * Graphics()->ScreenAspect() / 2, 40.0f);
 	TextRender()->DrawTextOutlined(&m_ClientBroadcastCursor);
 }
 
@@ -108,7 +108,7 @@ CBroadcast::CBroadcast()
 void CBroadcast::DoClientBroadcast(const char *pText)
 {
 	const float Height = 300;
-	const float Width = Height*Graphics()->ScreenAspect();
+	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0, 0, Width, Height);
 
 	m_ClientBroadcastCursor.Reset();
@@ -128,12 +128,12 @@ void CBroadcast::OnReset()
 	m_NumSegments = -1;
 }
 
-void CBroadcast::OnMessage(int MsgType, void* pRawMsg)
+void CBroadcast::OnMessage(int MsgType, void *pRawMsg)
 {
 	// process server broadcast message
 	if(MsgType == NETMSGTYPE_SV_BROADCAST)
 	{
-		OnBroadcastMessage((CNetMsg_Sv_Broadcast *)pRawMsg);
+		OnBroadcastMessage((CNetMsg_Sv_Broadcast *) pRawMsg);
 	}
 }
 
@@ -170,14 +170,14 @@ void CBroadcast::OnBroadcastMessage(const CNetMsg_Sv_Broadcast *pMsg)
 			continue;
 		}
 
-		if (*c == '\\' && c[1] == '\\')
+		if(*c == '\\' && c[1] == '\\')
 		{
 			aBuf[ServerMsgLen++] = *c;
 			i++; // skip the second backslash
 			continue;
 		}
 
-		if(*c == '^' && i+3 < MsgLength && IsCharANum(c[1]) && IsCharANum(c[2])  && IsCharANum(c[3]))
+		if(*c == '^' && i + 3 < MsgLength && IsCharANum(c[1]) && IsCharANum(c[2]) && IsCharANum(c[3]))
 		{
 			SegmentColors[m_NumSegments] = vec4((c[1] - '0') / 9.0f, (c[2] - '0') / 9.0f, (c[3] - '0') / 9.0f, 1.0f);
 			SegmentIndices[m_NumSegments] = ServerMsgLen;
@@ -202,7 +202,7 @@ void CBroadcast::OnBroadcastMessage(const CNetMsg_Sv_Broadcast *pMsg)
 	aBuf[ServerMsgLen] = 0;
 
 	const float Height = 300;
-	const float Width = Height*Graphics()->ScreenAspect();
+	const float Width = Height * Graphics()->ScreenAspect();
 	const float LineMaxWidth = Width * 0.5f - 10.0f;
 
 	Graphics()->MapScreen(0, 0, Width, Height);
@@ -228,12 +228,12 @@ void CBroadcast::OnBroadcastMessage(const CNetMsg_Sv_Broadcast *pMsg)
 		// can't fit on one line, reduce size
 		int NumLines = m_ServerBroadcastCursor.LineCount();
 		FontSize = mix(BROADCAST_FONTSIZE_BIG, BROADCAST_FONTSIZE_SMALL,
-					   NumLines/(float)MAX_BROADCAST_LINES);
+			NumLines / (float) MAX_BROADCAST_LINES);
 	}
 	else // user defined lines mode
 	{
 		FontSize = mix(BROADCAST_FONTSIZE_BIG, BROADCAST_FONTSIZE_SMALL,
-					   UserLineCount/(float)MAX_BROADCAST_LINES);
+			UserLineCount / (float) MAX_BROADCAST_LINES);
 	}
 
 	m_ServerBroadcastCursor.Reset();
@@ -250,7 +250,7 @@ void CBroadcast::OnBroadcastMessage(const CNetMsg_Sv_Broadcast *pMsg)
 	{
 		if(Config()->m_ClColoredBroadcast)
 		{
-			float AvgLum = 0.2126*SegmentColors[i].r + 0.7152*SegmentColors[i].g + 0.0722*SegmentColors[i].b;
+			float AvgLum = 0.2126 * SegmentColors[i].r + 0.7152 * SegmentColors[i].g + 0.0722 * SegmentColors[i].b;
 			TextRender()->TextColor(SegmentColors[i]);
 			if(AvgLum < 0.25f)
 			{
@@ -270,7 +270,7 @@ void CBroadcast::OnBroadcastMessage(const CNetMsg_Sv_Broadcast *pMsg)
 		}
 		m_aServerBroadcastSegments[i].m_GlyphPos = m_ServerBroadcastCursor.GlyphCount();
 		// The segment array always contains exactly m_NumSegments + 1 valid segments but clang-analyzer can't determine that.
-		TextRender()->TextDeferred(&m_ServerBroadcastCursor, aBuf + SegmentIndices[i], SegmentIndices[i+1] - SegmentIndices[i]); // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
+		TextRender()->TextDeferred(&m_ServerBroadcastCursor, aBuf + SegmentIndices[i], SegmentIndices[i + 1] - SegmentIndices[i]); // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
 	}
 	m_aServerBroadcastSegments[m_NumSegments].m_GlyphPos = m_ServerBroadcastCursor.GlyphCount();
 	TextRender()->TextColor(OldColor);

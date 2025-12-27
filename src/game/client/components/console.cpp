@@ -6,22 +6,22 @@
 
 #include <base/system.h>
 
-#include <engine/shared/ringbuffer.h>
-#include <engine/shared/config.h>
-#include <engine/graphics.h>
-#include <engine/textrender.h>
-#include <engine/storage.h>
-#include <engine/keys.h>
 #include <engine/console.h>
+#include <engine/graphics.h>
+#include <engine/keys.h>
+#include <engine/shared/config.h>
+#include <engine/shared/ringbuffer.h>
+#include <engine/storage.h>
+#include <engine/textrender.h>
 
 #include <game/client/ui.h>
 
 #include <game/version.h>
 
-#include <game/client/lineinput.h>
-#include <game/client/render.h>
 #include <game/client/components/controls.h>
 #include <game/client/components/menus.h>
+#include <game/client/lineinput.h>
+#include <game/client/render.h>
 
 #include "console.h"
 
@@ -109,18 +109,18 @@ void CGameConsole::CInstance::ExecuteLine(const char *pLine)
 
 void CGameConsole::CInstance::PossibleCommandsCompleteCallback(int Index, const char *pStr, void *pUser)
 {
-	CGameConsole::CInstance *pInstance = (CGameConsole::CInstance *)pUser;
+	CGameConsole::CInstance *pInstance = (CGameConsole::CInstance *) pUser;
 	if(pInstance->m_CompletionChosen == Index)
 		pInstance->m_Input.Set(pStr);
 }
 
 void CGameConsole::CInstance::PossibleArgumentsCompleteCallback(int Index, const char *pStr, void *pUser)
 {
-	CGameConsole::CInstance *pInstance = (CGameConsole::CInstance *)pUser;
+	CGameConsole::CInstance *pInstance = (CGameConsole::CInstance *) pUser;
 	if(pInstance->m_CompletionChosenArgument == Index)
 	{
 		// get command
-		char aBuf[512] = { 0 };
+		char aBuf[512] = {0};
 		const char *pSrc = pInstance->GetString();
 		unsigned i = 0;
 		for(; i < sizeof(aBuf) - 2 && *pSrc && *pSrc != ' '; i++, pSrc++)
@@ -138,7 +138,7 @@ void CGameConsole::CInstance::OnInput(IInput::CEvent Event)
 {
 	bool Handled = false;
 
-	if(Event.m_Flags&IInput::FLAG_PRESS)
+	if(Event.m_Flags & IInput::FLAG_PRESS)
 	{
 		if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
 		{
@@ -146,8 +146,8 @@ void CGameConsole::CInstance::OnInput(IInput::CEvent Event)
 			{
 				if(m_Type == CONSOLETYPE_LOCAL || m_pGameConsole->Client()->RconAuthed())
 				{
-					char *pEntry = m_History.Allocate(m_Input.GetLength()+1);
-					mem_copy(pEntry, m_Input.GetString(), m_Input.GetLength()+1);
+					char *pEntry = m_History.Allocate(m_Input.GetLength() + 1);
+					mem_copy(pEntry, m_Input.GetString(), m_Input.GetLength() + 1);
 					// print out the user's commands before they get run
 					char aBuf[128];
 					str_format(aBuf, sizeof(aBuf), "> %s", m_Input.GetString());
@@ -256,7 +256,7 @@ void CGameConsole::CInstance::OnInput(IInput::CEvent Event)
 	if(!Handled)
 		m_Input.ProcessInput(Event);
 
-	if(Event.m_Flags&(IInput::FLAG_PRESS|IInput::FLAG_TEXT))
+	if(Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_TEXT))
 	{
 		if(Event.m_Key != KEY_TAB && Event.m_Key != KEY_LSHIFT && Event.m_Key != KEY_RSHIFT)
 		{
@@ -289,7 +289,7 @@ void CGameConsole::CInstance::OnInput(IInput::CEvent Event)
 			char aBuf[sizeof(m_aCommandName)];
 			const char *pSrc = GetString();
 			int i = 0;
-			for(; i < (int)sizeof(aBuf)-1 && *pSrc && *pSrc != ' '; i++, pSrc++)
+			for(; i < (int) sizeof(aBuf) - 1 && *pSrc && *pSrc != ' '; i++, pSrc++)
 				aBuf[i] = *pSrc;
 			aBuf[i] = 0;
 
@@ -315,15 +315,14 @@ void CGameConsole::CInstance::PrintLine(const char *pLine, bool Highlighted)
 	if(Len > 255)
 		Len = 255;
 
-	CBacklogEntry *pEntry = m_Backlog.Allocate(sizeof(CBacklogEntry)+Len);
+	CBacklogEntry *pEntry = m_Backlog.Allocate(sizeof(CBacklogEntry) + Len);
 	pEntry->m_YOffset = -1.0f;
 	pEntry->m_Highlighted = Highlighted;
 	mem_copy(pEntry->m_aText, pLine, Len);
 	pEntry->m_aText[Len] = 0;
 }
 
-CGameConsole::CGameConsole()
-: m_LocalConsole(CONSOLETYPE_LOCAL), m_RemoteConsole(CONSOLETYPE_REMOTE)
+CGameConsole::CGameConsole() : m_LocalConsole(CONSOLETYPE_LOCAL), m_RemoteConsole(CONSOLETYPE_REMOTE)
 {
 	m_ConsoleType = CONSOLETYPE_LOCAL;
 	m_ConsoleState = CONSOLE_CLOSED;
@@ -334,7 +333,7 @@ CGameConsole::CGameConsole()
 float CGameConsole::TimeNow()
 {
 	static int64 s_TimeStart = time_get();
-	return float(time_get()-s_TimeStart)/float(time_freq());
+	return float(time_get() - s_TimeStart) / float(time_freq());
 }
 
 CGameConsole::CInstance *CGameConsole::CurrentConsole()
@@ -352,8 +351,8 @@ void CGameConsole::OnReset()
 // only defined for 0<=t<=1
 static float ConsoleScaleFunc(float t)
 {
-	//return t;
-	return sinf(acosf(1.0f-t));
+	// return t;
+	return sinf(acosf(1.0f - t));
 }
 
 struct CCompletionOptionRenderInfo
@@ -375,37 +374,37 @@ void CGameConsole::PossibleCommandsRenderCallback(int Index, const char *pStr, v
 
 	if(pInfo->m_EnumCount == pInfo->m_WantedCompletion)
 	{
-		pInfo->m_pSelf->TextRender()->TextColor(0.05f, 0.05f, 0.05f,1);
+		pInfo->m_pSelf->TextRender()->TextColor(0.05f, 0.05f, 0.05f, 1);
 		const float BeginX = pInfo->m_pCursor->AdvancePosition().x + pInfo->m_Offset;
 		pInfo->m_pSelf->TextRender()->TextDeferred(pInfo->m_pCursor, pStr, -1);
 		CTextBoundingBox Box = pInfo->m_pCursor->BoundingBox();
 		CUIRect Rect = {Box.x - 5 + BeginX, Box.y, Box.w + 8 - BeginX, Box.h};
 
-		Rect.Draw(vec4(229.0f/255.0f,185.0f/255.0f,4.0f/255.0f,0.85f), pInfo->m_pCursor->m_FontSize/3);
+		Rect.Draw(vec4(229.0f / 255.0f, 185.0f / 255.0f, 4.0f / 255.0f, 0.85f), pInfo->m_pCursor->m_FontSize / 3);
 
 		// scroll when out of sight
 		const bool MoveLeft = Rect.x - *pInfo->m_pOffsetChange < 0.0f;
 		const bool MoveRight = Rect.x + Rect.w - *pInfo->m_pOffsetChange > pInfo->m_Width;
 		if(MoveLeft && !MoveRight)
-			*pInfo->m_pOffsetChange -= -Rect.x + pInfo->m_Width/4.0f;
+			*pInfo->m_pOffsetChange -= -Rect.x + pInfo->m_Width / 4.0f;
 		else if(!MoveLeft && MoveRight)
-			*pInfo->m_pOffsetChange += Rect.x + Rect.w - pInfo->m_Width + pInfo->m_Width/4.0f;
+			*pInfo->m_pOffsetChange += Rect.x + Rect.w - pInfo->m_Width + pInfo->m_Width / 4.0f;
 	}
 	else
 	{
 		const char *pMatchStart = str_find_nocase(pStr, pInfo->m_pCurrentCmd);
 		if(pMatchStart)
 		{
-			pInfo->m_pSelf->TextRender()->TextColor(0.5f,0.5f,0.5f,1);
-			pInfo->m_pSelf->TextRender()->TextDeferred(pInfo->m_pCursor, pStr, pMatchStart-pStr);
-			pInfo->m_pSelf->TextRender()->TextColor(229.0f/255.0f,185.0f/255.0f,4.0f/255.0f,1);
+			pInfo->m_pSelf->TextRender()->TextColor(0.5f, 0.5f, 0.5f, 1);
+			pInfo->m_pSelf->TextRender()->TextDeferred(pInfo->m_pCursor, pStr, pMatchStart - pStr);
+			pInfo->m_pSelf->TextRender()->TextColor(229.0f / 255.0f, 185.0f / 255.0f, 4.0f / 255.0f, 1);
 			pInfo->m_pSelf->TextRender()->TextDeferred(pInfo->m_pCursor, pMatchStart, str_length(pInfo->m_pCurrentCmd));
-			pInfo->m_pSelf->TextRender()->TextColor(0.5f,0.5f,0.5f,1);
-			pInfo->m_pSelf->TextRender()->TextDeferred(pInfo->m_pCursor, pMatchStart+str_length(pInfo->m_pCurrentCmd), -1);
+			pInfo->m_pSelf->TextRender()->TextColor(0.5f, 0.5f, 0.5f, 1);
+			pInfo->m_pSelf->TextRender()->TextDeferred(pInfo->m_pCursor, pMatchStart + str_length(pInfo->m_pCurrentCmd), -1);
 		}
 		else
 		{
-			pInfo->m_pSelf->TextRender()->TextColor(0.75f,0.75f,0.75f,1);
+			pInfo->m_pSelf->TextRender()->TextColor(0.75f, 0.75f, 0.75f, 1);
 			pInfo->m_pSelf->TextRender()->TextDeferred(pInfo->m_pCursor, pStr, -1);
 		}
 	}
@@ -418,7 +417,7 @@ void CGameConsole::PossibleCommandsRenderCallback(int Index, const char *pStr, v
 void CGameConsole::OnRender()
 {
 	CUIRect Screen = *UI()->Screen();
-	float ConsoleMaxHeight = Screen.h*3/5.0f;
+	float ConsoleMaxHeight = Screen.h * 3 / 5.0f;
 	float ConsoleHeight;
 
 	const float Now = TimeNow();
@@ -454,11 +453,11 @@ void CGameConsole::OnRender()
 	if(m_ConsoleState == CONSOLE_OPENING)
 		ConsoleHeightScale = ConsoleScaleFunc(Progress);
 	else if(m_ConsoleState == CONSOLE_CLOSING)
-		ConsoleHeightScale = ConsoleScaleFunc(1.0f-Progress);
-	else //if(console_state == CONSOLE_OPEN)
+		ConsoleHeightScale = ConsoleScaleFunc(1.0f - Progress);
+	else // if(console_state == CONSOLE_OPEN)
 		ConsoleHeightScale = ConsoleScaleFunc(1.0f);
 
-	ConsoleHeight = ConsoleHeightScale*ConsoleMaxHeight;
+	ConsoleHeight = ConsoleHeightScale * ConsoleMaxHeight;
 
 	Graphics()->MapScreen(Screen.x, Screen.y, Screen.w, Screen.h);
 
@@ -466,10 +465,10 @@ void CGameConsole::OnRender()
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 	IGraphics::CColorVertex Array[4] = {
-		IGraphics::CColorVertex(0, 0,0,0, 0.5f),
-		IGraphics::CColorVertex(1, 0,0,0, 0.5f),
-		IGraphics::CColorVertex(2, 0,0,0, 0.0f),
-		IGraphics::CColorVertex(3, 0,0,0, 0.0f)};
+		IGraphics::CColorVertex(0, 0, 0, 0, 0.5f),
+		IGraphics::CColorVertex(1, 0, 0, 0, 0.5f),
+		IGraphics::CColorVertex(2, 0, 0, 0, 0.0f),
+		IGraphics::CColorVertex(3, 0, 0, 0, 0.0f)};
 	Graphics()->SetColorVertex(Array, 4);
 	IGraphics::CQuadItem QuadItem(0, ConsoleHeight, Screen.w, 10.0f);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
@@ -478,10 +477,10 @@ void CGameConsole::OnRender()
 	// do background
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CONSOLE_BG].m_Id);
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(0.2f, 0.2f, 0.2f,0.9f);
+	Graphics()->SetColor(0.2f, 0.2f, 0.2f, 0.9f);
 	if(m_ConsoleType == CONSOLETYPE_REMOTE)
-		Graphics()->SetColor(0.4f, 0.2f, 0.2f,0.9f);
-	Graphics()->QuadsSetSubset(0,-ConsoleHeight*0.075f,Screen.w*0.075f*0.5f,0);
+		Graphics()->SetColor(0.4f, 0.2f, 0.2f, 0.9f);
+	Graphics()->QuadsSetSubset(0, -ConsoleHeight * 0.075f, Screen.w * 0.075f * 0.5f, 0);
 	QuadItem = IGraphics::CQuadItem(0, 0, Screen.w, ConsoleHeight);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
 	Graphics()->QuadsEnd();
@@ -489,12 +488,12 @@ void CGameConsole::OnRender()
 	// do small bar shadow
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Array[0] = IGraphics::CColorVertex(0, 0,0,0, 0.0f);
-	Array[1] = IGraphics::CColorVertex(1, 0,0,0, 0.0f);
-	Array[2] = IGraphics::CColorVertex(2, 0,0,0, 0.25f);
-	Array[3] = IGraphics::CColorVertex(3, 0,0,0, 0.25f);
+	Array[0] = IGraphics::CColorVertex(0, 0, 0, 0, 0.0f);
+	Array[1] = IGraphics::CColorVertex(1, 0, 0, 0, 0.0f);
+	Array[2] = IGraphics::CColorVertex(2, 0, 0, 0, 0.25f);
+	Array[3] = IGraphics::CColorVertex(3, 0, 0, 0, 0.25f);
 	Graphics()->SetColorVertex(Array, 4);
-	QuadItem = IGraphics::CQuadItem(0, ConsoleHeight-20, Screen.w, 10);
+	QuadItem = IGraphics::CQuadItem(0, ConsoleHeight - 20, Screen.w, 10);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
 	Graphics()->QuadsEnd();
 
@@ -502,8 +501,8 @@ void CGameConsole::OnRender()
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CONSOLE_BAR].m_Id);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.9f);
-	Graphics()->QuadsSetSubset(0,0.1f,Screen.w*0.015f,1-0.1f);
-	QuadItem = IGraphics::CQuadItem(0,ConsoleHeight-10.0f,Screen.w,10.0f);
+	Graphics()->QuadsSetSubset(0, 0.1f, Screen.w * 0.015f, 1 - 0.1f);
+	QuadItem = IGraphics::CQuadItem(0, ConsoleHeight - 10.0f, Screen.w, 10.0f);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
 	Graphics()->QuadsEnd();
 
@@ -513,7 +512,7 @@ void CGameConsole::OnRender()
 
 	{
 		float FontSize = 10.0f;
-		float RowHeight = FontSize*1.25f;
+		float RowHeight = FontSize * 1.25f;
 		float x = 3;
 		float y = ConsoleHeight - RowHeight - 5.0f;
 
@@ -545,7 +544,7 @@ void CGameConsole::OnRender()
 			else
 				pPrompt = "NOT CONNECTED> ";
 		}
-		s_PromptCursor.Reset((int64)pPrompt);
+		s_PromptCursor.Reset((int64) pPrompt);
 		TextRender()->TextOutlined(&s_PromptCursor, pPrompt, -1);
 
 		x = s_PromptCursor.AdvancePosition().x;
@@ -577,8 +576,7 @@ void CGameConsole::OnRender()
 			Info.m_TotalWidth = 0.0f;
 			Info.m_pCurrentCmd = pConsole->m_aCompletionBuffer;
 			Info.m_pCursor = &s_CompletionOptionsCursor;
-			m_pConsole->PossibleCommands(Info.m_pCurrentCmd, pConsole->m_CompletionFlagmask, m_ConsoleType != CGameConsole::CONSOLETYPE_LOCAL &&
-				Client()->RconAuthed() && Client()->UseTempRconCommands(), PossibleCommandsRenderCallback, &Info);
+			m_pConsole->PossibleCommands(Info.m_pCurrentCmd, pConsole->m_CompletionFlagmask, m_ConsoleType != CGameConsole::CONSOLETYPE_LOCAL && Client()->RconAuthed() && Client()->UseTempRconCommands(), PossibleCommandsRenderCallback, &Info);
 
 			if(pConsole->m_IsCommand)
 			{
@@ -669,14 +667,14 @@ void CGameConsole::OnRender()
 		s_Cursor.m_MaxWidth = -1;
 		// render page
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), Localize("-Page %d-"), pConsole->m_BacklogActPage+1);
+		str_format(aBuf, sizeof(aBuf), Localize("-Page %d-"), pConsole->m_BacklogActPage + 1);
 		s_Cursor.MoveTo(10.0f, 0.0f);
 		TextRender()->TextOutlined(&s_Cursor, aBuf, -1.0f);
 
 		// render version
 		str_format(aBuf, sizeof(aBuf), "v%s", GAME_RELEASE_VERSION);
 		s_Cursor.Reset();
-		s_Cursor.MoveTo(Screen.w-10.0f, 0.0f);
+		s_Cursor.MoveTo(Screen.w - 10.0f, 0.0f);
 		s_Cursor.m_Align = TEXTALIGN_RIGHT;
 		TextRender()->TextOutlined(&s_Cursor, aBuf, -1.0f);
 		s_Cursor.m_Align = TEXTALIGN_LEFT;
@@ -690,7 +688,7 @@ bool CGameConsole::OnInput(IInput::CEvent Event)
 	if((Event.m_Key >= KEY_F1 && Event.m_Key <= KEY_F12) || (Event.m_Key >= KEY_F13 && Event.m_Key <= KEY_F24))
 		return false;
 
-	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags&IInput::FLAG_PRESS))
+	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS))
 		Toggle(m_ConsoleType);
 	else
 		CurrentConsole()->OnInput(Event);
@@ -711,14 +709,14 @@ void CGameConsole::Toggle(int Type)
 		m_ConsoleType = Type;
 		if(m_ConsoleState == CONSOLE_CLOSED || m_ConsoleState == CONSOLE_OPEN)
 		{
-			m_StateChangeEnd = TimeNow()+m_StateChangeDuration;
+			m_StateChangeEnd = TimeNow() + m_StateChangeDuration;
 		}
 		else
 		{
-			float Progress = m_StateChangeEnd-TimeNow();
-			float ReversedProgress = m_StateChangeDuration-Progress;
+			float Progress = m_StateChangeEnd - TimeNow();
+			float ReversedProgress = m_StateChangeDuration - Progress;
 
-			m_StateChangeEnd = TimeNow()+ReversedProgress;
+			m_StateChangeEnd = TimeNow() + ReversedProgress;
 		}
 
 		if(m_ConsoleState == CONSOLE_CLOSED || m_ConsoleState == CONSOLE_CLOSING)
@@ -768,32 +766,32 @@ void CGameConsole::Dump(int Type)
 
 void CGameConsole::ConToggleLocalConsole(IConsole::IResult *pResult, void *pUserData)
 {
-	((CGameConsole *)pUserData)->Toggle(CONSOLETYPE_LOCAL);
+	((CGameConsole *) pUserData)->Toggle(CONSOLETYPE_LOCAL);
 }
 
 void CGameConsole::ConToggleRemoteConsole(IConsole::IResult *pResult, void *pUserData)
 {
-	((CGameConsole *)pUserData)->Toggle(CONSOLETYPE_REMOTE);
+	((CGameConsole *) pUserData)->Toggle(CONSOLETYPE_REMOTE);
 }
 
 void CGameConsole::ConClearLocalConsole(IConsole::IResult *pResult, void *pUserData)
 {
-	((CGameConsole *)pUserData)->m_LocalConsole.ClearBacklog();
+	((CGameConsole *) pUserData)->m_LocalConsole.ClearBacklog();
 }
 
 void CGameConsole::ConClearRemoteConsole(IConsole::IResult *pResult, void *pUserData)
 {
-	((CGameConsole *)pUserData)->m_RemoteConsole.ClearBacklog();
+	((CGameConsole *) pUserData)->m_RemoteConsole.ClearBacklog();
 }
 
 void CGameConsole::ConDumpLocalConsole(IConsole::IResult *pResult, void *pUserData)
 {
-	((CGameConsole *)pUserData)->Dump(CONSOLETYPE_LOCAL);
+	((CGameConsole *) pUserData)->Dump(CONSOLETYPE_LOCAL);
 }
 
 void CGameConsole::ConDumpRemoteConsole(IConsole::IResult *pResult, void *pUserData)
 {
-	((CGameConsole *)pUserData)->Dump(CONSOLETYPE_REMOTE);
+	((CGameConsole *) pUserData)->Dump(CONSOLETYPE_REMOTE);
 }
 
 #ifdef CONF_DEBUG
@@ -807,7 +805,7 @@ struct CDumpCommandsCallbackInfo
 
 void CGameConsole::DumpCommandsCallback(int Index, const char *pStr, void *pUser)
 {
-	CDumpCommandsCallbackInfo *pInfo = (CDumpCommandsCallbackInfo *)pUser;
+	CDumpCommandsCallbackInfo *pInfo = (CDumpCommandsCallbackInfo *) pUser;
 	const IConsole::CCommandInfo *pCommand = pInfo->m_pConsole->Console()->GetCommandInfo(pStr, pInfo->m_FlagMask, pInfo->m_Temp);
 	io_write(pInfo->m_File, pCommand->m_pName, str_length(pCommand->m_pName));
 	io_write(pInfo->m_File, ";", 1);
@@ -819,7 +817,7 @@ void CGameConsole::DumpCommandsCallback(int Index, const char *pStr, void *pUser
 
 void CGameConsole::ConDumpCommands(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameConsole *pConsole = (CGameConsole *)pUserData;
+	CGameConsole *pConsole = (CGameConsole *) pUserData;
 	char aBuf[128];
 	char aFilename[64];
 	for(int i = 0; i < 2; i++) // client and server commands separately
@@ -851,7 +849,7 @@ void CGameConsole::ConDumpCommands(IConsole::IResult *pResult, void *pUserData)
 
 void CGameConsole::ClientConsolePrintCallback(const char *pStr, void *pUserData, bool Highlighted)
 {
-	((CGameConsole *)pUserData)->m_LocalConsole.PrintLine(pStr, Highlighted);
+	((CGameConsole *) pUserData)->m_LocalConsole.PrintLine(pStr, Highlighted);
 }
 
 void CGameConsole::ConchainConsoleOutputLevelUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

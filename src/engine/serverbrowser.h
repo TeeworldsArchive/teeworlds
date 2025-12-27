@@ -29,9 +29,9 @@ public:
 
 		enum
 		{
-			PLAYERFLAG_SPEC=1,
-			PLAYERFLAG_BOT=2,
-			PLAYERFLAG_MASK=3,
+			PLAYERFLAG_SPEC = 1,
+			PLAYERFLAG_BOT = 2,
+			PLAYERFLAG_MASK = 3,
 		};
 	};
 
@@ -43,7 +43,7 @@ public:
 		NUM_SERVER_LEVELS = 3
 	};
 
-	//int m_SortedIndex;
+	// int m_SortedIndex;
 	int m_ServerIndex;
 
 	NETADDR m_NetAddr;
@@ -75,7 +75,7 @@ class CServerFilterInfo
 public:
 	enum
 	{
-		MAX_GAMETYPES=8,
+		MAX_GAMETYPES = 8,
 	};
 	int m_SortHash;
 	int m_Ping;
@@ -90,7 +90,7 @@ public:
 	void ToggleLevel(int Level)
 	{
 		m_ServerLevel ^= 1 << Level;
-		if(m_ServerLevel == (1 << CServerInfo::NUM_SERVER_LEVELS)-1)
+		if(m_ServerLevel == (1 << CServerInfo::NUM_SERVER_LEVELS) - 1)
 		{
 			// Prevent filter that excludes everything
 			m_ServerLevel = 0;
@@ -107,7 +107,6 @@ class IServerBrowser : public IInterface
 {
 	MACRO_INTERFACE("serverbrowser", 0)
 public:
-
 	/* Constants: Server Browser Sorting
 		SORT_NAME - Sort by name.
 		SORT_PING - Sort by ping.
@@ -115,44 +114,45 @@ public:
 		SORT_GAMETYPE - Sort by game type. DM, TDM etc.
 		SORT_NUMPLAYERS - Sort after how many players there are on the server.
 	*/
-	enum {
-		SORT_NAME=0,
+	enum
+	{
+		SORT_NAME = 0,
 		SORT_PING,
 		SORT_MAP,
 		SORT_GAMETYPE,
 		SORT_NUMPLAYERS,
 
-		QUICK_SERVERNAME=1,
-		QUICK_PLAYER=2,
-		QUICK_MAPNAME=4,
-		QUICK_GAMETYPE=8,
+		QUICK_SERVERNAME = 1,
+		QUICK_PLAYER = 2,
+		QUICK_MAPNAME = 4,
+		QUICK_GAMETYPE = 8,
 
-		TYPE_INTERNET=0,
+		TYPE_INTERNET = 0,
 		TYPE_LAN,
 		NUM_TYPES,
 
-		REFRESHFLAG_INTERNET=1,
-		REFRESHFLAG_LAN=2,
+		REFRESHFLAG_INTERNET = 1,
+		REFRESHFLAG_LAN = 2,
 
 		LAN_PORT_BEGIN = 8303,
 		LAN_PORT_END = 8310,
 
-		FLAG_PASSWORD=1,
-		FLAG_PURE=2,
-		FLAG_PUREMAP=4,
-		FLAG_TIMESCORE=8,
+		FLAG_PASSWORD = 1,
+		FLAG_PURE = 2,
+		FLAG_PUREMAP = 4,
+		FLAG_TIMESCORE = 8,
 
-		FILTER_BOTS=16,
-		FILTER_EMPTY=32,
-		FILTER_FULL=64,
-		FILTER_SPECTATORS=128,
-		FILTER_FRIENDS=256,
-		FILTER_PW=512,
-		FILTER_FAVORITE=1024,
-		FILTER_COMPAT_VERSION=2048,
-		FILTER_PURE=4096,
-		FILTER_PURE_MAP=8192,
-		FILTER_COUNTRY= 16384,
+		FILTER_BOTS = 16,
+		FILTER_EMPTY = 32,
+		FILTER_FULL = 64,
+		FILTER_SPECTATORS = 128,
+		FILTER_FRIENDS = 256,
+		FILTER_PW = 512,
+		FILTER_FAVORITE = 1024,
+		FILTER_COMPAT_VERSION = 2048,
+		FILTER_PURE = 4096,
+		FILTER_PURE_MAP = 8192,
+		FILTER_COUNTRY = 16384,
 	};
 
 	virtual int GetType() = 0;

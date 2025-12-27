@@ -16,7 +16,7 @@ const char *pVersion = "trunk";
 const char *pMap = "somemap";
 const char *pServerName = "unnamed server";
 
-NETADDR aMasterServers[16] = {{0,{0},0}};
+NETADDR aMasterServers[16] = {{0, {0}, 0}};
 int NumMasters = 0;
 
 const char *PlayerNames[16] = {0};
@@ -41,7 +41,7 @@ static void SendHeartBeats()
 
 	/* supply the set port that the master can use if it has problems */
 	aData[sizeof(SERVERBROWSE_HEARTBEAT)] = 0;
-	aData[sizeof(SERVERBROWSE_HEARTBEAT)+1] = 0;
+	aData[sizeof(SERVERBROWSE_HEARTBEAT) + 1] = 0;
 
 	for(int i = 0; i < NumMasters; i++)
 	{
@@ -52,7 +52,7 @@ static void SendHeartBeats()
 
 static void WriteStr(const char *pStr)
 {
-	int l = str_length(pStr)+1;
+	int l = str_length(pStr) + 1;
 	mem_copy(&aInfoMsg[aInfoMsgSize], pStr, l);
 	aInfoMsgSize += l;
 }
@@ -111,7 +111,7 @@ static void SendFWCheckResponse(NETADDR *pAddr)
 static int Run()
 {
 	int64 NextHeartBeat = 0;
-	NETADDR BindAddr = {NETTYPE_IPV4, {0},0};
+	NETADDR BindAddr = {NETTYPE_IPV4, {0}, 0};
 
 	if(!pNet->Open(BindAddr, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 		return 0;
@@ -124,7 +124,7 @@ static int Run()
 		{
 			if(p.m_ClientID == -1)
 			{
-				if(p.m_DataSize >= (int)sizeof(SERVERBROWSE_GETINFO) &&
+				if(p.m_DataSize >= (int) sizeof(SERVERBROWSE_GETINFO) &&
 					mem_comp(p.m_pData, SERVERBROWSE_GETINFO, sizeof(SERVERBROWSE_GETINFO)) == 0)
 				{
 					SendServerInfo(&p.m_Address);
@@ -140,7 +140,7 @@ static int Run()
 		/* send heartbeats if needed */
 		if(NextHeartBeat < time_get())
 		{
-			NextHeartBeat = time_get()+time_freq()*(15+(random_int()%15));
+			NextHeartBeat = time_get() + time_freq() * (15 + (random_int() % 15));
 			SendHeartBeats();
 		}
 
@@ -165,45 +165,55 @@ int main(int argc, const char **argv)
 			aMasterServers[NumMasters].port = str_toint(*argv);
 			NumMasters++;
 		}
-		else */if(str_comp(*argv, "-p") == 0)
+		else */
+		if(str_comp(*argv, "-p") == 0)
 		{
-			argc--; argv++;
+			argc--;
+			argv++;
 			PlayerNames[NumPlayers++] = *argv;
-			argc--; argv++;
+			argc--;
+			argv++;
 			PlayerScores[NumPlayers] = str_toint(*argv);
 		}
 		else if(str_comp(*argv, "-a") == 0)
 		{
-			argc--; argv++;
+			argc--;
+			argv++;
 			pMap = *argv;
 		}
 		else if(str_comp(*argv, "-x") == 0)
 		{
-			argc--; argv++;
+			argc--;
+			argv++;
 			MaxPlayers = str_toint(*argv);
 		}
 		else if(str_comp(*argv, "-t") == 0)
 		{
-			argc--; argv++;
+			argc--;
+			argv++;
 			GameType = str_toint(*argv);
 		}
 		else if(str_comp(*argv, "-g") == 0)
 		{
-			argc--; argv++;
+			argc--;
+			argv++;
 			Progression = str_toint(*argv);
 		}
 		else if(str_comp(*argv, "-f") == 0)
 		{
-			argc--; argv++;
+			argc--;
+			argv++;
 			Flags = str_toint(*argv);
 		}
 		else if(str_comp(*argv, "-n") == 0)
 		{
-			argc--; argv++;
+			argc--;
+			argv++;
 			pServerName = *argv;
 		}
 
-		argc--; argv++;
+		argc--;
+		argv++;
 	}
 
 	if(secure_random_init() != 0)
@@ -219,4 +229,3 @@ int main(int argc, const char **argv)
 	cmdline_free(argc, argv);
 	return RunReturn;
 }
-

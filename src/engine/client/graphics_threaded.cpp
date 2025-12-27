@@ -9,11 +9,11 @@
 
 #include <pnglite.h>
 
-#include <engine/shared/config.h>
-#include <engine/graphics.h>
-#include <engine/storage.h>
-#include <engine/keys.h>
 #include <engine/console.h>
+#include <engine/graphics.h>
+#include <engine/keys.h>
+#include <engine/shared/config.h>
+#include <engine/storage.h>
 
 #include <math.h> // cosf, sinf
 
@@ -21,19 +21,18 @@
 #include "graphics_threaded_null.h"
 
 static CVideoMode g_aFakeModes[] = {
-	{320,200}, {320,240}, {400,300},
-	{512,384}, {640,400}, {640,480},
-	{720,400}, {768,576}, {800,600},
-	{1024,600}, {1024,768}, {1152,864},
-	{1280,600}, {1280,720}, {1280,768},
-	{1280,800}, {1280,960}, {1280,1024},
-	{1360,768}, {1366,768}, {1368,768},
-	{1400,1050}, {1440,900}, {1440,1050},
-	{1600,900}, {1600,1000}, {1600,1200},
-	{1680,1050}, {1792,1344}, {1800,1440},
-	{1856,1392}, {1920,1080}, {1920,1200},
-	{1920,1440}, {1920,2400}, {2048,1536}
-};
+	{320, 200}, {320, 240}, {400, 300},
+	{512, 384}, {640, 400}, {640, 480},
+	{720, 400}, {768, 576}, {800, 600},
+	{1024, 600}, {1024, 768}, {1152, 864},
+	{1280, 600}, {1280, 720}, {1280, 768},
+	{1280, 800}, {1280, 960}, {1280, 1024},
+	{1360, 768}, {1366, 768}, {1368, 768},
+	{1400, 1050}, {1440, 900}, {1440, 1050},
+	{1600, 900}, {1600, 1000}, {1600, 1200},
+	{1680, 1050}, {1792, 1344}, {1800, 1440},
+	{1856, 1392}, {1920, 1080}, {1920, 1200},
+	{1920, 1440}, {1920, 2400}, {2048, 1536}};
 
 void CGraphics_Threaded::FlushVertices()
 {
@@ -49,23 +48,23 @@ void CGraphics_Threaded::FlushVertices()
 	if(m_Drawing == DRAWING_QUADS)
 	{
 		Cmd.m_PrimType = CCommandBuffer::PRIMTYPE_QUADS;
-		Cmd.m_PrimCount = NumVerts/4;
+		Cmd.m_PrimCount = NumVerts / 4;
 	}
 	else if(m_Drawing == DRAWING_LINES)
 	{
 		Cmd.m_PrimType = CCommandBuffer::PRIMTYPE_LINES;
-		Cmd.m_PrimCount = NumVerts/2;
+		Cmd.m_PrimCount = NumVerts / 2;
 	}
 	else
 		return;
 
-	Cmd.m_pVertices = (CCommandBuffer::CVertex *)m_pCommandBuffer->AllocData(sizeof(CCommandBuffer::CVertex)*NumVerts);
+	Cmd.m_pVertices = (CCommandBuffer::CVertex *) m_pCommandBuffer->AllocData(sizeof(CCommandBuffer::CVertex) * NumVerts);
 	if(Cmd.m_pVertices == 0x0)
 	{
 		// kick command buffer and try again
 		KickCommandBuffer();
 
-		Cmd.m_pVertices = (CCommandBuffer::CVertex *)m_pCommandBuffer->AllocData(sizeof(CCommandBuffer::CVertex)*NumVerts);
+		Cmd.m_pVertices = (CCommandBuffer::CVertex *) m_pCommandBuffer->AllocData(sizeof(CCommandBuffer::CVertex) * NumVerts);
 		if(Cmd.m_pVertices == 0x0)
 		{
 			dbg_msg("graphics", "failed to allocate data for vertices");
@@ -79,7 +78,7 @@ void CGraphics_Threaded::FlushVertices()
 		// kick command buffer and try again
 		KickCommandBuffer();
 
-		Cmd.m_pVertices = (CCommandBuffer::CVertex *)m_pCommandBuffer->AllocData(sizeof(CCommandBuffer::CVertex)*NumVerts);
+		Cmd.m_pVertices = (CCommandBuffer::CVertex *) m_pCommandBuffer->AllocData(sizeof(CCommandBuffer::CVertex) * NumVerts);
 		if(Cmd.m_pVertices == 0x0)
 		{
 			dbg_msg("graphics", "failed to allocate data for vertices");
@@ -93,7 +92,7 @@ void CGraphics_Threaded::FlushVertices()
 		}
 	}
 
-	mem_copy(Cmd.m_pVertices, m_aVertices, sizeof(CCommandBuffer::CVertex)*NumVerts);
+	mem_copy(Cmd.m_pVertices, m_aVertices, sizeof(CCommandBuffer::CVertex) * NumVerts);
 }
 
 void CGraphics_Threaded::AddVertices(int Count)
@@ -163,12 +162,12 @@ void CGraphics_Threaded::ClipEnable(int x, int y, int w, int h)
 
 	x = clamp(x, 0, ScreenWidth());
 	y = clamp(y, 0, ScreenHeight());
-	w = clamp(w, 0, ScreenWidth()-x);
-	h = clamp(h, 0, ScreenHeight()-y);
+	w = clamp(w, 0, ScreenWidth() - x);
+	h = clamp(h, 0, ScreenHeight() - y);
 
 	m_State.m_ClipEnable = true;
 	m_State.m_ClipX = x;
-	m_State.m_ClipY = ScreenHeight()-(y+h);
+	m_State.m_ClipY = ScreenHeight() - (y + h);
 	m_State.m_ClipW = w;
 	m_State.m_ClipH = h;
 }
@@ -236,7 +235,7 @@ void CGraphics_Threaded::LinesBegin()
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->LinesBegin twice");
 	m_Drawing = DRAWING_LINES;
-	SetColor(1,1,1,1);
+	SetColor(1, 1, 1, 1);
 }
 
 void CGraphics_Threaded::LinesEnd()
@@ -252,18 +251,18 @@ void CGraphics_Threaded::LinesDraw(const CLineItem *pArray, int Num)
 
 	for(int i = 0; i < Num; ++i)
 	{
-		m_aVertices[m_NumVertices + 2*i].m_Pos.x = pArray[i].m_X0;
-		m_aVertices[m_NumVertices + 2*i].m_Pos.y = pArray[i].m_Y0;
-		m_aVertices[m_NumVertices + 2*i].m_Tex = m_aTexture[0];
-		m_aVertices[m_NumVertices + 2*i].m_Color = m_aColor[0];
+		m_aVertices[m_NumVertices + 2 * i].m_Pos.x = pArray[i].m_X0;
+		m_aVertices[m_NumVertices + 2 * i].m_Pos.y = pArray[i].m_Y0;
+		m_aVertices[m_NumVertices + 2 * i].m_Tex = m_aTexture[0];
+		m_aVertices[m_NumVertices + 2 * i].m_Color = m_aColor[0];
 
-		m_aVertices[m_NumVertices + 2*i + 1].m_Pos.x = pArray[i].m_X1;
-		m_aVertices[m_NumVertices + 2*i + 1].m_Pos.y = pArray[i].m_Y1;
-		m_aVertices[m_NumVertices + 2*i + 1].m_Tex = m_aTexture[1];
-		m_aVertices[m_NumVertices + 2*i + 1].m_Color = m_aColor[1];
+		m_aVertices[m_NumVertices + 2 * i + 1].m_Pos.x = pArray[i].m_X1;
+		m_aVertices[m_NumVertices + 2 * i + 1].m_Pos.y = pArray[i].m_Y1;
+		m_aVertices[m_NumVertices + 2 * i + 1].m_Tex = m_aTexture[1];
+		m_aVertices[m_NumVertices + 2 * i + 1].m_Color = m_aColor[1];
 	}
 
-	AddVertices(2*Num);
+	AddVertices(2 * Num);
 }
 
 int CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
@@ -287,9 +286,12 @@ int CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
 
 static int ImageFormatToTexFormat(int Format)
 {
-	if(Format == CImageInfo::FORMAT_RGB) return CCommandBuffer::TEXFORMAT_RGB;
-	if(Format == CImageInfo::FORMAT_RGBA) return CCommandBuffer::TEXFORMAT_RGBA;
-	if(Format == CImageInfo::FORMAT_ALPHA) return CCommandBuffer::TEXFORMAT_ALPHA;
+	if(Format == CImageInfo::FORMAT_RGB)
+		return CCommandBuffer::TEXFORMAT_RGB;
+	if(Format == CImageInfo::FORMAT_RGBA)
+		return CCommandBuffer::TEXFORMAT_RGBA;
+	if(Format == CImageInfo::FORMAT_ALPHA)
+		return CCommandBuffer::TEXFORMAT_ALPHA;
 	return CCommandBuffer::TEXFORMAT_RGBA;
 }
 
@@ -340,32 +342,29 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 	Cmd.m_Format = ImageFormatToTexFormat(Format);
 	Cmd.m_StoreFormat = ImageFormatToTexFormat(StoreFormat);
 
-
 	// flags
 	Cmd.m_Flags = CCommandBuffer::TEXFLAG_TEXTURE2D;
-	if(Flags&IGraphics::TEXLOAD_NOMIPMAPS)
+	if(Flags & IGraphics::TEXLOAD_NOMIPMAPS)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_NOMIPMAPS;
 	if(m_pConfig->m_GfxTextureCompression)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_COMPRESSED;
-	if(m_pConfig->m_GfxTextureQuality || Flags&TEXLOAD_NORESAMPLE)
+	if(m_pConfig->m_GfxTextureQuality || Flags & TEXLOAD_NORESAMPLE)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_QUALITY;
-	if(Flags&IGraphics::TEXLOAD_ARRAY_256)
+	if(Flags & IGraphics::TEXLOAD_ARRAY_256)
 	{
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE3D;
 		Cmd.m_Flags &= ~CCommandBuffer::TEXFLAG_TEXTURE2D;
 	}
-	if(Flags&IGraphics::TEXLOAD_MULTI_DIMENSION)
+	if(Flags & IGraphics::TEXLOAD_MULTI_DIMENSION)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE3D;
-	if(Flags&IGraphics::TEXLOAD_LINEARMIPMAPS)
+	if(Flags & IGraphics::TEXLOAD_LINEARMIPMAPS)
 		Cmd.m_Flags |= CCommandBuffer::TEXTFLAG_LINEARMIPMAPS;
 
-
 	// copy texture data
-	int MemSize = Width*Height*Cmd.m_PixelSize;
+	int MemSize = Width * Height * Cmd.m_PixelSize;
 	void *pTmpData = mem_alloc(MemSize);
 	mem_copy(pTmpData, pData, MemSize);
 	Cmd.m_pData = pTmpData;
-
 
 	//
 	m_pCommandBuffer->AddCommand(Cmd);
@@ -384,7 +383,7 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename,
 		return CTextureHandle();
 	if(LoadPNG(&Img, pFilename, StorageType))
 	{
-		if (StoreFormat == CImageInfo::FORMAT_AUTO)
+		if(StoreFormat == CImageInfo::FORMAT_AUTO)
 			StoreFormat = Img.m_Format;
 
 		ID = LoadTextureRaw(Img.m_Width, Img.m_Height, Img.m_Format, Img.m_pData, StoreFormat, Flags);
@@ -418,7 +417,7 @@ int CGraphics_Threaded::LoadPNG(CImageInfo *pImg, const char *pFilename, int Sto
 		return 0;
 	}
 
-	if(Png.depth != 8 || Png.width > (2<<12) || Png.height > (2<<12))
+	if(Png.depth != 8 || Png.width > (2 << 12) || Png.height > (2 << 12))
 	{
 		dbg_msg("game/png", "invalid format. filename='%s'", aCompleteFilename);
 		io_close(File);
@@ -436,7 +435,7 @@ int CGraphics_Threaded::LoadPNG(CImageInfo *pImg, const char *pFilename, int Sto
 		return 0;
 	}
 
-	unsigned char *pBuffer = (unsigned char *)mem_alloc(Png.width * Png.height * Png.bpp);
+	unsigned char *pBuffer = (unsigned char *) mem_alloc(Png.width * Png.height * Png.bpp);
 	png_get_data(&Png, pBuffer);
 	io_close(File);
 
@@ -464,8 +463,10 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename)
 
 	CCommandBuffer::CScreenshotCommand Cmd;
 	Cmd.m_pImage = &Image;
-	Cmd.m_X = 0; Cmd.m_Y = 0;
-	Cmd.m_W = -1; Cmd.m_H = -1;
+	Cmd.m_X = 0;
+	Cmd.m_Y = 0;
+	Cmd.m_W = -1;
+	Cmd.m_H = -1;
 	m_pCommandBuffer->AddCommand(Cmd);
 
 	// kick the buffer and wait for the result
@@ -476,14 +477,14 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename)
 	{
 		// find filename
 		char aWholePath[IO_MAX_PATH_LENGTH];
-		char aBuf[IO_MAX_PATH_LENGTH+32];
+		char aBuf[IO_MAX_PATH_LENGTH + 32];
 		IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath));
 		if(File)
 		{
 			// save png
 			png_t Png;
 			png_open_write(&Png, 0, File);
-			png_set_data(&Png, Image.m_Width, Image.m_Height, 8, PNG_TRUECOLOR, (unsigned char *)Image.m_pData);
+			png_set_data(&Png, Image.m_Width, Image.m_Height, 8, PNG_TRUECOLOR, (unsigned char *) Image.m_pData);
 			io_close(File);
 			str_format(aBuf, sizeof(aBuf), "saved screenshot to '%s'", aWholePath);
 		}
@@ -518,9 +519,9 @@ void CGraphics_Threaded::QuadsBegin()
 	dbg_assert(m_Drawing == 0, "called Graphics()->QuadsBegin twice");
 	m_Drawing = DRAWING_QUADS;
 
-	QuadsSetSubset(0,0,1,1,-1);
+	QuadsSetSubset(0, 0, 1, 1, -1);
 	QuadsSetRotation(0);
-	SetColor(1,1,1,1);
+	SetColor(1, 1, 1, 1);
 	m_TextureArrayIndex = m_pBackend->GetTextureArraySize() > 1 ? -1 : 0;
 }
 
@@ -595,13 +596,17 @@ void CGraphics_Threaded::QuadsSetSubset(float TlU, float TlV, float BrU, float B
 
 	m_State.m_TextureArrayIndex = m_TextureArrayIndex;
 
-	m_aTexture[0].u = TlU;	m_aTexture[1].u = BrU;
-	m_aTexture[0].v = TlV;	m_aTexture[1].v = TlV;
+	m_aTexture[0].u = TlU;
+	m_aTexture[1].u = BrU;
+	m_aTexture[0].v = TlV;
+	m_aTexture[1].v = TlV;
 
-	m_aTexture[3].u = TlU;	m_aTexture[2].u = BrU;
-	m_aTexture[3].v = BrV;	m_aTexture[2].v = BrV;
+	m_aTexture[3].u = TlU;
+	m_aTexture[2].u = BrU;
+	m_aTexture[3].v = BrV;
+	m_aTexture[2].v = BrV;
 
-	m_aTexture[0].i = m_aTexture[1].i = m_aTexture[2].i = m_aTexture[3].i = (0.5f + TextureIndex) / (256.0f/m_pBackend->GetTextureArraySize());
+	m_aTexture[0].i = m_aTexture[1].i = m_aTexture[2].i = m_aTexture[3].i = (0.5f + TextureIndex) / (256.0f / m_pBackend->GetTextureArraySize());
 	m_State.m_Dimension = (TextureIndex < 0) ? 2 : 3;
 }
 
@@ -615,12 +620,16 @@ void CGraphics_Threaded::QuadsSetSubsetFree(
 
 	m_State.m_TextureArrayIndex = m_TextureArrayIndex;
 
-	m_aTexture[0].u = x0; m_aTexture[0].v = y0;
-	m_aTexture[1].u = x1; m_aTexture[1].v = y1;
-	m_aTexture[2].u = x2; m_aTexture[2].v = y2;
-	m_aTexture[3].u = x3; m_aTexture[3].v = y3;
+	m_aTexture[0].u = x0;
+	m_aTexture[0].v = y0;
+	m_aTexture[1].u = x1;
+	m_aTexture[1].v = y1;
+	m_aTexture[2].u = x2;
+	m_aTexture[2].v = y2;
+	m_aTexture[3].u = x3;
+	m_aTexture[3].v = y3;
 
-	m_aTexture[0].i = m_aTexture[1].i = m_aTexture[2].i = m_aTexture[3].i = (0.5f + TextureIndex) / (256.0f/m_pBackend->GetTextureArraySize());
+	m_aTexture[0].i = m_aTexture[1].i = m_aTexture[2].i = m_aTexture[3].i = (0.5f + TextureIndex) / (256.0f / m_pBackend->GetTextureArraySize());
 	m_State.m_Dimension = (TextureIndex < 0) ? 2 : 3;
 }
 
@@ -628,8 +637,8 @@ void CGraphics_Threaded::QuadsDraw(CQuadItem *pArray, int Num)
 {
 	for(int i = 0; i < Num; ++i)
 	{
-		pArray[i].m_X -= pArray[i].m_Width/2;
-		pArray[i].m_Y -= pArray[i].m_Height/2;
+		pArray[i].m_X -= pArray[i].m_Width / 2;
+		pArray[i].m_Y -= pArray[i].m_Height / 2;
 	}
 
 	QuadsDrawTL(pArray, Num);
@@ -643,36 +652,36 @@ void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 
 	for(int i = 0; i < Num; ++i)
 	{
-		m_aVertices[m_NumVertices + 4*i].m_Pos.x = pArray[i].m_X;
-		m_aVertices[m_NumVertices + 4*i].m_Pos.y = pArray[i].m_Y;
-		m_aVertices[m_NumVertices + 4*i].m_Tex = m_aTexture[0];
-		m_aVertices[m_NumVertices + 4*i].m_Color = m_aColor[0];
+		m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pArray[i].m_X;
+		m_aVertices[m_NumVertices + 4 * i].m_Pos.y = pArray[i].m_Y;
+		m_aVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
+		m_aVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
 
-		m_aVertices[m_NumVertices + 4*i + 1].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
-		m_aVertices[m_NumVertices + 4*i + 1].m_Pos.y = pArray[i].m_Y;
-		m_aVertices[m_NumVertices + 4*i + 1].m_Tex = m_aTexture[1];
-		m_aVertices[m_NumVertices + 4*i + 1].m_Color = m_aColor[1];
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pArray[i].m_Y;
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
 
-		m_aVertices[m_NumVertices + 4*i + 2].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
-		m_aVertices[m_NumVertices + 4*i + 2].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
-		m_aVertices[m_NumVertices + 4*i + 2].m_Tex = m_aTexture[2];
-		m_aVertices[m_NumVertices + 4*i + 2].m_Color = m_aColor[2];
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[2];
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[2];
 
-		m_aVertices[m_NumVertices + 4*i + 3].m_Pos.x = pArray[i].m_X;
-		m_aVertices[m_NumVertices + 4*i + 3].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
-		m_aVertices[m_NumVertices + 4*i + 3].m_Tex = m_aTexture[3];
-		m_aVertices[m_NumVertices + 4*i + 3].m_Color = m_aColor[3];
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pArray[i].m_X;
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[3];
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[3];
 
 		if(m_Rotation != 0)
 		{
-			Center.x = pArray[i].m_X + pArray[i].m_Width/2;
-			Center.y = pArray[i].m_Y + pArray[i].m_Height/2;
+			Center.x = pArray[i].m_X + pArray[i].m_Width / 2;
+			Center.y = pArray[i].m_Y + pArray[i].m_Height / 2;
 
-			Rotate4(Center, &m_aVertices[m_NumVertices + 4*i]);
+			Rotate4(Center, &m_aVertices[m_NumVertices + 4 * i]);
 		}
 	}
 
-	AddVertices(4*Num);
+	AddVertices(4 * Num);
 }
 
 void CGraphics_Threaded::QuadsDrawFreeform(const CFreeformItem *pArray, int Num)
@@ -681,28 +690,28 @@ void CGraphics_Threaded::QuadsDrawFreeform(const CFreeformItem *pArray, int Num)
 
 	for(int i = 0; i < Num; ++i)
 	{
-		m_aVertices[m_NumVertices + 4*i].m_Pos.x = pArray[i].m_X0;
-		m_aVertices[m_NumVertices + 4*i].m_Pos.y = pArray[i].m_Y0;
-		m_aVertices[m_NumVertices + 4*i].m_Tex = m_aTexture[0];
-		m_aVertices[m_NumVertices + 4*i].m_Color = m_aColor[0];
+		m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pArray[i].m_X0;
+		m_aVertices[m_NumVertices + 4 * i].m_Pos.y = pArray[i].m_Y0;
+		m_aVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
+		m_aVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
 
-		m_aVertices[m_NumVertices + 4*i + 1].m_Pos.x = pArray[i].m_X1;
-		m_aVertices[m_NumVertices + 4*i + 1].m_Pos.y = pArray[i].m_Y1;
-		m_aVertices[m_NumVertices + 4*i + 1].m_Tex = m_aTexture[1];
-		m_aVertices[m_NumVertices + 4*i + 1].m_Color = m_aColor[1];
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pArray[i].m_X1;
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pArray[i].m_Y1;
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
+		m_aVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
 
-		m_aVertices[m_NumVertices + 4*i + 2].m_Pos.x = pArray[i].m_X3;
-		m_aVertices[m_NumVertices + 4*i + 2].m_Pos.y = pArray[i].m_Y3;
-		m_aVertices[m_NumVertices + 4*i + 2].m_Tex = m_aTexture[3];
-		m_aVertices[m_NumVertices + 4*i + 2].m_Color = m_aColor[3];
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pArray[i].m_X3;
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pArray[i].m_Y3;
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[3];
+		m_aVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[3];
 
-		m_aVertices[m_NumVertices + 4*i + 3].m_Pos.x = pArray[i].m_X2;
-		m_aVertices[m_NumVertices + 4*i + 3].m_Pos.y = pArray[i].m_Y2;
-		m_aVertices[m_NumVertices + 4*i + 3].m_Tex = m_aTexture[2];
-		m_aVertices[m_NumVertices + 4*i + 3].m_Color = m_aColor[2];
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pArray[i].m_X2;
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pArray[i].m_Y2;
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[2];
+		m_aVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[2];
 	}
 
-	AddVertices(4*Num);
+	AddVertices(4 * Num);
 }
 
 void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pText)
@@ -722,14 +731,14 @@ void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pTe
 		else
 		{
 			QuadsSetSubset(
-				(c%16)/16.0f,
-				(c/16)/16.0f,
-				(c%16)/16.0f+1.0f/16.0f,
-				(c/16)/16.0f+1.0f/16.0f);
+				(c % 16) / 16.0f,
+				(c / 16) / 16.0f,
+				(c % 16) / 16.0f + 1.0f / 16.0f,
+				(c / 16) / 16.0f + 1.0f / 16.0f);
 
 			CQuadItem QuadItem(x, y, Size, Size);
 			QuadsDrawTL(&QuadItem, 1);
-			x += Size/2;
+			x += Size / 2;
 		}
 	}
 }
@@ -737,16 +746,22 @@ void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pTe
 int CGraphics_Threaded::IssueInit()
 {
 	int Flags = 0;
-	if(m_pConfig->m_GfxBorderless) Flags |= IGraphicsBackend::INITFLAG_BORDERLESS;
-	if(m_pConfig->m_GfxFullscreen) Flags |= IGraphicsBackend::INITFLAG_FULLSCREEN;
-	if(m_pConfig->m_GfxVsync) Flags |= IGraphicsBackend::INITFLAG_VSYNC;
-	if(m_pConfig->m_GfxHighdpi) Flags |= IGraphicsBackend::INITFLAG_HIGHDPI;
-	if(m_pConfig->m_DbgResizable) Flags |= IGraphicsBackend::INITFLAG_RESIZABLE;
-	if(m_pConfig->m_GfxUseX11XRandRWM) Flags |= IGraphicsBackend::INITFLAG_X11XRANDR;
+	if(m_pConfig->m_GfxBorderless)
+		Flags |= IGraphicsBackend::INITFLAG_BORDERLESS;
+	if(m_pConfig->m_GfxFullscreen)
+		Flags |= IGraphicsBackend::INITFLAG_FULLSCREEN;
+	if(m_pConfig->m_GfxVsync)
+		Flags |= IGraphicsBackend::INITFLAG_VSYNC;
+	if(m_pConfig->m_GfxHighdpi)
+		Flags |= IGraphicsBackend::INITFLAG_HIGHDPI;
+	if(m_pConfig->m_DbgResizable)
+		Flags |= IGraphicsBackend::INITFLAG_RESIZABLE;
+	if(m_pConfig->m_GfxUseX11XRandRWM)
+		Flags |= IGraphicsBackend::INITFLAG_X11XRANDR;
 
 	return m_pBackend->Init("Teeworlds", &m_pConfig->m_GfxScreen, &m_pConfig->m_GfxScreenWidth,
-			&m_pConfig->m_GfxScreenHeight, &m_ScreenWidth, &m_ScreenHeight, m_pConfig->m_GfxFsaaSamples,
-			Flags, &m_DesktopScreenWidth, &m_DesktopScreenHeight);
+		&m_pConfig->m_GfxScreenHeight, &m_ScreenWidth, &m_ScreenHeight, m_pConfig->m_GfxFsaaSamples,
+		Flags, &m_DesktopScreenWidth, &m_DesktopScreenHeight);
 }
 
 int CGraphics_Threaded::InitWindow()
@@ -793,23 +808,23 @@ int CGraphics_Threaded::Init()
 
 	// init textures
 	m_FirstFreeTexture = 0;
-	for(int i = 0; i < MAX_TEXTURES-1; i++)
-		m_aTextureIndices[i] = i+1;
-	m_aTextureIndices[MAX_TEXTURES-1] = -1;
+	for(int i = 0; i < MAX_TEXTURES - 1; i++)
+		m_aTextureIndices[i] = i + 1;
+	m_aTextureIndices[MAX_TEXTURES - 1] = -1;
 
 	m_pBackend = CreateGraphicsBackend();
 	if(InitWindow() != 0)
 		return -1;
 
-	m_ScreenHiDPIScale = m_ScreenWidth / (float)m_pConfig->m_GfxScreenWidth;
+	m_ScreenHiDPIScale = m_ScreenWidth / (float) m_pConfig->m_GfxScreenWidth;
 
 	// create command buffers
 	for(int i = 0; i < NUM_CMDBUFFERS; i++)
-		m_apCommandBuffers[i] = new CCommandBuffer(128*1024, 2*1024*1024);
+		m_apCommandBuffers[i] = new CCommandBuffer(128 * 1024, 2 * 1024 * 1024);
 	m_pCommandBuffer = m_apCommandBuffers[0];
 
 	// create null texture, will get id=0
-	unsigned char aNullTextureData[4*32*32];
+	unsigned char aNullTextureData[4 * 32 * 32];
 	for(int x = 0; x < 32; ++x)
 		for(int y = 0; y < 32; ++y)
 		{
@@ -817,36 +832,36 @@ int CGraphics_Threaded::Init()
 			{
 				if(y < 16)
 				{
-					aNullTextureData[4*(y*32+x)+0] = y*8+x*8+15;
-					aNullTextureData[4*(y*32+x)+1] = 0;
-					aNullTextureData[4*(y*32+x)+2] = 0;
+					aNullTextureData[4 * (y * 32 + x) + 0] = y * 8 + x * 8 + 15;
+					aNullTextureData[4 * (y * 32 + x) + 1] = 0;
+					aNullTextureData[4 * (y * 32 + x) + 2] = 0;
 				}
 				else
 				{
-					aNullTextureData[4*(y*32+x)+0] = 0;
-					aNullTextureData[4*(y*32+x)+1] = y*8+x*8-113;
-					aNullTextureData[4*(y*32+x)+2] = 0;
+					aNullTextureData[4 * (y * 32 + x) + 0] = 0;
+					aNullTextureData[4 * (y * 32 + x) + 1] = y * 8 + x * 8 - 113;
+					aNullTextureData[4 * (y * 32 + x) + 2] = 0;
 				}
 			}
 			else
 			{
 				if(y < 16)
 				{
-					aNullTextureData[4*(y*32+x)+0] = 0;
-					aNullTextureData[4*(y*32+x)+1] = 0;
-					aNullTextureData[4*(y*32+x)+2] = y*8+x*8-113;
+					aNullTextureData[4 * (y * 32 + x) + 0] = 0;
+					aNullTextureData[4 * (y * 32 + x) + 1] = 0;
+					aNullTextureData[4 * (y * 32 + x) + 2] = y * 8 + x * 8 - 113;
 				}
 				else
 				{
-					aNullTextureData[4*(y*32+x)+0] = y*8+x*8-496;
-					aNullTextureData[4*(y*32+x)+1] = y*8+x*8-496;
-					aNullTextureData[4*(y*32+x)+2] = 0;
+					aNullTextureData[4 * (y * 32 + x) + 0] = y * 8 + x * 8 - 496;
+					aNullTextureData[4 * (y * 32 + x) + 1] = y * 8 + x * 8 - 496;
+					aNullTextureData[4 * (y * 32 + x) + 2] = 0;
 				}
 			}
-			aNullTextureData[4*(y*32+x)+3] = 255;
+			aNullTextureData[4 * (y * 32 + x) + 3] = 255;
 		}
 
-	m_InvalidTexture = LoadTextureRaw(32,32,CImageInfo::FORMAT_RGBA,aNullTextureData,CImageInfo::FORMAT_RGBA,TEXLOAD_NORESAMPLE|TEXLOAD_MULTI_DIMENSION);
+	m_InvalidTexture = LoadTextureRaw(32, 32, CImageInfo::FORMAT_RGBA, aNullTextureData, CImageInfo::FORMAT_RGBA, TEXLOAD_NORESAMPLE | TEXLOAD_MULTI_DIMENSION);
 	return 0;
 }
 
@@ -911,7 +926,6 @@ int CGraphics_Threaded::WindowActive()
 int CGraphics_Threaded::WindowOpen()
 {
 	return m_pBackend->WindowOpen();
-
 }
 
 void CGraphics_Threaded::ReadBackbuffer(unsigned char **ppPixels, int x, int y, int w, int h)
@@ -925,15 +939,17 @@ void CGraphics_Threaded::ReadBackbuffer(unsigned char **ppPixels, int x, int y, 
 
 	CCommandBuffer::CScreenshotCommand Cmd;
 	Cmd.m_pImage = &Image;
-	Cmd.m_X = x; Cmd.m_Y = y;
-	Cmd.m_W = w; Cmd.m_H = h;
+	Cmd.m_X = x;
+	Cmd.m_Y = y;
+	Cmd.m_W = w;
+	Cmd.m_H = h;
 	m_pCommandBuffer->AddCommand(Cmd);
 
 	// kick the buffer and wait for the result
 	KickCommandBuffer();
 	WaitForIdle();
 
-	*ppPixels = (unsigned char *)Image.m_pData; // take ownership!
+	*ppPixels = (unsigned char *) Image.m_pData; // take ownership!
 }
 
 void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
@@ -941,7 +957,7 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
 	// TODO: screenshot support
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
-	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename?pFilename:"screenshot", aDate);
+	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
 	m_DoScreenshot = true;
 }
 
@@ -1001,7 +1017,7 @@ int CGraphics_Threaded::GetVideoModes(CVideoMode *pModes, int MaxModes, int Scre
 {
 	if(m_pConfig->m_GfxDisplayAllModes)
 	{
-		int Count = minimum((int)(sizeof(g_aFakeModes)/sizeof(CVideoMode)), MaxModes);
+		int Count = minimum((int) (sizeof(g_aFakeModes) / sizeof(CVideoMode)), MaxModes);
 		mem_copy(pModes, g_aFakeModes, sizeof(CVideoMode) * Count);
 		return Count;
 	}

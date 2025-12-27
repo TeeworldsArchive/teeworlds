@@ -7,9 +7,9 @@
 #include <limits.h>
 
 #if defined(CONF_FAMILY_WINDOWS)
-	#define LINE_ENDING "\r\n"
+#define LINE_ENDING "\r\n"
 #else
-	#define LINE_ENDING "\n"
+#define LINE_ENDING "\n"
 #endif
 
 TEST(JsonParser, EmptyObject)
@@ -38,8 +38,7 @@ TEST(JsonParser, SpecialCharacters)
 		"\t\"\\u0001\\\"'\\r\\n\\t\": [" LINE_ENDING
 		"\t\t\" \\\"'abc\\u0001\\n\"" LINE_ENDING
 		"\t]" LINE_ENDING
-		"}" LINE_ENDING
-	);
+		"}" LINE_ENDING);
 	ASSERT_TRUE(pParsed);
 	ASSERT_EQ(pParsed->type, json_object);
 	ASSERT_EQ(pParsed->u.object.length, 1);

@@ -3,7 +3,7 @@
 #ifndef ENGINE_KEYS_H
 #define ENGINE_KEYS_H
 #if defined(CONF_FAMILY_WINDOWS)
-   #undef KEY_EXECUTE
+#undef KEY_EXECUTE
 #endif
 
 enum
@@ -324,8 +324,8 @@ enum
 	NUM_JOYSTICK_HATS = NUM_JOYSTICK_HAT_BUTTONS / NUM_JOYSTICK_BUTTONS_PER_HAT,
 };
 
-inline int KeyToKeycode(int Key) { return (Key>=0x80) ? (Key-0x80)|(1<<30) : Key; }
-inline int KeycodeToKey(int Keycode) { return (Keycode&(1<<30)) ? Keycode-(1<<30)+0x80 : Keycode; }
+inline int KeyToKeycode(int Key) { return (Key >= 0x80) ? (Key - 0x80) | (1 << 30) : Key; }
+inline int KeycodeToKey(int Keycode) { return (Keycode & (1 << 30)) ? Keycode - (1 << 30) + 0x80 : Keycode; }
 
 inline int DigitToNumberKey(int Digit)
 {

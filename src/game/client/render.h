@@ -3,10 +3,10 @@
 #ifndef GAME_CLIENT_RENDER_H
 #define GAME_CLIENT_RENDER_H
 
-#include <engine/graphics.h>
 #include <base/vmath.h>
-#include <generated/protocol.h>
+#include <engine/graphics.h>
 #include <game/mapitems.h>
+#include <generated/protocol.h>
 
 // sprite renderings
 enum
@@ -26,7 +26,7 @@ public:
 	CTeeRenderInfo()
 	{
 		for(int i = 0; i < NUM_SKINPARTS; i++)
-			m_aColors[i] = vec4(1,1,1,1);
+			m_aColors[i] = vec4(1, 1, 1, 1);
 		m_Size = 1.0f;
 		m_GotAirJump = 1;
 	};

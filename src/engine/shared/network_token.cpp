@@ -35,15 +35,13 @@ void CNetTokenManager::Update()
 int CNetTokenManager::ProcessMessage(const NETADDR *pAddr, const CNetPacketConstruct *pPacket)
 {
 	bool BroadcastResponse = false;
-	if(pPacket->m_Token != NET_TOKEN_NONE
-		&& !CheckToken(pAddr, pPacket->m_Token, pPacket->m_ResponseToken, &BroadcastResponse))
+	if(pPacket->m_Token != NET_TOKEN_NONE && !CheckToken(pAddr, pPacket->m_Token, pPacket->m_ResponseToken, &BroadcastResponse))
 		return 0; // wrong token, silent ignore
 
 	bool Verified = pPacket->m_Token != NET_TOKEN_NONE;
-	bool TokenMessage = (pPacket->m_Flags & NET_PACKETFLAG_CONTROL)
-		&& pPacket->m_aChunkData[0] == NET_CTRLMSG_TOKEN;
+	bool TokenMessage = (pPacket->m_Flags & NET_PACKETFLAG_CONTROL) && pPacket->m_aChunkData[0] == NET_CTRLMSG_TOKEN;
 
-	if(pPacket->m_Flags&NET_PACKETFLAG_CONNLESS)
+	if(pPacket->m_Flags & NET_PACKETFLAG_CONNLESS)
 		return (Verified && !BroadcastResponse) ? 1 : 0; // connless packets without token are not allowed
 
 	if(!TokenMessage)
@@ -62,14 +60,14 @@ int CNetTokenManager::ProcessMessage(const NETADDR *pAddr, const CNetPacketConst
 	// client requesting token
 	if(pPacket->m_DataSize >= NET_TOKENREQUEST_DATASIZE)
 	{
-		m_pNetBase->SendControlMsgWithToken((NETADDR *)pAddr, pPacket->m_ResponseToken, 0, NET_CTRLMSG_TOKEN, GenerateToken(pAddr), false);
+		m_pNetBase->SendControlMsgWithToken((NETADDR *) pAddr, pPacket->m_ResponseToken, 0, NET_CTRLMSG_TOKEN, GenerateToken(pAddr), false);
 	}
 	return 0; // no need to process NET_CTRLMSG_TOKEN further
 }
 
 void CNetTokenManager::GenerateSeed()
 {
-	static const NETADDR NullAddr = { 0 };
+	static const NETADDR NullAddr = {0};
 	m_PrevSeed = m_Seed;
 
 	secure_random_fill(&m_Seed, sizeof(m_Seed));
@@ -87,7 +85,7 @@ TOKEN CNetTokenManager::GenerateToken(const NETADDR *pAddr) const
 
 TOKEN CNetTokenManager::GenerateToken(const NETADDR *pAddr, int64 Seed)
 {
-	static const NETADDR NullAddr = { 0 };
+	static const NETADDR NullAddr = {0};
 	NETADDR Addr;
 	char aBuf[sizeof(NETADDR) + sizeof(int64)];
 	unsigned int Result;
@@ -134,7 +132,6 @@ bool CNetTokenManager::CheckToken(const NETADDR *pAddr, TOKEN Token, TOKEN Respo
 
 	return false;
 }
-
 
 CNetTokenCache::CNetTokenCache()
 {
@@ -261,9 +258,9 @@ void CNetTokenCache::AddToken(const NETADDR *pAddr, TOKEN Token, int TokenFLag)
 	bool Found = false;
 	while(pInfo)
 	{
-		NETADDR NullAddr = { 0 };
-		NullAddr.type = 7;	// cover broadcasts
-		if(net_addr_comp(&pInfo->m_Addr, pAddr, true) == 0 || ((TokenFLag&NET_TOKENFLAG_ALLOWBROADCAST) && net_addr_comp(&pInfo->m_Addr, &NullAddr, false) == 0 && pInfo->m_Addr.port == pAddr->port))
+		NETADDR NullAddr = {0};
+		NullAddr.type = 7; // cover broadcasts
+		if(net_addr_comp(&pInfo->m_Addr, pAddr, true) == 0 || ((TokenFLag & NET_TOKENFLAG_ALLOWBROADCAST) && net_addr_comp(&pInfo->m_Addr, &NullAddr, false) == 0 && pInfo->m_Addr.port == pAddr->port))
 		{
 			// notify the user that the packet gets delivered
 			if(pInfo->m_pfnCallback)
@@ -288,7 +285,7 @@ void CNetTokenCache::AddToken(const NETADDR *pAddr, TOKEN Token, int TokenFLag)
 	}
 
 	// add the token
-	if(Found || !(TokenFLag&NET_TOKENFLAG_RESPONSEONLY))
+	if(Found || !(TokenFLag & NET_TOKENFLAG_RESPONSEONLY))
 	{
 		CAddressInfo Info;
 		Info.m_Addr = *pAddr;
@@ -308,10 +305,10 @@ void CNetTokenCache::Update()
 		m_TokenCache.PopFirst();
 
 	// try to fetch the token again for stored packets
-	CConnlessPacketInfo * pEntry = m_pConnlessPacketList;
+	CConnlessPacketInfo *pEntry = m_pConnlessPacketList;
 	while(pEntry)
 	{
-		if(pEntry->m_LastTokenRequest + 2*time_freq() <= Now)
+		if(pEntry->m_LastTokenRequest + 2 * time_freq() <= Now)
 		{
 			FetchToken(&pEntry->m_Addr);
 			pEntry->m_LastTokenRequest = Now;
@@ -327,4 +324,3 @@ void CNetTokenCache::Update()
 		m_pConnlessPacketList = pNewList;
 	}
 }
-

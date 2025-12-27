@@ -121,7 +121,12 @@ public:
 	void SetHidden(bool Hidden) { m_Hidden = Hidden; }
 
 	bool ProcessInput(const IInput::CEvent &Event);
-	bool WasChanged() { bool Changed = m_WasChanged; m_WasChanged = false; return Changed; }
+	bool WasChanged()
+	{
+		bool Changed = m_WasChanged;
+		m_WasChanged = false;
+		return Changed;
+	}
 
 	void Render(bool Changed);
 

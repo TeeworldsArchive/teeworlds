@@ -6,9 +6,9 @@
 
 #include <engine/shared/config.h>
 
-#include <game/version.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
+#include <game/version.h>
 
 #include <generated/client_data.h>
 
@@ -19,17 +19,17 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	// render logo
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(1,1,1,1);
-	IGraphics::CQuadItem QuadItem(MainView.w/2-140, 60, 280, 70);
+	Graphics()->SetColor(1, 1, 1, 1);
+	IGraphics::CQuadItem QuadItem(MainView.w / 2 - 140, 60, 280, 70);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
 	Graphics()->QuadsEnd();
 
 	const float Rounding = 10.0f;
 
 	CUIRect TopMenu, BottomMenu;
-	MainView.VMargin(MainView.w/2-190.0f, &TopMenu);
+	MainView.VMargin(MainView.w / 2 - 190.0f, &TopMenu);
 	TopMenu.HSplitTop(365.0f, &TopMenu, &BottomMenu);
-	//TopMenu.HSplitBottom(145.0f, &TopMenu, 0);
+	// TopMenu.HSplitBottom(145.0f, &TopMenu, 0);
 	RenderBackgroundShadow(&TopMenu, false, Rounding);
 
 	TopMenu.HSplitTop(145.0f, 0, &TopMenu);
@@ -41,7 +41,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	static CButtonContainer s_SettingsButton;
 	if(DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &Button, Config()->m_ClShowStartMenuImages ? "settings" : 0, CUIRect::CORNER_ALL, Rounding, 0.5f) || CheckHotKey(KEY_S))
 		NewPage = PAGE_SETTINGS;
-	
+
 	/*TopMenu.HSplitBottom(5.0f, &TopMenu, 0); // little space
 	TopMenu.HSplitBottom(40.0f, &TopMenu, &Bottom);
 	static int s_LocalServerButton = 0;
@@ -90,7 +90,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	static CButtonContainer s_PlayButton;
 	if(DoButton_Menu(&s_PlayButton, Localize("Play"), 0, &Button, Config()->m_ClShowStartMenuImages ? "play_game" : 0, CUIRect::CORNER_ALL, Rounding, 0.5f) || UI()->ConsumeHotkey(CUI::HOTKEY_ENTER) || CheckHotKey(KEY_P))
 		NewPage = Config()->m_UiBrowserPage;
-	
+
 	BottomMenu.HSplitTop(90.0f, 0, &BottomMenu);
 	RenderBackgroundShadow(&BottomMenu, true, Rounding);
 

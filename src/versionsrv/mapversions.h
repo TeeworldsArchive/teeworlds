@@ -3,6 +3,14 @@
 #ifndef VERSIONSRV_MAPVERSIONS_H
 #define VERSIONSRV_MAPVERSIONS_H
 
+struct CMapVersion
+{
+	char m_aName[8];
+	unsigned char m_aCrc[4];
+	unsigned char m_aSize[4];
+	unsigned char m_aSha256[SHA256_DIGEST_LENGTH];
+};
+
 // Map versions for 0.7.x
 static const CMapVersion s_aMapVersionList[] = {
 	/* 0.7.1, 0.7.2, 0.7.3 */

@@ -2,8 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef GAME_CLIENT_COMPONENTS_SKINS_H
 #define GAME_CLIENT_COMPONENTS_SKINS_H
-#include <base/vmath.h>
 #include <base/tl/sorted_array.h>
+#include <base/vmath.h>
 #include <game/client/component.h>
 
 // todo: fix duplicate skins (different paths)
@@ -12,15 +12,15 @@ class CSkins : public CComponent
 public:
 	enum
 	{
-		SKINFLAG_SPECIAL=1<<0,
-		SKINFLAG_STANDARD=1<<1,
+		SKINFLAG_SPECIAL = 1 << 0,
+		SKINFLAG_STANDARD = 1 << 1,
 
-		DARKEST_COLOR_LGT=61,
+		DARKEST_COLOR_LGT = 61,
 
-		NUM_COLOR_COMPONENTS=4,
+		NUM_COLOR_COMPONENTS = 4,
 
-		HAT_NUM=2,
-		HAT_OFFSET_SIDE=2,
+		HAT_NUM = 2,
+		HAT_OFFSET_SIDE = 2,
 	};
 
 	struct CSkinPart
@@ -46,8 +46,8 @@ public:
 		bool operator==(const CSkin &Other) { return mem_comp(this, &Other, sizeof(CSkin)) == 0; }
 	};
 
-	static const char * const ms_apSkinPartNames[NUM_SKINPARTS];
-	static const char * const ms_apColorComponents[NUM_COLOR_COMPONENTS];
+	static const char *const ms_apSkinPartNames[NUM_SKINPARTS];
+	static const char *const ms_apColorComponents[NUM_COLOR_COMPONENTS];
 
 	static char *ms_apSkinVariables[NUM_SKINPARTS];
 	static int *ms_apUCCVariables[NUM_SKINPARTS]; // use custom color

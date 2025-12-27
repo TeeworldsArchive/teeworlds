@@ -38,20 +38,20 @@ void CMapImages::LoadMapImages(IMap *pMap, class CLayers *pLayers, int MapType)
 		bool FoundTileLayer = false;
 		for(int k = 0; k < pLayers->NumLayers(); k++)
 		{
-			const CMapItemLayer * const pLayer = pLayers->GetLayer(k);
-			if(!FoundQuadLayer && pLayer->m_Type == LAYERTYPE_QUADS && ((const CMapItemLayerQuads *)pLayer)->m_Image == i)
+			const CMapItemLayer *const pLayer = pLayers->GetLayer(k);
+			if(!FoundQuadLayer && pLayer->m_Type == LAYERTYPE_QUADS && ((const CMapItemLayerQuads *) pLayer)->m_Image == i)
 				FoundQuadLayer = true;
-			if(!FoundTileLayer && pLayer->m_Type == LAYERTYPE_TILES && ((const CMapItemLayerTilemap *)pLayer)->m_Image == i)
+			if(!FoundTileLayer && pLayer->m_Type == LAYERTYPE_TILES && ((const CMapItemLayerTilemap *) pLayer)->m_Image == i)
 				FoundTileLayer = true;
 		}
 		if(FoundTileLayer)
 			TextureFlags = FoundQuadLayer ? IGraphics::TEXLOAD_MULTI_DIMENSION : IGraphics::TEXLOAD_ARRAY_256;
 
-		CMapItemImage *pImg = (CMapItemImage *)pMap->GetItem(Start+i, 0, 0);
+		CMapItemImage *pImg = (CMapItemImage *) pMap->GetItem(Start + i, 0, 0);
 		if(pImg->m_External || (pImg->m_Version > 1 && pImg->m_MustBe1 != 1))
 		{
 			char Buf[IO_MAX_PATH_LENGTH];
-			char *pName = (char *)pMap->GetData(pImg->m_ImageName);
+			char *pName = (char *) pMap->GetData(pImg->m_ImageName);
 			str_format(Buf, sizeof(Buf), "mapres/%s.png", pName);
 			m_Info[MapType].m_aTextures[i] = Graphics()->LoadTexture(Buf, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, TextureFlags);
 		}

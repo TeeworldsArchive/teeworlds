@@ -40,7 +40,7 @@ Uuid calculate_uuid(const char *name)
 	// Without terminating NUL.
 	md5_update(&Md5, name, str_length(name));
 
-    Digest = md5_finish(&Md5);
+	Digest = md5_finish(&Md5);
 
 	for(unsigned i = 0; i < sizeof(Result.m_aData); i++)
 	{
@@ -69,7 +69,7 @@ void format_uuid(Uuid uuid, char *buffer, int size)
 
 int uuid_comp(Uuid uuid1, Uuid uuid2)
 {
-    return mem_comp(uuid1.m_aData, uuid2.m_aData, sizeof(uuid1.m_aData));
+	return mem_comp(uuid1.m_aData, uuid2.m_aData, sizeof(uuid1.m_aData));
 }
 
 int parse_uuid(Uuid *uuid, const char *buffer)

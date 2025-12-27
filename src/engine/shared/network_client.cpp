@@ -4,12 +4,11 @@
 
 #include "network.h"
 
-
 bool CNetClient::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, int Flags)
 {
 	// open socket
 	NETSOCKET Socket;
-	Socket = net_udp_create(BindAddr, (Flags&NETCREATE_FLAG_RANDOMPORT) ? 1 : 0);
+	Socket = net_udp_create(BindAddr, (Flags & NETCREATE_FLAG_RANDOMPORT) ? 1 : 0);
 	if(!Socket.type)
 		return false;
 
@@ -34,7 +33,6 @@ void CNetClient::Close()
 		m_Connection.Disconnect("Client shutdown");
 	Shutdown();
 }
-
 
 int CNetClient::Disconnect(const char *pReason)
 {
@@ -85,7 +83,7 @@ int CNetClient::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 			{
 				if(m_Connection.Feed(&m_RecvUnpacker.m_Data, &Addr))
 				{
-					if(!(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONNLESS))
+					if(!(m_RecvUnpacker.m_Data.m_Flags & NET_PACKETFLAG_CONNLESS))
 						m_RecvUnpacker.Start(&Addr, &m_Connection, 0);
 				}
 			}
@@ -95,12 +93,12 @@ int CNetClient::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 				if(!Accept)
 					continue;
 
-				if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONTROL)
+				if(m_RecvUnpacker.m_Data.m_Flags & NET_PACKETFLAG_CONTROL)
 				{
 					if(m_RecvUnpacker.m_Data.m_aChunkData[0] == NET_CTRLMSG_TOKEN)
-						m_TokenCache.AddToken(&Addr, m_RecvUnpacker.m_Data.m_ResponseToken, NET_TOKENFLAG_ALLOWBROADCAST|NET_TOKENFLAG_RESPONSEONLY);
+						m_TokenCache.AddToken(&Addr, m_RecvUnpacker.m_Data.m_ResponseToken, NET_TOKENFLAG_ALLOWBROADCAST | NET_TOKENFLAG_RESPONSEONLY);
 				}
-				else if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONNLESS && Accept != -1)
+				else if(m_RecvUnpacker.m_Data.m_Flags & NET_PACKETFLAG_CONNLESS && Accept != -1)
 				{
 					pChunk->m_Flags = NETSENDFLAG_CONNLESS;
 					pChunk->m_ClientID = -1;
@@ -120,7 +118,7 @@ int CNetClient::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 
 int CNetClient::Send(CNetChunk *pChunk, TOKEN Token, CSendCBData *pCallbackData)
 {
-	if(pChunk->m_Flags&NETSENDFLAG_CONNLESS)
+	if(pChunk->m_Flags & NETSENDFLAG_CONNLESS)
 	{
 		if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
 		{
@@ -133,7 +131,6 @@ int CNetClient::Send(CNetChunk *pChunk, TOKEN Token, CSendCBData *pCallbackData)
 			// upgrade the packet, now that we know its recipent
 			pChunk->m_ClientID = 0;
 		}
-
 
 		if(Token != NET_TOKEN_NONE)
 		{
@@ -148,13 +145,13 @@ int CNetClient::Send(CNetChunk *pChunk, TOKEN Token, CSendCBData *pCallbackData)
 			else
 			{
 				dbg_assert(pChunk->m_ClientID == 0, "errornous client id");
-				m_Connection.SendPacketConnless((const char *)pChunk->m_pData, pChunk->m_DataSize);
+				m_Connection.SendPacketConnless((const char *) pChunk->m_pData, pChunk->m_DataSize);
 			}
 		}
 	}
 	else
 	{
-		if(pChunk->m_DataSize+NET_MAX_CHUNKHEADERSIZE >= NET_MAX_PAYLOAD)
+		if(pChunk->m_DataSize + NET_MAX_CHUNKHEADERSIZE >= NET_MAX_PAYLOAD)
 		{
 			dbg_msg("netclient", "chunk payload too big. %d. dropping chunk", pChunk->m_DataSize);
 			return -1;
@@ -163,12 +160,12 @@ int CNetClient::Send(CNetChunk *pChunk, TOKEN Token, CSendCBData *pCallbackData)
 		int Flags = 0;
 		dbg_assert(pChunk->m_ClientID == 0, "errornous client id");
 
-		if(pChunk->m_Flags&NETSENDFLAG_VITAL)
+		if(pChunk->m_Flags & NETSENDFLAG_VITAL)
 			Flags = NET_CHUNKFLAG_VITAL;
 
 		m_Connection.QueueChunk(Flags, pChunk->m_DataSize, pChunk->m_pData);
 
-		if(pChunk->m_Flags&NETSENDFLAG_FLUSH)
+		if(pChunk->m_Flags & NETSENDFLAG_FLUSH)
 			m_Connection.Flush();
 	}
 	return 0;
@@ -202,4 +199,3 @@ const char *CNetClient::ErrorString() const
 {
 	return m_Connection.ErrorString();
 }
-

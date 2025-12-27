@@ -223,7 +223,7 @@ public:
 
 		if(Pos < IO_MAX_PATH_LENGTH)
 		{
-			str_copy(m_aAppDir, pArgv0, Pos+1);
+			str_copy(m_aAppDir, pArgv0, Pos + 1);
 			if(!fs_is_dir(m_aAppDir))
 				m_aAppDir[0] = 0;
 		}
@@ -258,7 +258,7 @@ public:
 				m_aDataDir[0] = 0;
 		}
 
-	#if defined(CONF_FAMILY_UNIX)
+#if defined(CONF_FAMILY_UNIX)
 		// 4) check for all default locations
 		{
 			const char *aDirs[] = {
@@ -268,12 +268,11 @@ public:
 				"/usr/local/share/games/teeworlds/data",
 				"/usr/pkg/share/teeworlds/data",
 				"/usr/pkg/share/games/teeworlds/data",
-				"/opt/teeworlds/data"
-			};
+				"/opt/teeworlds/data"};
 			const int DirsCount = sizeof(aDirs) / sizeof(aDirs[0]);
 
 			int i;
-			for (i = 0; i < DirsCount; i++)
+			for(i = 0; i < DirsCount; i++)
 			{
 				char aBuf[128];
 				str_format(aBuf, sizeof(aBuf), "%s/mapres", aDirs[i]);
@@ -284,7 +283,7 @@ public:
 				}
 			}
 		}
-	#endif
+#endif
 
 		// no data-dir found
 		dbg_msg("storage", "warning no data directory found");
@@ -354,16 +353,16 @@ public:
 		}
 
 		// open file
-		if(Flags&IOFLAG_WRITE)
+		if(Flags & IOFLAG_WRITE)
 		{
 			return io_open(GetPath(TYPE_SAVE, pFilename, pBuffer, BufferSize), Flags);
 		}
 		else
 		{
 			IOHANDLE Handle = 0;
-			int LB = 0, UB = m_NumPaths;	// check all available directories
+			int LB = 0, UB = m_NumPaths; // check all available directories
 
-			if(Type >= 0 && Type < m_NumPaths)	// check wanted directory
+			if(Type >= 0 && Type < m_NumPaths) // check wanted directory
 			{
 				LB = Type;
 				UB = Type + 1;
@@ -539,13 +538,13 @@ public:
 		return !fs_remove(GetPath(Type, pFilename, aBuffer, sizeof(aBuffer)));
 	}
 
-	virtual bool RenameFile(const char* pOldFilename, const char* pNewFilename, int Type)
+	virtual bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type)
 	{
 		if(Type < 0 || Type >= m_NumPaths)
 			return false;
 		char aOldBuffer[IO_MAX_PATH_LENGTH];
 		char aNewBuffer[IO_MAX_PATH_LENGTH];
-		return !fs_rename(GetPath(Type, pOldFilename, aOldBuffer, sizeof(aOldBuffer)), GetPath(Type, pNewFilename, aNewBuffer, sizeof (aNewBuffer)));
+		return !fs_rename(GetPath(Type, pOldFilename, aOldBuffer, sizeof(aOldBuffer)), GetPath(Type, pNewFilename, aNewBuffer, sizeof(aNewBuffer)));
 	}
 
 	virtual bool CreateFolder(const char *pFoldername, int Type)
@@ -580,7 +579,7 @@ public:
 		sha256_init(&Sha256Ctx);
 		unsigned Crc = 0;
 		unsigned Size = 0;
-		unsigned char aBuffer[64*1024];
+		unsigned char aBuffer[64 * 1024];
 		while(1)
 		{
 			unsigned Bytes = io_read(File, aBuffer, sizeof(aBuffer));

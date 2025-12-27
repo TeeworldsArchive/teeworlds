@@ -10,10 +10,9 @@
 #include "chat.h"
 #include "voting.h"
 
-
 void CVoting::ConVote(IConsole::IResult *pResult, void *pUserData)
 {
-	CVoting *pSelf = (CVoting *)pUserData;
+	CVoting *pSelf = (CVoting *) pUserData;
 	if(str_comp_nocase(pResult->GetString(0), "yes") == 0)
 		pSelf->SendVote(VOTE_CHOICE_YES);
 	else if(str_comp_nocase(pResult->GetString(0), "no") == 0)
@@ -67,7 +66,7 @@ void CVoting::RconRemoveVoteOption(int OptionID)
 	{
 		if(OptionID == 0)
 		{
-			char aBuf[VOTE_DESC_LENGTH+32];
+			char aBuf[VOTE_DESC_LENGTH + 32];
 			str_format(aBuf, sizeof(aBuf), "remove_vote \"%s\"", pOption->m_aDescription);
 			Client()->SendRcon(aBuf);
 			break;
@@ -80,14 +79,14 @@ void CVoting::RconRemoveVoteOption(int OptionID)
 
 void CVoting::RconAddVoteOption(const char *pDescription, const char *pCommand)
 {
-	char aBuf[VOTE_DESC_LENGTH+VOTE_CMD_LENGTH+32];
+	char aBuf[VOTE_DESC_LENGTH + VOTE_CMD_LENGTH + 32];
 	str_format(aBuf, sizeof(aBuf), "add_vote \"%s\" \"%s\"", pDescription, pCommand);
 	Client()->SendRcon(aBuf);
 }
 
 void CVoting::SendVote(int Choice)
 {
-	CNetMsg_Cl_Vote Msg = { Choice };
+	CNetMsg_Cl_Vote Msg = {Choice};
 	Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
 }
 
@@ -110,7 +109,7 @@ void CVoting::AddOption(const char *pDescription)
 			m_pRecycleLast = 0;
 	}
 	else
-		pOption = (CVoteOptionClient *)m_Heap.Allocate(sizeof(CVoteOptionClient));
+		pOption = (CVoteOptionClient *) m_Heap.Allocate(sizeof(CVoteOptionClient));
 
 	pOption->m_pNext = 0;
 	pOption->m_pPrev = m_pLast;
@@ -121,8 +120,10 @@ void CVoting::AddOption(const char *pDescription)
 		m_pFirst = pOption;
 
 	int Depth = 0;
-	for(;*pDescription == '#'; pDescription++, Depth++);
-	pOption->m_Depth = Depth ? Depth : pOption->m_pPrev ? pOption->m_pPrev->m_Depth : 0;
+	for(; *pDescription == '#'; pDescription++, Depth++)
+		;
+	pOption->m_Depth = Depth ? Depth : pOption->m_pPrev ? pOption->m_pPrev->m_Depth :
+							      0;
 
 	pOption->m_IsSubheader = Depth;
 
@@ -161,7 +162,7 @@ void CVoting::ClearOptions()
 
 void CVoting::OnReset()
 {
-	if(Client()->State() == IClient::STATE_LOADING)	// do not reset active vote while connecting
+	if(Client()->State() == IClient::STATE_LOADING) // do not reset active vote while connecting
 		return;
 
 	Clear();
@@ -182,7 +183,7 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 {
 	if(MsgType == NETMSGTYPE_SV_VOTESET)
 	{
-		CNetMsg_Sv_VoteSet *pMsg = (CNetMsg_Sv_VoteSet *)pRawMsg;
+		CNetMsg_Sv_VoteSet *pMsg = (CNetMsg_Sv_VoteSet *) pRawMsg;
 		int BlockTick = m_CallvoteBlockTick;
 		char aBuf[128];
 		if(pMsg->m_Timeout)
@@ -196,12 +197,12 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 				m_pClient->GetPlayerLabel(aLabel, sizeof(aLabel), pMsg->m_ClientID, m_pClient->m_aClients[pMsg->m_ClientID].m_aName);
 				switch(pMsg->m_Type)
 				{
-				case VOTE_START_OP:
-					str_format(aBuf, sizeof(aBuf), Localize("'%s' called vote to change server option '%s' (%s)"), aLabel, pMsg->m_pDescription, pMsg->m_pReason);
-					str_copy(m_aDescription, pMsg->m_pDescription, sizeof(m_aDescription));
-					m_pClient->m_pChat->AddLine(aBuf);
-					break;
-				case VOTE_START_KICK:
+					case VOTE_START_OP:
+						str_format(aBuf, sizeof(aBuf), Localize("'%s' called vote to change server option '%s' (%s)"), aLabel, pMsg->m_pDescription, pMsg->m_pReason);
+						str_copy(m_aDescription, pMsg->m_pDescription, sizeof(m_aDescription));
+						m_pClient->m_pChat->AddLine(aBuf);
+						break;
+					case VOTE_START_KICK:
 					{
 						char aName[4];
 						if(!Config()->m_ClShowsocial)
@@ -211,7 +212,7 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 						m_pClient->m_pChat->AddLine(aBuf);
 						break;
 					}
-				case VOTE_START_SPEC:
+					case VOTE_START_SPEC:
 					{
 						char aName[4];
 						if(!Config()->m_ClShowsocial)
@@ -222,39 +223,39 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 					}
 				}
 				if(pMsg->m_ClientID == m_pClient->m_LocalClientID)
-					m_CallvoteBlockTick = Client()->GameTick()+Client()->GameTickSpeed()*VOTE_COOLDOWN;
+					m_CallvoteBlockTick = Client()->GameTick() + Client()->GameTickSpeed() * VOTE_COOLDOWN;
 			}
 		}
 		else
 		{
 			switch(pMsg->m_Type)
 			{
-			case VOTE_START_OP:
-				str_format(aBuf, sizeof(aBuf), Localize("Admin forced server option '%s' (%s)"), pMsg->m_pDescription, pMsg->m_pReason);
-				m_pClient->m_pChat->AddLine(aBuf);
-				break;
-			case VOTE_START_SPEC:
-				str_format(aBuf, sizeof(aBuf), Localize("Admin moved '%s' to spectator (%s)"), pMsg->m_pDescription, pMsg->m_pReason);
-				m_pClient->m_pChat->AddLine(aBuf);
-				break;
-			case VOTE_END_ABORT:
-				OnReset();
-				m_pClient->m_pChat->AddLine(Localize("Vote aborted"));
-				break;
-			case VOTE_END_PASS:
-				OnReset();
-				m_pClient->m_pChat->AddLine(pMsg->m_ClientID == -1 ? Localize("Admin forced vote yes") : Localize("Vote passed"));
-				break;
-			case VOTE_END_FAIL:
-				OnReset();
-				m_pClient->m_pChat->AddLine(pMsg->m_ClientID == -1 ? Localize("Admin forced vote no") : Localize("Vote failed"));
-				m_CallvoteBlockTick = BlockTick;
+				case VOTE_START_OP:
+					str_format(aBuf, sizeof(aBuf), Localize("Admin forced server option '%s' (%s)"), pMsg->m_pDescription, pMsg->m_pReason);
+					m_pClient->m_pChat->AddLine(aBuf);
+					break;
+				case VOTE_START_SPEC:
+					str_format(aBuf, sizeof(aBuf), Localize("Admin moved '%s' to spectator (%s)"), pMsg->m_pDescription, pMsg->m_pReason);
+					m_pClient->m_pChat->AddLine(aBuf);
+					break;
+				case VOTE_END_ABORT:
+					OnReset();
+					m_pClient->m_pChat->AddLine(Localize("Vote aborted"));
+					break;
+				case VOTE_END_PASS:
+					OnReset();
+					m_pClient->m_pChat->AddLine(pMsg->m_ClientID == -1 ? Localize("Admin forced vote yes") : Localize("Vote passed"));
+					break;
+				case VOTE_END_FAIL:
+					OnReset();
+					m_pClient->m_pChat->AddLine(pMsg->m_ClientID == -1 ? Localize("Admin forced vote no") : Localize("Vote failed"));
+					m_CallvoteBlockTick = BlockTick;
 			}
 		}
 	}
 	else if(MsgType == NETMSGTYPE_SV_VOTESTATUS)
 	{
-		CNetMsg_Sv_VoteStatus *pMsg = (CNetMsg_Sv_VoteStatus *)pRawMsg;
+		CNetMsg_Sv_VoteStatus *pMsg = (CNetMsg_Sv_VoteStatus *) pRawMsg;
 		m_Yes = pMsg->m_Yes;
 		m_No = pMsg->m_No;
 		m_Pass = pMsg->m_Pass;
@@ -266,12 +267,12 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 	}
 	else if(MsgType == NETMSGTYPE_SV_VOTEOPTIONADD)
 	{
-		CNetMsg_Sv_VoteOptionAdd *pMsg = (CNetMsg_Sv_VoteOptionAdd *)pRawMsg;
+		CNetMsg_Sv_VoteOptionAdd *pMsg = (CNetMsg_Sv_VoteOptionAdd *) pRawMsg;
 		AddOption(pMsg->m_pDescription);
 	}
 	else if(MsgType == NETMSGTYPE_SV_VOTEOPTIONREMOVE)
 	{
-		CNetMsg_Sv_VoteOptionRemove *pMsg = (CNetMsg_Sv_VoteOptionRemove *)pRawMsg;
+		CNetMsg_Sv_VoteOptionRemove *pMsg = (CNetMsg_Sv_VoteOptionRemove *) pRawMsg;
 
 		for(CVoteOptionClient *pOption = m_pFirst; pOption; pOption = pOption->m_pNext)
 		{
@@ -305,13 +306,13 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 
 void CVoting::RenderBars(CUIRect Bars)
 {
-	Bars.Draw(vec4(0.8f,0.8f,0.8f,0.5f), Bars.h/3);
+	Bars.Draw(vec4(0.8f, 0.8f, 0.8f, 0.5f), Bars.h / 3);
 
 	CUIRect Splitter = Bars;
-	Splitter.x = Splitter.x+Splitter.w/2;
-	Splitter.w = Splitter.h/2.0f;
-	Splitter.x -= Splitter.w/2;
-	Splitter.Draw(vec4(0.4f,0.4f,0.4f,0.5f), Splitter.h/4);
+	Splitter.x = Splitter.x + Splitter.w / 2;
+	Splitter.w = Splitter.h / 2.0f;
+	Splitter.x -= Splitter.w / 2;
+	Splitter.Draw(vec4(0.4f, 0.4f, 0.4f, 0.5f), Splitter.h / 4);
 
 	if(m_Total)
 	{
@@ -319,8 +320,8 @@ void CVoting::RenderBars(CUIRect Bars)
 		if(m_Yes)
 		{
 			CUIRect YesArea = Bars;
-			YesArea.w *= m_Yes/(float)m_Total;
-			YesArea.Draw(vec4(0.2f,0.9f,0.2f,0.85f), Bars.h/3);
+			YesArea.w *= m_Yes / (float) m_Total;
+			YesArea.Draw(vec4(0.2f, 0.9f, 0.2f, 0.85f), Bars.h / 3);
 
 			PassArea.x += YesArea.w;
 			PassArea.w -= YesArea.w;
@@ -329,9 +330,9 @@ void CVoting::RenderBars(CUIRect Bars)
 		if(m_No)
 		{
 			CUIRect NoArea = Bars;
-			NoArea.w *= m_No/(float)m_Total;
-			NoArea.x = (Bars.x + Bars.w)-NoArea.w;
-			NoArea.Draw(vec4(0.9f,0.2f,0.2f,0.85f), Bars.h/3);
+			NoArea.w *= m_No / (float) m_Total;
+			NoArea.x = (Bars.x + Bars.w) - NoArea.w;
+			NoArea.Draw(vec4(0.9f, 0.2f, 0.2f, 0.85f), Bars.h / 3);
 
 			PassArea.w -= NoArea.w;
 		}

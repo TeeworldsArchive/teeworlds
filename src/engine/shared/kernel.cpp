@@ -7,7 +7,7 @@ class CKernel : public IKernel
 {
 	enum
 	{
-		MAX_INTERFACES=32,
+		MAX_INTERFACES = 32,
 	};
 
 	class CInterfaceInfo
@@ -37,12 +37,10 @@ class CKernel : public IKernel
 	}
 
 public:
-
 	CKernel()
 	{
 		m_NumInterfaces = 0;
 	}
-
 
 	virtual bool RegisterInterfaceImpl(const char *pName, IInterface *pInterface)
 	{

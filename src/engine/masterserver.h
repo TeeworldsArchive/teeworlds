@@ -9,10 +9,9 @@ class IMasterServer : public IInterface
 {
 	MACRO_INTERFACE("masterserver", 0)
 public:
-
 	enum
 	{
-		MAX_MASTERSERVERS=4
+		MAX_MASTERSERVERS = 4
 	};
 
 	virtual void Init() = 0;
@@ -23,7 +22,7 @@ public:
 	virtual int RefreshAddresses(int Nettype) = 0;
 	virtual void Update() = 0;
 	virtual bool IsRefreshing() const = 0;
-	virtual NETADDR GetAddr(int Index) const= 0;
+	virtual NETADDR GetAddr(int Index) const = 0;
 	virtual const char *GetName(int Index) const = 0;
 	virtual bool IsValid(int Index) const = 0;
 };
@@ -37,6 +36,3 @@ public:
 extern IEngineMasterServer *CreateEngineMasterServer();
 
 #endif
-
-
-

@@ -8,7 +8,7 @@ class CGameControllerLTS : public IGameController
 {
 public:
 	CGameControllerLTS(class CGameContext *pGameServer);
-	
+
 	// event
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
 	// game

@@ -2,41 +2,41 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef ENGINE_TEXTRENDER_H
 #define ENGINE_TEXTRENDER_H
-#include "kernel.h"
-#include <base/vmath.h>
 #include <base/tl/array.h>
-#include <engine/storage.h>
+#include <base/vmath.h>
 #include <engine/console.h>
 #include <engine/graphics.h>
+#include <engine/storage.h>
+#include "kernel.h"
 
 // TextRender Features
 enum
 {
-	TEXTFLAG_NO_RENDER=1,
+	TEXTFLAG_NO_RENDER = 1,
 
 	// Allow using '\\n' to linebreak
 	// If unset, '\\n' will be replaced with space
-	TEXTFLAG_ALLOW_NEWLINE=2,
+	TEXTFLAG_ALLOW_NEWLINE = 2,
 
 	// Display "…" when the text is truncated
-	TEXTFLAG_ELLIPSIS=4,
+	TEXTFLAG_ELLIPSIS = 4,
 
 	// If set, newline will try not to break words
-	TEXTFLAG_WORD_WRAP=8,
+	TEXTFLAG_WORD_WRAP = 8,
 
 	// Masks
-	TEXTALIGN_MASK_HORI=3,
-	TEXTALIGN_MASK_VERT=12
+	TEXTALIGN_MASK_HORI = 3,
+	TEXTALIGN_MASK_VERT = 12
 };
 
 enum ETextAlignment
 {
-	TEXTALIGN_LEFT=0,
-	TEXTALIGN_CENTER=1,
-	TEXTALIGN_RIGHT=2,
-	TEXTALIGN_TOP=0,
-	TEXTALIGN_MIDDLE=4,
-	TEXTALIGN_BOTTOM=8,
+	TEXTALIGN_LEFT = 0,
+	TEXTALIGN_CENTER = 1,
+	TEXTALIGN_RIGHT = 2,
+	TEXTALIGN_TOP = 0,
+	TEXTALIGN_MIDDLE = 4,
+	TEXTALIGN_BOTTOM = 8,
 
 	TEXTALIGN_TL = TEXTALIGN_TOP | TEXTALIGN_LEFT,
 	TEXTALIGN_TC = TEXTALIGN_TOP | TEXTALIGN_CENTER,
@@ -169,9 +169,21 @@ public:
 	int CharCount() const { return m_CharCount; }
 
 	// Default Cursor: Top left single line no width limit
-	CTextCursor() { Set(10.0f, 0, 0, 0); Reset(); }
-	CTextCursor(float FontSize, int Flags = 0) { Set(FontSize, 0, 0, Flags); Reset(); }
-	CTextCursor(float FontSize, float x, float y, int Flags = 0) { Set(FontSize, x, y, Flags); Reset(); }
+	CTextCursor()
+	{
+		Set(10.0f, 0, 0, 0);
+		Reset();
+	}
+	CTextCursor(float FontSize, int Flags = 0)
+	{
+		Set(FontSize, 0, 0, Flags);
+		Reset();
+	}
+	CTextCursor(float FontSize, float x, float y, int Flags = 0)
+	{
+		Set(FontSize, x, y, Flags);
+		Reset();
+	}
 
 	// Exposed Bounding Box, converted to screen coord.
 	CTextBoundingBox BoundingBox() const

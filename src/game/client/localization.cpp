@@ -81,18 +81,20 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 		for(unsigned i = 0; i < rStart.u.array.length; ++i)
 		{
 			bool Valid = true;
-			const char *pOr = (const char *)rStart[i]["or"];
-			const char *pTr = (const char *)rStart[i]["tr"];
+			const char *pOr = (const char *) rStart[i]["or"];
+			const char *pTr = (const char *) rStart[i]["tr"];
 			while(pOr[0] && pTr[0])
 			{
-				for(; pOr[0] && pOr[0] != '%'; ++pOr);
-				for(; pTr[0] && pTr[0] != '%'; ++pTr);
-				if(pOr[0] && pTr[0] && ((pOr[1] == ' ' && pTr[1] == 0) || (pOr[1] == 0 && pTr[1] == ' ')))	// skip  false positive
+				for(; pOr[0] && pOr[0] != '%'; ++pOr)
+					;
+				for(; pTr[0] && pTr[0] != '%'; ++pTr)
+					;
+				if(pOr[0] && pTr[0] && ((pOr[1] == ' ' && pTr[1] == 0) || (pOr[1] == 0 && pTr[1] == ' '))) // skip  false positive
 					break;
 				if((pOr[0] && (!pTr[0] || pOr[1] != pTr[1])) || (pTr[0] && (!pOr[0] || pTr[1] != pOr[1])))
 				{
 					Valid = false;
-					str_format(aBuf, sizeof(aBuf), "skipping invalid entry or:'%s', tr:'%s'", (const char *)rStart[i]["or"], (const char *)rStart[i]["tr"]);
+					str_format(aBuf, sizeof(aBuf), "skipping invalid entry or:'%s', tr:'%s'", (const char *) rStart[i]["or"], (const char *) rStart[i]["tr"]);
 					pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "localization", aBuf);
 					break;
 				}
@@ -102,7 +104,7 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 					++pTr;
 			}
 			if(Valid)
-				AddString((const char *)rStart[i]["or"], (const char *)rStart[i]["tr"], (const char *)rStart[i]["context"]);
+				AddString((const char *) rStart[i]["or"], (const char *) rStart[i]["tr"], (const char *) rStart[i]["context"]);
 		}
 	}
 
@@ -130,8 +132,8 @@ const char *CLocalizationDatabase::FindString(unsigned Hash, unsigned ContextHas
 		else if(rStr.m_ContextHash == DefaultHash)
 			DefaultIndex = i;
 	}
-	
-    return r.index(DefaultIndex).m_pReplacement;
+
+	return r.index(DefaultIndex).m_pReplacement;
 }
 
 CLocalizationDatabase g_Localization;

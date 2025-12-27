@@ -9,6 +9,7 @@
 class CMap : public IEngineMap
 {
 	CDataFileReader m_DataFile;
+
 public:
 	CMap() {}
 
@@ -34,7 +35,7 @@ public:
 		if(!m_DataFile.Open(pStorage, pMapName, IStorage::TYPE_ALL))
 			return false;
 		// check version
-		CMapItemVersion *pItem = (CMapItemVersion *)m_DataFile.FindItem(MAPITEMTYPE_VERSION, 0);
+		CMapItemVersion *pItem = (CMapItemVersion *) m_DataFile.FindItem(MAPITEMTYPE_VERSION, 0);
 		if(!pItem || pItem->m_Version != CMapItemVersion::CURRENT_VERSION)
 			return false;
 
@@ -52,13 +53,13 @@ public:
 				if(pLayer->m_Type == LAYERTYPE_TILES)
 				{
 					CMapItemLayerTilemap *pTilemap = reinterpret_cast<CMapItemLayerTilemap *>(pLayer);
-					
+
 					if(pTilemap->m_Version > 3)
 					{
 						const int TilemapCount = pTilemap->m_Width * pTilemap->m_Height;
 						const int TilemapSize = TilemapCount * sizeof(CTile);
 
-						if((TilemapCount / pTilemap->m_Width != pTilemap->m_Height) || (TilemapSize / (int)sizeof(CTile) != TilemapCount))
+						if((TilemapCount / pTilemap->m_Width != pTilemap->m_Height) || (TilemapSize / (int) sizeof(CTile) != TilemapCount))
 						{
 							dbg_msg("engine", "map layer too big (%d * %d * %u causes an integer overflow)", pTilemap->m_Width, pTilemap->m_Height, unsigned(sizeof(CTile)));
 							return false;
@@ -85,9 +86,8 @@ public:
 					}
 				}
 			}
-			
 		}
-		
+
 		return true;
 	}
 

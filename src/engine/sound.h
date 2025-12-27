@@ -11,19 +11,20 @@ class ISound : public IInterface
 public:
 	enum
 	{
-		FLAG_LOOP=1,
-		FLAG_POS=2,
-		FLAG_ALL=3
+		FLAG_LOOP = 1,
+		FLAG_POS = 2,
+		FLAG_ALL = 3
 	};
 
 	class CSampleHandle
 	{
 		friend class ISound;
 		int m_Id;
+
 	public:
-		CSampleHandle()
-		: m_Id(-1)
-		{}
+		CSampleHandle() : m_Id(-1)
+		{
+		}
 
 		bool IsValid() const { return Id() >= 0; }
 		int Id() const { return m_Id; }
@@ -51,7 +52,6 @@ protected:
 		return Tex;
 	}
 };
-
 
 class IEngineSound : public ISound
 {

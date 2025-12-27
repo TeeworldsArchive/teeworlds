@@ -48,30 +48,30 @@ protected:
 	vec2 m_Pos;
 
 	/* Getters */
-	int GetID() const					{ return m_ID; }
+	int GetID() const { return m_ID; }
 
 public:
 	/* Constructor */
-	CEntity(CGameWorld *pGameWorld, int Objtype, vec2 Pos, int ProximityRadius=0);
+	CEntity(CGameWorld *pGameWorld, int Objtype, vec2 Pos, int ProximityRadius = 0);
 
 	/* Destructor */
 	virtual ~CEntity();
 
 	/* Objects */
-	class CGameWorld *GameWorld()		{ return m_pGameWorld; }
-	class CConfig *Config()				{ return m_pGameWorld->Config(); }
-	class CGameContext *GameServer()	{ return m_pGameWorld->GameServer(); }
-	class IServer *Server()				{ return m_pGameWorld->Server(); }
+	class CGameWorld *GameWorld() { return m_pGameWorld; }
+	class CConfig *Config() { return m_pGameWorld->Config(); }
+	class CGameContext *GameServer() { return m_pGameWorld->GameServer(); }
+	class IServer *Server() { return m_pGameWorld->Server(); }
 
 	/* Getters */
-	CEntity *TypeNext()					{ return m_pNextTypeEntity; }
-	CEntity *TypePrev()					{ return m_pPrevTypeEntity; }
-	const vec2 &GetPos() const			{ return m_Pos; }
-	float GetProximityRadius() const	{ return m_ProximityRadius; }
-	bool IsMarkedForDestroy() const		{ return m_MarkedForDestroy; }
+	CEntity *TypeNext() { return m_pNextTypeEntity; }
+	CEntity *TypePrev() { return m_pPrevTypeEntity; }
+	const vec2 &GetPos() const { return m_Pos; }
+	float GetProximityRadius() const { return m_ProximityRadius; }
+	bool IsMarkedForDestroy() const { return m_MarkedForDestroy; }
 
 	/* Setters */
-	void MarkForDestroy()				{ m_MarkedForDestroy = true; }
+	void MarkForDestroy() { m_MarkedForDestroy = true; }
 
 	/* Other functions */
 

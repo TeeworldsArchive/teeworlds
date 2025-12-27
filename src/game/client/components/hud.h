@@ -9,7 +9,6 @@ class CHud : public CComponent
 	float m_Width, m_Height;
 	float m_AverageFPS;
 
-
 	int64 m_WarmupHideTick;
 	bool IsLargeWarmupTimerShown();
 
@@ -37,6 +36,7 @@ class CHud : public CComponent
 	void RenderRaceTime(const CNetObj_PlayerInfoRace *pRaceInfo);
 	void RenderCheckpoint();
 	void RenderLocalTime(float x);
+
 public:
 	CHud();
 

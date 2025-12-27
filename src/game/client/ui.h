@@ -18,17 +18,18 @@ class CLinearScrollbarScale : public IScrollbarScale
 public:
 	float ToRelative(int AbsoluteValue, int Min, int Max) const
 	{
-		return (AbsoluteValue - Min) / (float)(Max - Min);
+		return (AbsoluteValue - Min) / (float) (Max - Min);
 	}
 	int ToAbsolute(float RelativeValue, int Min, int Max) const
 	{
-		return round_to_int(RelativeValue*(Max - Min) + Min + 0.1f);
+		return round_to_int(RelativeValue * (Max - Min) + Min + 0.1f);
 	}
 };
 class CLogarithmicScrollbarScale : public IScrollbarScale
 {
 private:
 	int m_MinAdjustment;
+
 public:
 	CLogarithmicScrollbarScale(int MinAdjustment)
 	{
@@ -42,7 +43,7 @@ public:
 			Min += m_MinAdjustment;
 			Max += m_MinAdjustment;
 		}
-		return (log(AbsoluteValue) - log(Min)) / (float)(log(Max) - log(Min));
+		return (log(AbsoluteValue) - log(Min)) / (float) (log(Max) - log(Min));
 	}
 	int ToAbsolute(float RelativeValue, int Min, int Max) const
 	{
@@ -53,10 +54,9 @@ public:
 			Max += m_MinAdjustment;
 			ResultAdjustment = -m_MinAdjustment;
 		}
-		return round_to_int(exp(RelativeValue*(log(Max) - log(Min)) + log(Min))) + ResultAdjustment;
+		return round_to_int(exp(RelativeValue * (log(Max) - log(Min)) + log(Min))) + ResultAdjustment;
 	}
 };
-
 
 class IButtonColorFunction
 {
@@ -100,7 +100,6 @@ public:
 	}
 } const ScrollBarColorFunction;
 
-
 class CUIElementBase
 {
 private:
@@ -121,12 +120,12 @@ class CButtonContainer : public CUIElementBase
 {
 	bool m_CleanBackground;
 	float m_FadeStartTime;
+
 public:
 	CButtonContainer(bool CleanBackground = false) : m_FadeStartTime(0.0f) { m_CleanBackground = CleanBackground; }
 	float GetFade(bool Checked = false, float Seconds = 0.6f);
 	bool IsCleanBackground() const { return m_CleanBackground; }
 };
-
 
 class CUI
 {
@@ -220,12 +219,26 @@ public:
 	float MouseY() const { return m_MouseY; }
 	float MouseWorldX() const { return m_MouseWorldX; }
 	float MouseWorldY() const { return m_MouseWorldY; }
-	bool MouseButton(int Index) const { return (m_MouseButtons>>Index)&1; }
-	bool MouseButtonClicked(int Index) const { return MouseButton(Index) && !((m_LastMouseButtons>>Index)&1) ; }
+	bool MouseButton(int Index) const { return (m_MouseButtons >> Index) & 1; }
+	bool MouseButtonClicked(int Index) const { return MouseButton(Index) && !((m_LastMouseButtons >> Index) & 1); }
 
 	void SetHotItem(const void *pID) { m_pBecommingHotItem = pID; }
-	void SetActiveItem(const void *pID) { m_ActiveItemValid = true; m_pActiveItem = pID; if (pID) m_pLastActiveItem = pID; }
-	bool CheckActiveItem(const void *pID) { if(m_pActiveItem == pID) { m_ActiveItemValid = true; return true; } return false; }
+	void SetActiveItem(const void *pID)
+	{
+		m_ActiveItemValid = true;
+		m_pActiveItem = pID;
+		if(pID)
+			m_pLastActiveItem = pID;
+	}
+	bool CheckActiveItem(const void *pID)
+	{
+		if(m_pActiveItem == pID)
+		{
+			m_ActiveItemValid = true;
+			return true;
+		}
+		return false;
+	}
 	void ClearLastActiveItem() { m_pLastActiveItem = 0; }
 	const void *HotItem() const { return m_pHotItem; }
 	const void *NextHotItem() const { return m_pBecommingHotItem; }
@@ -233,7 +246,15 @@ public:
 	const void *LastActiveItem() const { return m_pLastActiveItem; }
 
 	void StartCheck() { m_ActiveItemValid = false; }
-	void FinishCheck() { if(!m_ActiveItemValid && m_pActiveItem != 0) { SetActiveItem(0); m_pHotItem = 0; m_pBecommingHotItem = 0; } }
+	void FinishCheck()
+	{
+		if(!m_ActiveItemValid && m_pActiveItem != 0)
+		{
+			SetActiveItem(0);
+			m_pHotItem = 0;
+			m_pBecommingHotItem = 0;
+		}
+	}
 
 	bool MouseInside(const CUIRect *pRect) const { return pRect->Inside(m_MouseX, m_MouseY); }
 	bool MouseInsideClip() const { return !IsClipped() || MouseInside(ClipArea()); }
@@ -293,12 +314,11 @@ public:
 
 	// client ID
 	float DrawClientID(float FontSize, vec2 Position, int ID,
-					const vec4& BgColor = vec4(1.0f, 1.0f, 1.0f, 0.5f), const vec4& TextColor = vec4(0.1f, 0.1f, 0.1f, 1.0f));
+		const vec4 &BgColor = vec4(1.0f, 1.0f, 1.0f, 0.5f), const vec4 &TextColor = vec4(0.1f, 0.1f, 0.1f, 1.0f));
 	float GetClientIDRectWidth(float FontSize);
 
 	float GetListHeaderHeight() const;
 	float GetListHeaderHeightFactor() const;
 };
-
 
 #endif

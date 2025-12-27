@@ -10,7 +10,7 @@ class CSpectator : public CComponent
 {
 	enum
 	{
-		NO_SELECTION=-1,
+		NO_SELECTION = -1,
 	};
 
 	bool m_Active;

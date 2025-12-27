@@ -8,9 +8,9 @@ class CMapImages : public CComponent
 {
 	enum
 	{
-		MAX_TEXTURES=64,
+		MAX_TEXTURES = 64,
 
-		MAP_TYPE_GAME=0,
+		MAP_TYPE_GAME = 0,
 		MAP_TYPE_MENU,
 		NUM_MAP_TYPES
 	};
@@ -33,7 +33,7 @@ public:
 
 	virtual void OnMapLoad();
 	void OnMenuMapLoad(class IMap *pMap);
-	
+
 	IGraphics::CTextureHandle GetEasterTexture();
 };
 

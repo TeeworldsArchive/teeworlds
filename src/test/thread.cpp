@@ -6,7 +6,7 @@
 
 static void Nothing(void *pUser)
 {
-	(void)pUser;
+	(void) pUser;
 }
 
 TEST(Thread, Detach)
@@ -17,7 +17,7 @@ TEST(Thread, Detach)
 
 static void SetToOne(void *pUser)
 {
-	*(int *)pUser = 1;
+	*(int *) pUser = 1;
 }
 
 TEST(Thread, Wait)
@@ -36,7 +36,7 @@ TEST(Thread, Yield)
 
 static void LockThread(void *pUser)
 {
-	LOCK *pLock = (LOCK *)pUser;
+	LOCK *pLock = (LOCK *) pUser;
 	lock_wait(*pLock);
 	lock_unlock(*pLock);
 }
@@ -60,7 +60,7 @@ struct SemTestStruct
 
 static void SemThread(void *pUser)
 {
-	struct SemTestStruct *pContext = (struct SemTestStruct *)pUser;
+	struct SemTestStruct *pContext = (struct SemTestStruct *) pUser;
 	sphore_wait(&pContext->sem);
 	lock_wait(pContext->k_lock);
 	pContext->k--;

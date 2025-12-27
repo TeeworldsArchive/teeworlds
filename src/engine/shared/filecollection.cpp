@@ -9,9 +9,9 @@
 
 bool CFileCollection::IsFilenameValid(const char *pFilename)
 {
-	if(str_length(pFilename) != m_FileDescLength+TIMESTAMP_LENGTH+m_FileExtLength ||
+	if(str_length(pFilename) != m_FileDescLength + TIMESTAMP_LENGTH + m_FileExtLength ||
 		str_comp_num(pFilename, m_aFileDesc, m_FileDescLength) ||
-		str_comp(pFilename+m_FileDescLength+TIMESTAMP_LENGTH, m_aFileExt))
+		str_comp(pFilename + m_FileDescLength + TIMESTAMP_LENGTH, m_aFileExt))
 		return false;
 
 	pFilename += m_FileDescLength;
@@ -42,20 +42,33 @@ bool CFileCollection::IsFilenameValid(const char *pFilename)
 
 int64 CFileCollection::ExtractTimestamp(const char *pTimestring)
 {
-	int64 Timestamp = pTimestring[0]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[1]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[2]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[3]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[5]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[6]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[8]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[9]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[11]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[12]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[14]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[15]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[17]-'0'; Timestamp <<= 4;
-	Timestamp += pTimestring[18]-'0';
+	int64 Timestamp = pTimestring[0] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[1] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[2] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[3] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[5] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[6] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[8] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[9] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[11] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[12] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[14] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[15] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[17] - '0';
+	Timestamp <<= 4;
+	Timestamp += pTimestring[18] - '0';
 
 	return Timestamp;
 }
@@ -63,25 +76,38 @@ int64 CFileCollection::ExtractTimestamp(const char *pTimestring)
 void CFileCollection::BuildTimestring(int64 Timestamp, char *pTimestring)
 {
 	pTimestring[19] = 0;
-	pTimestring[18] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[17] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
+	pTimestring[18] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[17] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
 	pTimestring[16] = '-';
-	pTimestring[15] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[14] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
+	pTimestring[15] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[14] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
 	pTimestring[13] = '-';
-	pTimestring[12] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[11] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
+	pTimestring[12] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[11] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
 	pTimestring[10] = '_';
-	pTimestring[9] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[8] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
+	pTimestring[9] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[8] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
 	pTimestring[7] = '-';
-	pTimestring[6] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[5] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
+	pTimestring[6] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[5] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
 	pTimestring[4] = '-';
-	pTimestring[3] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[2] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[1] = (Timestamp&0xF)+'0'; Timestamp >>= 4;
-	pTimestring[0] = (Timestamp&0xF)+'0';
+	pTimestring[3] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[2] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[1] = (Timestamp & 0xF) + '0';
+	Timestamp >>= 4;
+	pTimestring[0] = (Timestamp & 0xF) + '0';
 }
 
 void CFileCollection::Init(IStorage *pStorage, const char *pPath, const char *pFileDesc, const char *pFileExt, int MaxEntries)
@@ -124,18 +150,18 @@ void CFileCollection::AddEntry(int64 Timestamp)
 			// first entry
 			if(m_NumTimestamps < m_MaxEntries)
 			{
-				mem_move(m_aTimestamps+1, m_aTimestamps, m_NumTimestamps*sizeof(int64));
+				mem_move(m_aTimestamps + 1, m_aTimestamps, m_NumTimestamps * sizeof(int64));
 				m_aTimestamps[0] = Timestamp;
 				++m_NumTimestamps;
 			}
 		}
-		else if(m_aTimestamps[m_NumTimestamps-1] <= Timestamp)
+		else if(m_aTimestamps[m_NumTimestamps - 1] <= Timestamp)
 		{
 			// last entry
 			if(m_NumTimestamps == m_MaxEntries)
 			{
-				mem_move(m_aTimestamps, m_aTimestamps+1, (m_NumTimestamps-1)*sizeof(int64));
-				m_aTimestamps[m_NumTimestamps-1] = Timestamp;
+				mem_move(m_aTimestamps, m_aTimestamps + 1, (m_NumTimestamps - 1) * sizeof(int64));
+				m_aTimestamps[m_NumTimestamps - 1] = Timestamp;
 			}
 			else
 				m_aTimestamps[m_NumTimestamps++] = Timestamp;
@@ -143,10 +169,10 @@ void CFileCollection::AddEntry(int64 Timestamp)
 		else
 		{
 			// middle entry
-			int Left = 0, Right = m_NumTimestamps-1;
-			while(Right-Left > 1)
+			int Left = 0, Right = m_NumTimestamps - 1;
+			while(Right - Left > 1)
 			{
-				int Mid = (Left+Right)/2;
+				int Mid = (Left + Right) / 2;
 				if(m_aTimestamps[Mid] > Timestamp)
 					Right = Mid;
 				else
@@ -155,12 +181,12 @@ void CFileCollection::AddEntry(int64 Timestamp)
 
 			if(m_NumTimestamps == m_MaxEntries)
 			{
-				mem_move(m_aTimestamps, m_aTimestamps+1, (Right-1)*sizeof(int64));
-				m_aTimestamps[Right-1] = Timestamp;
+				mem_move(m_aTimestamps, m_aTimestamps + 1, (Right - 1) * sizeof(int64));
+				m_aTimestamps[Right - 1] = Timestamp;
 			}
 			else
 			{
-				mem_move(m_aTimestamps+Right+1, m_aTimestamps+Right, (m_NumTimestamps-Right)*sizeof(int64));
+				mem_move(m_aTimestamps + Right + 1, m_aTimestamps + Right, (m_NumTimestamps - Right) * sizeof(int64));
 				m_aTimestamps[Right] = Timestamp;
 				++m_NumTimestamps;
 			}
@@ -177,7 +203,7 @@ int CFileCollection::FilelistCallback(const char *pFilename, int IsDir, int Stor
 		return 0;
 
 	// extract the timestamp
-	int64 Timestamp = pThis->ExtractTimestamp(pFilename+pThis->m_FileDescLength+1);
+	int64 Timestamp = pThis->ExtractTimestamp(pFilename + pThis->m_FileDescLength + 1);
 
 	// add the entry
 	pThis->AddEntry(Timestamp);

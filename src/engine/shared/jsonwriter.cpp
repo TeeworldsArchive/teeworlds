@@ -7,14 +7,14 @@ static char EscapeJsonChar(char c)
 {
 	switch(c)
 	{
-	case '\"': return '\"';
-	case '\\': return '\\';
-	case '\b': return 'b';
-	case '\n': return 'n';
-	case '\r': return 'r';
-	case '\t': return 't';
-	// Don't escape '\f', who uses that. :)
-	default: return 0;
+		case '\"': return '\"';
+		case '\\': return '\\';
+		case '\b': return 'b';
+		case '\n': return 'n';
+		case '\r': return 'r';
+		case '\t': return 't';
+		// Don't escape '\f', who uses that. :)
+		default: return 0;
 	}
 }
 
@@ -46,7 +46,6 @@ void CJsonWriter::EndObject()
 	CompleteDataType();
 	WriteIndent(true);
 	WriteInternal("}");
-	
 }
 
 void CJsonWriter::BeginArray()
@@ -111,9 +110,7 @@ void CJsonWriter::WriteNullValue()
 
 bool CJsonWriter::CanWriteDatatype()
 {
-	return m_NumStates == 0
-		|| TopState()->m_Kind == STATE_ARRAY
-		|| TopState()->m_Kind == STATE_ATTRIBUTE;
+	return m_NumStates == 0 || TopState()->m_Kind == STATE_ARRAY || TopState()->m_Kind == STATE_ATTRIBUTE;
 }
 
 inline void CJsonWriter::WriteInternal(const char *pStr)
@@ -131,7 +128,7 @@ void CJsonWriter::WriteInternalEscaped(const char *pStr)
 		char SimpleEscape = EscapeJsonChar(pStr[i]);
 		// Assuming ASCII/UTF-8, exactly everything below 0x20 is a
 		// control character.
-		bool NeedsEscape = SimpleEscape || (unsigned char)pStr[i] < 0x20;
+		bool NeedsEscape = SimpleEscape || (unsigned char) pStr[i] < 0x20;
 		if(NeedsEscape)
 		{
 			if(i - UnwrittenFrom > 0)
@@ -164,8 +161,7 @@ void CJsonWriter::WriteInternalEscaped(const char *pStr)
 
 void CJsonWriter::WriteIndent(bool EndElement)
 {
-	const bool NotRootOrAttribute = m_NumStates != 0
-		&& TopState()->m_Kind != STATE_ATTRIBUTE;
+	const bool NotRootOrAttribute = m_NumStates != 0 && TopState()->m_Kind != STATE_ATTRIBUTE;
 
 	if(NotRootOrAttribute && !TopState()->m_Empty && !EndElement)
 		WriteInternal(",");

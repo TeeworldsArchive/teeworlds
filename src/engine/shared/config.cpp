@@ -2,10 +2,9 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <engine/config.h>
 #include <engine/console.h>
-#include <engine/storage.h>
 #include <engine/shared/config.h>
+#include <engine/storage.h>
 #include <game/version.h>
-
 
 void EscapeParam(char *pDst, const char *pSrc, int size)
 {
@@ -29,7 +28,7 @@ static void Con_SaveConfig(IConsole::IResult *pResult, void *pUserData)
 		str_timestamp(aDate, sizeof(aDate));
 		str_format(aFilename, sizeof(aFilename), "configs/config_%s.cfg", aDate);
 	}
-	((CConfigManager *)pUserData)->Save(aFilename);
+	((CConfigManager *) pUserData)->Save(aFilename);
 }
 
 CConfigManager::CConfigManager()
@@ -49,33 +48,37 @@ void CConfigManager::Init(int FlagMask)
 	Reset();
 
 	if(m_pConsole)
-		m_pConsole->Register("save_config", "?s[file]", CFGFLAG_SERVER|CFGFLAG_CLIENT|CFGFLAG_STORE, Con_SaveConfig, this, "Save config to file");
+		m_pConsole->Register("save_config", "?s[file]", CFGFLAG_SERVER | CFGFLAG_CLIENT | CFGFLAG_STORE, Con_SaveConfig, this, "Save config to file");
 }
 
 void CConfigManager::Reset()
 {
-	#define MACRO_CONFIG_INT(Name,ScriptName,def,min,max,flags,desc) m_Values.m_##Name = def;
-	#define MACRO_CONFIG_STR(Name,ScriptName,len,def,flags,desc) str_copy(m_Values.m_##Name, def, len);
-	#define MACRO_CONFIG_UTF8STR(Name,ScriptName,size,len,def,flags,desc) str_utf8_copy_num(m_Values.m_##Name, def, size, len);
+#define MACRO_CONFIG_INT(Name, ScriptName, def, min, max, flags, desc) m_Values.m_##Name = def;
+#define MACRO_CONFIG_STR(Name, ScriptName, len, def, flags, desc) str_copy(m_Values.m_##Name, def, len);
+#define MACRO_CONFIG_UTF8STR(Name, ScriptName, size, len, def, flags, desc) str_utf8_copy_num(m_Values.m_##Name, def, size, len);
 
-	#include "config_variables.h"
+#include "config_variables.h"
 
-	#undef MACRO_CONFIG_INT
-	#undef MACRO_CONFIG_STR
-	#undef MACRO_CONFIG_UTF8STR
+#undef MACRO_CONFIG_INT
+#undef MACRO_CONFIG_STR
+#undef MACRO_CONFIG_UTF8STR
 }
 
 void CConfigManager::RestoreStrings()
 {
-	#define MACRO_CONFIG_INT(Name,ScriptName,def,min,max,flags,desc)	// nop
-	#define MACRO_CONFIG_STR(Name,ScriptName,len,def,flags,desc) if(!m_Values.m_##Name[0] && def[0]) str_copy(m_Values.m_##Name, def, len);
-	#define MACRO_CONFIG_UTF8STR(Name,ScriptName,size,len,def,flags,desc) if(!m_Values.m_##Name[0] && def[0]) str_utf8_copy_num(m_Values.m_##Name, def, size, len);
+#define MACRO_CONFIG_INT(Name, ScriptName, def, min, max, flags, desc) // nop
+#define MACRO_CONFIG_STR(Name, ScriptName, len, def, flags, desc) \
+	if(!m_Values.m_##Name[0] && def[0]) \
+		str_copy(m_Values.m_##Name, def, len);
+#define MACRO_CONFIG_UTF8STR(Name, ScriptName, size, len, def, flags, desc) \
+	if(!m_Values.m_##Name[0] && def[0]) \
+		str_utf8_copy_num(m_Values.m_##Name, def, size, len);
 
-	#include "config_variables.h"
+#include "config_variables.h"
 
-	#undef MACRO_CONFIG_INT
-	#undef MACRO_CONFIG_STR
-	#undef MACRO_CONFIG_UTF8STR
+#undef MACRO_CONFIG_INT
+#undef MACRO_CONFIG_STR
+#undef MACRO_CONFIG_UTF8STR
 }
 
 void CConfigManager::Save(const char *pFilename)
@@ -92,18 +95,35 @@ void CConfigManager::Save(const char *pFilename)
 
 	WriteLine("# Teeworlds " GAME_VERSION);
 
-	char aLineBuf[1024*2];
-	char aEscapeBuf[1024*2];
+	char aLineBuf[1024 * 2];
+	char aEscapeBuf[1024 * 2];
 
-	#define MACRO_CONFIG_INT(Name,ScriptName,def,min,max,flags,desc) if(((flags)&(CFGFLAG_SAVE))&&((flags)&(m_FlagMask))&&(m_Values.m_##Name!=int(def))){ str_format(aLineBuf, sizeof(aLineBuf), "%s %i", #ScriptName, m_Values.m_##Name); WriteLine(aLineBuf); }
-	#define MACRO_CONFIG_STR(Name,ScriptName,len,def,flags,desc) if(((flags)&(CFGFLAG_SAVE))&&((flags)&(m_FlagMask)&&(str_comp(m_Values.m_##Name,def)))){ EscapeParam(aEscapeBuf, m_Values.m_##Name, sizeof(aEscapeBuf)); str_format(aLineBuf, sizeof(aLineBuf), "%s \"%s\"", #ScriptName, aEscapeBuf); WriteLine(aLineBuf); }
-	#define MACRO_CONFIG_UTF8STR(Name,ScriptName,size,len,def,flags,desc) if(((flags)&(CFGFLAG_SAVE))&&((flags)&(m_FlagMask)&&(str_comp(m_Values.m_##Name,def)))){ EscapeParam(aEscapeBuf, m_Values.m_##Name, sizeof(aEscapeBuf)); str_format(aLineBuf, sizeof(aLineBuf), "%s \"%s\"", #ScriptName, aEscapeBuf); WriteLine(aLineBuf); }
+#define MACRO_CONFIG_INT(Name, ScriptName, def, min, max, flags, desc) \
+	if(((flags) & (CFGFLAG_SAVE)) && ((flags) & (m_FlagMask)) && (m_Values.m_##Name != int(def))) \
+	{ \
+		str_format(aLineBuf, sizeof(aLineBuf), "%s %i", #ScriptName, m_Values.m_##Name); \
+		WriteLine(aLineBuf); \
+	}
+#define MACRO_CONFIG_STR(Name, ScriptName, len, def, flags, desc) \
+	if(((flags) & (CFGFLAG_SAVE)) && ((flags) & (m_FlagMask) && (str_comp(m_Values.m_##Name, def)))) \
+	{ \
+		EscapeParam(aEscapeBuf, m_Values.m_##Name, sizeof(aEscapeBuf)); \
+		str_format(aLineBuf, sizeof(aLineBuf), "%s \"%s\"", #ScriptName, aEscapeBuf); \
+		WriteLine(aLineBuf); \
+	}
+#define MACRO_CONFIG_UTF8STR(Name, ScriptName, size, len, def, flags, desc) \
+	if(((flags) & (CFGFLAG_SAVE)) && ((flags) & (m_FlagMask) && (str_comp(m_Values.m_##Name, def)))) \
+	{ \
+		EscapeParam(aEscapeBuf, m_Values.m_##Name, sizeof(aEscapeBuf)); \
+		str_format(aLineBuf, sizeof(aLineBuf), "%s \"%s\"", #ScriptName, aEscapeBuf); \
+		WriteLine(aLineBuf); \
+	}
 
-	#include "config_variables.h"
+#include "config_variables.h"
 
-	#undef MACRO_CONFIG_INT
-	#undef MACRO_CONFIG_STR
-	#undef MACRO_CONFIG_UTF8STR
+#undef MACRO_CONFIG_INT
+#undef MACRO_CONFIG_STR
+#undef MACRO_CONFIG_UTF8STR
 
 	for(int i = 0; i < m_NumCallbacks; i++)
 		m_aCallbacks[i].m_pfnFunc(this, m_aCallbacks[i].m_pUserData);

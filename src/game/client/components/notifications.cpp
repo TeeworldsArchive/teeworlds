@@ -1,7 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#include <engine/shared/config.h>
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 
 #include <generated/client_data.h>
 
@@ -17,14 +17,14 @@ CNotifications::CNotifications()
 
 void CNotifications::OnConsoleInit()
 {
-	IConsole* pConsole = Kernel()->RequestInterface<IConsole>();
+	IConsole *pConsole = Kernel()->RequestInterface<IConsole>();
 
 	pConsole->Register("snd_toggle", "", CFGFLAG_CLIENT, Con_SndToggle, this, "Toggle sounds on and off");
 }
 
 void CNotifications::Con_SndToggle(IConsole::IResult *pResult, void *pUserData)
 {
-	CNotifications *pSelf = (CNotifications *)pUserData;
+	CNotifications *pSelf = (CNotifications *) pUserData;
 
 	pSelf->Config()->m_SndEnable ^= 1;
 	pSelf->m_SoundToggleTime = pSelf->Client()->LocalTime();
@@ -46,20 +46,20 @@ void CNotifications::RenderSoundNotification()
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
 	CUIRect Area;
-	Area.x = (Width-ItemWidth)/2.f;
-	Area.y = (Height/5.f) - (ItemHeight/2.f);
+	Area.x = (Width - ItemWidth) / 2.f;
+	Area.y = (Height / 5.f) - (ItemHeight / 2.f);
 	Area.w = ItemWidth;
 	Area.h = ItemHeight;
 
 	const float Fade = minimum(1.0f, RemainingDisplayTime / FadeTime); // 0.0 ≤ Fade ≤ 1.0
 
-	vec4 Color = (Config()->m_SndEnable == 0) ? vec4(1.f/0xff*0xf9, 1.f/0xff*0x2b, 1.f/0xff*0x2b, 0.55f) : vec4(1.f/0xff*0x2b, 1.f/0xff*0xf9, 1.f/0xff*0x2b, 0.55f);
-	Color = mix(vec4(Color.r, Color.g, Color.b, 0.0f), Color, 0.8*Fade);
+	vec4 Color = (Config()->m_SndEnable == 0) ? vec4(1.f / 0xff * 0xf9, 1.f / 0xff * 0x2b, 1.f / 0xff * 0x2b, 0.55f) : vec4(1.f / 0xff * 0x2b, 1.f / 0xff * 0xf9, 1.f / 0xff * 0x2b, 0.55f);
+	Color = mix(vec4(Color.r, Color.g, Color.b, 0.0f), Color, 0.8 * Fade);
 	Area.Draw(Color, 3.0f);
 
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_SOUNDICONS].m_Id);
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(1.0f*Fade, 1.0f*Fade, 1.0f*Fade, 1.0f*Fade);
+	Graphics()->SetColor(1.0f * Fade, 1.0f * Fade, 1.0f * Fade, 1.0f * Fade);
 	RenderTools()->SelectSprite(Config()->m_SndEnable ? SPRITE_SOUNDICON_ON : SPRITE_SOUNDICON_MUTE);
 	IGraphics::CQuadItem QuadItem(Area.x, Area.y, Area.w, Area.h);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);

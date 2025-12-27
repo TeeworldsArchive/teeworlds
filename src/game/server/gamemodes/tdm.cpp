@@ -21,17 +21,16 @@ int CGameControllerTDM::OnCharacterDeath(class CCharacter *pVictim, class CPlaye
 {
 	IGameController::OnCharacterDeath(pVictim, pKiller, Weapon);
 
-
 	if(pKiller && Weapon != WEAPON_GAME)
 	{
 		// do team scoring
 		if(pKiller == pVictim->GetPlayer() || pKiller->GetTeam() == pVictim->GetPlayer()->GetTeam())
-			m_aTeamscore[pKiller->GetTeam()&1]--; // klant arschel
+			m_aTeamscore[pKiller->GetTeam() & 1]--; // klant arschel
 		else
-			m_aTeamscore[pKiller->GetTeam()&1]++; // good shit
+			m_aTeamscore[pKiller->GetTeam() & 1]++; // good shit
 	}
 
-	pVictim->GetPlayer()->m_RespawnTick = maximum(pVictim->GetPlayer()->m_RespawnTick, Server()->Tick()+Server()->TickSpeed()*Config()->m_SvRespawnDelayTDM);
+	pVictim->GetPlayer()->m_RespawnTick = maximum(pVictim->GetPlayer()->m_RespawnTick, Server()->Tick() + Server()->TickSpeed() * Config()->m_SvRespawnDelayTDM);
 
 	return 0;
 }

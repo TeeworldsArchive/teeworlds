@@ -12,13 +12,13 @@ class CServerBrowserFavorites
 public:
 	enum
 	{
-		FAVSTATE_LOOKUP=0,
+		FAVSTATE_LOOKUP = 0,
 		FAVSTATE_LOOKUPCHECK,
 		FAVSTATE_INVALID,
 		FAVSTATE_ADDR,
 		FAVSTATE_HOST,
 
-		MAX_FAVORITES=256,
+		MAX_FAVORITES = 256,
 	};
 
 	struct CFavoriteServer
@@ -46,7 +46,7 @@ public:
 
 	CServerBrowserFavorites();
 	void Init(class CNetClient *pNetClient, class IConsole *pConsole, class IEngine *pEngine, class IConfigManager *pConfigManager);
-	
+
 	bool AddFavoriteEx(const char *pHostname, const NETADDR *pAddr, bool DoCheck, const char *pPassword = 0);
 	CFavoriteServer *FindFavoriteByAddr(const NETADDR &Addr, int *Index);
 	CFavoriteServer *FindFavoriteByHostname(const char *pHostname, int *Index);

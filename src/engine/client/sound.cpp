@@ -12,12 +12,11 @@
 
 #include "sound.h"
 
-extern "C"
-{
-	#include <wavpack.h>
+extern "C" {
+#include <wavpack.h>
 }
-#include <math.h>
 #include <limits.h>
+#include <math.h>
 
 enum
 {
@@ -67,7 +66,7 @@ static int m_MixingRate = 48000;
 static int m_SoundVolume = 100;
 
 static int m_NextVoice = 0;
-static int *m_pMixBuffer = 0;	// buffer only used by the thread callback function
+static int *m_pMixBuffer = 0; // buffer only used by the thread callback function
 static unsigned m_MaxFrames = 0;
 
 static IOHANDLE s_File;
@@ -80,7 +79,7 @@ static short Int2Short(int i)
 static void Mix(short *pFinalOut, unsigned Frames)
 {
 	int MasterVol;
-	mem_zero(m_pMixBuffer, m_MaxFrames*2*sizeof(int));
+	mem_zero(m_pMixBuffer, m_MaxFrames * 2 * sizeof(int));
 	Frames = minimum(Frames, m_MaxFrames);
 
 	// aquire lock while we are mixing
@@ -97,10 +96,10 @@ static void Mix(short *pFinalOut, unsigned Frames)
 			int *pOut = m_pMixBuffer;
 
 			int Step = v->m_pSample->m_Channels; // setup input sources
-			short *pInL = &v->m_pSample->m_pData[v->m_Tick*Step];
-			short *pInR = &v->m_pSample->m_pData[v->m_Tick*Step+1];
+			short *pInL = &v->m_pSample->m_pData[v->m_Tick * Step];
+			short *pInR = &v->m_pSample->m_pData[v->m_Tick * Step + 1];
 
-			unsigned End = v->m_pSample->m_NumFrames-v->m_Tick;
+			unsigned End = v->m_pSample->m_NumFrames - v->m_Tick;
 
 			int Rvol = v->m_pChannel->m_Vol;
 			int Lvol = v->m_pChannel->m_Vol;
@@ -114,21 +113,21 @@ static void Mix(short *pFinalOut, unsigned Frames)
 				pInR = pInL;
 
 			// volume calculation
-			if(v->m_Flags&ISound::FLAG_POS)
+			if(v->m_Flags & ISound::FLAG_POS)
 			{
 				int dx = v->m_X - m_CenterX;
 				int dy = v->m_Y - m_CenterY;
-				float Dist = sqrtf((float)dx*dx+dy*dy);
+				float Dist = sqrtf((float) dx * dx + dy * dy);
 				if(Dist >= 0.0f && Dist < m_MaxDistance)
 				{
 					// linear falloff
-					float Falloff = 1.0f - Dist/m_MaxDistance;
+					float Falloff = 1.0f - Dist / m_MaxDistance;
 
 					// amplitude after falloff
 					float FalloffAmp = v->m_pChannel->m_Vol * Falloff;
 
 					// distribute volume to the channels depending on x difference
-					float Lpan = 0.5f - dx/m_MaxDistance/2.0f;
+					float Lpan = 0.5f - dx / m_MaxDistance / 2.0f;
 					float Rpan = 1.0f - Lpan;
 
 					// apply square root to preserve sound power after panning
@@ -136,8 +135,8 @@ static void Mix(short *pFinalOut, unsigned Frames)
 					float RampFactor = sqrt(Rpan);
 
 					// volume of the channels
-					Lvol = FalloffAmp*LampFactor;
-					Rvol = FalloffAmp*RampFactor;
+					Lvol = FalloffAmp * LampFactor;
+					Rvol = FalloffAmp * RampFactor;
 				}
 				else
 				{
@@ -149,8 +148,8 @@ static void Mix(short *pFinalOut, unsigned Frames)
 			// process all frames
 			for(unsigned s = 0; s < End; s++)
 			{
-				*pOut++ += (*pInL)*Lvol;
-				*pOut++ += (*pInR)*Rvol;
+				*pOut++ += (*pInL) * Lvol;
+				*pOut++ += (*pInR) * Rvol;
 				pInL += Step;
 				pInR += Step;
 				v->m_Tick++;
@@ -159,14 +158,13 @@ static void Mix(short *pFinalOut, unsigned Frames)
 			// free voice if not used any more
 			if(v->m_Tick == v->m_pSample->m_NumFrames)
 			{
-				if(v->m_Flags&ISound::FLAG_LOOP)
+				if(v->m_Flags & ISound::FLAG_LOOP)
 					v->m_Tick = 0;
 				else
 					v->m_pSample = 0;
 			}
 		}
 	}
-
 
 	// release the lock
 	lock_unlock(m_SoundLock);
@@ -175,12 +173,12 @@ static void Mix(short *pFinalOut, unsigned Frames)
 	// TODO: this seams slow
 	for(unsigned i = 0; i < Frames; ++i)
 	{
-		int j = i<<1;
-		int vl = ((m_pMixBuffer[j]*MasterVol)/101)>>8;
-		int vr = ((m_pMixBuffer[j+1]*MasterVol)/101)>>8;
+		int j = i << 1;
+		int vl = ((m_pMixBuffer[j] * MasterVol) / 101) >> 8;
+		int vr = ((m_pMixBuffer[j + 1] * MasterVol) / 101) >> 8;
 
 		pFinalOut[j] = Int2Short(vl);
-		pFinalOut[j+1] = Int2Short(vr);
+		pFinalOut[j + 1] = Int2Short(vr);
 	}
 
 #if defined(CONF_ARCH_ENDIAN_BIG)
@@ -190,10 +188,9 @@ static void Mix(short *pFinalOut, unsigned Frames)
 
 static void SdlCallback(void *pUnused, Uint8 *pStream, int Len)
 {
-	(void)pUnused;
-	Mix((short *)pStream, Len/2/2);
+	(void) pUnused;
+	Mix((short *) pStream, Len / 2 / 2);
 }
-
 
 int CSound::Init()
 {
@@ -237,8 +234,8 @@ int CSound::Init()
 	else
 		dbg_msg("client/sound", "sound init successful");
 
-	m_MaxFrames = m_pConfig->m_SndBufferSize*2;
-	m_pMixBuffer = (int *)mem_alloc(m_MaxFrames*2*sizeof(int));
+	m_MaxFrames = m_pConfig->m_SndBufferSize * 2;
+	m_pMixBuffer = (int *) mem_alloc(m_MaxFrames * 2 * sizeof(int));
 
 	SDL_PauseAudio(0);
 
@@ -301,24 +298,24 @@ void CSound::RateConvert(int SampleID)
 		return;
 
 	// allocate new data
-	NumFrames = (int)((pSample->m_NumFrames/(float)pSample->m_Rate)*m_MixingRate);
-	pNewData = (short *)mem_alloc(NumFrames*pSample->m_Channels*sizeof(short));
+	NumFrames = (int) ((pSample->m_NumFrames / (float) pSample->m_Rate) * m_MixingRate);
+	pNewData = (short *) mem_alloc(NumFrames * pSample->m_Channels * sizeof(short));
 
 	for(int i = 0; i < NumFrames; i++)
 	{
 		// resample TODO: this should be done better, like linear at least
-		float a = i/(float)NumFrames;
-		int f = (int)(a*pSample->m_NumFrames);
+		float a = i / (float) NumFrames;
+		int f = (int) (a * pSample->m_NumFrames);
 		if(f >= pSample->m_NumFrames)
-			f = pSample->m_NumFrames-1;
+			f = pSample->m_NumFrames - 1;
 
 		// set new data
 		if(pSample->m_Channels == 1)
 			pNewData[i] = pSample->m_pData[f];
 		else if(pSample->m_Channels == 2)
 		{
-			pNewData[i*2] = pSample->m_pData[f*2];
-			pNewData[i*2+1] = pSample->m_pData[f*2+1];
+			pNewData[i * 2] = pSample->m_pData[f * 2];
+			pNewData[i * 2 + 1] = pSample->m_pData[f * 2 + 1];
 		}
 	}
 
@@ -336,31 +333,31 @@ static int ReadDataOld(void *pBuffer, int Size)
 #if defined(CONF_WAVPACK_OPEN_FILE_INPUT_EX)
 static int ReadData(void *pId, void *pBuffer, int Size)
 {
-	(void)pId;
+	(void) pId;
 	return ReadDataOld(pBuffer, Size);
 }
 
 static int ReturnFalse(void *pId)
 {
-	(void)pId;
+	(void) pId;
 	return 0;
 }
 
 static unsigned int GetPos(void *pId)
 {
-	(void)pId;
+	(void) pId;
 	return io_tell(s_File);
 }
 
 static unsigned int GetLength(void *pId)
 {
-	(void)pId;
+	(void) pId;
 	return io_length(s_File);
 }
 
 static int PushBackByte(void *pId, int Char)
 {
-	(void)pId;
+	(void) pId;
 	return io_unread_byte(s_File, Char);
 }
 #endif
@@ -411,11 +408,11 @@ ISound::CSampleHandle CSound::LoadWV(const char *pFilename)
 	Callback.get_pos = GetPos;
 	Callback.push_back_byte = PushBackByte;
 	Callback.read_bytes = ReadData;
-	pContext = WavpackOpenFileInputEx(&Callback, (void *)1, 0, aError, 0, 0);
+	pContext = WavpackOpenFileInputEx(&Callback, (void *) 1, 0, aError, 0, 0);
 #else
 	pContext = WavpackOpenFileInput(ReadDataOld, aError);
 #endif
-	if (pContext)
+	if(pContext)
 	{
 		int m_aSamples = WavpackGetNumSamples(pContext);
 		int BitsPerSample = WavpackGetBitsPerSample(pContext);
@@ -454,15 +451,15 @@ ISound::CSampleHandle CSound::LoadWV(const char *pFilename)
 			return CSampleHandle();
 		}
 
-		pData = (int *)mem_alloc(4*m_aSamples*m_aChannels);
+		pData = (int *) mem_alloc(4 * m_aSamples * m_aChannels);
 		WavpackUnpackSamples(pContext, pData, m_aSamples); // TODO: check return value
 		pSrc = pData;
 
-		pSample->m_pData = (short *)mem_alloc(2*m_aSamples*m_aChannels);
+		pSample->m_pData = (short *) mem_alloc(2 * m_aSamples * m_aChannels);
 		pDst = pSample->m_pData;
 
-		for (i = 0; i < m_aSamples*m_aChannels; i++)
-			*pDst++ = (short)*pSrc++;
+		for(i = 0; i < m_aSamples * m_aChannels; i++)
+			*pDst++ = (short) *pSrc++;
 
 		mem_free(pData);
 
@@ -489,8 +486,8 @@ ISound::CSampleHandle CSound::LoadWV(const char *pFilename)
 
 void CSound::SetListenerPos(float x, float y)
 {
-	m_CenterX = (int)x;
-	m_CenterY = (int)y;
+	m_CenterX = (int) x;
+	m_CenterY = (int) y;
 }
 
 void CSound::SetMaxDistance(float Distance)
@@ -500,7 +497,7 @@ void CSound::SetMaxDistance(float Distance)
 
 void CSound::SetChannelVolume(int ChannelID, float Vol)
 {
-	m_aChannels[ChannelID].m_Vol = (int)(Vol*255.0f);
+	m_aChannels[ChannelID].m_Vol = (int) (Vol * 255.0f);
 }
 
 int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, float y)
@@ -520,7 +517,7 @@ int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, floa
 		if(!m_aVoices[id].m_pSample)
 		{
 			VoiceID = id;
-			m_NextVoice = id+1;
+			m_NextVoice = id + 1;
 			break;
 		}
 	}
@@ -536,8 +533,8 @@ int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, floa
 			m_aVoices[VoiceID].m_Tick = 0;
 		m_aVoices[VoiceID].m_Vol = 255;
 		m_aVoices[VoiceID].m_Flags = Flags;
-		m_aVoices[VoiceID].m_X = (int)x;
-		m_aVoices[VoiceID].m_Y = (int)y;
+		m_aVoices[VoiceID].m_X = (int) x;
+		m_aVoices[VoiceID].m_Y = (int) y;
 	}
 
 	lock_unlock(m_SoundLock);
@@ -546,7 +543,7 @@ int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, floa
 
 int CSound::PlayAt(int ChannelID, CSampleHandle SampleID, int Flags, float x, float y)
 {
-	return Play(ChannelID, SampleID, Flags|ISound::FLAG_POS, x, y);
+	return Play(ChannelID, SampleID, Flags | ISound::FLAG_POS, x, y);
 }
 
 int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags)

@@ -12,6 +12,7 @@ class CNotifications : public CComponent
 	void RenderSoundNotification();
 
 	static void Con_SndToggle(IConsole::IResult *pResult, void *pUserData);
+
 public:
 	CNotifications();
 	virtual void OnRender();

@@ -23,9 +23,9 @@ enum
 };
 
 // TODO: use SDF or MSDF font instead of multiple font sizes
-static int s_aFontSizes[] = {8,9,10,11,12,13,14,15,16,17,18,19,20,24,36,64};
-#define NUM_FONT_SIZES (sizeof(s_aFontSizes)/sizeof(int))
-#define PAGE_SIZE (TEXTURE_SIZE/NUM_PAGES_PER_DIM)
+static int s_aFontSizes[] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 24, 36, 64};
+#define NUM_FONT_SIZES (sizeof(s_aFontSizes) / sizeof(int))
+#define PAGE_SIZE (TEXTURE_SIZE / NUM_PAGES_PER_DIM)
 
 struct CGlyph
 {
@@ -50,19 +50,19 @@ struct CGlyphIndex
 	int m_ID;
 	CGlyph *m_pGlyph;
 
-	friend bool operator ==(const CGlyphIndex& l, const CGlyphIndex& r)
+	friend bool operator==(const CGlyphIndex &l, const CGlyphIndex &r)
 	{
 		return l.m_ID == r.m_ID && l.m_FontSizeIndex == r.m_FontSizeIndex;
 	};
-	friend bool operator < (const CGlyphIndex& l, const CGlyphIndex& r)
+	friend bool operator<(const CGlyphIndex &l, const CGlyphIndex &r)
 	{
 		if(l.m_FontSizeIndex == r.m_FontSizeIndex)
 			return l.m_ID < r.m_ID;
 		return l.m_FontSizeIndex < r.m_FontSizeIndex;
 	};
-	friend bool operator > (const CGlyphIndex& l, const CGlyphIndex& r) { return r < l; }
-	friend bool operator <=(const CGlyphIndex& l, const CGlyphIndex& r) { return !(l > r); }
-	friend bool operator >=(const CGlyphIndex& l, const CGlyphIndex& r) { return !(l < r); }
+	friend bool operator>(const CGlyphIndex &l, const CGlyphIndex &r) { return r < l; }
+	friend bool operator<=(const CGlyphIndex &l, const CGlyphIndex &r) { return !(l > r); }
+	friend bool operator>=(const CGlyphIndex &l, const CGlyphIndex &r) { return !(l < r); }
 };
 
 class CGlyphMap
@@ -82,7 +82,11 @@ class CGlyphMap
 		int m_Access;
 		bool m_IsEmpty;
 
-		CAtlas() { m_LastFrameAccess = 0; m_Access = 0; }
+		CAtlas()
+		{
+			m_LastFrameAccess = 0;
+			m_Access = 0;
+		}
 		int TrySection(int Index, int Width, int Height);
 		void Init(int Index, int X, int Y, int Width, int Height);
 		ivec2 Add(int Width, int Height);
@@ -91,7 +95,7 @@ class CGlyphMap
 	IGraphics *m_pGraphics;
 	FT_Stroker m_FtStroker;
 	IGraphics::CTextureHandle m_aTextures[2];
-	CAtlas m_aAtlasPages[NUM_PAGES_PER_DIM*NUM_PAGES_PER_DIM];
+	CAtlas m_aAtlasPages[NUM_PAGES_PER_DIM * NUM_PAGES_PER_DIM];
 	int m_ActiveAtlasIndex;
 	sorted_array<CGlyphIndex> m_Glyphs;
 
@@ -112,6 +116,7 @@ class CGlyphMap
 	void UploadGlyph(int TextureIndex, int PosX, int PosY, int Width, int Height, const unsigned char *pData);
 	bool SetFaceByName(FT_Face *pFace, const char *pFamilyName);
 	int GetCharGlyph(int Chr, FT_Face *pFace);
+
 public:
 	CGlyphMap(IGraphics *pGraphics, FT_Library FtLibrary);
 	~CGlyphMap();

@@ -3,8 +3,8 @@
 #ifndef ENGINE_SHARED_NETWORK_H
 #define ENGINE_SHARED_NETWORK_H
 
-#include "ringbuffer.h"
 #include "huffman.h"
+#include "ringbuffer.h"
 
 /*
 
@@ -48,42 +48,41 @@ CURRENT:
 
 enum
 {
-	NETFLAG_ALLOWSTATELESS=1,
-	NETSENDFLAG_VITAL=1,
-	NETSENDFLAG_CONNLESS=2,
-	NETSENDFLAG_FLUSH=4,
+	NETFLAG_ALLOWSTATELESS = 1,
+	NETSENDFLAG_VITAL = 1,
+	NETSENDFLAG_CONNLESS = 2,
+	NETSENDFLAG_FLUSH = 4,
 
-	NETSTATE_OFFLINE=0,
+	NETSTATE_OFFLINE = 0,
 	NETSTATE_CONNECTING,
 	NETSTATE_ONLINE,
 
-	NETBANTYPE_SOFT=1,
-	NETBANTYPE_DROP=2,
+	NETBANTYPE_SOFT = 1,
+	NETBANTYPE_DROP = 2,
 
-	NETCREATE_FLAG_RANDOMPORT=1,
+	NETCREATE_FLAG_RANDOMPORT = 1,
 };
-
 
 enum
 {
 	NET_MAX_CHUNKHEADERSIZE = 3,
-	
+
 	// packets
 	NET_PACKETHEADERSIZE = 7,
 	NET_PACKETHEADERSIZE_CONNLESS = NET_PACKETHEADERSIZE + 2,
 	NET_MAX_PACKETHEADERSIZE = NET_PACKETHEADERSIZE_CONNLESS,
 
 	NET_MAX_PACKETSIZE = 1400,
-	NET_MAX_PAYLOAD = NET_MAX_PACKETSIZE-NET_MAX_PACKETHEADERSIZE,
+	NET_MAX_PAYLOAD = NET_MAX_PACKETSIZE - NET_MAX_PACKETHEADERSIZE,
 
-	NET_PACKETVERSION=1,
+	NET_PACKETVERSION = 1,
 
-	NET_PACKETFLAG_CONTROL=1,
-	NET_PACKETFLAG_RESEND=2,
-	NET_PACKETFLAG_COMPRESSION=4,
-	NET_PACKETFLAG_CONNLESS=8,
+	NET_PACKETFLAG_CONTROL = 1,
+	NET_PACKETFLAG_RESEND = 2,
+	NET_PACKETFLAG_COMPRESSION = 4,
+	NET_PACKETFLAG_CONNLESS = 8,
 
-	NET_MAX_PACKET_CHUNKS=256,
+	NET_MAX_PACKET_CHUNKS = 256,
 
 	// token
 	NET_SEEDTIME = 16,
@@ -108,33 +107,32 @@ enum
 	//
 	NET_MAX_CLIENTS = 64,
 	NET_MAX_CONSOLE_CLIENTS = 4,
-	
-	NET_MAX_SEQUENCE = 1<<10,
-	NET_SEQUENCE_MASK = NET_MAX_SEQUENCE-1,
 
-	NET_CONNSTATE_OFFLINE=0,
-	NET_CONNSTATE_TOKEN=1,
-	NET_CONNSTATE_CONNECT=2,
-	NET_CONNSTATE_PENDING=3,
-	NET_CONNSTATE_ONLINE=4,
-	NET_CONNSTATE_ERROR=5,
+	NET_MAX_SEQUENCE = 1 << 10,
+	NET_SEQUENCE_MASK = NET_MAX_SEQUENCE - 1,
 
-	NET_CHUNKFLAG_VITAL=1,
-	NET_CHUNKFLAG_RESEND=2,
+	NET_CONNSTATE_OFFLINE = 0,
+	NET_CONNSTATE_TOKEN = 1,
+	NET_CONNSTATE_CONNECT = 2,
+	NET_CONNSTATE_PENDING = 3,
+	NET_CONNSTATE_ONLINE = 4,
+	NET_CONNSTATE_ERROR = 5,
 
-	NET_CTRLMSG_KEEPALIVE=0,
-	NET_CTRLMSG_CONNECT=1,
-	NET_CTRLMSG_ACCEPT=2,
-	NET_CTRLMSG_CLOSE=4,
-	NET_CTRLMSG_TOKEN=5,
+	NET_CHUNKFLAG_VITAL = 1,
+	NET_CHUNKFLAG_RESEND = 2,
 
-	NET_CONN_BUFFERSIZE=1024*32,
+	NET_CTRLMSG_KEEPALIVE = 0,
+	NET_CTRLMSG_CONNECT = 1,
+	NET_CTRLMSG_ACCEPT = 2,
+	NET_CTRLMSG_CLOSE = 4,
+	NET_CTRLMSG_TOKEN = 5,
+
+	NET_CONN_BUFFERSIZE = 1024 * 32,
 
 	NET_ENUM_TERMINATOR
 };
 
-
-typedef int (*NETFUNC_DELCLIENT)(int ClientID, const char* pReason, void *pUser);
+typedef int (*NETFUNC_DELCLIENT)(int ClientID, const char *pReason, void *pUser);
 typedef int (*NETFUNC_NEWCLIENT)(int ClientID, void *pUser);
 
 typedef unsigned int TOKEN;
@@ -185,7 +183,6 @@ public:
 	unsigned char m_aChunkData[NET_MAX_PAYLOAD];
 };
 
-
 class CNetBase
 {
 	class CNetInitializer
@@ -213,7 +210,7 @@ public:
 	CConfig *Config() { return m_pConfig; }
 	class IEngine *Engine() { return m_pEngine; }
 	int NetType() { return m_Socket.type; }
-	
+
 	void Init(NETSOCKET Socket, class CConfig *pConfig, class IConsole *pConsole, class IEngine *pEngine);
 	void Shutdown();
 	void UpdateLogHandles();
@@ -253,7 +250,7 @@ private:
 	int64 m_NextSeedTime;
 };
 
-typedef void(*FSendCallback)(int TrackID, void *pUser);
+typedef void (*FSendCallback)(int TrackID, void *pUser);
 struct CSendCBData
 {
 	FSendCallback m_pfnCallback;
@@ -302,15 +299,15 @@ private:
 	};
 
 	TStaticRingBuffer<CAddressInfo,
-	                  NET_TOKENCACHE_SIZE * sizeof(CAddressInfo),
-	                  CRingBufferBase::FLAG_RECYCLE> m_TokenCache;
+		NET_TOKENCACHE_SIZE * sizeof(CAddressInfo),
+		CRingBufferBase::FLAG_RECYCLE>
+		m_TokenCache;
 
 	CConnlessPacketInfo *m_pConnlessPacketList; // TODO: enhance this, dynamic linked lists
-	                                            // are bad for performance
+						    // are bad for performance
 	CNetBase *m_pNetBase;
 	const CNetTokenManager *m_pTokenManager;
 };
-
 
 class CNetConnection
 {
@@ -318,6 +315,7 @@ class CNetConnection
 	// the ack sequencing number and is also responible for updating
 	// that. this should be fixed.
 	friend class CNetRecvUnpacker;
+
 private:
 	unsigned short m_Sequence;
 	unsigned short m_Ack;
@@ -526,8 +524,6 @@ public:
 	const NETADDR *ClientAddr(int ClientID) const { return m_aSlots[ClientID].m_Connection.PeerAddress(); }
 	class CNetBan *NetBan() const { return m_pNetBan; }
 };
-
-
 
 // client side
 class CNetClient : public CNetBase

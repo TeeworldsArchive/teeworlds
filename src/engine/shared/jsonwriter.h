@@ -14,7 +14,7 @@ class CJsonWriter
 		STATE_ARRAY,
 		STATE_ATTRIBUTE,
 
-		MAX_DEPTH=16,
+		MAX_DEPTH = 16,
 	};
 
 	class CState

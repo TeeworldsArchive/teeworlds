@@ -1,11 +1,11 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <base/math.h>
-#include <engine/graphics.h>
 #include <engine/demo.h>
+#include <engine/graphics.h>
 
-#include <generated/client_data.h>
 #include <game/client/render.h>
+#include <generated/client_data.h>
 
 #include "particles.h"
 
@@ -17,18 +17,17 @@ CParticles::CParticles()
 	m_RenderGeneral.m_pParts = this;
 }
 
-
 void CParticles::OnReset()
 {
 	// reset particles
 	for(int i = 0; i < MAX_PARTICLES; i++)
 	{
-		m_aParticles[i].m_PrevPart = i-1;
-		m_aParticles[i].m_NextPart = i+1;
+		m_aParticles[i].m_PrevPart = i - 1;
+		m_aParticles[i].m_NextPart = i + 1;
 	}
 
 	m_aParticles[0].m_PrevPart = 0;
-	m_aParticles[MAX_PARTICLES-1].m_NextPart = -1;
+	m_aParticles[MAX_PARTICLES - 1].m_NextPart = -1;
 	m_FirstFree = 0;
 
 	for(int i = 0; i < NUM_GROUPS; i++)
@@ -39,7 +38,7 @@ void CParticles::Add(int Group, CParticle *pPart)
 {
 	if(m_pClient->IsWorldPaused() || m_pClient->IsDemoPlaybackPaused())
 		return;
-	if (m_FirstFree == -1)
+	if(m_FirstFree == -1)
 		return;
 
 	// remove from the free list
@@ -86,16 +85,16 @@ void CParticles::Update(float TimePassed)
 		while(i != -1)
 		{
 			int Next = m_aParticles[i].m_NextPart;
-			//m_aParticles[i].vel += flow_get(m_aParticles[i].pos)*time_passed * m_aParticles[i].flow_affected;
-			m_aParticles[i].m_Vel.y += m_aParticles[i].m_Gravity*TimePassed;
+			// m_aParticles[i].vel += flow_get(m_aParticles[i].pos)*time_passed * m_aParticles[i].flow_affected;
+			m_aParticles[i].m_Vel.y += m_aParticles[i].m_Gravity * TimePassed;
 
 			for(int f = 0; f < FrictionCount; f++) // apply friction
 				m_aParticles[i].m_Vel *= m_aParticles[i].m_Friction;
 
 			// move the point
-			vec2 Vel = m_aParticles[i].m_Vel*TimePassed;
-			Collision()->MovePoint(&m_aParticles[i].m_Pos, &Vel, 0.1f+0.9f*random_float(), NULL);
-			m_aParticles[i].m_Vel = Vel* (1.0f/TimePassed);
+			vec2 Vel = m_aParticles[i].m_Vel * TimePassed;
+			Collision()->MovePoint(&m_aParticles[i].m_Pos, &Vel, 0.1f + 0.9f * random_float(), NULL);
+			m_aParticles[i].m_Vel = Vel * (1.0f / TimePassed);
 
 			m_aParticles[i].m_Life += TimePassed;
 			m_aParticles[i].m_Rot += TimePassed * m_aParticles[i].m_Rotspeed;
@@ -132,14 +131,14 @@ void CParticles::OnRender()
 
 	int64 Now = time_get();
 	static int64 s_LastTime = Now;
-	Update((float)((Now-s_LastTime)/(double)time_freq()) * m_pClient->GetAnimationPlaybackSpeed());
+	Update((float) ((Now - s_LastTime) / (double) time_freq()) * m_pClient->GetAnimationPlaybackSpeed());
 	s_LastTime = Now;
 }
 
 void CParticles::RenderGroup(int Group)
 {
 	Graphics()->BlendNormal();
-	//gfx_blend_additive();
+	// gfx_blend_additive();
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_PARTICLES].m_Id);
 	Graphics()->QuadsBegin();
 

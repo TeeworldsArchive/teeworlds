@@ -2,9 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "dm.h"
 
-
-CGameControllerDM::CGameControllerDM(CGameContext *pGameServer)
-: IGameController(pGameServer)
+CGameControllerDM::CGameControllerDM(CGameContext *pGameServer) : IGameController(pGameServer)
 {
 	/*
 	m_pGameType = "DM";

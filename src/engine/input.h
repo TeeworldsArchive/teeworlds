@@ -17,14 +17,14 @@ public:
 	public:
 		int m_Flags;
 		int m_Key;
-		char m_aText[32*UTF8_BYTE_LENGTH+1];
+		char m_aText[32 * UTF8_BYTE_LENGTH + 1];
 		int m_InputCount;
 	};
 
 protected:
 	enum
 	{
-		INPUT_BUFFER_SIZE=32
+		INPUT_BUFFER_SIZE = 32
 	};
 
 	// quick access to events
@@ -34,11 +34,11 @@ protected:
 public:
 	enum
 	{
-		FLAG_PRESS=1,
-		FLAG_RELEASE=2,
-		FLAG_REPEAT=4,
-		FLAG_TEXT=8,
-		FLAG_TEXTEDIT=16,
+		FLAG_PRESS = 1,
+		FLAG_RELEASE = 2,
+		FLAG_REPEAT = 4,
+		FLAG_TEXT = 8,
+		FLAG_TEXTEDIT = 16,
 
 		CURSOR_NONE = 0,
 		CURSOR_MOUSE,
@@ -46,7 +46,7 @@ public:
 
 		MAX_CANDIDATES = 16,
 		MAX_CANDIDATE_LENGTH = 16,
-		MAX_CANDIDATE_ARRAY_SIZE=MAX_CANDIDATE_LENGTH*UTF8_BYTE_LENGTH+1,
+		MAX_CANDIDATE_ARRAY_SIZE = MAX_CANDIDATE_LENGTH * UTF8_BYTE_LENGTH + 1,
 		MAX_COMPOSITION_ARRAY_SIZE = 32, // SDL2 limitation
 
 		COMP_LENGTH_INACTIVE = -1
@@ -59,7 +59,7 @@ public:
 	{
 		if(Index < 0 || Index >= m_NumEvents)
 		{
-			IInput::CEvent e = {0,0};
+			IInput::CEvent e = {0, 0};
 			return e;
 		}
 		return m_aInputEvents[Index];
@@ -68,7 +68,7 @@ public:
 
 	// keys
 	virtual bool KeyIsPressed(int Key) const = 0;
-	virtual bool KeyPress(int Key, bool CheckCounter=false) const = 0;
+	virtual bool KeyPress(int Key, bool CheckCounter = false) const = 0;
 	const char *KeyName(int Key) const { return (Key >= 0 && Key < g_MaxKeys) ? g_aaKeyStrings[Key] : g_aaKeyStrings[0]; }
 
 	// joystick
@@ -123,7 +123,6 @@ public:
 		return CURSOR_NONE;
 	}
 };
-
 
 class IEngineInput : public IInput
 {

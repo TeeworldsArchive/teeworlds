@@ -42,6 +42,7 @@ public:
 
 		static int GetJoystickHatKey(int Hat, int HatValue);
 	};
+
 private:
 	IEngineGraphics *m_pGraphics;
 	CConfig *m_pConfig;

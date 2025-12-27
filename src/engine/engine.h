@@ -4,6 +4,7 @@
 #define ENGINE_ENGINE_H
 
 #include "kernel.h"
+
 #include <engine/shared/jobs.h>
 
 class CHostLookup

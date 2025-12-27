@@ -11,6 +11,7 @@ class CEffects : public CComponent
 
 	int m_aDamageTaken[MAX_CLIENTS];
 	float m_aDamageTakenTick[MAX_CLIENTS];
+
 public:
 	CEffects();
 

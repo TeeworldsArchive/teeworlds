@@ -5,8 +5,8 @@
 
 #include <engine/storage.h>
 
-#include <versionsrv/versionsrv.h>
 #include <versionsrv/mapversions.h>
+#include <versionsrv/versionsrv.h>
 
 #include "mapchecker.h"
 
@@ -36,7 +36,7 @@ void CMapChecker::AddMaplist(const CMapVersion *pMaplist, unsigned Num)
 
 	for(unsigned i = 0; i < Num; ++i)
 	{
-		CWhitelistEntry *pEntry = (CWhitelistEntry *)m_Whitelist.Allocate(sizeof(CWhitelistEntry));
+		CWhitelistEntry *pEntry = (CWhitelistEntry *) m_Whitelist.Allocate(sizeof(CWhitelistEntry));
 		pEntry->m_pNext = m_pFirst;
 		m_pFirst = pEntry;
 
@@ -68,7 +68,7 @@ bool CMapChecker::ReadAndValidateMap(const char *pFilename, int StorageType)
 
 	// extract map name
 	char aMapName[MAX_MAP_LENGTH];
-	char aMapNameExt[MAX_MAP_LENGTH+4];
+	char aMapNameExt[MAX_MAP_LENGTH + 4];
 	bool StandardMap = false;
 	const char *pExtractedName = pFilename;
 	const char *pEnd = 0;
@@ -76,12 +76,12 @@ bool CMapChecker::ReadAndValidateMap(const char *pFilename, int StorageType)
 	for(const char *pSrc = pFilename; *pSrc; ++pSrc)
 	{
 		if(*pSrc == '/' || *pSrc == '\\')
-			pExtractedName = pSrc+1;
+			pExtractedName = pSrc + 1;
 		else if(*pSrc == '.')
 			pEnd = pSrc;
 	}
 
-	int Length = (int)(pEnd - pExtractedName);
+	int Length = (int) (pEnd - pExtractedName);
 	if(Length <= 0 || Length >= MAX_MAP_LENGTH)
 		return true;
 	str_truncate(aMapName, MAX_MAP_LENGTH, pExtractedName, pEnd - pExtractedName);

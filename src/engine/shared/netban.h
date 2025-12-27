@@ -5,7 +5,6 @@
 
 #include <base/system.h>
 
-
 inline int NetComp(const NETADDR *pAddr1, const NETADDR *pAddr2)
 {
 	return net_addr_comp(pAddr1, pAddr2, false);
@@ -17,14 +16,13 @@ public:
 	NETADDR m_LB;
 	NETADDR m_UB;
 
-	bool IsValid() const { return m_LB.type == m_UB.type && mem_comp(m_LB.ip, m_UB.ip, m_LB.type==NETTYPE_IPV4 ? NETADDR_SIZE_IPV4 : NETADDR_SIZE_IPV6) < 0; }
+	bool IsValid() const { return m_LB.type == m_UB.type && mem_comp(m_LB.ip, m_UB.ip, m_LB.type == NETTYPE_IPV4 ? NETADDR_SIZE_IPV4 : NETADDR_SIZE_IPV6) < 0; }
 };
 
 inline int NetComp(const CNetRange *pRange1, const CNetRange *pRange2)
 {
 	return net_addr_comp(&pRange1->m_LB, &pRange2->m_LB, false) || net_addr_comp(&pRange1->m_UB, &pRange2->m_UB, false);
 }
-
 
 class CNetBan
 {
@@ -37,12 +35,12 @@ protected:
 	bool NetMatch(const CNetRange *pRange, const NETADDR *pAddr, int Start, int Length) const
 	{
 		return pRange->m_LB.type == pAddr->type && (Start == 0 || mem_comp(&pRange->m_LB.ip[0], &pAddr->ip[0], Start) == 0) &&
-			mem_comp(&pRange->m_LB.ip[Start], &pAddr->ip[Start], Length-Start) <= 0 && mem_comp(&pRange->m_UB.ip[Start], &pAddr->ip[Start], Length-Start) >= 0;
+		       mem_comp(&pRange->m_LB.ip[Start], &pAddr->ip[Start], Length - Start) <= 0 && mem_comp(&pRange->m_UB.ip[Start], &pAddr->ip[Start], Length - Start) >= 0;
 	}
 
 	bool NetMatch(const CNetRange *pRange, const NETADDR *pAddr) const
 	{
-		return NetMatch(pRange, pAddr, 0,  pRange->m_LB.type==NETTYPE_IPV4 ? 4 : 16);
+		return NetMatch(pRange, pAddr, 0, pRange->m_LB.type == NETTYPE_IPV4 ? 4 : 16);
 	}
 
 	const char *NetToString(const NETADDR *pData, char *pBuffer, unsigned BufferSize) const
@@ -66,9 +64,9 @@ protected:
 	{
 	public:
 		int m_Hash;
-		int m_HashIndex;	// matching parts for ranges, 0 for addr
+		int m_HashIndex; // matching parts for ranges, 0 for addr
 
-		CNetHash() {}	
+		CNetHash() {}
 		CNetHash(const NETADDR *pAddr);
 		CNetHash(const CNetRange *pRange);
 
@@ -79,15 +77,16 @@ protected:
 	{
 		enum
 		{
-			EXPIRES_NEVER=-1,
-			REASON_LENGTH=64,
+			EXPIRES_NEVER = -1,
+			REASON_LENGTH = 64,
 		};
 		int m_Expires;
 		int m_LastInfoQuery;
-		char m_aReason[REASON_LENGTH];		
+		char m_aReason[REASON_LENGTH];
 	};
 
-	template<class T> struct CBan
+	template<class T>
+	struct CBan
 	{
 		T m_Data;
 		CBanInfo m_Info;
@@ -102,7 +101,8 @@ protected:
 		CBan *m_pPrev;
 	};
 
-	template<class T, int HashCount> class CBanPool
+	template<class T, int HashCount>
+	class CBanPool
 	{
 	public:
 		typedef T CDataType;
@@ -111,7 +111,7 @@ protected:
 		int Remove(CBan<CDataType> *pBan);
 		void Update(CBan<CDataType> *pBan, const CBanInfo *pInfo);
 		void Reset();
-	
+
 		int Num() const { return m_CountUsed; }
 		bool IsFull() const { return m_CountUsed == MAX_BANS; }
 
@@ -132,7 +132,7 @@ protected:
 	private:
 		enum
 		{
-			MAX_BANS=1024,
+			MAX_BANS = 1024,
 		};
 
 		CBan<CDataType> *m_aapHashList[HashCount][256];
@@ -146,10 +146,13 @@ protected:
 	typedef CBanPool<CNetRange, 16> CBanRangePool;
 	typedef CBan<NETADDR> CBanAddr;
 	typedef CBan<CNetRange> CBanRange;
-	
-	template<class T> void MakeBanInfo(CBan<T> *pBan, char *pBuf, unsigned BuffSize, int Type, int *pLastInfoQuery=0);
-	template<class T> int Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason);
-	template<class T> int Unban(T *pBanPool, const typename T::CDataType *pData);
+
+	template<class T>
+	void MakeBanInfo(CBan<T> *pBan, char *pBuf, unsigned BuffSize, int Type, int *pLastInfoQuery = 0);
+	template<class T>
+	int Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason);
+	template<class T>
+	int Unban(T *pBanPool, const typename T::CDataType *pData);
 
 	class IConsole *m_pConsole;
 	class IStorage *m_pStorage;
@@ -160,7 +163,7 @@ protected:
 public:
 	enum
 	{
-		MSGTYPE_PLAYER=0,
+		MSGTYPE_PLAYER = 0,
 		MSGTYPE_LIST,
 		MSGTYPE_BANADD,
 		MSGTYPE_BANREM,
@@ -179,7 +182,8 @@ public:
 	int UnbanByRange(const CNetRange *pRange);
 	int UnbanByIndex(int Index);
 	void UnbanAll();
-	template<class T> bool IsBannable(const T *pData);
+	template<class T>
+	bool IsBannable(const T *pData);
 	bool IsBanned(const NETADDR *pAddr, char *pBuf, unsigned BufferSize, int *pLastInfoQuery);
 
 	static void ConBan(class IConsole::IResult *pResult, void *pUser);

@@ -2,8 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef GAME_SERVER_GAMEMODES_CTF_H
 #define GAME_SERVER_GAMEMODES_CTF_H
-#include <game/server/gamecontroller.h>
 #include <game/server/entity.h>
+#include <game/server/gamecontroller.h>
 
 class CGameControllerCTF : public IGameController
 {
@@ -17,7 +17,7 @@ class CGameControllerCTF : public IGameController
 
 public:
 	CGameControllerCTF(class CGameContext *pGameServer);
-	
+
 	// event
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 	virtual void OnFlagReturn(class CFlag *pFlag);
@@ -29,4 +29,3 @@ public:
 };
 
 #endif
-

@@ -3,8 +3,8 @@
 #ifndef ENGINE_SHARED_DATAFILE_H
 #define ENGINE_SHARED_DATAFILE_H
 
-#include <base/system.h>
 #include <base/hash.h>
+#include <base/system.h>
 
 // raw datafile access
 class CDataFileReader
@@ -13,6 +13,7 @@ class CDataFileReader
 	void *GetDataImpl(int Index, int Swap);
 	int GetFileDataSize(int Index) const;
 	int GetFileItemSize(int Index) const;
+
 public:
 	CDataFileReader() : m_pDataFile(0) {}
 	~CDataFileReader() { Close(); }
@@ -70,9 +71,9 @@ class CDataFileWriter
 
 	enum
 	{
-		MAX_ITEM_TYPES=0xffff,
-		MAX_ITEMS=1024,
-		MAX_DATAS=1024,
+		MAX_ITEM_TYPES = 0xffff,
+		MAX_ITEMS = 1024,
+		MAX_DATAS = 1024,
 	};
 
 	IOHANDLE m_File;
@@ -92,6 +93,5 @@ public:
 	int AddItem(int Type, int ID, int Size, const void *pData);
 	int Finish();
 };
-
 
 #endif

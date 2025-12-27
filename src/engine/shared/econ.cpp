@@ -6,10 +6,9 @@
 #include "econ.h"
 #include "netban.h"
 
-
 int CEcon::NewClientCallback(int ClientID, void *pUser)
 {
-	CEcon *pThis = (CEcon *)pUser;
+	CEcon *pThis = (CEcon *) pUser;
 
 	char aAddrStr[NETADDR_MAXSTRSIZE];
 	net_addr_str(pThis->m_NetConsole.ClientAddr(ClientID), aAddrStr, sizeof(aAddrStr), true);
@@ -27,7 +26,7 @@ int CEcon::NewClientCallback(int ClientID, void *pUser)
 
 int CEcon::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 {
-	CEcon *pThis = (CEcon *)pUser;
+	CEcon *pThis = (CEcon *) pUser;
 
 	char aAddrStr[NETADDR_MAXSTRSIZE];
 	net_addr_str(pThis->m_NetConsole.ClientAddr(ClientID), aAddrStr, sizeof(aAddrStr), true);
@@ -97,7 +96,7 @@ bool CEcon::Open()
 		return false;
 
 	int64 Now = time_get();
-	if(m_LastOpenTry + 60 * time_freq() > Now)	// try again every 60s
+	if(m_LastOpenTry + 60 * time_freq() > Now) // try again every 60s
 		return false;
 
 	NETADDR BindAddr;
@@ -119,7 +118,7 @@ bool CEcon::Open()
 		m_Ready = true;
 		char aBuf[128];
 		str_format(aBuf, sizeof(aBuf), "bound to %s:%d", m_pConfig->m_EcBindaddr, m_pConfig->m_EcPort);
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD,"econ", aBuf);
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "econ", aBuf);
 		m_NetConsole.SetLingerState(m_pConfig->m_NetTcpAbortOnClose);
 
 		Console()->Chain("ec_output_level", ConchainEconOutputLevelUpdate, this);
@@ -139,14 +138,14 @@ bool CEcon::Open()
 void CEcon::Update()
 {
 	if(!m_Ready && !Open())
-		return;	
+		return;
 
 	m_NetConsole.Update();
 
 	char aBuf[NET_MAX_PACKETSIZE];
 	int ClientID;
 
-	while(m_NetConsole.Recv(aBuf, (int)(sizeof(aBuf))-1, &ClientID))
+	while(m_NetConsole.Recv(aBuf, (int) (sizeof(aBuf)) - 1, &ClientID))
 	{
 		dbg_assert(m_aClients[ClientID].m_State != CClient::STATE_EMPTY, "got message from empty slot");
 		if(m_aClients[ClientID].m_State == CClient::STATE_CONNECTED)
@@ -170,7 +169,7 @@ void CEcon::Update()
 				if(m_aClients[ClientID].m_AuthTries >= MAX_AUTH_TRIES)
 				{
 					if(m_pConfig->m_EcBantime)
-						m_NetConsole.NetBan()->BanAddr(m_NetConsole.ClientAddr(ClientID), m_pConfig->m_EcBantime*60, "Too many authentication tries");
+						m_NetConsole.NetBan()->BanAddr(m_NetConsole.ClientAddr(ClientID), m_pConfig->m_EcBantime * 60, "Too many authentication tries");
 					m_NetConsole.Drop(ClientID, "Too many authentication tries");
 				}
 			}

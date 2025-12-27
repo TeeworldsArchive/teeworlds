@@ -44,9 +44,8 @@ float CButtonContainer::GetFade(bool Checked, float Seconds)
 		return 1.0f;
 	}
 
-	return maximum(0.0f, m_FadeStartTime -  Client()->LocalTime() + Seconds)/Seconds;
+	return maximum(0.0f, m_FadeStartTime - Client()->LocalTime() + Seconds) / Seconds;
 }
-
 
 CUI::CUI()
 {
@@ -93,9 +92,12 @@ void CUI::Update(float MouseX, float MouseY, float MouseWorldX, float MouseWorld
 	unsigned MouseButtons = 0;
 	if(Enabled())
 	{
-		if(Input()->KeyIsPressed(KEY_MOUSE_1)) MouseButtons |= 1;
-		if(Input()->KeyIsPressed(KEY_MOUSE_2)) MouseButtons |= 2;
-		if(Input()->KeyIsPressed(KEY_MOUSE_3)) MouseButtons |= 4;
+		if(Input()->KeyIsPressed(KEY_MOUSE_1))
+			MouseButtons |= 1;
+		if(Input()->KeyIsPressed(KEY_MOUSE_2))
+			MouseButtons |= 2;
+		if(Input()->KeyIsPressed(KEY_MOUSE_3))
+			MouseButtons |= 4;
 	}
 
 	m_MouseX = MouseX;
@@ -129,7 +131,7 @@ bool CUI::KeyIsPressed(int Key) const
 
 bool CUI::ConsumeHotkey(unsigned Hotkey)
 {
-	bool Pressed = m_HotkeysPressed&Hotkey;
+	bool Pressed = m_HotkeysPressed & Hotkey;
 	m_HotkeysPressed &= ~Hotkey;
 	return Pressed;
 }
@@ -143,7 +145,7 @@ bool CUI::OnInput(const IInput::CEvent &e)
 	if(pActiveInput && pActiveInput->ProcessInput(e))
 		return true;
 
-	if(e.m_Flags&IInput::FLAG_PRESS)
+	if(e.m_Flags & IInput::FLAG_PRESS)
 	{
 		unsigned LastHotkeysPressed = m_HotkeysPressed;
 		if(e.m_Key == KEY_RETURN || e.m_Key == KEY_KP_ENTER)
@@ -169,10 +171,10 @@ void CUI::ConvertCursorMove(float *pX, float *pY, int CursorType) const
 	switch(CursorType)
 	{
 		case IInput::CURSOR_MOUSE:
-			Factor = Config()->m_UiMousesens/100.0f;
+			Factor = Config()->m_UiMousesens / 100.0f;
 			break;
 		case IInput::CURSOR_JOYSTICK:
-			Factor = Config()->m_UiJoystickSens/100.0f;
+			Factor = Config()->m_UiJoystickSens / 100.0f;
 			break;
 	}
 	*pX *= Factor;
@@ -188,7 +190,7 @@ const CUIRect *CUI::Screen()
 
 float CUI::PixelSize()
 {
-	return Screen()->w/Graphics()->ScreenWidth();
+	return Screen()->w / Graphics()->ScreenWidth();
 }
 
 void CUI::MapScreen()
@@ -206,8 +208,8 @@ void CUI::ClipEnable(const CUIRect *pRect)
 		CUIRect Intersection;
 		Intersection.x = maximum(pRect->x, pOldRect->x);
 		Intersection.y = maximum(pRect->y, pOldRect->y);
-		Intersection.w = minimum(pRect->x+pRect->w, pOldRect->x+pOldRect->w) - pRect->x;
-		Intersection.h = minimum(pRect->y+pRect->h, pOldRect->y+pOldRect->h) - pRect->y;
+		Intersection.w = minimum(pRect->x + pRect->w, pOldRect->x + pOldRect->w) - pRect->x;
+		Intersection.h = minimum(pRect->y + pRect->h, pOldRect->y + pOldRect->h) - pRect->y;
 		m_aClips[m_NumClips] = Intersection;
 	}
 	else
@@ -236,9 +238,9 @@ void CUI::UpdateClipping()
 	if(IsClipped())
 	{
 		const CUIRect *pRect = ClipArea();
-		const float XScale = Graphics()->ScreenWidth()/Screen()->w;
-		const float YScale = Graphics()->ScreenHeight()/Screen()->h;
-		Graphics()->ClipEnable((int)(pRect->x*XScale), (int)(pRect->y*YScale), (int)(pRect->w*XScale), (int)(pRect->h*YScale));
+		const float XScale = Graphics()->ScreenWidth() / Screen()->w;
+		const float YScale = Graphics()->ScreenHeight() / Screen()->h;
+		Graphics()->ClipEnable((int) (pRect->x * XScale), (int) (pRect->y * YScale), (int) (pRect->w * XScale), (int) (pRect->h * YScale));
 	}
 	else
 	{
@@ -382,7 +384,7 @@ void CUI::DoLabelHighlighted(const CUIRect *pRect, const char *pText, const char
 	if(pMatch)
 	{
 		const int HighlightLength = str_length(pHighlighted);
-		TextRender()->TextDeferred(&s_Cursor, pText, (int)(pMatch - pText));
+		TextRender()->TextDeferred(&s_Cursor, pText, (int) (pMatch - pText));
 		TextRender()->TextColor(HighlightColor);
 		TextRender()->TextDeferred(&s_Cursor, pMatch, HighlightLength);
 		TextRender()->TextColor(TextColor);
@@ -442,7 +444,7 @@ bool CUI::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 				const int PrevOffset = Offset;
 				Offset = str_utf8_forward(pDisplayStr, Offset);
 				const float AddedTextWidth = TextRender()->TextWidth(FontSize, pDisplayStr + PrevOffset, Offset - PrevOffset);
-				if(TotalTextWidth + AddedTextWidth/2.0f - ScrollOffset - ScrollOffsetChange > MxRel)
+				if(TotalTextWidth + AddedTextWidth / 2.0f - ScrollOffset - ScrollOffsetChange > MxRel)
 				{
 					CursorOffset = PrevOffset;
 					if(s_SelectionStartOffset < 0)
@@ -573,7 +575,7 @@ void CUI::DoEditBoxOption(CLineInput *pLineInput, const CUIRect *pRect, const ch
 	CUIRect Label, EditBox;
 	pRect->VSplitLeft(VSplitVal, &Label, &EditBox);
 
-	const float FontSize = pRect->h*CUI::ms_FontmodHeight*0.8f;
+	const float FontSize = pRect->h * CUI::ms_FontmodHeight * 0.8f;
 	char aBuf[32];
 	str_format(aBuf, sizeof(aBuf), "%s:", pStr);
 	DoLabel(&Label, aBuf, FontSize, TEXTALIGN_MC);
@@ -726,19 +728,19 @@ void CUI::DoScrollbarOption(const void *pID, int *pOption, const CUIRect *pRect,
 	else
 		str_format(aBuf, sizeof(aBuf), "%s: \xe2\x88\x9e", pStr);
 
-	float FontSize = pRect->h*CUI::ms_FontmodHeight*0.8f;
+	float FontSize = pRect->h * CUI::ms_FontmodHeight * 0.8f;
 	float VSplitVal = maximum(TextRender()->TextWidth(FontSize, aBuf, -1), TextRender()->TextWidth(FontSize, aBufMax, -1));
 
 	pRect->Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
 	CUIRect Label, ScrollBar;
-	pRect->VSplitLeft(pRect->h+10.0f+VSplitVal, &Label, &ScrollBar);
-	Label.VSplitLeft(Label.h+5.0f, 0, &Label);
+	pRect->VSplitLeft(pRect->h + 10.0f + VSplitVal, &Label, &ScrollBar);
+	Label.VSplitLeft(Label.h + 5.0f, 0, &Label);
 	DoLabel(&Label, aBuf, FontSize, TEXTALIGN_ML);
 
 	ScrollBar.VMargin(4.0f, &ScrollBar);
 	Value = pScale->ToAbsolute(DoScrollbarH(pID, &ScrollBar, pScale->ToRelative(Value, Min, Max)), Min, Max);
-	if (NoClampValue && ((Value == Min && *pOption < Min) || (Value == Max && *pOption > Max)))
+	if(NoClampValue && ((Value == Min && *pOption < Min) || (Value == Max && *pOption > Max)))
 	{
 		Value = *pOption;
 	}
@@ -748,7 +750,7 @@ void CUI::DoScrollbarOption(const void *pID, int *pOption, const CUIRect *pRect,
 	*pOption = Value;
 }
 
-void CUI::DoScrollbarOptionLabeled(const void *pID, int *pOption, const CUIRect *pRect, const char *pStr, const char* aLabels[], int NumLabels, const IScrollbarScale *pScale)
+void CUI::DoScrollbarOptionLabeled(const void *pID, int *pOption, const CUIRect *pRect, const char *pStr, const char *aLabels[], int NumLabels, const IScrollbarScale *pScale)
 {
 	int Value = clamp(*pOption, 0, NumLabels - 1);
 	const int Max = NumLabels - 1;
@@ -756,12 +758,12 @@ void CUI::DoScrollbarOptionLabeled(const void *pID, int *pOption, const CUIRect 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "%s: %s", pStr, aLabels[Value]);
 
-	float FontSize = pRect->h*CUI::ms_FontmodHeight*0.8f;
+	float FontSize = pRect->h * CUI::ms_FontmodHeight * 0.8f;
 
 	pRect->Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
 	CUIRect Label, ScrollBar;
-	pRect->VSplitLeft(pRect->h+5.0f, 0, &Label);
+	pRect->VSplitLeft(pRect->h + 5.0f, 0, &Label);
 	Label.VSplitRight(60.0f, &Label, &ScrollBar);
 	DoLabel(&Label, aBuf, FontSize, TEXTALIGN_ML);
 
@@ -774,7 +776,7 @@ void CUI::DoScrollbarOptionLabeled(const void *pID, int *pOption, const CUIRect 
 	*pOption = clamp(Value, 0, Max);
 }
 
-float CUI::DrawClientID(float FontSize, vec2 CursorPosition, int ID, const vec4& BgColor, const vec4& TextColor)
+float CUI::DrawClientID(float FontSize, vec2 CursorPosition, int ID, const vec4 &BgColor, const vec4 &TextColor)
 {
 	if(!m_pConfig->m_ClShowUserId)
 		return 0;
@@ -841,19 +843,19 @@ void CUI::RenderTooltip()
 	}
 
 	const float SecondsBeforeFadeIn = 0.75f;
-	const float SecondsSinceActivation = (Now - s_TooltipActivationStart)/(float)time_freq();
+	const float SecondsSinceActivation = (Now - s_TooltipActivationStart) / (float) time_freq();
 	if(SecondsSinceActivation < SecondsBeforeFadeIn)
 		return;
 	const float SecondsFadeIn = 0.25f;
-	const float AlphaFactor = SecondsSinceActivation < SecondsBeforeFadeIn+SecondsFadeIn ? (SecondsSinceActivation-SecondsBeforeFadeIn)/SecondsFadeIn : 1.0f;
+	const float AlphaFactor = SecondsSinceActivation < SecondsBeforeFadeIn + SecondsFadeIn ? (SecondsSinceActivation - SecondsBeforeFadeIn) / SecondsFadeIn : 1.0f;
 	const CUIRect *pScreen = Screen();
 
 	static CTextCursor s_Cursor;
 	s_Cursor.Reset();
 	s_Cursor.m_FontSize = 10.0f;
 	s_Cursor.m_MaxLines = -1;
-	s_Cursor.m_MaxWidth = pScreen->w/4.0f;
-	s_Cursor.m_Flags = TEXTFLAG_ALLOW_NEWLINE|TEXTFLAG_WORD_WRAP;
+	s_Cursor.m_MaxWidth = pScreen->w / 4.0f;
+	s_Cursor.m_Flags = TEXTFLAG_ALLOW_NEWLINE | TEXTFLAG_WORD_WRAP;
 	vec4 OldTextColor = TextRender()->GetColor();
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, AlphaFactor);
 	TextRender()->TextDeferred(&s_Cursor, m_aTooltipText, -1);
@@ -865,7 +867,7 @@ void CUI::RenderTooltip()
 	const float Rounding = 4.0f;
 	const float Spacing = 4.0f;
 	const float Border = 1.0f;
-	CUIRect Tooltip = { MouseX(), m_TooltipAnchor.y + m_TooltipAnchor.h + Spacing, BoundingBox.w + 2 * (Spacing+Border), BoundingBox.h + 2 * (Spacing+Border) };
+	CUIRect Tooltip = {MouseX(), m_TooltipAnchor.y + m_TooltipAnchor.h + Spacing, BoundingBox.w + 2 * (Spacing + Border), BoundingBox.h + 2 * (Spacing + Border)};
 	if(Tooltip.x + Tooltip.w > pScreen->w)
 		Tooltip.x -= Tooltip.w;
 	if(Tooltip.y + Tooltip.h > pScreen->h)
@@ -947,5 +949,5 @@ float CUI::GetListHeaderHeight() const
 
 float CUI::GetListHeaderHeightFactor() const
 {
-	return 1.0f + (m_pConfig->m_UiWideview ? (3.0f/ms_ListheaderHeight) : 0.0f);
+	return 1.0f + (m_pConfig->m_UiWideview ? (3.0f / ms_ListheaderHeight) : 0.0f);
 }

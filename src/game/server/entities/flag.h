@@ -27,11 +27,11 @@ public:
 	CFlag(CGameWorld *pGameWorld, int Team, vec2 StandPos);
 
 	/* Getters */
-	int GetTeam() const				{ return m_Team; }
-	bool IsAtStand() const			{ return m_AtStand; }
-	CCharacter *GetCarrier() const	{ return m_pCarrier; }
-	int GetGrabTick() const			{ return m_GrabTick; }
-	int GetDropTick() const			{ return m_DropTick; }
+	int GetTeam() const { return m_Team; }
+	bool IsAtStand() const { return m_AtStand; }
+	CCharacter *GetCarrier() const { return m_pCarrier; }
+	int GetGrabTick() const { return m_GrabTick; }
+	int GetDropTick() const { return m_DropTick; }
 
 	/* CEntity functions */
 	virtual void Reset();

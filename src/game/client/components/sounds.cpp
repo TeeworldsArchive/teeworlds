@@ -1,14 +1,13 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <engine/engine.h>
-#include <engine/sound.h>
 #include <engine/shared/config.h>
-#include <generated/client_data.h>
-#include <game/client/gameclient.h>
+#include <engine/sound.h>
 #include <game/client/components/camera.h>
 #include <game/client/components/menus.h>
+#include <game/client/gameclient.h>
+#include <generated/client_data.h>
 #include "sounds.h"
-
 
 struct CUserData
 {
@@ -39,7 +38,7 @@ ISound::CSampleHandle CSounds::GetSampleId(int SetId)
 {
 	if(!Config()->m_SndEnable || !Sound()->IsSoundEnabled() || m_WaitForSoundJob || SetId < 0 || SetId >= g_pData->m_NumSounds)
 		return ISound::CSampleHandle();
-	
+
 	CDataSoundset *pSet = &g_pData->m_aSounds[SetId];
 	if(!pSet->m_NumSounds)
 		return ISound::CSampleHandle();
@@ -52,8 +51,7 @@ ISound::CSampleHandle CSounds::GetSampleId(int SetId)
 	do
 	{
 		Id = random_int() % pSet->m_NumSounds;
-	}
-	while(Id == pSet->m_Last);
+	} while(Id == pSet->m_Last);
 	pSet->m_Last = Id;
 	return pSet->m_aSounds[Id].m_Id;
 }
@@ -131,9 +129,9 @@ void CSounds::OnRender()
 		if(m_QueueWaitTime <= Now)
 		{
 			Play(m_aQueue[0].m_Channel, m_aQueue[0].m_SetId, 1.0f);
-			m_QueueWaitTime = Now+time_freq()*3/10; // wait 300ms before playing the next one
+			m_QueueWaitTime = Now + time_freq() * 3 / 10; // wait 300ms before playing the next one
 			if(--m_QueuePos > 0)
-				mem_move(m_aQueue, m_aQueue+1, m_QueuePos*sizeof(QueueEntry));
+				mem_move(m_aQueue, m_aQueue + 1, m_QueuePos * sizeof(QueueEntry));
 		}
 	}
 }

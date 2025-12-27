@@ -6,8 +6,8 @@
 #include <base/vmath.h>
 #include <engine/client.h>
 #include <engine/console.h>
-#include <game/layers.h>
 #include <game/gamecore.h>
+#include <game/layers.h>
 #include "render.h"
 #include "ui.h"
 
@@ -108,7 +108,7 @@ public:
 
 	enum
 	{
-		SERVERMODE_PURE=0,
+		SERVERMODE_PURE = 0,
 		SERVERMODE_MOD,
 		SERVERMODE_PUREMOD,
 	};
@@ -134,8 +134,7 @@ public:
 		CNetObj_Character *pPrevChar,
 		CNetObj_Character *pPlayerChar,
 		float *IntraTick,
-		int ClientID
-	) const;
+		int ClientID) const;
 
 	vec2 GetCharPos(int ClientID, bool Predicted = false) const;
 
@@ -292,13 +291,13 @@ public:
 	virtual const char *NetVersionHashUsed() const;
 	virtual const char *NetVersionHashReal() const;
 	virtual int ClientVersion() const;
-	void GetPlayerLabel(char* aBuf, int BufferSize, int ClientID, const char* ClientName);
+	void GetPlayerLabel(char *aBuf, int BufferSize, int ClientID, const char *ClientName);
 	void StartRendering();
 
 	bool IsXmas() const;
 	bool IsEaster() const;
 	int RacePrecision() const { return m_Snap.m_pGameDataRace ? m_Snap.m_pGameDataRace->m_Precision : 3; }
-	bool IsWorldPaused() const { return m_Snap.m_pGameData && (m_Snap.m_pGameData->m_GameStateFlags&(GAMESTATEFLAG_PAUSED|GAMESTATEFLAG_ROUNDOVER|GAMESTATEFLAG_GAMEOVER)); }
+	bool IsWorldPaused() const { return m_Snap.m_pGameData && (m_Snap.m_pGameData->m_GameStateFlags & (GAMESTATEFLAG_PAUSED | GAMESTATEFLAG_ROUNDOVER | GAMESTATEFLAG_GAMEOVER)); }
 	bool IsDemoPlaybackPaused() const;
 	float GetAnimationPlaybackSpeed() const;
 
@@ -342,11 +341,10 @@ public:
 	class CMapLayers *m_pMapLayersForeGround;
 };
 
-
 void FormatTime(char *pBuf, int Size, int Time, int Precision);
 void FormatTimeDiff(char *pBuf, int Size, int Time, int Precision, bool ForceSign = true);
 
-const char *Localize(const char *pStr, const char *pContext="")
-GNUC_ATTRIBUTE((format_arg(1)));
+const char *Localize(const char *pStr, const char *pContext = "")
+	GNUC_ATTRIBUTE((format_arg(1)));
 
 #endif

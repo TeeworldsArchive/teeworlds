@@ -14,6 +14,7 @@ class CCommandBuffer
 		unsigned char *m_pData;
 		unsigned m_Size;
 		unsigned m_Used;
+
 	public:
 		CBuffer(unsigned BufferSize)
 		{
@@ -24,7 +25,7 @@ class CCommandBuffer
 
 		~CBuffer()
 		{
-			delete [] m_pData;
+			delete[] m_pData;
 			m_pData = 0x0;
 			m_Used = 0;
 			m_Size = 0;
@@ -57,7 +58,7 @@ public:
 
 	enum
 	{
-		MAX_TEXTURES=1024*4,
+		MAX_TEXTURES = 1024 * 4,
 	};
 
 	enum
@@ -124,9 +125,18 @@ public:
 		BLEND_ADDITIVE,
 	};
 
-	struct CPoint { float x, y; };
-	struct CTexCoord { float u, v, i; };
-	struct CColor { float r, g, b, a; };
+	struct CPoint
+	{
+		float x, y;
+	};
+	struct CTexCoord
+	{
+		float u, v, i;
+	};
+	struct CColor
+	{
+		float r, g, b, a;
+	};
 
 	struct CVertex
 	{
@@ -245,7 +255,6 @@ public:
 		void *m_pData; // will be freed by the command processor
 	};
 
-
 	struct CTextureDestroyCommand : public CCommand
 	{
 		CTextureDestroyCommand() : CCommand(CMD_TEXTURE_DESTROY) {}
@@ -269,10 +278,10 @@ public:
 	bool AddCommand(const T &Command)
 	{
 		// make sure that we don't do something stupid like ->AddCommand(&Cmd);
-		(void)static_cast<const CCommand *>(&Command);
+		(void) static_cast<const CCommand *>(&Command);
 
 		// allocate and copy the command into the buffer
-		T *pCmd = (T *)m_CmdBuffer.Alloc(sizeof(*pCmd), 8); // TODO: use alignof(T)
+		T *pCmd = (T *) m_CmdBuffer.Alloc(sizeof(*pCmd), 8); // TODO: use alignof(T)
 		if(!pCmd)
 			return false;
 		*pCmd = Command;
@@ -331,7 +340,7 @@ public:
 	virtual void SetWindowBordered(bool State) = 0;
 	virtual bool SetWindowScreen(int Index) = 0;
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;
-	virtual bool GetDesktopResolution(int Index, int *pDesktopWidth, int* pDesktopHeight) = 0;
+	virtual bool GetDesktopResolution(int Index, int *pDesktopWidth, int *pDesktopHeight) = 0;
 	virtual int GetWindowScreen() = 0;
 	virtual int WindowActive() = 0;
 	virtual int WindowOpen() = 0;
@@ -347,11 +356,11 @@ class CGraphics_Threaded : public IEngineGraphics
 	{
 		NUM_CMDBUFFERS = 2,
 
-		MAX_VERTICES = 32*1024,
-		MAX_TEXTURES = 1024*4,
+		MAX_VERTICES = 32 * 1024,
+		MAX_TEXTURES = 1024 * 4,
 
-		DRAWING_QUADS=1,
-		DRAWING_LINES=2
+		DRAWING_QUADS = 1,
+		DRAWING_LINES = 2
 	};
 
 	CCommandBuffer::CState m_State;
@@ -394,6 +403,7 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	int IssueInit();
 	int InitWindow();
+
 public:
 	CGraphics_Threaded();
 

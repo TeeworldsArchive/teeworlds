@@ -7,7 +7,7 @@
 
 enum
 {
-	MAX_TIMELINE_MARKERS=64
+	MAX_TIMELINE_MARKERS = 64
 };
 
 struct CDemoHeader
@@ -46,7 +46,7 @@ public:
 
 	enum
 	{
-		DEMOTYPE_INVALID=0,
+		DEMOTYPE_INVALID = 0,
 		DEMOTYPE_CLIENT,
 		DEMOTYPE_SERVER,
 	};

@@ -15,12 +15,12 @@ class CServerBrowser : public IServerBrowser
 public:
 	enum
 	{
-		SET_MASTER_ADD=1,
+		SET_MASTER_ADD = 1,
 		SET_FAV_ADD,
 		SET_TOKEN,
 		SET_PLAYERINFO,
 	};
-		
+
 	CServerBrowser();
 	void Init(class CNetClient *pClient, const char *pNetVersion);
 	void Set(const NETADDR &Addr, int SetType, int Token, const CServerInfo *pInfo);
@@ -58,7 +58,7 @@ public:
 	void RemoveFilter(int Index) { m_ServerBrowserFilter.RemoveFilter(Index); }
 
 	static void CBFTrackPacket(int TrackID, void *pUser);
-	
+
 	void LoadServerlist();
 	void SaveServerlist();
 
@@ -88,7 +88,7 @@ private:
 		int m_NumPlayers;
 		int m_NumServers;
 		int m_NumServerCapacity;
-	
+
 		CServerEntry *m_aServerlistIp[256]; // ip hash list
 		CServerEntry **m_ppServerlist;
 

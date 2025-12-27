@@ -2,12 +2,12 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef GAME_CLIENT_COMPONENTS_BINDS_H
 #define GAME_CLIENT_COMPONENTS_BINDS_H
-#include <game/client/component.h>
 #include <engine/keys.h>
+#include <game/client/component.h>
 
 class CBinds : public CComponent
 {
-	int DecodeBindString(const char *pKeyName, int* pModifier);
+	int DecodeBindString(const char *pKeyName, int *pModifier);
 
 	static void ConBind(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnbind(IConsole::IResult *pResult, void *pUserData);
@@ -29,9 +29,9 @@ public:
 
 	enum
 	{
-		BIND_LENGTH=128,
+		BIND_LENGTH = 128,
 
-		MODIFIER_NONE=0,
+		MODIFIER_NONE = 0,
 		MODIFIER_SHIFT,
 		MODIFIER_CTRL,
 		MODIFIER_ALT,
@@ -44,7 +44,7 @@ public:
 	void SetDefaults();
 	void UnbindAll();
 	const char *Get(int KeyID, int Modifier);
-	void GetKeyID(const char *pBindStr, int& KeyID, int& Modifier);
+	void GetKeyID(const char *pBindStr, int &KeyID, int &Modifier);
 	void GetKey(const char *pBindStr, char aKey[64], unsigned BufSize, int KeyID, int Modifier);
 	void GetKey(const char *pBindStr, char aKey[64], unsigned BufSize);
 	static const char *GetModifierName(int m);

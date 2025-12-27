@@ -10,8 +10,7 @@
 #include <game/server/player.h>
 #include "ctf.h"
 
-CGameControllerCTF::CGameControllerCTF(CGameContext *pGameServer)
-: IGameController(pGameServer)
+CGameControllerCTF::CGameControllerCTF(CGameContext *pGameServer) : IGameController(pGameServer)
 {
 	// game
 	m_apFlags[0] = 0;
@@ -20,13 +19,13 @@ CGameControllerCTF::CGameControllerCTF(CGameContext *pGameServer)
 	m_pGameType = "CTF";
 	*/
 	m_pGameType = "CTF Archived";
-	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_FLAGS;
+	m_GameFlags = GAMEFLAG_TEAMS | GAMEFLAG_FLAGS;
 }
 
 // balancing
 bool CGameControllerCTF::CanBeMovedOnBalance(int ClientID) const
 {
-	CCharacter* Character = GameServer()->m_apPlayers[ClientID]->GetCharacter();
+	CCharacter *Character = GameServer()->m_apPlayers[ClientID]->GetCharacter();
 	if(Character)
 	{
 		for(int fi = 0; fi < 2; fi++)
@@ -78,8 +77,10 @@ bool CGameControllerCTF::OnEntity(int Index, vec2 Pos)
 		return true;
 
 	int Team = -1;
-	if(Index == ENTITY_FLAGSTAND_RED) Team = TEAM_RED;
-	if(Index == ENTITY_FLAGSTAND_BLUE) Team = TEAM_BLUE;
+	if(Index == ENTITY_FLAGSTAND_RED)
+		Team = TEAM_RED;
+	if(Index == ENTITY_FLAGSTAND_BLUE)
+		Team = TEAM_BLUE;
 	if(Team == -1 || m_apFlags[Team])
 		return false;
 
@@ -93,11 +94,11 @@ bool CGameControllerCTF::DoWincheckMatch()
 {
 	// check score win condition
 	if((m_GameInfo.m_ScoreLimit > 0 && (m_aTeamscore[TEAM_RED] >= m_GameInfo.m_ScoreLimit || m_aTeamscore[TEAM_BLUE] >= m_GameInfo.m_ScoreLimit)) ||
-		(m_GameInfo.m_TimeLimit > 0 && (Server()->Tick()-m_GameStartTick) >= m_GameInfo.m_TimeLimit*Server()->TickSpeed()*60))
+		(m_GameInfo.m_TimeLimit > 0 && (Server()->Tick() - m_GameStartTick) >= m_GameInfo.m_TimeLimit * Server()->TickSpeed() * 60))
 	{
 		if(m_SuddenDeath)
 		{
-			if(m_aTeamscore[TEAM_RED]/100 != m_aTeamscore[TEAM_BLUE]/100)
+			if(m_aTeamscore[TEAM_RED] / 100 != m_aTeamscore[TEAM_BLUE] / 100)
 			{
 				EndMatch();
 				return true;
@@ -175,12 +176,12 @@ void CGameControllerCTF::Tick()
 		//
 		if(F->GetCarrier())
 		{
-			if(m_apFlags[fi^1] && m_apFlags[fi^1]->IsAtStand())
+			if(m_apFlags[fi ^ 1] && m_apFlags[fi ^ 1]->IsAtStand())
 			{
-				if(distance(F->GetPos(), m_apFlags[fi^1]->GetPos()) < CFlag::ms_PhysSize + CCharacter::ms_PhysSize)
+				if(distance(F->GetPos(), m_apFlags[fi ^ 1]->GetPos()) < CFlag::ms_PhysSize + CCharacter::ms_PhysSize)
 				{
 					// CAPTURE! \o/
-					m_aTeamscore[fi^1] += 100;
+					m_aTeamscore[fi ^ 1] += 100;
 					F->GetCarrier()->GetPlayer()->m_Score += 5;
 					float Diff = Server()->Tick() - F->GetGrabTick();
 
@@ -189,8 +190,7 @@ void CGameControllerCTF::Tick()
 						F->GetCarrier()->GetPlayer()->GetCID(),
 						Server()->ClientName(F->GetCarrier()->GetPlayer()->GetCID()),
 						F->GetCarrier()->GetPlayer()->GetTeam(),
-						Diff / (float)Server()->TickSpeed()
-					);
+						Diff / (float) Server()->TickSpeed());
 					GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 					GameServer()->SendGameMsg(GAMEMSG_CTF_CAPTURE, fi, F->GetCarrier()->GetPlayer()->GetCID(), Diff, -1);
@@ -205,7 +205,7 @@ void CGameControllerCTF::Tick()
 		else
 		{
 			CCharacter *apCloseCCharacters[MAX_CLIENTS];
-			int Num = GameServer()->m_World.FindEntities(F->GetPos(), CFlag::ms_PhysSize, (CEntity**)apCloseCCharacters, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
+			int Num = GameServer()->m_World.FindEntities(F->GetPos(), CFlag::ms_PhysSize, (CEntity **) apCloseCCharacters, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
 			for(int i = 0; i < Num; i++)
 			{
 				if(!apCloseCCharacters[i]->IsAlive() || apCloseCCharacters[i]->GetPlayer()->GetTeam() == TEAM_SPECTATORS || GameServer()->Collision()->IntersectLine(F->GetPos(), apCloseCCharacters[i]->GetPos(), NULL, NULL))
@@ -223,8 +223,7 @@ void CGameControllerCTF::Tick()
 						str_format(aBuf, sizeof(aBuf), "flag_return player='%d:%s' team=%d",
 							pChr->GetPlayer()->GetCID(),
 							Server()->ClientName(pChr->GetPlayer()->GetCID()),
-							pChr->GetPlayer()->GetTeam()
-						);
+							pChr->GetPlayer()->GetTeam());
 						GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 						GameServer()->SendGameMsg(GAMEMSG_CTF_RETURN, -1);
 						F->Reset();
@@ -234,7 +233,7 @@ void CGameControllerCTF::Tick()
 				{
 					// take the flag
 					if(F->IsAtStand())
-						m_aTeamscore[fi^1]++;
+						m_aTeamscore[fi ^ 1]++;
 
 					F->Grab(apCloseCCharacters[i]);
 
@@ -244,8 +243,7 @@ void CGameControllerCTF::Tick()
 					str_format(aBuf, sizeof(aBuf), "flag_grab player='%d:%s' team=%d",
 						F->GetCarrier()->GetPlayer()->GetCID(),
 						Server()->ClientName(F->GetCarrier()->GetPlayer()->GetCID()),
-						F->GetCarrier()->GetPlayer()->GetTeam()
-					);
+						F->GetCarrier()->GetPlayer()->GetTeam());
 					GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 					GameServer()->SendGameMsg(GAMEMSG_CTF_GRAB, fi, -1);
 					break;

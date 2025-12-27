@@ -3,9 +3,9 @@
 #ifndef GAME_CLIENT_COMPONENTS_SOUNDS_H
 #define GAME_CLIENT_COMPONENTS_SOUNDS_H
 
+#include <engine/shared/jobs.h>
 #include <engine/sound.h>
 #include <game/client/component.h>
-#include <engine/shared/jobs.h>
 
 class CSounds : public CComponent
 {
@@ -22,14 +22,14 @@ class CSounds : public CComponent
 	int64 m_QueueWaitTime;
 	class CJob m_SoundJob;
 	bool m_WaitForSoundJob;
-	
+
 	ISound::CSampleHandle GetSampleId(int SetId);
 
 public:
 	// sound channels
 	enum
 	{
-		CHN_GUI=0,
+		CHN_GUI = 0,
 		CHN_MUSIC,
 		CHN_WORLD,
 		CHN_GLOBAL,
@@ -48,6 +48,5 @@ public:
 	void Stop(int SetId);
 	bool IsPlaying(int SetId);
 };
-
 
 #endif

@@ -1,16 +1,16 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#include <base/system.h>
 #include <base/math.h>
+#include <base/system.h>
 #include <base/vmath.h>
 
-#include <math.h>
-#include <engine/map.h>
 #include <engine/kernel.h>
+#include <engine/map.h>
+#include <math.h>
 
-#include <game/mapitems.h>
-#include <game/layers.h>
 #include <game/collision.h>
+#include <game/layers.h>
+#include <game/mapitems.h>
 
 CCollision::CCollision()
 {
@@ -27,7 +27,7 @@ void CCollision::Init(class CLayers *pLayers)
 	m_Height = m_pLayers->GameLayer()->m_Height;
 	m_pTiles = static_cast<CTile *>(m_pLayers->Map()->GetData(m_pLayers->GameLayer()->m_Data));
 
-	for(int i = 0; i < m_Width*m_Height; i++)
+	for(int i = 0; i < m_Width * m_Height; i++)
 	{
 		int Index = m_pTiles[i].m_Index;
 
@@ -36,44 +36,44 @@ void CCollision::Init(class CLayers *pLayers)
 
 		switch(Index)
 		{
-		case TILE_DEATH:
-			m_pTiles[i].m_Index = COLFLAG_DEATH;
-			break;
-		case TILE_HOOKABLE:
-			m_pTiles[i].m_Index = COLFLAG_SOLID;
-			break;
-		case TILE_UNHOOKABLE:
-			m_pTiles[i].m_Index = COLFLAG_SOLID|COLFLAG_UNHOOKABLE;
-			break;
-		default:
-			m_pTiles[i].m_Index = 0;
+			case TILE_DEATH:
+				m_pTiles[i].m_Index = COLFLAG_DEATH;
+				break;
+			case TILE_HOOKABLE:
+				m_pTiles[i].m_Index = COLFLAG_SOLID;
+				break;
+			case TILE_UNHOOKABLE:
+				m_pTiles[i].m_Index = COLFLAG_SOLID | COLFLAG_UNHOOKABLE;
+				break;
+			default:
+				m_pTiles[i].m_Index = 0;
 		}
 	}
 }
 
 int CCollision::GetTile(int x, int y) const
 {
-	int Nx = clamp(x/32, 0, m_Width-1);
-	int Ny = clamp(y/32, 0, m_Height-1);
+	int Nx = clamp(x / 32, 0, m_Width - 1);
+	int Ny = clamp(y / 32, 0, m_Height - 1);
 
-	return m_pTiles[Ny*m_Width+Nx].m_Index > 128 ? 0 : m_pTiles[Ny*m_Width+Nx].m_Index;
+	return m_pTiles[Ny * m_Width + Nx].m_Index > 128 ? 0 : m_pTiles[Ny * m_Width + Nx].m_Index;
 }
 
 bool CCollision::IsTile(int x, int y, int Flag) const
 {
-	return GetTile(x, y)&Flag;
+	return GetTile(x, y) & Flag;
 }
 
 // TODO: rewrite this smarter!
 int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
-	const int End = distance(Pos0, Pos1)+1;
-	const float InverseEnd = 1.0f/End;
+	const int End = distance(Pos0, Pos1) + 1;
+	const float InverseEnd = 1.0f / End;
 	vec2 Last = Pos0;
 
 	for(int i = 0; i <= End; i++)
 	{
-		vec2 Pos = mix(Pos0, Pos1, i*InverseEnd);
+		vec2 Pos = mix(Pos0, Pos1, i * InverseEnd);
 		if(CheckPoint(Pos.x, Pos.y))
 		{
 			if(pOutCollision)

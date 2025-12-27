@@ -3,25 +3,24 @@
 #ifndef GAME_CLIENT_COMPONENTS_MENUS_H
 #define GAME_CLIENT_COMPONENTS_MENUS_H
 
-#include <base/vmath.h>
 #include <base/tl/sorted_array.h>
 #include <base/tl/string.h>
+#include <base/vmath.h>
 
-#include <engine/graphics.h>
-#include <engine/demo.h>
-#include <engine/contacts.h>
-#include <engine/serverbrowser.h>
 #include <engine/config.h>
+#include <engine/contacts.h>
+#include <engine/demo.h>
+#include <engine/graphics.h>
+#include <engine/serverbrowser.h>
 
-#include <game/voting.h>
 #include <game/client/component.h>
 #include <game/client/localization.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
+#include <game/voting.h>
 
 #include "skins.h"
-
 
 // component to fetch keypresses, override all other input
 class CMenusKeyBinder : public CComponent
@@ -59,7 +58,7 @@ private:
 
 	enum
 	{
-		POPUP_NONE=0,
+		POPUP_NONE = 0,
 		POPUP_MESSAGE, // generic message popup (one button)
 		POPUP_CONFIRM, // generic confirmation popup (two buttons)
 		POPUP_FIRST_LAUNCH,
@@ -75,7 +74,7 @@ private:
 
 	enum
 	{
-		PAGE_NEWS=0,
+		PAGE_NEWS = 0,
 		PAGE_GAME,
 		PAGE_PLAYERS,
 		PAGE_SERVER_INFO,
@@ -87,14 +86,14 @@ private:
 		PAGE_SYSTEM,
 		PAGE_START,
 
-		SETTINGS_GENERAL=0,
+		SETTINGS_GENERAL = 0,
 		SETTINGS_PLAYER,
 		SETTINGS_TBD, // TODO: replace this removed tee page
 		SETTINGS_CONTROLS,
 		SETTINGS_GRAPHICS,
 		SETTINGS_SOUND,
 
-		ACTLB_NONE=0,
+		ACTLB_NONE = 0,
 		ACTLB_LANG,
 		ACTLB_THEME,
 	};
@@ -150,7 +149,7 @@ private:
 
 	static int MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser);
 
-	const CMenuImage *FindMenuImage(const char* pName);
+	const CMenuImage *FindMenuImage(const char *pName);
 
 	// themes
 	class CTheme
@@ -176,8 +175,8 @@ private:
 	public:
 		enum
 		{
-			GAMEICON_SIZE=64,
-			GAMEICON_OLDHEIGHT=192,
+			GAMEICON_SIZE = 64,
+			GAMEICON_OLDHEIGHT = 192,
 		};
 		CGameIcon() {}
 		CGameIcon(const char *pName) : m_Name(pName) {}
@@ -224,7 +223,7 @@ private:
 	// demo
 	enum
 	{
-		SORT_DEMONAME=0,
+		SORT_DEMONAME = 0,
 		SORT_LENGTH,
 		SORT_DATE,
 	};
@@ -257,11 +256,10 @@ private:
 
 		bool operator<(const CDemoItem &Other) const
 		{
-			return !str_comp(m_aFilename, "..") ? true
-				: !str_comp(Other.m_aFilename, "..") ? false
-				: m_IsDir && !Other.m_IsDir ? true
-				: !m_IsDir && Other.m_IsDir ? false
-				: str_comp_filenames(m_aFilename, Other.m_aFilename) < 0;
+			return !str_comp(m_aFilename, "..") ? true : !str_comp(Other.m_aFilename, "..") ? false :
+							     m_IsDir && !Other.m_IsDir                  ? true :
+							     !m_IsDir && Other.m_IsDir                  ? false :
+													  str_comp_filenames(m_aFilename, Other.m_aFilename) < 0;
 		}
 	};
 
@@ -313,7 +311,7 @@ private:
 
 	void DemolistOnUpdate(bool Reset);
 	void DemolistPopulate();
-	static int DemolistFetchCallback(const CFsFileInfo* pFileInfo, int IsDir, int StorageType, void *pUser);
+	static int DemolistFetchCallback(const CFsFileInfo *pFileInfo, int IsDir, int StorageType, void *pUser);
 
 	// friends
 	class CFriendItem
@@ -353,7 +351,6 @@ private:
 
 	void FriendlistOnUpdate();
 
-
 	// server browser
 	class CBrowserFilter
 	{
@@ -384,19 +381,19 @@ private:
 		CButtonContainer m_DownButtonContainer;
 
 		CBrowserFilter() {}
-		CBrowserFilter(int Custom, const char* pName, IServerBrowser *pServerBrowser);
+		CBrowserFilter(int Custom, const char *pName, IServerBrowser *pServerBrowser);
 		void Switch();
 		bool Extended() const;
 		int Custom() const;
 		int Filter() const;
-		const char* Name() const;
+		const char *Name() const;
 
 		void SetFilterNum(int Num);
 
 		int NumSortedServers() const;
 		int NumPlayers() const;
-		const CServerInfo* SortedGet(int Index) const;
-		const void* ID(int Index) const;
+		const CServerInfo *SortedGet(int Index) const;
+		const void *ID(int Index) const;
 
 		void Reset();
 		void GetFilter(CServerFilterInfo *pFilterInfo) const;
@@ -486,12 +483,11 @@ private:
 	void ServerBrowserFilterOnUpdate();
 	void ServerBrowserSortingOnUpdate();
 
-
 	// video settings
 	bool m_CheckVideoSettings;
 	enum
 	{
-		MAX_RESOLUTIONS=256,
+		MAX_RESOLUTIONS = 256,
 	};
 	CVideoMode m_aModes[MAX_RESOLUTIONS];
 	int m_NumModes;
@@ -558,8 +554,8 @@ private:
 	void UpdateFriends();
 
 	// found in menus_settings.cpp
-	void RenderLanguageSelection(CUIRect MainView, bool Header=true);
-	void RenderThemeSelection(CUIRect MainView, bool Header=true);
+	void RenderLanguageSelection(CUIRect MainView, bool Header = true);
+	void RenderThemeSelection(CUIRect MainView, bool Header = true);
 	void RenderHSLPicker(CUIRect MainView);
 	void RenderSkinSelection(CUIRect MainView);
 	void RenderSkinPartSelection(CUIRect MainView);
@@ -580,8 +576,8 @@ private:
 	void ResetSettingsSound();
 	void PopupConfirmPlayerCountry();
 
-	bool DoResolutionList(CUIRect* pRect, CListBox* pListBox,
-						  const sorted_array<CVideoMode>& lModes);
+	bool DoResolutionList(CUIRect *pRect, CListBox *pListBox,
+		const sorted_array<CVideoMode> &lModes);
 
 	// found in menus_callback.cpp
 	float RenderSettingsControlsMouse(CUIRect View);
@@ -609,6 +605,7 @@ private:
 
 	void RenderBackground(float Time);
 	void RenderBackgroundShadow(const CUIRect *pRect, bool TopToBottom, float Rounding = 5.0f);
+
 public:
 	void InitLoading(int TotalWorkAmount);
 	void RenderLoading(int WorkedAmount = 0);

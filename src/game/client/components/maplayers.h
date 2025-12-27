@@ -16,13 +16,13 @@ class CMapLayers : public CComponent
 	array<CEnvPoint> m_lEnvPoints;
 	array<CEnvPoint> m_lEnvPointsMenu;
 
-	CTile* m_pEggTiles;
+	CTile *m_pEggTiles;
 	int m_EggLayerWidth;
 	int m_EggLayerHeight;
 
 	static void EnvelopeEval(float TimeOffset, int Env, float *pChannels, void *pUser);
 
-	void LoadEnvPoints(const CLayers *pLayers, array<CEnvPoint>& lEnvPoints);
+	void LoadEnvPoints(const CLayers *pLayers, array<CEnvPoint> &lEnvPoints);
 	void LoadBackgroundMap();
 
 	void PlaceEasterEggs(const CLayers *pLayers);
@@ -30,7 +30,7 @@ class CMapLayers : public CComponent
 public:
 	enum
 	{
-		TYPE_BACKGROUND=0,
+		TYPE_BACKGROUND = 0,
 		TYPE_FOREGROUND,
 	};
 

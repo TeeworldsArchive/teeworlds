@@ -5,9 +5,9 @@
 
 #include <engine/shared/memheap.h>
 
-#include <game/voting.h>
 #include <game/client/component.h>
 #include <game/client/ui.h>
+#include <game/voting.h>
 
 class CVoting : public CComponent
 {
@@ -49,12 +49,12 @@ public:
 	void RconRemoveVoteOption(int OptionID);
 	void RconAddVoteOption(const char *pDescription, const char *pCommand);
 
-	int SecondsLeft() { return (m_Closetime - time_get())/time_freq(); }
+	int SecondsLeft() { return (m_Closetime - time_get()) / time_freq(); }
 	bool IsVoting() { return m_Closetime > 0 && m_Closetime > time_get(); }
 	int TakenChoice() const { return m_Voted; }
 	const char *VoteDescription() const { return m_aDescription; }
 	const char *VoteReason() const { return m_aReason; }
-	int CallvoteBlockTime() const { return m_CallvoteBlockTick > Client()->GameTick() ? (m_CallvoteBlockTick-Client()->GameTick())/Client()->GameTickSpeed() : 0; }
+	int CallvoteBlockTime() const { return m_CallvoteBlockTick > Client()->GameTick() ? (m_CallvoteBlockTick - Client()->GameTick()) / Client()->GameTickSpeed() : 0; }
 	int NumVoteOptions() const { return m_NumVoteOptions; }
 	const CVoteOptionClient *FirstVoteOption() const { return m_pFirst; }
 

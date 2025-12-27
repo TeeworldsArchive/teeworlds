@@ -25,8 +25,8 @@ public:
 	void AddString(const char *pStr, int Limit = 0);
 	void AddRaw(const void *pData, int Size);
 
-	int Size() const { return (int)(m_pCurrent - m_aBuffer); }
-	int RemainingSize() const { return (int)(m_pEnd - m_pCurrent); }
+	int Size() const { return (int) (m_pCurrent - m_aBuffer); }
+	int RemainingSize() const { return (int) (m_pEnd - m_pCurrent); }
 	const unsigned char *Data() const { return m_aBuffer; }
 	bool Error() const { return m_Error; }
 };

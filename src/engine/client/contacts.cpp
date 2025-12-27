@@ -16,7 +16,7 @@ IContactList::IContactList()
 
 const CContactInfo *IContactList::GetContact(int Index) const
 {
-	return &m_aContacts[maximum(0, Index%m_NumContacts)];
+	return &m_aContacts[maximum(0, Index % m_NumContacts)];
 }
 
 int IContactList::GetContactState(const char *pName, const char *pClan) const
@@ -92,22 +92,22 @@ void IContactList::RemoveContact(int Index)
 {
 	if(Index >= 0 && Index < m_NumContacts)
 	{
-		mem_move(&m_aContacts[Index], &m_aContacts[Index+1], sizeof(CContactInfo)*(m_NumContacts-(Index+1)));
+		mem_move(&m_aContacts[Index], &m_aContacts[Index + 1], sizeof(CContactInfo) * (m_NumContacts - (Index + 1)));
 		--m_NumContacts;
 	}
 	return;
 }
 
-void IContactList::ConfigSave(IConfigManager *pConfigManager, const char* pCmdStr)
+void IContactList::ConfigSave(IConfigManager *pConfigManager, const char *pCmdStr)
 {
 	char aBuf[128];
-	const char *pEnd = aBuf+sizeof(aBuf)-4;
+	const char *pEnd = aBuf + sizeof(aBuf) - 4;
 	for(int i = 0; i < this->m_NumContacts; ++i)
 	{
 		str_copy(aBuf, pCmdStr, sizeof(aBuf));
 
 		const char *pSrc = this->m_aContacts[i].m_aName;
-		char *pDst = aBuf+str_length(aBuf);
+		char *pDst = aBuf + str_length(aBuf);
 		*pDst++ = '"';
 		while(*pSrc && pDst < pEnd)
 		{
@@ -187,12 +187,12 @@ void CBlacklist::Init()
 
 void CFriends::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 {
-	CFriends *pSelf = (CFriends *)pUserData;
+	CFriends *pSelf = (CFriends *) pUserData;
 	pSelf->ConfigSave(pConfigManager, "add_friend ");
 }
 
 void CBlacklist::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 {
-	CBlacklist *pSelf = (CBlacklist *)pUserData;
+	CBlacklist *pSelf = (CBlacklist *) pUserData;
 	pSelf->ConfigSave(pConfigManager, "add_ignore ");
 }

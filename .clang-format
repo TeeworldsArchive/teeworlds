@@ -1,0 +1,55 @@
+---
+Language: Cpp
+AccessModifierOffset: -8
+AlignAfterOpenBracket: DontAlign
+AlignEscapedNewlines: DontAlign
+AlignTrailingComments: false
+AllowShortBlocksOnASingleLine: Always
+AllowShortIfStatementsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AlwaysBreakTemplateDeclarations: true
+BasedOnStyle: LLVM
+BreakBeforeBraces: Custom
+BreakBeforeTernaryOperators: false
+BreakConstructorInitializers: AfterColon
+BreakStringLiterals: true
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterExternBlock: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyNamespace: true
+  SplitEmptyRecord: true
+#ColumnLimit: 100
+ColumnLimit: 0
+CommentPragmas: ''
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 8
+ContinuationIndentWidth: 8
+IncludeCategories:
+  - Regex:           '^<(base|engine|game|generated)'
+    Priority:        -2
+  - Regex:           '^"'
+    Priority:        -1
+  - Regex:           '.*'
+    Priority:        1
+IncludeIsMainRegex: '$'
+IndentWidth: 8
+IndentCaseLabels: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+PointerAlignment: Right
+ReflowComments: true
+SpaceBeforeParens: Never
+SpaceAfterTemplateKeyword: false
+SpaceAfterCStyleCast: true
+TabWidth: 8
+UseTab: ForContinuationAndIndentation

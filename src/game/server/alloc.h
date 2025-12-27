@@ -8,7 +8,7 @@
 #include <base/system.h>
 
 #define MACRO_ALLOC_HEAP() \
-	public: \
+public: \
 	void *operator new(size_t Size) \
 	{ \
 		void *p = mem_alloc(Size); \
@@ -21,14 +21,15 @@
 		/*dbg_msg("", "-- %p", p);*/ \
 		mem_free(pPtr); \
 	} \
-	private:
+\
+private:
 
 #define MACRO_ALLOC_POOL_ID() \
-	public: \
+public: \
 	void *operator new(size_t Size, int id); \
 	void operator delete(void *p, int id); \
 	void operator delete(void *p); /* NOLINT(misc-new-delete-overloads) */ \
-	private:
+private:
 
 #define MACRO_ALLOC_POOL_ID_IMPL(POOLTYPE, PoolSize) \
 	static char ms_PoolData##POOLTYPE[PoolSize][sizeof(POOLTYPE)] = {{0}}; \
@@ -45,14 +46,14 @@
 	void POOLTYPE::operator delete(void *p, int id) \
 	{ \
 		dbg_assert(ms_PoolUsed##POOLTYPE[id], "not used"); \
-		dbg_assert(id == (POOLTYPE*)p - (POOLTYPE*)ms_PoolData##POOLTYPE, "invalid id"); \
+		dbg_assert(id == (POOLTYPE *) p - (POOLTYPE *) ms_PoolData##POOLTYPE, "invalid id"); \
 		/*dbg_msg("pool", "-- %s %d", #POOLTYPE, id);*/ \
 		ms_PoolUsed##POOLTYPE[id] = 0; \
 		mem_zero(ms_PoolData##POOLTYPE[id], sizeof(POOLTYPE)); \
 	} \
 	void POOLTYPE::operator delete(void *p) /* NOLINT(misc-new-delete-overloads) */ \
 	{ \
-		int id = (POOLTYPE*)p - (POOLTYPE*)ms_PoolData##POOLTYPE; \
+		int id = (POOLTYPE *) p - (POOLTYPE *) ms_PoolData##POOLTYPE; \
 		dbg_assert(ms_PoolUsed##POOLTYPE[id], "not used"); \
 		/*dbg_msg("pool", "-- %s %d", #POOLTYPE, id);*/ \
 		ms_PoolUsed##POOLTYPE[id] = 0; \

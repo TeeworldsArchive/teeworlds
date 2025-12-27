@@ -40,7 +40,7 @@ public:
 private:
 	enum
 	{
-		CAMTYPE_UNDEFINED=-1,
+		CAMTYPE_UNDEFINED = -1,
 		CAMTYPE_SPEC,
 		CAMTYPE_PLAYER,
 	};

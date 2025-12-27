@@ -1,13 +1,13 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <engine/graphics.h>
-#include <engine/textrender.h>
 #include <engine/shared/config.h>
-#include <generated/protocol.h>
+#include <engine/textrender.h>
 #include <generated/client_data.h>
+#include <generated/protocol.h>
 
-#include <game/client/gameclient.h>
 #include <game/client/animstate.h>
+#include <game/client/gameclient.h>
 #include "infomessages.h"
 
 #include "chat.h"
@@ -25,7 +25,7 @@ void CInfoMessages::AddInfoMsg(int Type, CInfoMsg NewMsg)
 	NewMsg.m_Type = Type;
 	NewMsg.m_Tick = Client()->GameTick();
 
-	m_InfoMsgCurrent = (m_InfoMsgCurrent+1)%MAX_INFOMSGS;
+	m_InfoMsgCurrent = (m_InfoMsgCurrent + 1) % MAX_INFOMSGS;
 	m_aInfoMsgs[m_InfoMsgCurrent] = NewMsg;
 }
 
@@ -35,18 +35,18 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		return;
 
 	// hint TextRender to render text, deferred, with correct fontsize
-	float Width = 400*3.0f*Graphics()->ScreenAspect();
-	float Height = 400*3.0f;
-	Graphics()->MapScreen(0, 0, Width*1.5f, Height*1.5f);
+	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
+	float Height = 400 * 3.0f;
+	Graphics()->MapScreen(0, 0, Width * 1.5f, Height * 1.5f);
 
-	bool Race = m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_RACE;
+	bool Race = m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_RACE;
 
 	if(MsgType == NETMSGTYPE_SV_KILLMSG)
 	{
-		if(Race && m_pClient->m_Snap.m_pGameDataRace && m_pClient->m_Snap.m_pGameDataRace->m_RaceFlags&RACEFLAG_HIDE_KILLMSG)
+		if(Race && m_pClient->m_Snap.m_pGameDataRace && m_pClient->m_Snap.m_pGameDataRace->m_RaceFlags & RACEFLAG_HIDE_KILLMSG)
 			return;
 
-		CNetMsg_Sv_KillMsg *pMsg = (CNetMsg_Sv_KillMsg *)pRawMsg;
+		CNetMsg_Sv_KillMsg *pMsg = (CNetMsg_Sv_KillMsg *) pRawMsg;
 
 		// unpack messages
 		CInfoMsg Kill;
@@ -75,8 +75,8 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		}
 		else
 		{
-			bool IsTeamplay = (m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_TEAMS) != 0;
-			int KillerTeam = - 1 - Kill.m_Player2ID;
+			bool IsTeamplay = (m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS) != 0;
+			int KillerTeam = -1 - Kill.m_Player2ID;
 			int Skin = m_pClient->m_pSkins->Find("dummy", false);
 			if(Skin != -1)
 			{
@@ -87,10 +87,10 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 					if(IsTeamplay)
 					{
 						int ColorVal = m_pClient->m_pSkins->GetTeamColor(0, 0x000000, KillerTeam, p);
-						Kill.m_Player2RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(ColorVal, p==SKINPART_MARKING);
+						Kill.m_Player2RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(ColorVal, p == SKINPART_MARKING);
 					}
 					else
-						Kill.m_Player2RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(0x000000, p==SKINPART_MARKING);
+						Kill.m_Player2RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(0x000000, p == SKINPART_MARKING);
 					Kill.m_Player2RenderInfo.m_aColors[p].a *= .5f;
 				}
 				Kill.m_Player2RenderInfo.m_Size = 64.0f;
@@ -108,8 +108,8 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		}
 		else
 		{
-			bool IsTeamplay = (m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_TEAMS) != 0;
-			int KillerTeam = - 1 - Kill.m_Player3ID;
+			bool IsTeamplay = (m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS) != 0;
+			int KillerTeam = -1 - Kill.m_Player3ID;
 			int Skin = m_pClient->m_pSkins->Find("dummy", false);
 			if(Skin != -1)
 			{
@@ -120,10 +120,10 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 					if(IsTeamplay)
 					{
 						int ColorVal = m_pClient->m_pSkins->GetTeamColor(0, 0x000000, KillerTeam, p);
-						Kill.m_Player3RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(ColorVal, p==SKINPART_MARKING);
+						Kill.m_Player3RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(ColorVal, p == SKINPART_MARKING);
 					}
 					else
-						Kill.m_Player3RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(0x000000, p==SKINPART_MARKING);
+						Kill.m_Player3RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(0x000000, p == SKINPART_MARKING);
 					Kill.m_Player3RenderInfo.m_aColors[p].a *= .5f;
 				}
 				Kill.m_Player3RenderInfo.m_Size = 64.0f;
@@ -138,7 +138,7 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 	}
 	else if(MsgType == NETMSGTYPE_SV_RACEFINISH && Race)
 	{
-		CNetMsg_Sv_RaceFinish *pMsg = (CNetMsg_Sv_RaceFinish *)pRawMsg;
+		CNetMsg_Sv_RaceFinish *pMsg = (CNetMsg_Sv_RaceFinish *) pRawMsg;
 
 		char aBuf[256];
 		char aTime[32];
@@ -156,7 +156,7 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 				str_format(aBuf, sizeof(aBuf), Localize("'%s' has set a new map record: %s"), aLabel, aTime);
 			else // m_RecordPersonal
 				str_format(aBuf, sizeof(aBuf), Localize("'%s' has set a new personal record: %s"), aLabel, aTime);
-			
+
 			if(pMsg->m_Diff < 0)
 			{
 				char aImprovement[64];
@@ -169,7 +169,7 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 			m_pClient->m_pChat->AddLine(aBuf);
 		}
 
-		if(m_pClient->m_Snap.m_pGameDataRace && m_pClient->m_Snap.m_pGameDataRace->m_RaceFlags&RACEFLAG_FINISHMSG_AS_CHAT)
+		if(m_pClient->m_Snap.m_pGameDataRace && m_pClient->m_Snap.m_pGameDataRace->m_RaceFlags & RACEFLAG_FINISHMSG_AS_CHAT)
 		{
 			if(!pMsg->m_RecordPersonal && !pMsg->m_RecordServer) // don't print the time twice
 			{
@@ -182,7 +182,7 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 			CInfoMsg Finish;
 			Finish.m_Player1ID = pMsg->m_ClientID;
 			Finish.m_Player1RenderInfo = m_pClient->m_aClients[Finish.m_Player1ID].m_RenderInfo;
-			
+
 			Finish.m_TimeCursor.m_FontSize = 36.0f;
 			if(pMsg->m_RecordServer)
 				TextRender()->TextColor(1.0f, 0.5f, 0.0f, 1.0f);
@@ -221,16 +221,16 @@ void CInfoMessages::OnRender()
 	if(!Config()->m_ClShowhud || Client()->State() < IClient::STATE_ONLINE)
 		return;
 
-	float Width = 400*3.0f*Graphics()->ScreenAspect();
-	float Height = 400*3.0f;
+	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
+	float Height = 400 * 3.0f;
 
-	Graphics()->MapScreen(0, 0, Width*1.5f, Height*1.5f);
-	float StartX = Width*1.5f-10.0f;
+	Graphics()->MapScreen(0, 0, Width * 1.5f, Height * 1.5f);
+	float StartX = Width * 1.5f - 10.0f;
 	float y = 20.0f;
 
 	for(int i = 1; i <= MAX_INFOMSGS; i++)
 	{
-		CInfoMsg *pInfoMsg = &m_aInfoMsgs[(m_InfoMsgCurrent+i)%MAX_INFOMSGS];
+		CInfoMsg *pInfoMsg = &m_aInfoMsgs[(m_InfoMsgCurrent + i) % MAX_INFOMSGS];
 		if(Client()->GameTick() > pInfoMsg->m_Tick + SERVER_TICK_SPEED * 10)
 			continue;
 
@@ -260,9 +260,9 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 	// render victim tee
 	x -= 24.0f;
 
-	if(m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_FLAGS)
+	if(m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_FLAGS)
 	{
-		if(pInfoMsg->m_ModeSpecial&1)
+		if(pInfoMsg->m_ModeSpecial & 1)
 		{
 			Graphics()->BlendNormal();
 			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
@@ -274,13 +274,13 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 				RenderTools()->SelectSprite(SPRITE_FLAG_RED);
 
 			float Size = 56.0f;
-			IGraphics::CQuadItem QuadItem(x, y-16, Size/2, Size);
+			IGraphics::CQuadItem QuadItem(x, y - 16, Size / 2, Size);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 		}
 	}
 
-	RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player1RenderInfo, EMOTE_PAIN, vec2(-1,0), vec2(x, y+28));
+	RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player1RenderInfo, EMOTE_PAIN, vec2(-1, 0), vec2(x, y + 28));
 	x -= 32.0f;
 
 	// render weapon
@@ -290,16 +290,16 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 		Graphics()->QuadsBegin();
 		RenderTools()->SelectSprite(g_pData->m_Weapons.m_aId[pInfoMsg->m_Weapon].m_pSpriteBody);
-		RenderTools()->DrawSprite(x, y+28, 96);
+		RenderTools()->DrawSprite(x, y + 28, 96);
 		Graphics()->QuadsEnd();
 	}
 	x -= 52.0f;
 
 	if(pInfoMsg->m_Player1ID != pInfoMsg->m_Player2ID)
 	{
-		if(m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_FLAGS)
+		if(m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_FLAGS)
 		{
-			if(pInfoMsg->m_ModeSpecial&2)
+			if(pInfoMsg->m_ModeSpecial & 2)
 			{
 				Graphics()->BlendNormal();
 				Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
@@ -311,7 +311,7 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 					RenderTools()->SelectSprite(SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
 
 				float Size = 56.0f;
-				IGraphics::CQuadItem QuadItem(x-56, y-16, Size/2, Size);
+				IGraphics::CQuadItem QuadItem(x - 56, y - 16, Size / 2, Size);
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 				Graphics()->QuadsEnd();
 			}
@@ -321,10 +321,10 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 		x -= 24.0f;
 		if(pInfoMsg->m_Player3ID >= 0)
 		{
-			RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player3RenderInfo, EMOTE_ANGRY, vec2(1,0), vec2(x, y+28));
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player3RenderInfo, EMOTE_ANGRY, vec2(1, 0), vec2(x, y + 28));
 			x -= 16.0f;
 		}
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player2RenderInfo, EMOTE_ANGRY, vec2(1,0), vec2(x, y+28));
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player2RenderInfo, EMOTE_ANGRY, vec2(1, 0), vec2(x, y + 28));
 		x -= 32.0f;
 
 		if(pInfoMsg->m_Player3ID >= 0)
@@ -353,7 +353,7 @@ void CInfoMessages::RenderFinishMsg(CInfoMsg *pInfoMsg, float x, float y) const
 {
 	float FontSize = 36.0f;
 	float PlayerNameW = pInfoMsg->m_Player1NameCursor.Width() + UI()->GetClientIDRectWidth(FontSize);
-	
+
 	// render diff
 	if(pInfoMsg->m_Diff != 0)
 	{
@@ -394,5 +394,5 @@ void CInfoMessages::RenderFinishMsg(CInfoMsg *pInfoMsg, float x, float y) const
 
 	// render player tee
 	int Emote = (pInfoMsg->m_RecordPersonal || pInfoMsg->m_RecordServer) ? EMOTE_HAPPY : EMOTE_NORMAL;
-	RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player1RenderInfo, Emote, vec2(-1,0), vec2(x, y+28));
+	RenderTools()->RenderTee(CAnimState::GetIdle(), &pInfoMsg->m_Player1RenderInfo, Emote, vec2(-1, 0), vec2(x, y + 28));
 }

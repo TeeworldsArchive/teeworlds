@@ -11,7 +11,7 @@
 
 CListBox::CListBox()
 {
-	m_ScrollOffset = vec2(0,0);
+	m_ScrollOffset = vec2(0, 0);
 	m_ListBoxUpdateScroll = false;
 }
 
@@ -22,18 +22,18 @@ void CListBox::DoBegin(const CUIRect *pRect)
 }
 
 void CListBox::DoHeader(const CUIRect *pRect, const char *pTitle,
-							   float HeaderHeight, float Spacing)
+	float HeaderHeight, float Spacing)
 {
 	CUIRect Header;
 	CUIRect View = *pRect;
 
 	// background
-	View.HSplitTop(HeaderHeight+Spacing, &Header, 0);
-	Header.Draw(vec4(0.0f, 0.0f, 0.0f, Config()->m_ClMenuAlpha/100.0f), 5.0f, m_BackgroundCorners&CUIRect::CORNER_T);
+	View.HSplitTop(HeaderHeight + Spacing, &Header, 0);
+	Header.Draw(vec4(0.0f, 0.0f, 0.0f, Config()->m_ClMenuAlpha / 100.0f), 5.0f, m_BackgroundCorners & CUIRect::CORNER_T);
 
 	// draw header
 	View.HSplitTop(HeaderHeight, &Header, &View);
-	UI()->DoLabel(&Header, pTitle, Header.h*CUI::ms_FontmodHeight*0.8f, TEXTALIGN_MC);
+	UI()->DoLabel(&Header, pTitle, Header.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
 
 	View.HSplitTop(Spacing, &Header, &View);
 
@@ -54,17 +54,17 @@ bool CListBox::DoFilter(float FilterHeight, float Spacing)
 	CUIRect View = m_ListBoxView;
 
 	// background
-	View.HSplitTop(FilterHeight+Spacing, &Filter, 0);
-	Filter.Draw(vec4(0.0f, 0.0f, 0.0f, Config()->m_ClMenuAlpha/100.0f), 5.0f, CUIRect::CORNER_NONE);
+	View.HSplitTop(FilterHeight + Spacing, &Filter, 0);
+	Filter.Draw(vec4(0.0f, 0.0f, 0.0f, Config()->m_ClMenuAlpha / 100.0f), 5.0f, CUIRect::CORNER_NONE);
 
 	// draw filter
 	View.HSplitTop(FilterHeight, &Filter, &View);
 	Filter.Margin(Spacing, &Filter);
 
-	float FontSize = Filter.h*CUI::ms_FontmodHeight*0.8f;
+	float FontSize = Filter.h * CUI::ms_FontmodHeight * 0.8f;
 
 	CUIRect Label, EditBox;
-	Filter.VSplitLeft(Filter.w/5.0f, &Label, &EditBox);
+	Filter.VSplitLeft(Filter.w / 5.0f, &Label, &EditBox);
 	Label.y += Spacing;
 	UI()->DoLabel(&Label, Localize("Search:"), FontSize, TEXTALIGN_CENTER);
 	bool Changed = UI()->DoEditBox(&m_FilterInput, &EditBox, FontSize);
@@ -82,8 +82,8 @@ void CListBox::DoFooter(const char *pBottomText, float FooterHeight)
 	m_FooterHeight = FooterHeight;
 }
 
-void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, 
-							int SelectedIndex, const CUIRect *pRect, bool Background, bool *pActive, int BackgroundCorners)
+void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll,
+	int SelectedIndex, const CUIRect *pRect, bool Background, bool *pActive, int BackgroundCorners)
 {
 	CUIRect View;
 	if(pRect)
@@ -94,7 +94,7 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	// background
 	m_BackgroundCorners = BackgroundCorners;
 	if(Background)
-		View.Draw(vec4(0.0f, 0.0f, 0.0f, Config()->m_ClMenuAlpha/100.0f), 5.0f, m_BackgroundCorners&CUIRect::CORNER_B);
+		View.Draw(vec4(0.0f, 0.0f, 0.0f, Config()->m_ClMenuAlpha / 100.0f), 5.0f, m_BackgroundCorners & CUIRect::CORNER_B);
 
 	// draw footers
 	if(m_pBottomText)
@@ -102,7 +102,7 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 		CUIRect Footer;
 		View.HSplitBottom(m_FooterHeight, &View, &Footer);
 		Footer.VSplitLeft(10.0f, 0, &Footer);
-		UI()->DoLabel(&Footer, m_pBottomText, Footer.h*CUI::ms_FontmodHeight*0.8f, TEXTALIGN_MC);
+		UI()->DoLabel(&Footer, m_pBottomText, Footer.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
 	}
 
 	// setup the variables
@@ -139,7 +139,7 @@ CListboxItem CListBox::DoNextRow()
 	static CUIRect s_RowView;
 	CListboxItem Item = {0};
 
-	if(m_ListBoxItemIndex%m_ListBoxItemsPerRow == 0)
+	if(m_ListBoxItemIndex % m_ListBoxItemsPerRow == 0)
 		m_ListBoxView.HSplitTop(m_ListBoxRowHeight /*-2.0f*/, &s_RowView, &m_ListBoxView);
 	m_ScrollRegion.AddRect(s_RowView);
 	if(m_ListBoxUpdateScroll && m_ListBoxSelectedIndex == m_ListBoxItemIndex)
@@ -148,7 +148,7 @@ CListboxItem CListBox::DoNextRow()
 		m_ListBoxUpdateScroll = false;
 	}
 
-	s_RowView.VSplitLeft(s_RowView.w/(m_ListBoxItemsPerRow-m_ListBoxItemIndex%m_ListBoxItemsPerRow), &Item.m_Rect, &s_RowView);
+	s_RowView.VSplitLeft(s_RowView.w / (m_ListBoxItemsPerRow - m_ListBoxItemIndex % m_ListBoxItemsPerRow), &Item.m_Rect, &s_RowView);
 
 	Item.m_Selected = m_ListBoxSelectedIndex == m_ListBoxItemIndex;
 	Item.m_Visible = !m_ScrollRegion.IsRectClipped(Item.m_Rect);

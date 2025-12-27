@@ -8,7 +8,6 @@
 #include "netban.h"
 #include "network.h"
 
-
 bool CNetServer::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, CNetBan *pNetBan,
 	int MaxClients, int MaxClientsPerIP, NETFUNC_NEWCLIENT pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser)
 {
@@ -135,7 +134,7 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 					{
 						if(m_RecvUnpacker.m_Data.m_DataSize)
 						{
-							if(!(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONNLESS))
+							if(!(m_RecvUnpacker.m_Data.m_Flags & NET_PACKETFLAG_CONNLESS))
 								m_RecvUnpacker.Start(&Addr, &m_aSlots[i].m_Connection, i);
 							else
 							{
@@ -161,7 +160,7 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 			if(Accept <= 0)
 				continue;
 
-			if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONTROL)
+			if(m_RecvUnpacker.m_Data.m_Flags & NET_PACKETFLAG_CONTROL)
 			{
 				if(m_RecvUnpacker.m_Data.m_aChunkData[0] == NET_CTRLMSG_CONNECT)
 				{
@@ -175,7 +174,7 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 
 					// only allow a specific number of players with the same ip
 					int FoundAddr = 1;
-					
+
 					bool Continue = false;
 					for(int i = 0; i < NET_MAX_CLIENTS; i++)
 					{
@@ -214,7 +213,7 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 				else if(m_RecvUnpacker.m_Data.m_aChunkData[0] == NET_CTRLMSG_TOKEN)
 					m_TokenCache.AddToken(&Addr, m_RecvUnpacker.m_Data.m_ResponseToken, NET_TOKENFLAG_RESPONSEONLY);
 			}
-			else if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONNLESS)
+			else if(m_RecvUnpacker.m_Data.m_Flags & NET_PACKETFLAG_CONNLESS)
 			{
 				pChunk->m_Flags = NETSENDFLAG_CONNLESS;
 				pChunk->m_ClientID = -1;
@@ -232,7 +231,7 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 
 int CNetServer::Send(CNetChunk *pChunk, TOKEN Token)
 {
-	if(pChunk->m_Flags&NETSENDFLAG_CONNLESS)
+	if(pChunk->m_Flags & NETSENDFLAG_CONNLESS)
 	{
 		if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
 		{
@@ -272,13 +271,13 @@ int CNetServer::Send(CNetChunk *pChunk, TOKEN Token)
 				dbg_assert(pChunk->m_ClientID < NET_MAX_CLIENTS, "errornous client id");
 				dbg_assert(m_aSlots[pChunk->m_ClientID].m_Connection.State() != NET_CONNSTATE_OFFLINE, "errornous client id");
 
-				m_aSlots[pChunk->m_ClientID].m_Connection.SendPacketConnless((const char *)pChunk->m_pData, pChunk->m_DataSize);
+				m_aSlots[pChunk->m_ClientID].m_Connection.SendPacketConnless((const char *) pChunk->m_pData, pChunk->m_DataSize);
 			}
 		}
 	}
 	else
 	{
-		if(pChunk->m_DataSize+NET_MAX_CHUNKHEADERSIZE >= NET_MAX_PAYLOAD)
+		if(pChunk->m_DataSize + NET_MAX_CHUNKHEADERSIZE >= NET_MAX_PAYLOAD)
 		{
 			dbg_msg("netclient", "chunk payload too big. %d. dropping chunk", pChunk->m_DataSize);
 			return -1;
@@ -289,12 +288,12 @@ int CNetServer::Send(CNetChunk *pChunk, TOKEN Token)
 		dbg_assert(pChunk->m_ClientID < NET_MAX_CLIENTS, "errornous client id");
 		dbg_assert(m_aSlots[pChunk->m_ClientID].m_Connection.State() != NET_CONNSTATE_OFFLINE, "errornous client id");
 
-		if(pChunk->m_Flags&NETSENDFLAG_VITAL)
+		if(pChunk->m_Flags & NETSENDFLAG_VITAL)
 			Flags = NET_CHUNKFLAG_VITAL;
 
 		if(m_aSlots[pChunk->m_ClientID].m_Connection.QueueChunk(Flags, pChunk->m_DataSize, pChunk->m_pData) == 0)
 		{
-			if(pChunk->m_Flags&NETSENDFLAG_FLUSH)
+			if(pChunk->m_Flags & NETSENDFLAG_FLUSH)
 				m_aSlots[pChunk->m_ClientID].m_Connection.Flush();
 		}
 		else

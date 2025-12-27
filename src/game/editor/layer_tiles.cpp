@@ -6,12 +6,12 @@
 #include <engine/client.h>
 #include <engine/console.h>
 #include <engine/graphics.h>
-#include <engine/textrender.h>
 #include <engine/storage.h>
+#include <engine/textrender.h>
 
-#include <generated/client_data.h>
 #include <game/client/localization.h>
 #include <game/client/render.h>
+#include <generated/client_data.h>
 #include "editor.h"
 
 const char *pDefaultLayerName = "Tiles";
@@ -31,8 +31,8 @@ CLayerTiles::CLayerTiles(int w, int h)
 	m_ColorEnv = -1;
 	m_ColorEnvOffset = 0;
 
-	m_pTiles = new CTile[m_Width*m_Height];
-	mem_zero(m_pTiles, m_Width*m_Height*sizeof(CTile));
+	m_pTiles = new CTile[m_Width * m_Height];
+	mem_zero(m_pTiles, m_Width * m_Height * sizeof(CTile));
 
 	m_pSaveTiles = 0;
 	m_SaveTilesSize = 0;
@@ -44,9 +44,9 @@ CLayerTiles::CLayerTiles(int w, int h)
 
 CLayerTiles::~CLayerTiles()
 {
-	delete [] m_pTiles;
+	delete[] m_pTiles;
 	m_pTiles = 0;
-	delete [] m_pSaveTiles;
+	delete[] m_pSaveTiles;
 	m_pSaveTiles = 0;
 	m_SaveTilesSize = 0;
 }
@@ -56,16 +56,16 @@ void CLayerTiles::PrepareForSave()
 	for(int y = 0; y < m_Height; y++)
 		for(int x = 0; x < m_Width; x++)
 		{
-			m_pTiles[y*m_Width+x].m_Flags &= TILEFLAG_VFLIP|TILEFLAG_HFLIP|TILEFLAG_ROTATE;
-			if(m_pTiles[y*m_Width+x].m_Index == 0)
-				m_pTiles[y*m_Width+x].m_Flags = 0;
+			m_pTiles[y * m_Width + x].m_Flags &= TILEFLAG_VFLIP | TILEFLAG_HFLIP | TILEFLAG_ROTATE;
+			if(m_pTiles[y * m_Width + x].m_Index == 0)
+				m_pTiles[y * m_Width + x].m_Flags = 0;
 		}
 
 	if(m_Image != -1 && m_Color.a == 255)
 	{
 		for(int y = 0; y < m_Height; y++)
 			for(int x = 0; x < m_Width; x++)
-				m_pTiles[y*m_Width+x].m_Flags |= m_pEditor->m_Map.m_lImages[m_Image]->m_aTileFlags[m_pTiles[y*m_Width+x].m_Index];
+				m_pTiles[y * m_Width + x].m_Flags |= m_pEditor->m_Map.m_lImages[m_Image]->m_aTileFlags[m_pTiles[y * m_Width + x].m_Index];
 	}
 
 	int NumSaveTiles = 0; // number of unique tiles that we have to save
@@ -95,7 +95,7 @@ void CLayerTiles::PrepareForSave()
 	}
 
 	if(m_pSaveTiles)
-		delete [] m_pSaveTiles;
+		delete[] m_pSaveTiles;
 
 	m_pSaveTiles = new CTile[NumSaveTiles];
 	m_SaveTilesSize = sizeof(CTile) * NumSaveTiles;
@@ -149,7 +149,7 @@ void CLayerTiles::MakePalette()
 {
 	for(int y = 0; y < m_Height; y++)
 		for(int x = 0; x < m_Width; x++)
-			m_pTiles[y*m_Width+x].m_Index = y*16+x;
+			m_pTiles[y * m_Width + x].m_Index = y * 16 + x;
 }
 
 void CLayerTiles::Render()
@@ -157,34 +157,34 @@ void CLayerTiles::Render()
 	if(m_Image >= 0 && m_Image < m_pEditor->m_Map.m_lImages.size())
 		m_Texture = m_pEditor->m_Map.m_lImages[m_Image]->m_Texture;
 	Graphics()->TextureSet(m_Texture);
-	vec4 Color = vec4(m_Color.r/255.0f, m_Color.g/255.0f, m_Color.b/255.0f, m_Color.a/255.0f);
+	vec4 Color = vec4(m_Color.r / 255.0f, m_Color.g / 255.0f, m_Color.b / 255.0f, m_Color.a / 255.0f);
 	Graphics()->BlendNone();
 	m_pEditor->RenderTools()->RenderTilemap(m_pTiles, m_Width, m_Height, 32.0f, Color, LAYERRENDERFLAG_OPAQUE,
-												m_pEditor->EnvelopeEval, m_pEditor, m_ColorEnv, m_ColorEnvOffset);
+		m_pEditor->EnvelopeEval, m_pEditor, m_ColorEnv, m_ColorEnvOffset);
 	Graphics()->BlendNormal();
 	m_pEditor->RenderTools()->RenderTilemap(m_pTiles, m_Width, m_Height, 32.0f, Color, LAYERRENDERFLAG_TRANSPARENT,
-												m_pEditor->EnvelopeEval, m_pEditor, m_ColorEnv, m_ColorEnvOffset);
+		m_pEditor->EnvelopeEval, m_pEditor, m_ColorEnv, m_ColorEnvOffset);
 }
 
-int CLayerTiles::ConvertX(float x) const { return (int)(x/32.0f); }
-int CLayerTiles::ConvertY(float y) const { return (int)(y/32.0f); }
+int CLayerTiles::ConvertX(float x) const { return (int) (x / 32.0f); }
+int CLayerTiles::ConvertY(float y) const { return (int) (y / 32.0f); }
 
 void CLayerTiles::Convert(CUIRect Rect, RECTi *pOut)
 {
 	pOut->x = ConvertX(Rect.x);
 	pOut->y = ConvertY(Rect.y);
-	pOut->w = ConvertX(Rect.x+Rect.w+31) - pOut->x;
-	pOut->h = ConvertY(Rect.y+Rect.h+31) - pOut->y;
+	pOut->w = ConvertX(Rect.x + Rect.w + 31) - pOut->x;
+	pOut->h = ConvertY(Rect.y + Rect.h + 31) - pOut->y;
 }
 
 void CLayerTiles::Snap(CUIRect *pRect)
 {
 	RECTi Out;
 	Convert(*pRect, &Out);
-	pRect->x = Out.x*32.0f;
-	pRect->y = Out.y*32.0f;
-	pRect->w = Out.w*32.0f;
-	pRect->h = Out.h*32.0f;
+	pRect->x = Out.x * 32.0f;
+	pRect->y = Out.y * 32.0f;
+	pRect->w = Out.w * 32.0f;
+	pRect->h = Out.h * 32.0f;
 }
 
 void CLayerTiles::Clamp(RECTi *pRect)
@@ -201,10 +201,10 @@ void CLayerTiles::Clamp(RECTi *pRect)
 		pRect->y = 0;
 	}
 
-	if(pRect->x+pRect->w > m_Width)
+	if(pRect->x + pRect->w > m_Width)
 		pRect->w = m_Width - pRect->x;
 
-	if(pRect->y+pRect->h > m_Height)
+	if(pRect->y + pRect->h > m_Height)
 		pRect->h = m_Height - pRect->y;
 
 	if(pRect->h < 0)
@@ -219,7 +219,7 @@ void CLayerTiles::BrushSelecting(CUIRect Rect)
 
 	Graphics()->TextureClear();
 	m_pEditor->Graphics()->QuadsBegin();
-	m_pEditor->Graphics()->SetColor(FillColor.r*FillColor.a, FillColor.g*FillColor.a, FillColor.b*FillColor.a, FillColor.a);
+	m_pEditor->Graphics()->SetColor(FillColor.r * FillColor.a, FillColor.g * FillColor.a, FillColor.b * FillColor.a, FillColor.a);
 	Snap(&Rect);
 	IGraphics::CQuadItem QuadItem(Rect.x, Rect.y, Rect.w, Rect.h);
 	m_pEditor->Graphics()->QuadsDrawTL(&QuadItem, 1);
@@ -227,8 +227,8 @@ void CLayerTiles::BrushSelecting(CUIRect Rect)
 	char aBuf[16];
 	str_format(aBuf, sizeof(aBuf), "%d,%d", ConvertX(Rect.w), ConvertY(Rect.h));
 	static CTextCursor s_Cursor;
-	s_Cursor.m_FontSize = m_pEditor->m_ShowTilePicker?15.0f:15.0f*m_pEditor->m_WorldZoom;
-	s_Cursor.MoveTo(Rect.x+3.0f, Rect.y+3.0f);
+	s_Cursor.m_FontSize = m_pEditor->m_ShowTilePicker ? 15.0f : 15.0f * m_pEditor->m_WorldZoom;
+	s_Cursor.MoveTo(Rect.x + 3.0f, Rect.y + 3.0f);
 	s_Cursor.Reset();
 	TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
 }
@@ -254,7 +254,7 @@ int CLayerTiles::BrushGrab(CLayerGroup *pBrush, CUIRect Rect)
 	// copy the tiles
 	for(int y = 0; y < r.h; y++)
 		for(int x = 0; x < r.w; x++)
-			pGrabbed->m_pTiles[y*pGrabbed->m_Width+x] = m_pTiles[(r.y+y)*m_Width+(r.x+x)];
+			pGrabbed->m_pTiles[y * pGrabbed->m_Width + x] = m_pTiles[(r.y + y) * m_Width + (r.x + x)];
 
 	s_lastBrushX = -1;
 	s_lastBrushY = -1;
@@ -273,28 +273,28 @@ void CLayerTiles::FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect)
 	int w = ConvertX(Rect.w);
 	int h = ConvertY(Rect.h);
 
-	CLayerTiles *pLt = static_cast<CLayerTiles*>(pBrush);
+	CLayerTiles *pLt = static_cast<CLayerTiles *>(pBrush);
 
 	for(int y = 0; y < h; y++)
 	{
 		for(int x = 0; x < w; x++)
 		{
-			int fx = x+sx;
-			int fy = y+sy;
+			int fx = x + sx;
+			int fy = y + sy;
 
 			if(fx < 0 || fx >= m_Width || fy < 0 || fy >= m_Height)
 				continue;
 
 			if(Empty)
-				m_pTiles[fy*m_Width+fx].m_Index = 1;
+				m_pTiles[fy * m_Width + fx].m_Index = 1;
 			else
-				m_pTiles[fy*m_Width+fx] = pLt->m_pTiles[(y*pLt->m_Width + x%pLt->m_Width) % (pLt->m_Width*pLt->m_Height)];
+				m_pTiles[fy * m_Width + fx] = pLt->m_pTiles[(y * pLt->m_Width + x % pLt->m_Width) % (pLt->m_Width * pLt->m_Height)];
 		}
 	}
 
 	if(m_LiveAutoMap)
 	{
-		RECTi r = {sx - 1, sy - 1, w + 2, h + 2};	
+		RECTi r = {sx - 1, sy - 1, w + 2, h + 2};
 		m_pEditor->m_Map.m_lImages[m_Image]->m_pAutoMapper->Proceed(this, m_SelectedRuleSet, r);
 	}
 
@@ -306,23 +306,23 @@ void CLayerTiles::BrushDraw(CLayer *pBrush, float wx, float wy)
 	if(m_Readonly)
 		return;
 
-	CLayerTiles *l = (CLayerTiles *)pBrush;
+	CLayerTiles *l = (CLayerTiles *) pBrush;
 	int sx = ConvertX(wx);
 	int sy = ConvertY(wy);
 
-	//dont draw if the mouse is held without moving
+	// dont draw if the mouse is held without moving
 	if(sx == s_lastBrushX && sy == s_lastBrushY)
 		return;
 
 	for(int y = 0; y < l->m_Height; y++)
 		for(int x = 0; x < l->m_Width; x++)
 		{
-			int fx = x+sx;
-			int fy = y+sy;
-			if(fx<0 || fx >= m_Width || fy < 0 || fy >= m_Height)
+			int fx = x + sx;
+			int fy = y + sy;
+			if(fx < 0 || fx >= m_Width || fy < 0 || fy >= m_Height)
 				continue;
 
-			m_pTiles[fy*m_Width+fx] = l->m_pTiles[y*l->m_Width+x];
+			m_pTiles[fy * m_Width + fx] = l->m_pTiles[y * l->m_Width + x];
 		}
 
 	if(m_LiveAutoMap)
@@ -340,17 +340,17 @@ void CLayerTiles::BrushDraw(CLayer *pBrush, float wx, float wy)
 void CLayerTiles::BrushFlipX()
 {
 	for(int y = 0; y < m_Height; y++)
-		for(int x = 0; x < m_Width/2; x++)
+		for(int x = 0; x < m_Width / 2; x++)
 		{
-			CTile Tmp = m_pTiles[y*m_Width+x];
-			m_pTiles[y*m_Width+x] = m_pTiles[y*m_Width+m_Width-1-x];
-			m_pTiles[y*m_Width+m_Width-1-x] = Tmp;
+			CTile Tmp = m_pTiles[y * m_Width + x];
+			m_pTiles[y * m_Width + x] = m_pTiles[y * m_Width + m_Width - 1 - x];
+			m_pTiles[y * m_Width + m_Width - 1 - x] = Tmp;
 		}
 
 	if(!m_Game)
 		for(int y = 0; y < m_Height; y++)
 			for(int x = 0; x < m_Width; x++)
-				m_pTiles[y*m_Width+x].m_Flags ^= m_pTiles[y*m_Width+x].m_Flags&TILEFLAG_ROTATE ? TILEFLAG_HFLIP : TILEFLAG_VFLIP;
+				m_pTiles[y * m_Width + x].m_Flags ^= m_pTiles[y * m_Width + x].m_Flags & TILEFLAG_ROTATE ? TILEFLAG_HFLIP : TILEFLAG_VFLIP;
 
 	s_lastBrushX = -1;
 	s_lastBrushY = -1;
@@ -358,18 +358,18 @@ void CLayerTiles::BrushFlipX()
 
 void CLayerTiles::BrushFlipY()
 {
-	for(int y = 0; y < m_Height/2; y++)
+	for(int y = 0; y < m_Height / 2; y++)
 		for(int x = 0; x < m_Width; x++)
 		{
-			CTile Tmp = m_pTiles[y*m_Width+x];
-			m_pTiles[y*m_Width+x] = m_pTiles[(m_Height-1-y)*m_Width+x];
-			m_pTiles[(m_Height-1-y)*m_Width+x] = Tmp;
+			CTile Tmp = m_pTiles[y * m_Width + x];
+			m_pTiles[y * m_Width + x] = m_pTiles[(m_Height - 1 - y) * m_Width + x];
+			m_pTiles[(m_Height - 1 - y) * m_Width + x] = Tmp;
 		}
 
 	if(!m_Game)
 		for(int y = 0; y < m_Height; y++)
 			for(int x = 0; x < m_Width; x++)
-				m_pTiles[y*m_Width+x].m_Flags ^= m_pTiles[y*m_Width+x].m_Flags&TILEFLAG_ROTATE ? TILEFLAG_VFLIP : TILEFLAG_HFLIP;
+				m_pTiles[y * m_Width + x].m_Flags ^= m_pTiles[y * m_Width + x].m_Flags & TILEFLAG_ROTATE ? TILEFLAG_VFLIP : TILEFLAG_HFLIP;
 
 	s_lastBrushX = -1;
 	s_lastBrushY = -1;
@@ -377,24 +377,24 @@ void CLayerTiles::BrushFlipY()
 
 void CLayerTiles::BrushRotate(float Amount)
 {
-	int Rotation = (round_to_int(360.0f*Amount/(pi*2))/90)%4;	// 0=0°, 1=90°, 2=180°, 3=270°
+	int Rotation = (round_to_int(360.0f * Amount / (pi * 2)) / 90) % 4; // 0=0°, 1=90°, 2=180°, 3=270°
 	if(Rotation < 0)
-		Rotation +=4;
+		Rotation += 4;
 
 	if(Rotation == 1 || Rotation == 3)
 	{
 		// 90° rotation
-		CTile *pTempData = new CTile[m_Width*m_Height];
-		mem_copy(pTempData, m_pTiles, m_Width*m_Height*sizeof(CTile));
+		CTile *pTempData = new CTile[m_Width * m_Height];
+		mem_copy(pTempData, m_pTiles, m_Width * m_Height * sizeof(CTile));
 		CTile *pDst = m_pTiles;
 		for(int x = 0; x < m_Width; ++x)
-			for(int y = m_Height-1; y >= 0; --y, ++pDst)
+			for(int y = m_Height - 1; y >= 0; --y, ++pDst)
 			{
-				*pDst = pTempData[y*m_Width+x];
+				*pDst = pTempData[y * m_Width + x];
 				if(!m_Game)
 				{
-					if(pDst->m_Flags&TILEFLAG_ROTATE)
-						pDst->m_Flags ^= (TILEFLAG_HFLIP|TILEFLAG_VFLIP);
+					if(pDst->m_Flags & TILEFLAG_ROTATE)
+						pDst->m_Flags ^= (TILEFLAG_HFLIP | TILEFLAG_VFLIP);
 					pDst->m_Flags ^= TILEFLAG_ROTATE;
 				}
 			}
@@ -417,15 +417,15 @@ void CLayerTiles::BrushRotate(float Amount)
 
 void CLayerTiles::Resize(int NewW, int NewH)
 {
-	CTile *pNewData = new CTile[NewW*NewH];
-	mem_zero(pNewData, NewW*NewH*sizeof(CTile));
+	CTile *pNewData = new CTile[NewW * NewH];
+	mem_zero(pNewData, NewW * NewH * sizeof(CTile));
 
 	// copy old data
 	for(int y = 0; y < minimum(NewH, m_Height); y++)
-		mem_copy(&pNewData[y*NewW], &m_pTiles[y*m_Width], minimum(m_Width, NewW)*sizeof(CTile));
+		mem_copy(&pNewData[y * NewW], &m_pTiles[y * m_Width], minimum(m_Width, NewW) * sizeof(CTile));
 
 	// replace old
-	delete [] m_pTiles;
+	delete[] m_pTiles;
 	m_pTiles = pNewData;
 	m_Width = NewW;
 	m_Height = NewH;
@@ -435,32 +435,32 @@ void CLayerTiles::Shift(int Direction)
 {
 	switch(Direction)
 	{
-	case 1:
+		case 1:
 		{
 			// left
 			for(int y = 0; y < m_Height; ++y)
-				mem_move(&m_pTiles[y*m_Width], &m_pTiles[y*m_Width+1], (m_Width-1)*sizeof(CTile));
+				mem_move(&m_pTiles[y * m_Width], &m_pTiles[y * m_Width + 1], (m_Width - 1) * sizeof(CTile));
 		}
 		break;
-	case 2:
+		case 2:
 		{
 			// right
 			for(int y = 0; y < m_Height; ++y)
-				mem_move(&m_pTiles[y*m_Width+1], &m_pTiles[y*m_Width], (m_Width-1)*sizeof(CTile));
+				mem_move(&m_pTiles[y * m_Width + 1], &m_pTiles[y * m_Width], (m_Width - 1) * sizeof(CTile));
 		}
 		break;
-	case 4:
+		case 4:
 		{
 			// up
-			for(int y = 0; y < m_Height-1; ++y)
-				mem_copy(&m_pTiles[y*m_Width], &m_pTiles[(y+1)*m_Width], m_Width*sizeof(CTile));
+			for(int y = 0; y < m_Height - 1; ++y)
+				mem_copy(&m_pTiles[y * m_Width], &m_pTiles[(y + 1) * m_Width], m_Width * sizeof(CTile));
 		}
 		break;
-	case 8:
+		case 8:
 		{
 			// down
-			for(int y = m_Height-1; y > 0; --y)
-				mem_copy(&m_pTiles[y*m_Width], &m_pTiles[(y-1)*m_Width], m_Width*sizeof(CTile));
+			for(int y = m_Height - 1; y > 0; --y)
+				mem_copy(&m_pTiles[y * m_Width], &m_pTiles[(y - 1) * m_Width], m_Width * sizeof(CTile));
 		}
 	}
 
@@ -476,26 +476,26 @@ void CLayerTiles::ShowInfo()
 	Graphics()->TextureSet(s_Font);
 	Graphics()->QuadsBegin();
 
-	int StartY = maximum(0, (int)(ScreenY0/32.0f)-1);
-	int StartX = maximum(0, (int)(ScreenX0/32.0f)-1);
-	int EndY = minimum((int)(ScreenY1/32.0f)+1, m_Height);
-	int EndX = minimum((int)(ScreenX1/32.0f)+1, m_Width);
+	int StartY = maximum(0, (int) (ScreenY0 / 32.0f) - 1);
+	int StartX = maximum(0, (int) (ScreenX0 / 32.0f) - 1);
+	int EndY = minimum((int) (ScreenY1 / 32.0f) + 1, m_Height);
+	int EndX = minimum((int) (ScreenX1 / 32.0f) + 1, m_Width);
 
 	for(int y = StartY; y < EndY; y++)
 		for(int x = StartX; x < EndX; x++)
 		{
-			int c = x + y*m_Width;
+			int c = x + y * m_Width;
 			if(m_pTiles[c].m_Index)
 			{
 				char aBuf[32];
 				str_format(aBuf, sizeof(aBuf), "%i", m_pTiles[c].m_Index);
-				m_pEditor->Graphics()->QuadsText(x*32, y*32, 16.0f, aBuf);
+				m_pEditor->Graphics()->QuadsText(x * 32, y * 32, 16.0f, aBuf);
 
-				char aFlags[4] = {	m_pTiles[c].m_Flags&TILEFLAG_VFLIP ? 'V' : ' ',
-									m_pTiles[c].m_Flags&TILEFLAG_HFLIP ? 'H' : ' ',
-									m_pTiles[c].m_Flags&TILEFLAG_ROTATE? 'R' : ' ',
-									0};
-				m_pEditor->Graphics()->QuadsText(x*32, y*32+16, 16.0f, aFlags);
+				char aFlags[4] = {m_pTiles[c].m_Flags & TILEFLAG_VFLIP ? 'V' : ' ',
+					m_pTiles[c].m_Flags & TILEFLAG_HFLIP ? 'H' : ' ',
+					m_pTiles[c].m_Flags & TILEFLAG_ROTATE ? 'R' : ' ',
+					0};
+				m_pEditor->Graphics()->QuadsText(x * 32, y * 32 + 16, 16.0f, aFlags);
 
 				// TODO: Use text render instead, once it's optimized enough for this much text at once, and remove usage of debug font here
 				/*str_format(aBuf, sizeof(aBuf),
@@ -559,8 +559,8 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 			int h = minimum(gl->m_Height, m_Height);
 			for(int y = 0; y < h; y++)
 				for(int x = 0; x < w; x++)
-					if(m_pTiles[y*m_Width+x].m_Index)
-						gl->m_pTiles[y*gl->m_Width+x].m_Index = TILE_AIR+Result;
+					if(m_pTiles[y * m_Width + x].m_Index)
+						gl->m_pTiles[y * gl->m_Width + x].m_Index = TILE_AIR + Result;
 
 			return 1;
 		}
@@ -568,7 +568,7 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 
 	enum
 	{
-		PROP_WIDTH=0,
+		PROP_WIDTH = 0,
 		PROP_HEIGHT,
 		PROP_SHIFT,
 		PROP_IMAGE,
@@ -579,9 +579,9 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 	};
 
 	int Color = 0;
-	Color |= m_Color.r<<24;
-	Color |= m_Color.g<<16;
-	Color |= m_Color.b<<8;
+	Color |= m_Color.r << 24;
+	Color |= m_Color.g << 16;
+	Color |= m_Color.b << 8;
 	Color |= m_Color.a;
 
 	CProperty aProps[] = {
@@ -590,7 +590,7 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 		{"Shift", 0, PROPTYPE_SHIFT, 0, 0},
 		{"Image", m_Image, PROPTYPE_IMAGE, 0, 0},
 		{"Color", Color, PROPTYPE_COLOR, 0, 0},
-		{"Color Env", m_ColorEnv+1, PROPTYPE_INT_STEP, 0, m_pEditor->m_Map.m_lEnvelopes.size()+1},
+		{"Color Env", m_ColorEnv + 1, PROPTYPE_INT_STEP, 0, m_pEditor->m_Map.m_lEnvelopes.size() + 1},
 		{"Color TO", m_ColorEnvOffset, PROPTYPE_INT_SCROLL, -1000000, 1000000},
 		{0},
 	};
@@ -615,7 +615,7 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 		Shift(NewVal);
 	else if(Prop == PROP_IMAGE)
 	{
-		if (NewVal == -1)
+		if(NewVal == -1)
 		{
 			m_Texture.Invalidate();
 			m_Image = -1;
@@ -623,7 +623,7 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 		else
 		{
 			bool HasNameOfOldImage = m_Image != -1 && str_comp(m_aName, m_pEditor->m_Map.m_lImages[m_Image]->m_aName) == 0;
-			m_Image = NewVal%m_pEditor->m_Map.m_lImages.size();
+			m_Image = NewVal % m_pEditor->m_Map.m_lImages.size();
 			m_SelectedRuleSet = 0;
 			m_LiveAutoMap = false;
 			if(str_comp(m_aName, pDefaultLayerName) == 0 || HasNameOfOldImage)
@@ -632,15 +632,15 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 	}
 	else if(Prop == PROP_COLOR)
 	{
-		m_Color.r = (NewVal>>24)&0xff;
-		m_Color.g = (NewVal>>16)&0xff;
-		m_Color.b = (NewVal>>8)&0xff;
-		m_Color.a = NewVal&0xff;
+		m_Color.r = (NewVal >> 24) & 0xff;
+		m_Color.g = (NewVal >> 16) & 0xff;
+		m_Color.b = (NewVal >> 8) & 0xff;
+		m_Color.a = NewVal & 0xff;
 	}
 	if(Prop == PROP_COLOR_ENV)
 	{
-		int Index = clamp(NewVal-1, -1, m_pEditor->m_Map.m_lEnvelopes.size()-1);
-		int Step = (Index-m_ColorEnv)%2;
+		int Index = clamp(NewVal - 1, -1, m_pEditor->m_Map.m_lEnvelopes.size() - 1);
+		int Step = (Index - m_ColorEnv) % 2;
 		if(Step != 0)
 		{
 			for(; Index >= -1 && Index < m_pEditor->m_Map.m_lEnvelopes.size(); Index += Step)
@@ -656,7 +656,6 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 
 	return 0;
 }
-
 
 void CLayerTiles::ModifyImageIndex(INDEX_MODIFY_FUNC Func)
 {

@@ -7,7 +7,6 @@
 #include "netban.h"
 #include "network.h"
 
-
 bool CNetConsole::Open(NETADDR BindAddr, CNetBan *pNetBan, NETFUNC_NEWCLIENT pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser)
 {
 	// zero out the whole structure
@@ -56,7 +55,7 @@ void CNetConsole::Drop(int ClientID, const char *pReason)
 
 int CNetConsole::AcceptClient(NETSOCKET Socket, const NETADDR *pAddr)
 {
-	char aError[256] = { 0 };
+	char aError[256] = {0};
 	int FreeSlot = -1;
 
 	// look for free slot or multiple client

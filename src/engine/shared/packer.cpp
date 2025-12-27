@@ -73,11 +73,10 @@ void CPacker::AddRaw(const void *pData, int Size)
 	m_pCurrent += Size;
 }
 
-
 void CUnpacker::Reset(const void *pData, int Size)
 {
 	m_Error = false;
-	m_pStart = (const unsigned char *)pData;
+	m_pStart = (const unsigned char *) pData;
 	m_pEnd = m_pStart + Size;
 	m_pCurrent = m_pStart;
 }
@@ -127,7 +126,7 @@ const char *CUnpacker::GetString(int SanitizeType)
 	}
 
 	// Ensure string is null terminated.
-	char *pStr = (char *)m_pCurrent;
+	char *pStr = (char *) m_pCurrent;
 	while(*m_pCurrent)
 	{
 		m_pCurrent++;

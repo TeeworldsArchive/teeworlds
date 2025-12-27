@@ -1,16 +1,16 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#include <math.h>
 #include <algorithm>
+#include <math.h>
 
 #include <base/math.h>
 
-#include <engine/shared/config.h>
 #include <engine/graphics.h>
 #include <engine/map.h>
+#include <engine/shared/config.h>
 #include <engine/textrender.h>
-#include <generated/client_data.h>
 #include <game/layers.h>
+#include <generated/client_data.h>
 #include "animstate.h"
 #include "render.h"
 
@@ -25,26 +25,26 @@ void CRenderTools::Init(CConfig *pConfig, IGraphics *pGraphics)
 
 void CRenderTools::SelectSprite(const CDataSprite *pSpr, int Flags, int sx, int sy)
 {
-	int x = pSpr->m_X+sx;
-	int y = pSpr->m_Y+sy;
+	int x = pSpr->m_X + sx;
+	int y = pSpr->m_Y + sy;
 	int w = pSpr->m_W;
 	int h = pSpr->m_H;
 	int cx = pSpr->m_pSet->m_Gridx;
 	int cy = pSpr->m_pSet->m_Gridy;
 
-	float f = sqrtf(h*h + w*w);
-	gs_SpriteWScale = w/f;
-	gs_SpriteHScale = h/f;
+	float f = sqrtf(h * h + w * w);
+	gs_SpriteWScale = w / f;
+	gs_SpriteHScale = h / f;
 
-	float x1 = x/(float)cx + 0.5f/(float)(cx*32);
-	float x2 = (x+w)/(float)cx - 0.5f/(float)(cx*32);
-	float y1 = y/(float)cy + 0.5f/(float)(cy*32);
-	float y2 = (y+h)/(float)cy - 0.5f/(float)(cy*32);
+	float x1 = x / (float) cx + 0.5f / (float) (cx * 32);
+	float x2 = (x + w) / (float) cx - 0.5f / (float) (cx * 32);
+	float y1 = y / (float) cy + 0.5f / (float) (cy * 32);
+	float y2 = (y + h) / (float) cy - 0.5f / (float) (cy * 32);
 
-	if(Flags&SPRITE_FLAG_FLIP_Y)
+	if(Flags & SPRITE_FLAG_FLIP_Y)
 		std::swap(y1, y2);
 
-	if(Flags&SPRITE_FLAG_FLIP_X)
+	if(Flags & SPRITE_FLAG_FLIP_X)
 		std::swap(x1, x2);
 
 	Graphics()->QuadsSetSubset(x1, y1, x2, y2);
@@ -59,7 +59,7 @@ void CRenderTools::SelectSprite(int Id, int Flags, int sx, int sy)
 
 void CRenderTools::DrawSprite(float x, float y, float Size)
 {
-	IGraphics::CQuadItem QuadItem(x, y, Size*gs_SpriteWScale, Size*gs_SpriteHScale);
+	IGraphics::CQuadItem QuadItem(x, y, Size * gs_SpriteWScale, Size * gs_SpriteHScale);
 	Graphics()->QuadsDraw(&QuadItem, 1);
 }
 
@@ -202,21 +202,21 @@ void CRenderTools::RenderTee(CAnimState *pAnim, const CTeeRenderInfo *pInfo, int
 				{
 					switch(Emote)
 					{
-					case EMOTE_PAIN:
-						SelectSprite(SPRITE_TEE_EYES_PAIN, 0, 0, 0);
-						break;
-					case EMOTE_HAPPY:
-						SelectSprite(SPRITE_TEE_EYES_HAPPY, 0, 0, 0);
-						break;
-					case EMOTE_SURPRISE:
-						SelectSprite(SPRITE_TEE_EYES_SURPRISE, 0, 0, 0);
-						break;
-					case EMOTE_ANGRY:
-						SelectSprite(SPRITE_TEE_EYES_ANGRY, 0, 0, 0);
-						break;
-					default:
-						SelectSprite(SPRITE_TEE_EYES_NORMAL, 0, 0, 0);
-						break;
+						case EMOTE_PAIN:
+							SelectSprite(SPRITE_TEE_EYES_PAIN, 0, 0, 0);
+							break;
+						case EMOTE_HAPPY:
+							SelectSprite(SPRITE_TEE_EYES_HAPPY, 0, 0, 0);
+							break;
+						case EMOTE_SURPRISE:
+							SelectSprite(SPRITE_TEE_EYES_SURPRISE, 0, 0, 0);
+							break;
+						case EMOTE_ANGRY:
+							SelectSprite(SPRITE_TEE_EYES_ANGRY, 0, 0, 0);
+							break;
+						default:
+							SelectSprite(SPRITE_TEE_EYES_NORMAL, 0, 0, 0);
+							break;
 					}
 
 					float EyeScale = BaseSize * 0.60f;
@@ -237,17 +237,17 @@ void CRenderTools::RenderTee(CAnimState *pAnim, const CTeeRenderInfo *pInfo, int
 					int Flag = Direction.x < 0.0f ? SPRITE_FLAG_FLIP_X : 0;
 					switch(pInfo->m_HatSpriteIndex)
 					{
-					case 0:
-						SelectSprite(SPRITE_TEE_HATS_TOP1, Flag, 0, 0);
-						break;
-					case 1:
-						SelectSprite(SPRITE_TEE_HATS_TOP2, Flag, 0, 0);
-						break;
-					case 2:
-						SelectSprite(SPRITE_TEE_HATS_SIDE1, Flag, 0, 0);
-						break;
-					case 3:
-						SelectSprite(SPRITE_TEE_HATS_SIDE2, Flag, 0, 0);
+						case 0:
+							SelectSprite(SPRITE_TEE_HATS_TOP1, Flag, 0, 0);
+							break;
+						case 1:
+							SelectSprite(SPRITE_TEE_HATS_TOP2, Flag, 0, 0);
+							break;
+						case 2:
+							SelectSprite(SPRITE_TEE_HATS_SIDE1, Flag, 0, 0);
+							break;
+						case 3:
+							SelectSprite(SPRITE_TEE_HATS_SIDE2, Flag, 0, 0);
 					}
 					Item = BodyItem;
 					Graphics()->QuadsDraw(&Item, 1);
@@ -288,7 +288,7 @@ void CRenderTools::RenderTee(CAnimState *pAnim, const CTeeRenderInfo *pInfo, int
 }
 
 void CRenderTools::RenderTeeHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset,
-								 vec2 PostRotOffset)
+	vec2 PostRotOffset)
 {
 	// in-game hand size is 15 when tee size is 64
 	float BaseSize = 15.0f * (pInfo->m_Size / 64.0f);
@@ -301,7 +301,7 @@ void CRenderTools::RenderTeeHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, ve
 		Angle += AngleOffset;
 
 	vec2 DirX = Dir;
-	vec2 DirY(-Dir.y,Dir.x);
+	vec2 DirY(-Dir.y, Dir.x);
 
 	if(Dir.x < 0)
 		DirY = -DirY;
@@ -310,7 +310,7 @@ void CRenderTools::RenderTeeHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, ve
 	HandPos += DirY * PostRotOffset.y;
 
 	const vec4 Color = pInfo->m_aColors[SKINPART_HANDS];
-	IGraphics::CQuadItem QuadOutline(HandPos.x, HandPos.y, 2*BaseSize, 2*BaseSize);
+	IGraphics::CQuadItem QuadOutline(HandPos.x, HandPos.y, 2 * BaseSize, 2 * BaseSize);
 	IGraphics::CQuadItem QuadHand = QuadOutline;
 
 	Graphics()->TextureSet(pInfo->m_aTextures[SKINPART_HANDS]);
@@ -330,20 +330,20 @@ void CRenderTools::RenderTeeHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, ve
 static void CalcScreenParams(float Amount, float WMax, float HMax, float Aspect, float *w, float *h)
 {
 	float f = sqrtf(Amount) / sqrtf(Aspect);
-	*w = f*Aspect;
+	*w = f * Aspect;
 	*h = f;
 
 	// limit the view
 	if(*w > WMax)
 	{
 		*w = WMax;
-		*h = *w/Aspect;
+		*h = *w / Aspect;
 	}
 
 	if(*h > HMax)
 	{
 		*h = HMax;
-		*w = *h*Aspect;
+		*w = *h * Aspect;
 	}
 }
 
@@ -351,21 +351,21 @@ void CRenderTools::MapScreenToWorld(float CenterX, float CenterY, float Parallax
 	float OffsetX, float OffsetY, float Aspect, float Zoom, float aPoints[4])
 {
 	float Width, Height;
-	CalcScreenParams(1150*1000, 1500, 1050, Aspect, &Width, &Height);
+	CalcScreenParams(1150 * 1000, 1500, 1050, Aspect, &Width, &Height);
 	CenterX *= ParallaxX;
 	CenterY *= ParallaxY;
 	Width *= Zoom;
 	Height *= Zoom;
-	aPoints[0] = OffsetX+CenterX-Width/2;
-	aPoints[1] = OffsetY+CenterY-Height/2;
-	aPoints[2] = aPoints[0]+Width;
-	aPoints[3] = aPoints[1]+Height;
+	aPoints[0] = OffsetX + CenterX - Width / 2;
+	aPoints[1] = OffsetY + CenterY - Height / 2;
+	aPoints[2] = aPoints[0] + Width;
+	aPoints[3] = aPoints[1] + Height;
 }
 
 void CRenderTools::MapScreenToGroup(float CenterX, float CenterY, const CMapItemGroup *pGroup, float Zoom)
 {
 	float aPoints[4];
-	MapScreenToWorld(CenterX, CenterY, pGroup->m_ParallaxX/100.0f, pGroup->m_ParallaxY/100.0f,
+	MapScreenToWorld(CenterX, CenterY, pGroup->m_ParallaxX / 100.0f, pGroup->m_ParallaxY / 100.0f,
 		pGroup->m_OffsetX, pGroup->m_OffsetY, Graphics()->ScreenAspect(), Zoom, aPoints);
 	Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
 }

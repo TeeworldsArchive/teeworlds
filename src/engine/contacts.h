@@ -17,11 +17,11 @@ struct CContactInfo
 	enum
 	{
 		// for contact lists
-		CONTACT_NO=0,
+		CONTACT_NO = 0,
 		CONTACT_CLAN,
 		CONTACT_PLAYER,
 
-		MAX_CONTACTS=128,
+		MAX_CONTACTS = 128,
 	};
 };
 

@@ -23,7 +23,7 @@ void *CEventHandler::Create(int Type, int Size, int64 Mask)
 {
 	if(m_NumEvents == MAX_EVENTS)
 		return 0;
-	if(m_CurrentOffset+Size >= MAX_DATASIZE)
+	if(m_CurrentOffset + Size >= MAX_DATASIZE)
 		return 0;
 
 	void *p = &m_aData[m_CurrentOffset];
@@ -48,7 +48,7 @@ void CEventHandler::Snap(int SnappingClient)
 	{
 		if(SnappingClient == -1 || CmaskIsSet(m_aEventList[i].m_ClientMask, SnappingClient))
 		{
-			CNetEvent_Common *ev = (CNetEvent_Common *)&m_aData[m_aEventList[i].m_Offset];
+			CNetEvent_Common *ev = (CNetEvent_Common *) &m_aData[m_aEventList[i].m_Offset];
 			if(SnappingClient == -1 || distance(GameServer()->m_apPlayers[SnappingClient]->m_ViewPos, vec2(ev->m_X, ev->m_Y)) < 1500.0f)
 			{
 				void *pData = GameServer()->Server()->SnapNewItem(m_aEventList[i].m_Type, i, m_aEventList[i].m_Size);

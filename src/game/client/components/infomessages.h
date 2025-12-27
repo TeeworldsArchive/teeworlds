@@ -11,7 +11,7 @@ class CInfoMessages : public CComponent
 	{
 		int m_Type;
 		int m_Tick;
-	
+
 		// victim / finishing player
 		int m_Player1ID;
 		CTextCursor m_Player1NameCursor;

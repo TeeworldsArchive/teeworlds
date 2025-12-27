@@ -74,6 +74,7 @@ class CGameContext : public IGameServer
 	void Construct(int Resetting);
 
 	bool m_Resetting;
+
 public:
 	IServer *Server() const { return m_pServer; }
 	class CConfig *Config() { return m_pConfig; }
@@ -121,7 +122,7 @@ public:
 	int m_VoteEnforce;
 	enum
 	{
-		VOTE_TIME=25,
+		VOTE_TIME = 25,
 		VOTE_CANCEL_TIME = 10,
 
 		MIN_SKINCHANGE_CLIENTVERSION = 0x0703,
@@ -137,7 +138,7 @@ public:
 	void CreateHammerHit(vec2 Pos);
 	void CreatePlayerSpawn(vec2 Pos);
 	void CreateDeath(vec2 Pos, int Who);
-	void CreateSound(vec2 Pos, int Sound, int64 Mask=-1);
+	void CreateSound(vec2 Pos, int Sound, int64 Mask = -1);
 
 	// ----- send functions -----
 	void SendChat(int ChatterClientID, int Mode, int To, const char *pText);
@@ -203,7 +204,7 @@ public:
 };
 
 inline int64 CmaskAll() { return -1; }
-inline int64 CmaskOne(int ClientID) { return (int64)1<<ClientID; }
-inline int64 CmaskAllExceptOne(int ClientID) { return CmaskAll()^CmaskOne(ClientID); }
-inline bool CmaskIsSet(int64 Mask, int ClientID) { return (Mask&CmaskOne(ClientID)) != 0; }
+inline int64 CmaskOne(int ClientID) { return (int64) 1 << ClientID; }
+inline int64 CmaskAllExceptOne(int ClientID) { return CmaskAll() ^ CmaskOne(ClientID); }
+inline bool CmaskIsSet(int64 Mask, int ClientID) { return (Mask & CmaskOne(ClientID)) != 0; }
 #endif

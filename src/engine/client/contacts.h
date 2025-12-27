@@ -3,9 +3,9 @@
 #ifndef ENGINE_CLIENT_CONTACTS_H
 #define ENGINE_CLIENT_CONTACTS_H
 
-#include <engine/shared/console.h>
 #include <engine/config.h>
 #include <engine/contacts.h>
+#include <engine/shared/console.h>
 
 class IContactList
 {
@@ -16,7 +16,7 @@ private:
 public:
 	IContactList();
 
-	void ConfigSave(IConfigManager *pConfigManager, const char* pCmdStr);
+	void ConfigSave(IConfigManager *pConfigManager, const char *pCmdStr);
 
 	virtual void Init() = 0;
 
@@ -30,7 +30,7 @@ public:
 	void RemoveContact(int Index);
 };
 
-class CFriends: public IFriends, public IContactList
+class CFriends : public IFriends, public IContactList
 {
 public:
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
@@ -49,7 +49,7 @@ public:
 	static void ConRemoveFriend(IConsole::IResult *pResult, void *pUserData);
 };
 
-class CBlacklist: public IBlacklist, public IContactList
+class CBlacklist : public IBlacklist, public IContactList
 {
 public:
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);

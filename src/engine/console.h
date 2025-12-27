@@ -9,24 +9,23 @@ class IConsole : public IInterface
 {
 	MACRO_INTERFACE("console", 0)
 public:
-
 	//	TODO: rework/cleanup
 	enum
 	{
-		OUTPUT_LEVEL_STANDARD=0,
+		OUTPUT_LEVEL_STANDARD = 0,
 		OUTPUT_LEVEL_ADDINFO,
 		OUTPUT_LEVEL_DEBUG,
 
-		ACCESS_LEVEL_ADMIN=0,
+		ACCESS_LEVEL_ADMIN = 0,
 		ACCESS_LEVEL_MOD,
 
-		TEMPCMD_NAME_LENGTH=48,
-		TEMPCMD_HELP_LENGTH=128,
-		TEMPCMD_PARAMS_LENGTH=96,
+		TEMPCMD_NAME_LENGTH = 48,
+		TEMPCMD_HELP_LENGTH = 128,
+		TEMPCMD_PARAMS_LENGTH = 96,
 
 		TEMPMAP_NAME_LENGTH = 128,
 
-		MAX_PRINT_CB=4,
+		MAX_PRINT_CB = 4,
 	};
 
 	// TODO: rework this interface to reduce the amount of virtual calls
@@ -34,6 +33,7 @@ public:
 	{
 	protected:
 		unsigned m_NumArgs;
+
 	public:
 		int m_Value;
 		char m_aValue[128];
@@ -51,6 +51,7 @@ public:
 	{
 	protected:
 		int m_AccessLevel;
+
 	public:
 		CCommandInfo(bool BasicAccess) { m_AccessLevel = BasicAccess ? ACCESS_LEVEL_MOD : ACCESS_LEVEL_ADMIN; }
 		virtual ~CCommandInfo() {}
@@ -96,7 +97,7 @@ public:
 
 	virtual int RegisterPrintCallback(int OutputLevel, FPrintCallback pfnPrintCallback, void *pUserData) = 0;
 	virtual void SetPrintOutputLevel(int Index, int OutputLevel) = 0;
-	virtual void Print(int Level, const char *pFrom, const char *pStr, bool Highlighted=false) = 0;
+	virtual void Print(int Level, const char *pFrom, const char *pStr, bool Highlighted = false) = 0;
 
 	virtual int ParseCommandArgs(const char *pArgs, const char *pFormat, FCommandCallback pfnCallback, void *pContext) = 0;
 

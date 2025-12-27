@@ -21,10 +21,10 @@ enum
 	NUM_TC_STATS = 11
 };
 
-class CStats: public CComponent
+class CStats : public CComponent
 {
 private:
-// stats
+	// stats
 	class CPlayerStats
 	{
 	public:

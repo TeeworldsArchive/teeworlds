@@ -99,11 +99,11 @@ inline int GetInfectedColor(int UseCustomColors, int PartColor, int Part)
 {
 	static const int s_InfectedColors[2] = {0x3AFF00, 0x00FF86};
 
-	int InfectedHue = (s_InfectedColors[Part == SKINPART_FEET ? 1 : 0]>>16)&0xff;
-	int InfectedSat = (s_InfectedColors[Part == SKINPART_FEET ? 1 : 0]>>8)&0xff;
-	int InfectedLgt = s_InfectedColors[Part == SKINPART_FEET ? 1 : 0]&0xff;
-	int PartSat = (PartColor>>8)&0xff;
-	int PartLgt = PartColor&0xff;
+	int InfectedHue = (s_InfectedColors[Part == SKINPART_FEET ? 1 : 0] >> 16) & 0xff;
+	int InfectedSat = (s_InfectedColors[Part == SKINPART_FEET ? 1 : 0] >> 8) & 0xff;
+	int InfectedLgt = s_InfectedColors[Part == SKINPART_FEET ? 1 : 0] & 0xff;
+	int PartSat = (PartColor >> 8) & 0xff;
+	int PartLgt = PartColor & 0xff;
 
 	if(!UseCustomColors)
 	{
@@ -118,9 +118,9 @@ inline int GetInfectedColor(int UseCustomColors, int PartColor, int Part)
 	int s = clamp(mix(InfectedSat, PartSat, 0.2), MinSat, MaxSat);
 	int l = clamp(mix(InfectedLgt, PartLgt, 0.2), 61, 200);
 
-	int ColorVal = (h<<16) + (s<<8) + l;
+	int ColorVal = (h << 16) + (s << 8) + l;
 	if(Part == SKINPART_MARKING) // keep alpha
-		ColorVal += PartColor&0xff000000;
+		ColorVal += PartColor & 0xff000000;
 
 	return ColorVal;
 }
@@ -144,7 +144,7 @@ void CGameControllerReinfected::RefreshPlayerSkin(CPlayer *pPlayer, bool Sync)
 
 bool CGameControllerReinfected::IsInfectionStarted()
 {
-    return (Server()->Tick() - m_GameStartTick) > (Server()->TickSpeed() * Config()->m_RiInfectionStartTime) && IsGameRunning();
+	return (Server()->Tick() - m_GameStartTick) > (Server()->TickSpeed() * Config()->m_RiInfectionStartTime) && IsGameRunning();
 }
 
 void CGameControllerReinfected::StartRandomInfection()
@@ -209,7 +209,7 @@ bool CGameControllerReinfected::CanCharacterPickup(CCharacter *pChr) const
 	if(!pChr || !pChr->GetPlayer() || Reinfected()->IsInfected(pChr->GetPlayer()->GetCID()))
 		return false;
 
-    return IGameController::CanCharacterPickup(pChr);
+	return IGameController::CanCharacterPickup(pChr);
 }
 
 int CGameControllerReinfected::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, int Weapon)
@@ -235,10 +235,10 @@ int CGameControllerReinfected::OnCharacterDeath(CCharacter *pVictim, CPlayer *pK
 		}
 	}
 	if(Weapon == WEAPON_SELF)
-		pVictim->GetPlayer()->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()*3.0f;
+		pVictim->GetPlayer()->m_RespawnTick = Server()->Tick() + Server()->TickSpeed() * 3.0f;
 
 	// update spectator modes for dead players in survival
-	if(m_GameFlags&GAMEFLAG_SURVIVAL)
+	if(m_GameFlags & GAMEFLAG_SURVIVAL)
 	{
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->m_DeadSpecMode)
@@ -250,7 +250,7 @@ int CGameControllerReinfected::OnCharacterDeath(CCharacter *pVictim, CPlayer *pK
 
 int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int Weapon)
 {
-    if(!pChr || !Reinfected()->IsInfected(pChr))
+	if(!pChr || !Reinfected()->IsInfected(pChr))
 		return IGameController::OnCharacterFireWeapon(pChr, Direction, Weapon);
 
 	// inefction hammer
@@ -261,13 +261,13 @@ int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Dire
 		vec2 ProjStartPos = ChrPos + Direction * pChr->GetProximityRadius() * 0.75f;
 
 		int ReloadTimer = g_pData->m_Weapons.m_aId[WEAPON_HAMMER].m_Firedelay * Server()->TickSpeed() / 1000;
-			
+
 		GameServer()->CreateSound(ChrPos, SOUND_HAMMER_FIRE);
 
 		CCharacter *apEnts[MAX_CLIENTS];
 		int Hits = 0;
-		int Num = GameServer()->m_World.FindEntities(ProjStartPos, pChr->GetProximityRadius()*0.5f, (CEntity**)apEnts,
-													MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
+		int Num = GameServer()->m_World.FindEntities(ProjStartPos, pChr->GetProximityRadius() * 0.5f, (CEntity **) apEnts,
+			MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
 
 		for(int i = 0; i < Num; ++i)
 		{
@@ -295,7 +295,7 @@ int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Dire
 			}
 			else
 			{
-				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir*-1, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
+				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir * -1, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
 					ClientID, Weapon);
 			}
 			Hits++;
@@ -303,7 +303,7 @@ int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Dire
 
 		// if we Hit anything, we have to wait for the reload
 		if(Hits)
-			ReloadTimer = Server()->TickSpeed()/3;
+			ReloadTimer = Server()->TickSpeed() / 3;
 
 		return ReloadTimer;
 	}
@@ -341,8 +341,8 @@ bool CGameControllerReinfected::DoWincheckMatch()
 	{
 		StartRandomInfection();
 	}
-	
-    return false;
+
+	return false;
 }
 
 void CGameControllerReinfected::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)

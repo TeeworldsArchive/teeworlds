@@ -1,7 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#include <base/system.h>
 #include <base/math.h>
+#include <base/system.h>
 
 #include <engine/config.h>
 #include <engine/console.h>
@@ -12,8 +12,8 @@
 
 #include <game/version.h>
 
-#include "versionsrv.h"
 #include "mapversions.h"
+#include "versionsrv.h"
 
 enum
 {
@@ -171,19 +171,16 @@ int main(int argc, const char **argv)
 		TOKEN ResponseToken;
 		while(s_NetClient.Recv(&Packet, &ResponseToken))
 		{
-			if(Packet.m_DataSize == sizeof(VERSIONSRV_GETVERSION)
-				&& mem_comp(Packet.m_pData, VERSIONSRV_GETVERSION, sizeof(VERSIONSRV_GETVERSION)) == 0)
+			if(Packet.m_DataSize == sizeof(VERSIONSRV_GETVERSION) && mem_comp(Packet.m_pData, VERSIONSRV_GETVERSION, sizeof(VERSIONSRV_GETVERSION)) == 0)
 			{
 				SendVersion(&Packet.m_Address, ResponseToken);
 			}
 
-			if((Packet.m_DataSize == sizeof(VERSIONSRV_GETMAPLIST)
-					|| Packet.m_DataSize == sizeof(VERSIONSRV_GETMAPLIST) + sizeof(unsigned))
-				&& mem_comp(Packet.m_pData, VERSIONSRV_GETMAPLIST, sizeof(VERSIONSRV_GETMAPLIST)) == 0)
+			if((Packet.m_DataSize == sizeof(VERSIONSRV_GETMAPLIST) || Packet.m_DataSize == sizeof(VERSIONSRV_GETMAPLIST) + sizeof(unsigned)) && mem_comp(Packet.m_pData, VERSIONSRV_GETMAPLIST, sizeof(VERSIONSRV_GETMAPLIST)) == 0)
 			{
 				unsigned ClientVersion = 0x0700;
 				if(Packet.m_DataSize == sizeof(VERSIONSRV_GETMAPLIST) + sizeof(unsigned))
-					ClientVersion = bytes_be_to_uint((unsigned char *)Packet.m_pData + sizeof(VERSIONSRV_GETMAPLIST));
+					ClientVersion = bytes_be_to_uint((unsigned char *) Packet.m_pData + sizeof(VERSIONSRV_GETMAPLIST));
 				SendMapversions(&Packet.m_Address, ResponseToken, ClientVersion);
 			}
 		}
