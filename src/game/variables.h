@@ -142,6 +142,7 @@ MACRO_CONFIG_INT(SvVoteSpectateRejoindelay, sv_vote_spectate_rejoindelay, 3, 0, 
 MACRO_CONFIG_INT(SvVoteKick, sv_vote_kick, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_SERVER, "Allow voting to kick players")
 MACRO_CONFIG_INT(SvVoteKickMin, sv_vote_kick_min, 0, 0, MAX_CLIENTS, CFGFLAG_SAVE | CFGFLAG_SERVER, "Minimum number of players required to start a kick vote")
 MACRO_CONFIG_INT(SvVoteKickBantime, sv_vote_kick_bantime, 5, 0, 1440, CFGFLAG_SAVE | CFGFLAG_SERVER, "The time to ban a player if kicked by vote. 0 makes it just use kick")
+MACRO_CONFIG_INT(SvAllowSpecVoting, sv_allow_spec_voting, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_SERVER, "Allow voting by spectators")
 
 MACRO_CONFIG_INT(RiPlayersMin, ri_players_min, 0, 0, MAX_CLIENTS, CFGFLAG_SAVE | CFGFLAG_SERVER, "Minimum number of players required to start reinfected game")
 MACRO_CONFIG_INT(RiInfectionStartTime, ri_infection_start_time, 10, 0, MAX_CLIENTS, CFGFLAG_SAVE | CFGFLAG_SERVER, "timer for reinfected game to start infection")

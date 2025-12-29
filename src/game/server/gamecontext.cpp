@@ -288,6 +288,7 @@ void CGameContext::SendSettings(int ClientID)
 	Msg.m_TeamLock = m_LockTeams != 0;
 	Msg.m_TeamBalance = Config()->m_SvTeambalanceTime != 0;
 	Msg.m_PlayerSlots = GetMaxPlayerSlots();
+	Msg.m_AllowSpecVoting = Config()->m_SvAllowSpecVoting;
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
 }
 
@@ -571,7 +572,7 @@ void CGameContext::OnTick()
 				bool aVoteChecked[MAX_CLIENTS] = {0};
 				for(int i = 0; i < MAX_CLIENTS; i++)
 				{
-					if(!m_apPlayers[i] || m_apPlayers[i]->GetTeam() == TEAM_SPECTATORS || aVoteChecked[i]) // don't count in votes by spectators
+					if(!m_apPlayers[i] || (m_apPlayers[i]->GetTeam() == TEAM_SPECTATORS && !Config()->m_SvAllowSpecVoting) || aVoteChecked[i]) // don't count in votes by spectators
 						continue;
 
 					int ActVote = m_apPlayers[i]->m_Vote;
@@ -899,7 +900,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			{
 				if((Config()->m_SvSpamprotection && ((pPlayer->m_LastVoteTryTick && pPlayer->m_LastVoteTryTick + Server()->TickSpeed() * 3 > Now) ||
 									    (pPlayer->m_LastVoteCallTick && pPlayer->m_LastVoteCallTick + Server()->TickSpeed() * VOTE_COOLDOWN > Now))) ||
-					pPlayer->GetTeam() == TEAM_SPECTATORS || m_VoteCloseTime)
+					(pPlayer->GetTeam() == TEAM_SPECTATORS && !Config()->m_SvAllowSpecVoting) || m_VoteCloseTime)
 					return;
 
 				pPlayer->m_LastVoteTryTick = Now;
@@ -1665,6 +1666,7 @@ void CGameContext::OnInit()
 	Console()->Chain("sv_teambalance_time", ConchainSettingUpdate, this);
 	Console()->Chain("sv_player_slots", ConchainSettingUpdate, this);
 	Console()->Chain("sv_max_clients", ConchainSettingUpdate, this);
+	Console()->Chain("sv_allow_spec_voting", ConchainSettingUpdate, this);
 
 	Console()->Chain("sv_scorelimit", ConchainGameinfoUpdate, this);
 	Console()->Chain("sv_timelimit", ConchainGameinfoUpdate, this);

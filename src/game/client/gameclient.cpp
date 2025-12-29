@@ -957,6 +957,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		m_ServerSettings.m_TeamLock = pMsg->m_TeamLock;
 		m_ServerSettings.m_TeamBalance = pMsg->m_TeamBalance;
 		m_ServerSettings.m_PlayerSlots = pMsg->m_PlayerSlots;
+		m_ServerSettings.m_AllowSpecVoting = pMsg->m_AllowSpecVoting;
 	}
 	else if(MsgId == NETMSGTYPE_SV_TEAM)
 	{

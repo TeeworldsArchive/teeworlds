@@ -259,6 +259,7 @@ public:
 		bool m_TeamLock;
 		bool m_TeamBalance;
 		int m_PlayerSlots;
+		bool m_AllowSpecVoting;
 	} m_ServerSettings;
 
 	CRenderTools m_RenderTools;

@@ -668,7 +668,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 		str_format(aBuf, sizeof(aBuf), Localize("You must wait %d seconds before making another vote"), m_pClient->m_pVoting->CallvoteBlockTime());
 		pNotification = aBuf;
 	}
-	else if(!Authed && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team == TEAM_SPECTATORS)
+	else if(!Authed && !m_pClient->m_ServerSettings.m_AllowSpecVoting && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team == TEAM_SPECTATORS)
 		pNotification = Localize("Spectators aren't allowed to start a vote.");
 
 	MainView.HSplitBottom(80.0f, &MainView, 0);
@@ -740,7 +740,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	// render page
 	if(s_ControlPage == 0)
 		// double click triggers vote if not spectating
-		DoCallVote = RenderServerControlServer(MainView) && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS;
+		DoCallVote = RenderServerControlServer(MainView) && (m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS || m_pClient->m_ServerSettings.m_AllowSpecVoting);
 	else if(s_ControlPage == 1)
 		RenderServerControlKick(MainView, false);
 	else if(s_ControlPage == 2)
@@ -750,7 +750,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	Extended.Margin(Spacing, &Extended);
 	Extended.HSplitTop(LineHeight, &Bottom, &Extended);
 	{
-		if(Authed || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS)
+		if(Authed || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS || m_pClient->m_ServerSettings.m_AllowSpecVoting)
 		{
 			CUIRect Search;
 			// render search
