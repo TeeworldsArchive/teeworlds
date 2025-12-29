@@ -214,6 +214,16 @@ public:
 	}
 
 	/*
+		Function: emplace
+	*/
+	T &emplace()
+	{
+		incsize();
+		set_size(size() + 1);
+		return list[num_elements - 1];
+	}
+
+	/*
 		Function: base_ptr
 	*/
 	T *base_ptr()
