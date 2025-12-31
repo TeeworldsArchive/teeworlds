@@ -932,7 +932,8 @@
 		},
 		{
 			"id": "TW",
-			"code": 158
+			"code": 158,
+			"blocked": true
 		},
 		{
 			"id": "TZ",
