@@ -351,7 +351,7 @@ Messages = [
 		NetBool("m_TeamLock"),
 		NetBool("m_TeamBalance"),
 		NetIntRange("m_PlayerSlots", 0, 'MAX_CLIENTS'),
-        NetBool("m_AllowSpecVoting"),
+        NetBool("m_AllowSpecVoting", default=False),
 	]),
 
 	NetMessage("Sv_ClientInfo", [
