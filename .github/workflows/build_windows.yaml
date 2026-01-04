@@ -1,0 +1,103 @@
+name: Build Windows
+
+on: [push, pull_request]
+
+jobs:
+  build-cmake:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-2022]
+        include:
+        - os: windows-latest
+          cmake-args: -G Ninja
+          package-file: "*-win64.zip"
+          archtitecture: "x86_64"
+          env:
+            CFLAGS: -Wdeclaration-after-statement -Werror
+            CXXFLAGS: -Werror
+            LDFLAGS: -Werror
+            PATH: /ucrt64/bin:/usr/bin:/bin
+        - os: windows-2022
+          cmake-args: -G Ninja
+          package-file: "*-win64.zip"
+          archtitecture: "x86_64"
+          env:
+            CFLAGS: -Wdeclaration-after-statement -Werror
+            CXXFLAGS: -Werror
+            LDFLAGS: -Werror
+            PATH: /ucrt64/bin:/usr/bin:/bin
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Prepare MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        pacboy: >-
+          toolchain:p
+          cmake:p
+          ninja:p
+          zlib:p
+          SDL2:p
+          freetype:p
+    - run: set MSYSTEM=UCRT64
+    - name: Build in debug mode
+      env: ${{ matrix.env }}
+      run: |
+        mkdir debug
+        cd debug
+        cmake --version
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        cmake --build . --config Debug --target everything
+
+    - name: Test debug
+      run: |
+        cd debug
+        cmake --build . --config Debug --target run_tests
+  
+    - name: Run debug server
+      env: ${{ matrix.env }}
+      run: |
+        cd debug
+        ./teeworlds_srv shutdown
+
+    - name: Build in release mode
+      env: ${{ matrix.env }}
+      run: |
+        mkdir release
+        cd release
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        cmake --build . --config Release --target everything
+
+    - name: Test release
+      run: |
+        cd release
+        cmake --build . --config Release --target run_tests
+
+    - name: Run release server
+      env: ${{ matrix.env }}
+      run: |
+        cd release
+        ./teeworlds_srv shutdown
+
+    - name: Package
+      run: |
+        cd release
+        CPACK_VERBOSE=1 cmake --build . --config Release --target package
+        mkdir artifacts
+        mv ${{ matrix.package-file }} artifacts
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: teeworlds-archive-${{ matrix.os }}
+        path: release/artifacts

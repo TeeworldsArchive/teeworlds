@@ -2528,9 +2528,11 @@ void str_append(char *dst, const char *src, int dst_size)
 
 void str_copy(char *dst, const char *src, int dst_size)
 {
+    int i;
 	dbg_assert(dst_size > 0, "dst_size invalid");
-	dst[0] = '\0';
-	strncat(dst, src, dst_size - 1);
+    for(i = 0; (i < dst_size - 1) && (src[i] != '\0'); i++)
+        dst[i] = src[i];
+    dst[i] = '\0';
 }
 
 void str_truncate(char *dst, int dst_size, const char *src, int truncation_len)
@@ -2554,7 +2556,7 @@ void str_format(char *buffer, int buffer_size, const char *format, ...)
 	dbg_assert(buffer_size > 0, "buffer_size invalid");
 	va_start(ap, format);
 
-#if defined(CONF_FAMILY_WINDOWS) && !defined(__GNUC__)
+#if defined(CONF_FAMILY_WINDOWS)
 	_vsprintf_p(buffer, buffer_size, format, ap);
 #else
 	vsnprintf(buffer, buffer_size, format, ap);

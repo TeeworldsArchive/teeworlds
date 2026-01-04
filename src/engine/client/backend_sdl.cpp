@@ -12,14 +12,8 @@
 #if defined(CONF_FAMILY_WINDOWS)
 PFNGLTEXIMAGE3DPROC glTexImage3DInternal;
 
-#if defined(_MSC_VER)
-GLAPI void GLAPIENTRY glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels)
-#else
-void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels)
-#endif
-{
+#define glTexImage3D(target, level, internalFormat, width, height, depth, border, format, type, pixels) \
 	glTexImage3DInternal(target, level, internalFormat, width, height, depth, border, format, type, pixels);
-}
 #endif
 
 // ------------ CGraphicsBackend_Threaded
@@ -706,7 +700,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	SDL_GL_GetDrawableSize(m_pWindow, pScreenWidth, pScreenHeight); // drawable size may differ in high dpi mode
 
 #if defined(CONF_FAMILY_WINDOWS)
-	glTexImage3DInternal = (PFNGLTEXIMAGE3DPROC) wglGetProcAddress("glTexImage3D");
+	glTexImage3DInternal = reinterpret_cast<PFNGLTEXIMAGE3DPROC>(reinterpret_cast<void(*)()>(wglGetProcAddress("glTexImage3D")));
 	if(glTexImage3DInternal == 0)
 	{
 		dbg_msg("gfx", "glTexImage3D not supported");

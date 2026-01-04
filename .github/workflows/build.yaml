@@ -1,4 +1,4 @@
-name: Build
+name: Build Unix
 
 on: [push, pull_request]
 
@@ -8,10 +8,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest, ubuntu-22.04]
+        os: [ubuntu-latest, macOS-latest, ubuntu-22.04]
         include:
         - os: ubuntu-latest
           cmake-args: -G Ninja
+          build-target: package
           package-file: "*-linux_x86_64.tar.xz"
           archtitecture: "x86_64"
           env:
@@ -20,6 +21,7 @@ jobs:
         - os: ubuntu-22.04
           cmake-path: /usr/bin/
           cmake-args: -G Ninja
+          build-target: package
           package-file: "*-linux_x86_64.tar.xz"
           archtitecture: "x86_64"
           env:
@@ -27,19 +29,12 @@ jobs:
             CXXFLAGS: -Werror
         - os: macOS-latest
           cmake-args: -G Ninja
+          build-target: package_dmg
           package-file: "*-macos.dmg"
           archtitecture: "arm64"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
-        - os: windows-latest
-          cmake-args: -A x64
-          package-file: "*-win64.zip"
-          archtitecture: "x86_64"
-          env:
-            CFLAGS: /WX
-            CXXFLAGS: /WX
-            LDFLAGS: /WX
 
     steps:
     - uses: actions/checkout@v4
@@ -65,13 +60,15 @@ jobs:
       run: |
         mkdir debug
         cd debug
-        ${{ matrix.cmake-path }}cmake --version
-        ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
-        ${{ matrix.cmake-path }}cmake --build . --config Debug ${{ matrix.build-args }} --target everything
+        cmake --version
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        cmake --build . --config Debug --target everything
+
     - name: Test debug
       run: |
         cd debug
-        ${{ matrix.cmake-path }}cmake --build . --config Debug ${{ matrix.build-args }} --target run_tests
+        cmake --build . --config Debug --target run_tests
+  
     - name: Run debug server
       env: ${{ matrix.env }}
       run: |
@@ -83,12 +80,14 @@ jobs:
       run: |
         mkdir release
         cd release
-        ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
-        ${{ matrix.cmake-path }}cmake --build . --config Release ${{ matrix.build-args }} --target everything
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        cmake --build . --config Release --target everything
+
     - name: Test release
       run: |
         cd release
-        ${{ matrix.cmake-path }}cmake --build . --config Release ${{ matrix.build-args }} --target run_tests
+        cmake --build . --config Release --target run_tests
+
     - name: Run release server
       env: ${{ matrix.env }}
       run: |
@@ -98,14 +97,14 @@ jobs:
     - name: Package
       run: |
         cd release
-        ${{ matrix.cmake-path }}cmake --build . --config Release ${{ matrix.build-args }} --target package_default
+        CPACK_VERBOSE=1 cmake --build . --config Release --target ${{ matrix.build-target }}
         mkdir artifacts
         mv ${{ matrix.package-file }} artifacts
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: teeworlds-${{ matrix.os }}
+        name: teeworlds-archive-${{ matrix.os }}
         path: release/artifacts
 
   build-bam:
@@ -113,14 +112,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: [ubuntu-latest, macOS-latest]
         include:
         - os: ubuntu-latest
           archtitecture: "x86_64"
         - os: macOS-latest
           archtitecture: "arm64"
-        - os: windows-latest
-          archtitecture: "x86_64"
 
     steps:
     - uses: actions/checkout@v4
@@ -149,12 +146,6 @@ jobs:
         brew install sdl2
         cd bam
         ./make_unix.sh
-
-    - name: Prepare Windows
-      if: contains(matrix.os, 'windows')
-      run: |
-        cd bam
-        ./make_win64_msvc.bat
 
     - name: Build in debug mode
       run: ./bam/bam conf=debug all
