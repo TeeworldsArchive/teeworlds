@@ -3,14 +3,12 @@ if(NOT CMAKE_CROSSCOMPILING)
   pkg_check_modules(PC_FREETYPE freetype2)
 endif()
 
-set_extra_dirs_lib(FREETYPE freetype)
 find_library(FREETYPE_LIBRARY
   NAMES freetype freetype.6
   HINTS ${HINTS_FREETYPE_LIBDIR} ${PC_FREETYPE_LIBDIR} ${PC_FREETYPE_LIBRARY_DIRS}
   PATHS ${PATHS_FREETYPE_LIBDIR}
   ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
 )
-set_extra_dirs_include(FREETYPE freetype "${FREETYPE_LIBRARY}")
 find_path(FREETYPE_INCLUDEDIR
   NAMES config/ftheader.h freetype/config/ftheader.h
   PATH_SUFFIXES freetype2
@@ -27,11 +25,4 @@ mark_as_advanced(FREETYPE_LIBRARY FREETYPE_INCLUDEDIR)
 if(FREETYPE_FOUND)
   set(FREETYPE_LIBRARIES ${FREETYPE_LIBRARY})
   set(FREETYPE_INCLUDE_DIRS ${FREETYPE_INCLUDEDIR})
-
-  is_bundled(FREETYPE_BUNDLED "${FREETYPE_LIBRARY}")
-  if(FREETYPE_BUNDLED AND TARGET_OS STREQUAL "windows")
-    set(FREETYPE_COPY_FILES "${EXTRA_FREETYPE_LIBDIR}/freetype.dll")
-  else()
-    set(FREETYPE_COPY_FILES)
-  endif()
 endif()

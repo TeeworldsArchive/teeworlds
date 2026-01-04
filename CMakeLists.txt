@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12...3.27.4)
+cmake_minimum_required(VERSION 3.21)
 
 file(STRINGS src/game/version.h VERSION_LINE
   LIMIT_COUNT 1
@@ -17,16 +17,7 @@ else()
   message(FATAL_ERROR "Couldn't parse version from src/game/version.h")
 endif()
 
-# Extra support for CMake pre-3.0
-if(NOT POLICY CMP0048)
-  set(PROJECT_VERSION_MAJOR ${VERSION_MAJOR})
-  set(PROJECT_VERSION_MINOR ${VERSION_MINOR})
-  set(PROJECT_VERSION_PATCH ${VERSION_PATCH})
-  set(PROJECT_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
-endif()
-
-project(teeworlds VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
-project(teeworlds C CXX)
+project(teeworlds-archive LANGUAGES C CXX VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 set(ORIGINAL_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
@@ -90,28 +81,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 
 set(SERVER_EXECUTABLE teeworlds_srv CACHE STRING "Name of the built server executable")
 set(CLIENT_EXECUTABLE teeworlds CACHE STRING "Name of the build client executable")
-
-########################################################################
-# Download dependencies
-########################################################################
-
-find_package(Python3)
-if(DOWNLOAD_DEPENDENCIES)
-  if(Python3_EXECUTABLE AND TARGET_OS STREQUAL "windows" AND TARGET_BITS)
-    set(DOWNLOADS)
-    foreach(d freetype sdl)
-      if(NOT EXISTS "${PROJECT_SOURCE_DIR}/other/${d}/${TARGET_OS}/lib${TARGET_BITS}")
-        list(APPEND DOWNLOADS ${d})
-      endif()
-    endforeach()
-    if(DOWNLOADS)
-      message(STATUS "Downloading Freetype and SDL 2")
-      execute_process(COMMAND ${Python3_EXECUTABLE} scripts/download.py ${DOWNLOADS}
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-      )
-    endif()
-  endif()
-endif()
 
 ########################################################################
 # Compiler flags
@@ -244,48 +213,13 @@ set(TARGETS_LINK) # Targets with a linking stage.
 # DEPENDENCIES
 ########################################################################
 
-function(set_extra_dirs_lib VARIABLE NAME)
-  set("PATHS_${VARIABLE}_LIBDIR" PARENT_SCOPE)
-  set("HINTS_${VARIABLE}_LIBDIR" PARENT_SCOPE)
-  if(PREFER_BUNDLED_LIBS)
-    set(TYPE HINTS)
-  else()
-    set(TYPE PATHS)
-  endif()
-  if(TARGET_BITS AND TARGET_OS)
-    set(DIR "other/${NAME}/${TARGET_OS}/lib${TARGET_BITS}")
-    set("${TYPE}_${VARIABLE}_LIBDIR" "${DIR}" PARENT_SCOPE)
-    set("EXTRA_${VARIABLE}_LIBDIR" "${DIR}" PARENT_SCOPE)
-  endif()
-endfunction()
-
-function(set_extra_dirs_include VARIABLE NAME LIBRARY)
-  set("PATHS_${VARIABLE}_INCLUDEDIR" PARENT_SCOPE)
-  set("HINTS_${VARIABLE}_INCLUDEDIR" PARENT_SCOPE)
-  is_bundled(IS_BUNDLED "${LIBRARY}")
-  if(IS_BUNDLED)
-    set("HINTS_${VARIABLE}_INCLUDEDIR" "other/${NAME}/include" "other/${NAME}/include/${TARGET_OS}" PARENT_SCOPE)
-  endif()
-endfunction()
-
 if(CMAKE_CROSSCOMPILING)
   set(CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH NO_CMAKE_SYSTEM_PATH)
 else()
   set(CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH)
 endif()
 
-function(is_bundled VARIABLE PATH)
-  if(PATH)
-    string(FIND "${PATH}" "${PROJECT_SOURCE_DIR}" LOCAL_PATH_POS)
-    if(LOCAL_PATH_POS EQUAL 0 AND TARGET_BITS AND TARGET_OS)
-      set("${VARIABLE}" ON PARENT_SCOPE)
-    else()
-      set("${VARIABLE}" OFF PARENT_SCOPE)
-    endif()
-  else()
-    set("${VARIABLE}" OFF PARENT_SCOPE)
-  endif()
-endfunction()
+find_package(Python3)
 
 if(NOT CMAKE_CROSSCOMPILING)
   # Check for PkgConfig once so all the other `find_package` calls can do it
@@ -1178,11 +1112,6 @@ foreach(datafile ${DATA})
   file(MAKE_DIRECTORY ${DESTINATION})
   file(COPY ${datafile} DESTINATION ${DESTINATION})
 endforeach()
-set(COPY_FILES
-  ${FREETYPE_COPY_FILES}
-  ${SDL2_COPY_FILES}
-)
-file(COPY ${COPY_FILES} DESTINATION .)
 
 ########################################################################
 # CODE GENERATION
@@ -1901,7 +1830,6 @@ set(CPACK_DIRS ${PROJECT_BINARY_DIR}/data)
 set(CPACK_FILES
   license.txt
   storage.cfg
-  ${COPY_FILES}
 )
 if(TARGET_OS STREQUAL "windows")
   list(APPEND CPACK_FILES other/config_directory.bat)
@@ -1915,16 +1843,77 @@ endif()
 
 if(DEV)
   # Don't generate CPack targets.
-elseif(CMAKE_VERSION VERSION_LESS 3.6 OR CMAKE_VERSION VERSION_EQUAL 3.6)
-  message(WARNING "Cannot create CPack targets, CMake version too old. Use CMake 3.6 or newer.")
 else()
   set(EXTRA_ARGS DESTINATION ${CPACK_PACKAGE_FILE_NAME} COMPONENT portable EXCLUDE_FROM_ALL)
   install(TARGETS ${CPACK_TARGETS} ${EXTRA_ARGS})
   install(DIRECTORY ${CPACK_DIRS} ${EXTRA_ARGS})
+  set(INSTALL_DEPS_SCRIPT "${CMAKE_BINARY_DIR}/.install_deps.cmake")
+
+  set(TARGET_FILE_LIST "")
+  foreach(_TARGET ${CPACK_TARGETS})
+    get_target_property(_ISIMPORTED ${_TARGET} IMPORTED)
+    if(NOT _ISIMPORTED)
+      list(APPEND TARGET_FILE_LIST "$<TARGET_FILE:${_TARGET}>")
+    endif()
+  endforeach()
+
+  if(TARGET_OS STREQUAL "windows")
+    if(DEFINED ENV{MSYSTEM_PREFIX})
+      file(TO_CMAKE_PATH "$ENV{MSYSTEM_PREFIX}" MSYS2_ROOT)
+      set(EXTRA_BIN_DIR "${MSYS2_ROOT}/bin")
+    else()
+      # fallback to default
+      set(EXTRA_BIN_DIR "C:/msys64/ucrt64/bin")
+    endif()
+  else()
+    set(EXTRA_BIN_DIR "/usr/bin")
+  endif()
+
+  file(GENERATE OUTPUT "${INSTALL_DEPS_SCRIPT}"
+      CONTENT "
+  set(_DEPS \"\")
+  set(UNRESOLVED_DEPS \"\")
+
+  message(STATUS \"Extra binary dir is ${EXTRA_BIN_DIR}\")
+
+  foreach(_FILE ${TARGET_FILE_LIST})
+    if(EXISTS \"\${_FILE}\")
+      file(GET_RUNTIME_DEPENDENCIES
+        EXECUTABLES \"\${_FILE}\"
+        RESOLVED_DEPENDENCIES_VAR _RESOLVED
+        UNRESOLVED_DEPENDENCIES_VAR _UNRESOLVED
+        DIRECTORIES \"${EXTRA_BIN_DIR}\"
+      )
+      list(APPEND _DEPS \${_RESOLVED})
+      list(APPEND UNRESOLVED_DEPS \${_UNRESOLVED})
+      message(STATUS \"Collecting deps for: \${_FILE}\")
+    endif()
+  endforeach()
+  message(STATUS \"Original deps: \${_DEPS}\")
+
+  list(REMOVE_DUPLICATES _DEPS)
+  set(DEP_WHITELIST_REGEX
+    \"(freetype|SDL2|OpenGL|libfreetype|libfreetype-6|libSDL2|libGL|opengl32|glu32|libcrypto)\"
+  )
+
+  list(FILTER _DEPS INCLUDE REGEX \"\${DEP_WHITELIST_REGEX}\")
+
+  foreach(_LIB IN LISTS _DEPS)
+    file(INSTALL
+      DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CPACK_PACKAGE_FILE_NAME}\"
+      TYPE SHARED_LIBRARY
+      FILES \"\${_LIB}\"
+    )
+  endforeach()
+
+  if(UNRESOLVED_DEPS)
+    message(WARNING \"Unresolved runtime dependencies: \${UNRESOLVED_DEPS}\")
+  endif()
+  ")
+
+  install(SCRIPT "${INSTALL_DEPS_SCRIPT}" COMPONENT portable)
   install(FILES ${CPACK_FILES} ${EXTRA_ARGS})
 endif()
-
-set(PACKAGE_TARGETS)
 
 if(CLIENT AND (DMGTOOLS_FOUND OR HDIUTIL))
   file(MAKE_DIRECTORY bundle/client/)
@@ -1995,58 +1984,12 @@ if(CLIENT AND (DMGTOOLS_FOUND OR HDIUTIL))
   list(APPEND PACKAGE_TARGETS package_dmg)
 endif()
 
-foreach(ext zip tar.gz tar.xz)
-  set(TAR_MODE c)
-  set(TAR_EXTRA_ARGS)
-  string(REPLACE . _ EXT_SLUG ${ext})
-
-  set(TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG}/${CPACK_PACKAGE_FILE_NAME})
-
-  set(COPY_FILE_COMMANDS)
-  set(COPY_DIR_COMMANDS)
-  set(COPY_TARGET_COMMANDS)
-  set(STRIP_TARGET_COMMANDS)
-  foreach(file ${CPACK_FILES})
-    list(APPEND COPY_FILE_COMMANDS COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/${file} ${TMPDIR}/)
-  endforeach()
-  foreach(dir ${CPACK_DIRS})
-    get_filename_component(NAME ${dir} NAME)
-    list(APPEND COPY_DIR_COMMANDS COMMAND ${CMAKE_COMMAND} -E copy_directory ${dir} ${TMPDIR}/${NAME})
-  endforeach()
-  foreach(target ${CPACK_TARGETS})
-    list(APPEND COPY_TARGET_COMMANDS COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${target}> ${TMPDIR}/)
-  endforeach()
-
-  if(ext STREQUAL zip)
-    set(TAR_EXTRA_ARGS --format=zip)
-  elseif(ext STREQUAL tar.gz)
-    set(TAR_MODE cz)
-  elseif(ext STREQUAL tar.xz)
-    set(TAR_MODE cJ)
-  endif()
-  add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.${ext}
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${TMPDIR}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${TMPDIR}
-    ${COPY_FILE_COMMANDS}
-    ${COPY_DIR_COMMANDS}
-    ${COPY_TARGET_COMMANDS}
-    ${STRIP_TARGET_COMMANDS}
-    COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${CMAKE_COMMAND} -E tar ${TAR_MODE} ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${TAR_EXTRA_ARGS} -- ${CPACK_PACKAGE_FILE_NAME}/
-    DEPENDS ${CPACK_TARGETS}
-  )
-  add_custom_target(package_${EXT_SLUG} DEPENDS ${CPACK_PACKAGE_FILE_NAME}.${ext})
-  list(APPEND PACKAGE_TARGETS package_${EXT_SLUG})
-endforeach()
-
 set(PACKAGE_DEFAULT tar_xz)
 if(TARGET_OS STREQUAL "windows")
   set(PACKAGE_DEFAULT zip)
 elseif(TARGET_OS STREQUAL "mac")
   set(PACKAGE_DEFAULT dmg)
 endif()
-add_custom_target(package_default DEPENDS package_${PACKAGE_DEFAULT})
-
-add_custom_target(package_all DEPENDS ${PACKAGE_TARGETS})
 
 # Unset these variables, they might do something in the future of CPack.
 unset(CPACK_SOURCE_FILES)

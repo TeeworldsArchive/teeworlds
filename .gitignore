@@ -17,8 +17,6 @@ scripts/work/
 /SDL.dll
 /freetype.dll
 /autoexec.cfg
-other/freetype
-other/sdl
 Info.plist
 
 crapnet*
@@ -58,6 +56,8 @@ generated
 
 .ninja_deps
 .ninja_log
+.install_deps.cmake
+install_manifest_portable.txt
 CMakeCache.txt
 CMakeFiles
 CMakeSettings*

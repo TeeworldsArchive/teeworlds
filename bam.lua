@@ -396,29 +396,17 @@ end
 function BuildContent(settings, arch, conf)
 	local content = {}
 	table.insert(content, CopyToDir(settings.link.Output(settings, "data"), CollectRecursive(content_src_dir .. "*.png", content_src_dir .. "*.wv", content_src_dir .. "*.ttc", content_src_dir .. "*.ttf", content_src_dir .. "*.txt", content_src_dir .. "*.map", content_src_dir .. "*.rules", content_src_dir .. "*.json")))
-	if family == "windows" then
-		if arch == "x86_64" then
-			_arch = "64"
-		else
-			_arch = "32"
-		end
-		-- dependencies
-		dl = Python("scripts/download.py")
-		AddJob({
-				"other/freetype/include/ft2build.h", "other/freetype/windows/lib" .. _arch .. "/freetype.dll",
-				"other/sdl/include/SDL.h", "other/sdl/windows/lib" .. _arch .. "/SDL2.dll"
-			}, "Downloading freetype and SDL2", dl .. " freetype sdl"
-		)
-		table.insert(content, CopyFile(settings.link.Output(settings, "") .. "/SDL2.dll", "other/sdl/windows/lib" .. _arch .. "/SDL2.dll"))
-		table.insert(content, CopyFile(settings.link.Output(settings, "") .. "/freetype.dll", "other/freetype/windows/lib" .. _arch .. "/freetype.dll"))
-		AddDependency(settings.link.Output(settings, "") .. "/SDL2.dll", "other/sdl/include/SDL.h")
-		AddDependency(settings.link.Output(settings, "") .. "/freetype.dll", "other/freetype/include/ft2build.h")
-	end
 	PseudoTarget(settings.link.Output(settings, "content") .. settings.link.extension, content)
 end
 
 -- create all targets for specified configuration & architecture
 function GenerateSettings(conf, arch, builddir, compiler, headless)
+	if family == "windows" then
+		print("Bam is not supported on the windows anymore because of it only support mingw32 and MSVC, but we use MSYS2 to build this project at now.")
+		print("Try using CMake instead! It is recommended to use MSYS2 to build the project!")
+		os.exit(1)
+	end
+
 	local settings = NewSettings()
 
 	-- Set compiler if explicitly requested
