@@ -47,7 +47,7 @@ jobs:
           cmake:p
           ninja:p
           zlib:p
-          SDL2:p
+          sdl3:p
           freetype:p
     - run: set MSYSTEM=UCRT64
     - name: Build in debug mode

@@ -229,11 +229,12 @@ public:
 	virtual void Minimize() = 0;
 	virtual void Maximize() = 0;
 
-	virtual int WindowActive() = 0;
-	virtual int WindowOpen() = 0;
+	virtual bool WindowActive() = 0;
+	virtual bool WindowOpen() = 0;
+
+	virtual void *GetWindowHandle() = 0;
 };
 
-extern IEngineGraphics *CreateEngineGraphics(); // NOTE: not used
 extern IEngineGraphics *CreateEngineGraphicsThreaded();
 
 #endif

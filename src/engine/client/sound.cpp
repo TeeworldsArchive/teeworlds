@@ -8,7 +8,7 @@
 
 #include <engine/shared/config.h>
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 #include "sound.h"
 
@@ -186,10 +186,23 @@ static void Mix(short *pFinalOut, unsigned Frames)
 #endif
 }
 
-static void SdlCallback(void *pUnused, Uint8 *pStream, int Len)
+static void SDLNewCallback(void *pUnused, SDL_AudioStream *pStream, int AdditionalAmount, int TotalAmount)
 {
 	(void) pUnused;
-	Mix((short *) pStream, Len / 2 / 2);
+	/* Calculate a little more audio here, maybe using `userdata`, write it to `stream`
+	 *
+	 * If you want to use the original callback, you could do something like this:
+	 */
+	if(AdditionalAmount > 0)
+	{
+		Uint8 *pData = SDL_stack_alloc(Uint8, AdditionalAmount);
+		if(pData)
+		{
+			Mix((short *) pData, AdditionalAmount / 2 / 2);
+			SDL_PutAudioStreamData(pStream, pData, AdditionalAmount);
+			SDL_stack_free(pData);
+		}
+	}
 }
 
 int CSound::Init()
@@ -202,14 +215,12 @@ int CSound::Init()
 	m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 
-	SDL_AudioSpec Format;
-
 	m_SoundLock = lock_create();
 
 	if(!m_pConfig->m_SndInit)
 		return 0;
 
-	if(SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	if(!SDL_InitSubSystem(SDL_INIT_AUDIO))
 	{
 		dbg_msg("gfx", "unable to init SDL audio: %s", SDL_GetError());
 		return -1;
@@ -217,27 +228,27 @@ int CSound::Init()
 
 	m_MixingRate = m_pConfig->m_SndRate;
 
-	// Set 16-bit stereo audio at 22Khz
-	Format.freq = m_pConfig->m_SndRate;
-	Format.format = AUDIO_S16;
-	Format.channels = 2;
-	Format.samples = m_pConfig->m_SndBufferSize;
-	Format.callback = SdlCallback;
-	Format.userdata = NULL;
+	m_MixingRate = m_pConfig->m_SndRate;
 
+	SDL_AudioSpec Format;
+	Format.freq = m_pConfig->m_SndRate;
+	Format.format = SDL_AUDIO_S16;
+	Format.channels = 2;
+
+	SDL_AudioStream *pStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &Format, SDLNewCallback, nullptr);
 	// Open the audio device and start playing sound!
-	if(SDL_OpenAudio(&Format, NULL) < 0)
+	if(!pStream)
 	{
 		dbg_msg("client/sound", "unable to open audio: %s", SDL_GetError());
 		return -1;
 	}
 	else
-		dbg_msg("client/sound", "sound init successful");
+		dbg_msg("client/sound", "sound init successful using audio driver '%s'", SDL_GetCurrentAudioDriver());
 
 	m_MaxFrames = m_pConfig->m_SndBufferSize * 2;
 	m_pMixBuffer = (int *) mem_alloc(m_MaxFrames * 2 * sizeof(int));
 
-	SDL_PauseAudio(0);
+	SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(pStream));
 
 	m_SoundEnabled = 1;
 	Update(); // update the volume
@@ -264,7 +275,6 @@ int CSound::Update()
 
 int CSound::Shutdown()
 {
-	SDL_CloseAudio();
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	lock_destroy(m_SoundLock);
 	if(m_pMixBuffer)

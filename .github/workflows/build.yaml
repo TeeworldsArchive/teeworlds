@@ -41,17 +41,29 @@ jobs:
       with:
         submodules: true
 
+    - name: Checkout SDL3
+      if: contains(matrix.os, 'ubuntu')
+      uses: actions/checkout@v4
+      with:
+        repository: libsdl-org/SDL
+        ref: release-3.2.28
+        path: ./SDL
+
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt-get install pkg-config cmake ninja-build libfreetype6-dev libsdl2-dev libgl1-mesa-dev -y
+        sudo apt-get install pkg-config ninja-build libfreetype6-dev libgl1-mesa-dev -y
+        sudo apt-get install build-essential git cmake libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev libudev-dev libinput-dev libts-dev libjpeg-dev libwebp-dev -y
+        cd SDL
+        cmake . -DCMAKE_BUILD_TYPE=Release
+        sudo make install
 
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
       run: |
         brew update || true
-        brew install pkg-config sdl2 python3 ninja || true
+        brew install pkg-config sdl3 python3 ninja || true
         brew upgrade freetype
         sudo rm -rf /Library/Developer/CommandLineTools
 
@@ -131,19 +143,31 @@ jobs:
         ref: a44a2c7dc16caae7ac457f17dfd14a87e7059c57
         path: ./bam
 
+    - name: Checkout SDL3
+      if: contains(matrix.os, 'ubuntu')
+      uses: actions/checkout@v4
+      with:
+        repository: libsdl-org/SDL
+        ref: release-3.2.28
+        path: ./SDL
+
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
         sudo apt-get install libfreetype6-dev libsdl2-dev libgl1-mesa-dev -y
+        sudo apt-get install build-essential git cmake libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev libudev-dev libinput-dev libts-dev libjpeg-dev libwebp-dev -y
         cd bam
         ./make_unix.sh
+        cd ../SDL
+        cmake . -DCMAKE_BUILD_TYPE=Release
+        sudo make install
 
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
       run: |
         brew update
-        brew install sdl2
+        brew install sdl3
         cd bam
         ./make_unix.sh
 

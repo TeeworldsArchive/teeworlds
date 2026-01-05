@@ -918,12 +918,12 @@ int CGraphics_Threaded::GetWindowScreen()
 	return m_pBackend->GetWindowScreen();
 }
 
-int CGraphics_Threaded::WindowActive()
+bool CGraphics_Threaded::WindowActive()
 {
 	return m_pBackend->WindowActive();
 }
 
-int CGraphics_Threaded::WindowOpen()
+bool CGraphics_Threaded::WindowOpen()
 {
 	return m_pBackend->WindowOpen();
 }
@@ -1011,6 +1011,11 @@ bool CGraphics_Threaded::IsIdle() const
 void CGraphics_Threaded::WaitForIdle()
 {
 	m_pBackend->WaitForIdle();
+}
+
+void *CGraphics_Threaded::GetWindowHandle()
+{
+	return m_pBackend->GetWindowHandle();
 }
 
 int CGraphics_Threaded::GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen)
