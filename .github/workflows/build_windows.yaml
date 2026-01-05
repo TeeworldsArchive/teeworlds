@@ -5,6 +5,8 @@ on: [push, pull_request]
 jobs:
   build-cmake:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write  
     strategy:
       fail-fast: false
       matrix:
@@ -101,3 +103,12 @@ jobs:
       with:
         name: teeworlds-archive-${{ matrix.os }}
         path: release/artifacts
+
+    - name: Download artifact for Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type != 'tag'
+      with:
+        tag_name: nightly
+        name: Nightly Build
+        files: release/artifacts/*
+        prerelease: true
