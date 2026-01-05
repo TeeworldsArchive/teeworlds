@@ -1106,26 +1106,13 @@ set_glob(DATA GLOB_RECURSE "json;map;png;rules;ttc;ttf;txt;wv" datasrc ${EXPECTE
 # COPY DATA AND DLLS
 ########################################################################
 
-set(DATA_OUTPUTS "")
-
 foreach(datafile ${DATA})
-  file(RELATIVE_PATH rel_path "${PROJECT_SOURCE_DIR}/datasrc" "${datafile}")
-  set(dest_file "data/${rel_path}")
-  get_filename_component(dest_dir "${dest_file}" DIRECTORY)
-  file(MAKE_DIRECTORY "${dest_dir}")
-
-  add_custom_command(
-    OUTPUT "${dest_file}"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${datafile}" "${dest_file}"
-    DEPENDS "${datafile}"
-    COMMENT "Copying ${rel_path}"
-    VERBATIM
-  )
-
-  list(APPEND DATA_OUTPUTS "${dest_file}")
+  file(RELATIVE_PATH OUT ${PROJECT_SOURCE_DIR}/datasrc ${datafile})
+  get_filename_component(DESTINATION data/${OUT} PATH)
+  file(MAKE_DIRECTORY ${DESTINATION})
+  file(COPY ${datafile} DESTINATION ${DESTINATION})
 endforeach()
 
-add_custom_target(copy_data ALL DEPENDS ${DATA_OUTPUTS})
 ########################################################################
 # CODE GENERATION
 ########################################################################
@@ -1703,7 +1690,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
   add_custom_target(run_tests
     COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS}
     COMMENT Running tests
-    DEPENDS ${TARGET_TESTRUNER}
+    DEPENDS ${TARGET_TESTRUNER} ${copy_data}
     USES_TERMINAL
   )
 endif()
