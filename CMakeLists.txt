@@ -1106,13 +1106,28 @@ set_glob(DATA GLOB_RECURSE "json;map;png;rules;ttc;ttf;txt;wv" datasrc ${EXPECTE
 # COPY DATA AND DLLS
 ########################################################################
 
+set(DATA_OUTPUTS "")
+
 foreach(datafile ${DATA})
-  file(RELATIVE_PATH OUT ${PROJECT_SOURCE_DIR}/datasrc ${datafile})
-  get_filename_component(DESTINATION data/${OUT} PATH)
-  file(MAKE_DIRECTORY ${DESTINATION})
-  file(COPY ${datafile} DESTINATION ${DESTINATION})
+  file(RELATIVE_PATH rel_path "${PROJECT_SOURCE_DIR}/datasrc" "${datafile}")
+  set(dest_file "${CMAKE_BINARY_DIR}/data/${rel_path}")
+  get_filename_component(dest_dir "${dest_file}" DIRECTORY)
+  file(MAKE_DIRECTORY "${dest_dir}")
+
+  add_custom_command(
+    OUTPUT "${dest_file}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${datafile}" "${dest_file}"
+    DEPENDS "${datafile}"
+    COMMENT "Copying ${rel_path}"
+    VERBATIM
+  )
+
+  list(APPEND DATA_OUTPUTS "${dest_file}")
 endforeach()
 
+add_custom_target(copy_data ALL
+  DEPENDS ${DATA_OUTPUTS}
+)
 ########################################################################
 # CODE GENERATION
 ########################################################################
