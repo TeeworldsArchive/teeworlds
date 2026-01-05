@@ -13,7 +13,10 @@ if __name__ == '__main__':
 
     json_tc[JSON_KEY_TRANSL] = []
     for entry in json_sc[JSON_KEY_TRANSL]:
-        json_tc[JSON_KEY_TRANSL].append({JSON_KEY_OR: entry[JSON_KEY_OR], JSON_KEY_TR: do_convert(entry[JSON_KEY_TR])})
+        add_entry = {JSON_KEY_OR: entry[JSON_KEY_OR], JSON_KEY_TR: do_convert(entry[JSON_KEY_TR])}
+        if JSON_KEY_CTXT in entry:
+            add_entry[JSON_KEY_CTXT] = entry[JSON_KEY_CTXT]
+        json_tc[JSON_KEY_TRANSL].append(add_entry)
     json.dump(
 		json_tc,
 		open("datasrc/languages/traditional_chinese.json", 'w', encoding='utf-8'),
