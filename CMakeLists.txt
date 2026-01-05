@@ -814,7 +814,7 @@ set(EXPECTED_DATA
   editor/entities/reinfected.png
   emoticons.png
   fonts/DejaVuSans.ttf
-  fonts/SourceHanSans.ttc
+  fonts/LitcaneSansLite.ttc
   fonts/index.json
   game.png
   languages/belarusian.json
