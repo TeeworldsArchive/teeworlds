@@ -80,8 +80,8 @@ public:
 	virtual bool SetWindowScreen(int Index) { return false; };
 	virtual int GetWindowScreen() { return 0; };
 
-	virtual int WindowActive() { return 0; };
-	virtual int WindowOpen() { return 0; };
+	virtual bool WindowActive() { return false; };
+	virtual bool WindowOpen() { return false; };
 
 	virtual int Init() { return 0; };
 	virtual void Shutdown() {};
@@ -97,6 +97,8 @@ public:
 	virtual void InsertSignal(semaphore *pSemaphore) {};
 	virtual bool IsIdle() const { return false; };
 	virtual void WaitForIdle() {};
+
+	virtual void *GetWindowHandle() { return 0; };
 };
 
 #endif // ENGINE_CLIENT_GRAPHICS_THREADED_NULL_H

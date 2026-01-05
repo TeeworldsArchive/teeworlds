@@ -1,6 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 #include <base/system.h>
 #include <engine/console.h>
@@ -16,25 +16,7 @@
 #include "keynames.h"
 #undef KEYS_INCLUDE
 
-// support older SDL version (pre 2.0.6)
-#ifndef SDL_JOYSTICK_AXIS_MIN
-#define SDL_JOYSTICK_AXIS_MIN -32768
-#endif
-#ifndef SDL_JOYSTICK_AXIS_MAX
-#define SDL_JOYSTICK_AXIS_MAX 32767
-#endif
-
-#if defined(CONF_FAMILY_WINDOWS)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#include <imm.h>
-#endif
-
-// for platform specific features that aren't available or are broken in SDL
-#include "SDL_syswm.h"
-
-void CInput::AddEvent(char *pText, int Key, int Flags)
+void CInput::AddEvent(const char *pText, int Key, int Flags)
 {
 	if(m_NumEvents != INPUT_BUFFER_SIZE)
 	{
@@ -77,11 +59,11 @@ CInput::CInput()
 
 void CInput::Init()
 {
-	StopTextInput();
-
 	m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	m_pConfig = Kernel()->RequestInterface<IConfigManager>()->Values();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
+
+	StopTextInput();
 
 	MouseModeRelative();
 
@@ -98,21 +80,22 @@ void CInput::InitJoysticks()
 {
 	if(!SDL_WasInit(SDL_INIT_JOYSTICK))
 	{
-		if(SDL_InitSubSystem(SDL_INIT_JOYSTICK) < 0)
+		if(!SDL_InitSubSystem(SDL_INIT_JOYSTICK))
 		{
 			dbg_msg("joystick", "Unable to init SDL joystick system: %s", SDL_GetError());
 			return;
 		}
 	}
 
-	int NumJoysticks = SDL_NumJoysticks();
+	int NumJoysticks;
+	SDL_GetJoysticks(&NumJoysticks);
 	if(NumJoysticks > 0)
 	{
 		dbg_msg("joystick", "%d joystick(s) found", NumJoysticks);
 		int ActualIndex = 0;
 		for(int i = 0; i < NumJoysticks; i++)
 		{
-			SDL_Joystick *pJoystick = SDL_JoystickOpen(i);
+			SDL_Joystick *pJoystick = SDL_OpenJoystick(i);
 			if(!pJoystick)
 			{
 				dbg_msg("joystick", "Could not open joystick %d: '%s'", i, SDL_GetError());
@@ -171,13 +154,13 @@ CInput::CJoystick::CJoystick(CInput *pInput, int Index, SDL_Joystick *pDelegate)
 	m_pInput = pInput;
 	m_Index = Index;
 	m_pDelegate = pDelegate;
-	m_NumAxes = SDL_JoystickNumAxes(pDelegate);
-	m_NumButtons = SDL_JoystickNumButtons(pDelegate);
-	m_NumBalls = SDL_JoystickNumBalls(pDelegate);
-	m_NumHats = SDL_JoystickNumHats(pDelegate);
-	str_copy(m_aName, SDL_JoystickName(pDelegate), sizeof(m_aName));
-	SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(pDelegate), m_aGUID, sizeof(m_aGUID));
-	m_InstanceID = SDL_JoystickInstanceID(pDelegate);
+	m_NumAxes = SDL_GetNumJoystickAxes(pDelegate);
+	m_NumButtons = SDL_GetNumJoystickButtons(pDelegate);
+	m_NumBalls = SDL_GetNumJoystickBalls(pDelegate);
+	m_NumHats = SDL_GetNumJoystickHats(pDelegate);
+	str_copy(m_aName, SDL_GetJoystickName(pDelegate), sizeof(m_aName));
+	SDL_GUIDToString(SDL_GetJoystickGUID(pDelegate), m_aGUID, sizeof(m_aGUID));
+	m_InstanceID = SDL_GetJoystickID(pDelegate);
 }
 
 void CInput::CloseJoysticks()
@@ -201,7 +184,7 @@ void CInput::SelectNextJoystick()
 
 float CInput::CJoystick::GetAxisValue(int Axis)
 {
-	return (SDL_JoystickGetAxis(m_pDelegate, Axis) - SDL_JOYSTICK_AXIS_MIN) / float(SDL_JOYSTICK_AXIS_MAX - SDL_JOYSTICK_AXIS_MIN) * 2.0f - 1.0f;
+	return (SDL_GetJoystickAxis(m_pDelegate, Axis) - SDL_JOYSTICK_AXIS_MIN) / float(SDL_JOYSTICK_AXIS_MAX - SDL_JOYSTICK_AXIS_MIN) * 2.0f - 1.0f;
 }
 
 int CInput::CJoystick::GetJoystickHatKey(int Hat, int HatValue)
@@ -222,7 +205,7 @@ int CInput::CJoystick::GetJoystickHatKey(int Hat, int HatValue)
 
 int CInput::CJoystick::GetHatValue(int Hat)
 {
-	return GetJoystickHatKey(Hat, SDL_JoystickGetHat(m_pDelegate, Hat));
+	return GetJoystickHatKey(Hat, SDL_GetJoystickHat(m_pDelegate, Hat));
 }
 
 bool CInput::CJoystick::Relative(float *pX, float *pY)
@@ -264,15 +247,8 @@ bool CInput::MouseRelative(float *pX, float *pY)
 	if(!m_MouseInputRelative)
 		return false;
 
-	int MouseX = 0, MouseY = 0;
-	SDL_GetRelativeMouseState(&MouseX, &MouseY);
-	if(MouseX || MouseY)
-	{
-		*pX = MouseX;
-		*pY = MouseY;
-		return true;
-	}
-	return false;
+	SDL_GetRelativeMouseState(pX, pY);
+	return static_cast<int>(*pX) || static_cast<int>(*pY);
 }
 
 void CInput::MouseModeAbsolute()
@@ -280,8 +256,8 @@ void CInput::MouseModeAbsolute()
 	if(m_MouseInputRelative)
 	{
 		m_MouseInputRelative = false;
-		SDL_ShowCursor(SDL_ENABLE);
-		SDL_SetRelativeMouseMode(SDL_FALSE);
+		SDL_ShowCursor();
+		SDL_SetWindowRelativeMouseMode((SDL_Window *) Graphics()->GetWindowHandle(), false);
 	}
 }
 
@@ -290,12 +266,11 @@ void CInput::MouseModeRelative()
 	if(!m_MouseInputRelative)
 	{
 		m_MouseInputRelative = true;
-		SDL_ShowCursor(SDL_DISABLE);
-		if(SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, Config()->m_InpGrab ? "0" : "1", SDL_HINT_OVERRIDE) == SDL_FALSE)
+		SDL_HideCursor();
+		if(!SDL_SetWindowRelativeMouseMode((SDL_Window *) Graphics()->GetWindowHandle(), true))
 		{
 			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "input", "unable to switch relative mouse mode");
 		}
-		SDL_SetRelativeMouseMode(SDL_TRUE);
 		SDL_GetRelativeMouseState(NULL, NULL);
 	}
 }
@@ -327,16 +302,12 @@ void CInput::SetClipboardText(const char *pText)
 
 void CInput::StartTextInput()
 {
-	// enable system messages for ime
-	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-	SDL_StartTextInput();
+	SDL_StartTextInput((SDL_Window *) Graphics()->GetWindowHandle());
 }
 
 void CInput::StopTextInput()
 {
-	SDL_StopTextInput();
-	// disable system messages for performance
-	SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
+	SDL_StopTextInput((SDL_Window *) Graphics()->GetWindowHandle());
 	m_CompositionLength = COMP_LENGTH_INACTIVE;
 	m_CompositionCursor = 0;
 	m_aComposition[0] = 0;
@@ -353,29 +324,29 @@ void CInput::Clear()
 
 bool CInput::KeyState(int Key) const
 {
-	return Key >= KEY_FIRST && Key < KEY_LAST && m_aInputState[Key >= KEY_MOUSE_1 ? Key : SDL_GetScancodeFromKey(KeyToKeycode(Key))];
+	return Key >= KEY_FIRST && Key < KEY_LAST && m_aInputState[Key >= KEY_MOUSE_1 ? Key : SDL_GetScancodeFromKey(KeyToKeycode(Key), 0)];
 }
 
 void CInput::UpdateMouseState()
 {
 	int MouseState = SDL_GetMouseState(NULL, NULL);
-	if(MouseState & SDL_BUTTON(SDL_BUTTON_LEFT))
+	if(MouseState & SDL_BUTTON_MASK(SDL_BUTTON_LEFT))
 		m_aInputState[KEY_MOUSE_1] = true;
-	if(MouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
+	if(MouseState & SDL_BUTTON_MASK(SDL_BUTTON_RIGHT))
 		m_aInputState[KEY_MOUSE_2] = true;
-	if(MouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
+	if(MouseState & SDL_BUTTON_MASK(SDL_BUTTON_MIDDLE))
 		m_aInputState[KEY_MOUSE_3] = true;
-	if(MouseState & SDL_BUTTON(SDL_BUTTON_X1))
+	if(MouseState & SDL_BUTTON_MASK(SDL_BUTTON_X1))
 		m_aInputState[KEY_MOUSE_4] = true;
-	if(MouseState & SDL_BUTTON(SDL_BUTTON_X2))
+	if(MouseState & SDL_BUTTON_MASK(SDL_BUTTON_X2))
 		m_aInputState[KEY_MOUSE_5] = true;
-	if(MouseState & SDL_BUTTON(6))
+	if(MouseState & SDL_BUTTON_MASK(6))
 		m_aInputState[KEY_MOUSE_6] = true;
-	if(MouseState & SDL_BUTTON(7))
+	if(MouseState & SDL_BUTTON_MASK(7))
 		m_aInputState[KEY_MOUSE_7] = true;
-	if(MouseState & SDL_BUTTON(8))
+	if(MouseState & SDL_BUTTON_MASK(8))
 		m_aInputState[KEY_MOUSE_8] = true;
-	if(MouseState & SDL_BUTTON(9))
+	if(MouseState & SDL_BUTTON_MASK(9))
 		m_aInputState[KEY_MOUSE_9] = true;
 }
 
@@ -456,13 +427,13 @@ void CInput::HandleJoystickButtonEvent(const SDL_Event &Event)
 
 	const int Key = Event.jbutton.button + KEY_JOYSTICK_BUTTON_0;
 
-	if(Event.type == SDL_JOYBUTTONDOWN)
+	if(Event.type == SDL_EVENT_JOYSTICK_BUTTON_DOWN)
 	{
 		m_aInputState[Key] = true;
 		m_aInputCount[Key] = m_InputCounter;
 		AddEvent(0, Key, IInput::FLAG_PRESS);
 	}
-	else if(Event.type == SDL_JOYBUTTONUP)
+	else if(Event.type == SDL_EVENT_JOYSTICK_BUTTON_UP)
 	{
 		m_aInputState[Key] = false;
 		AddEvent(0, Key, IInput::FLAG_RELEASE);
@@ -505,7 +476,7 @@ void CInput::SetCompositionWindowPosition(float X, float Y, float H)
 	Rect.y = Y / m_pGraphics->ScreenHiDPIScale();
 	Rect.h = H / m_pGraphics->ScreenHiDPIScale();
 	Rect.w = 0;
-	SDL_SetTextInputRect(&Rect);
+	SDL_SetTextInputArea((SDL_Window *) Graphics()->GetWindowHandle(), &Rect, 0);
 }
 
 int CInput::Update()
@@ -514,7 +485,7 @@ int CInput::Update()
 	m_InputCounter = (m_InputCounter % 0xFFFF) + 1;
 
 	int NumKeyStates;
-	const Uint8 *pState = SDL_GetKeyboardState(&NumKeyStates);
+	const bool *pState = SDL_GetKeyboardState(&NumKeyStates);
 	if(NumKeyStates >= KEY_MOUSE_1)
 		NumKeyStates = KEY_MOUSE_1;
 	mem_copy(m_aInputState, pState, NumKeyStates);
@@ -532,13 +503,8 @@ int CInput::Update()
 		int Action = IInput::FLAG_PRESS;
 		switch(Event.type)
 		{
-			// handle text editing candidate
-			case SDL_SYSWMEVENT:
-				ProcessSystemMessage(Event.syswm.msg);
-				break;
-
 			// handle on the spot text editing
-			case SDL_TEXTEDITING:
+			case SDL_EVENT_TEXT_EDITING:
 			{
 				m_CompositionLength = str_length(Event.edit.text);
 				if(m_CompositionLength)
@@ -562,7 +528,7 @@ int CInput::Update()
 				}
 				break;
 			}
-			case SDL_TEXTINPUT:
+			case SDL_EVENT_TEXT_INPUT:
 				m_aComposition[0] = 0;
 				m_CompositionLength = COMP_LENGTH_INACTIVE;
 				m_CompositionCursor = 0;
@@ -571,35 +537,35 @@ int CInput::Update()
 				break;
 
 			// handle keys
-			case SDL_KEYUP:
+			case SDL_EVENT_KEY_UP:
 				Action = IInput::FLAG_RELEASE;
 
 				// fall through
-			case SDL_KEYDOWN:
-				Key = KeycodeToKey(Event.key.keysym.sym);
-				Scancode = Event.key.keysym.scancode;
+			case SDL_EVENT_KEY_DOWN:
+				Key = KeycodeToKey(Event.key.key);
+				Scancode = Event.key.scancode;
 				break;
 
 			// handle the joystick events
-			case SDL_JOYAXISMOTION:
+			case SDL_EVENT_JOYSTICK_AXIS_MOTION:
 				HandleJoystickAxisMotionEvent(Event);
 				break;
 
-			case SDL_JOYBUTTONUP:
-			case SDL_JOYBUTTONDOWN:
+			case SDL_EVENT_JOYSTICK_BUTTON_UP:
+			case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
 				HandleJoystickButtonEvent(Event);
 				break;
 
-			case SDL_JOYHATMOTION:
+			case SDL_EVENT_JOYSTICK_HAT_MOTION:
 				HandleJoystickHatMotionEvent(Event);
 				break;
 
 			// handle mouse buttons
-			case SDL_MOUSEBUTTONUP:
+			case SDL_EVENT_MOUSE_BUTTON_UP:
 				Action = IInput::FLAG_RELEASE;
 
 				// fall through
-			case SDL_MOUSEBUTTONDOWN:
+			case SDL_EVENT_MOUSE_BUTTON_DOWN:
 				if(Event.button.button == SDL_BUTTON_LEFT)
 				{
 					Key = KEY_MOUSE_1;
@@ -627,7 +593,7 @@ int CInput::Update()
 				Scancode = Key;
 				break;
 
-			case SDL_MOUSEWHEEL:
+			case SDL_EVENT_MOUSE_WHEEL:
 				if(Event.wheel.y > 0)
 					Key = KEY_MOUSE_WHEEL_UP;
 				else if(Event.wheel.y < 0)
@@ -638,18 +604,8 @@ int CInput::Update()
 				Scancode = Key;
 				break;
 
-#if defined(CONF_PLATFORM_MACOS) // Todo SDL: remove this when fixed (mouse state is faulty on start)
-			case SDL_WINDOWEVENT:
-				if(Event.window.event == SDL_WINDOWEVENT_MAXIMIZED)
-				{
-					MouseModeAbsolute();
-					MouseModeRelative();
-				}
-				break;
-#endif
-
 			// other messages
-			case SDL_QUIT:
+			case SDL_EVENT_QUIT:
 				return 1;
 		}
 
@@ -668,60 +624,6 @@ int CInput::Update()
 		m_CompositionLength = COMP_LENGTH_INACTIVE;
 
 	return 0;
-}
-
-void CInput::ProcessSystemMessage(SDL_SysWMmsg *pMsg)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	// Todo SDL: remove this after SDL2 supports IME candidates
-	if(pMsg->subsystem == SDL_SYSWM_WINDOWS)
-	{
-		if(pMsg->msg.win.msg != WM_IME_NOTIFY)
-			return;
-
-		switch(pMsg->msg.win.wParam)
-		{
-			case IMN_OPENCANDIDATE:
-			case IMN_CHANGECANDIDATE:
-			{
-				HWND WindowHandle = pMsg->msg.win.hwnd;
-				HIMC ImeContext = ImmGetContext(WindowHandle);
-				DWORD CandidateCount;
-				DWORD Size = ImmGetCandidateListCountW(ImeContext, &CandidateCount);
-				LPCANDIDATELIST CandidateList = NULL;
-				if(Size > 0)
-				{
-					CandidateList = (LPCANDIDATELIST) mem_alloc(Size);
-					Size = ImmGetCandidateListW(ImeContext, 0, CandidateList, Size);
-				}
-				if(CandidateList && Size > 0)
-				{
-					m_CandidateCount = 0;
-					for(DWORD i = CandidateList->dwPageStart; i < CandidateList->dwCount && m_CandidateCount < (int) CandidateList->dwPageSize; i++)
-					{
-						LPCWSTR Candidate = (LPCWSTR) ((DWORD_PTR) CandidateList + CandidateList->dwOffset[i]);
-						WideCharToMultiByte(CP_UTF8, 0, Candidate, -1, m_aaCandidates[m_CandidateCount], MAX_CANDIDATE_ARRAY_SIZE, "?", NULL);
-						m_aaCandidates[m_CandidateCount][MAX_CANDIDATE_ARRAY_SIZE - 1] = '\0';
-						m_CandidateCount++;
-					}
-					m_CandidateSelectedIndex = CandidateList->dwSelection - CandidateList->dwPageStart;
-				}
-				else
-				{
-					m_CandidateCount = 0;
-					m_CandidateSelectedIndex = -1;
-				}
-				mem_free(CandidateList);
-				ImmReleaseContext(WindowHandle, ImeContext);
-				break;
-			}
-			case IMN_CLOSECANDIDATE:
-				m_CandidateCount = 0;
-				m_CandidateSelectedIndex = -1;
-				break;
-		}
-	}
-#endif
 }
 
 IEngineInput *CreateEngineInput() { return new CInput; }

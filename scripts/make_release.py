@@ -136,10 +136,6 @@ if include_data and not use_bundle:
 	copy_tree(source_package_dir+"data", package_dir+"/data")
 	copy_tree(languages_dir, package_dir+"/data/languages")
 	copy_tree(maps_dir, package_dir+"/data/maps")
-	if platform[:3] == "win":
-		shutil.copy("other/config_directory.bat", package_dir)
-		shutil.copy(source_package_dir+"SDL2.dll", package_dir)
-		shutil.copy(source_package_dir+"freetype.dll", package_dir)
 
 if include_exe and not use_bundle:
 	shutil.copy(source_package_dir+name+exe_ext, package_dir)
@@ -182,10 +178,10 @@ if use_bundle:
 	shutil.copy("other/icons/Teeworlds.icns", clientbundle_resource_dir)
 	shutil.copy(source_package_dir+name+exe_ext, clientbundle_bin_dir)
 	shell("install_name_tool -change /opt/homebrew/opt/freetype/lib/libfreetype.6.dylib @executable_path/../Frameworks/libfreetype.6.dylib " + binary_path)
-	shell("install_name_tool -change /opt/homebrew/opt/sdl2/lib/libSDL2-2.0.0.dylib @executable_path/../Frameworks/libSDL2-2.0.0.dylib  " + binary_path)
+	shell("install_name_tool -change /opt/homebrew/opt/sdl3/lib/libSDL3.dylib @executable_path/../Frameworks/libSDL3.dylib  " + binary_path)
 	shell("cp /opt/homebrew/opt/freetype/lib/libfreetype.6.dylib " + clientbundle_framework_dir)
 	shell("cp /opt/homebrew/opt/freetype/lib/libfreetype.6.dylib " + clientbundle_framework_dir)
-	shell("cp /opt/homebrew/opt/sdl2/lib/libSDL2-2.0.0.dylib " + clientbundle_framework_dir)
+	shell("cp /opt/homebrew/opt/sdl3/lib/libSDL3.dylib " + clientbundle_framework_dir)
 	shell("install_name_tool -change /opt/homebrew/opt/libpng/lib/libpng16.16.dylib @executable_path/../Frameworks/libpng16.16.dylib " + freetypelib_path)
 	open(os.path.join(clientbundle_content_dir, "Info.plist"), "w").write("""
 <?xml version="1.0" encoding="UTF-8"?>

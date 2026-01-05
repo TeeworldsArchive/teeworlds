@@ -2528,11 +2528,11 @@ void str_append(char *dst, const char *src, int dst_size)
 
 void str_copy(char *dst, const char *src, int dst_size)
 {
-    int i;
+	int i;
 	dbg_assert(dst_size > 0, "dst_size invalid");
-    for(i = 0; (i < dst_size - 1) && (src[i] != '\0'); i++)
-        dst[i] = src[i];
-    dst[i] = '\0';
+	for(i = 0; (i < dst_size - 1) && (src[i] != '\0'); i++)
+		dst[i] = src[i];
+	dst[i] = '\0';
 }
 
 void str_truncate(char *dst, int dst_size, const char *src, int truncation_len)

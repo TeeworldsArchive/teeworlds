@@ -342,12 +342,14 @@ public:
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;
 	virtual bool GetDesktopResolution(int Index, int *pDesktopWidth, int *pDesktopHeight) = 0;
 	virtual int GetWindowScreen() = 0;
-	virtual int WindowActive() = 0;
-	virtual int WindowOpen() = 0;
+	virtual bool WindowActive() = 0;
+	virtual bool WindowOpen() = 0;
 
 	virtual void RunBuffer(CCommandBuffer *pBuffer) = 0;
 	virtual bool IsIdle() const = 0;
 	virtual void WaitForIdle() = 0;
+
+	virtual void *GetWindowHandle() = 0;
 };
 
 class CGraphics_Threaded : public IEngineGraphics
@@ -468,8 +470,8 @@ public:
 	virtual bool SetWindowScreen(int Index);
 	virtual int GetWindowScreen();
 
-	virtual int WindowActive();
-	virtual int WindowOpen();
+	virtual bool WindowActive();
+	virtual bool WindowOpen();
 
 	virtual int Init();
 	virtual void Shutdown();
@@ -485,6 +487,8 @@ public:
 	virtual void InsertSignal(semaphore *pSemaphore);
 	virtual bool IsIdle() const;
 	virtual void WaitForIdle();
+
+	virtual void *GetWindowHandle();
 };
 
 extern IGraphicsBackend *CreateGraphicsBackend();
