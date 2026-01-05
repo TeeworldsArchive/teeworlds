@@ -1110,7 +1110,7 @@ set(DATA_OUTPUTS "")
 
 foreach(datafile ${DATA})
   file(RELATIVE_PATH rel_path "${PROJECT_SOURCE_DIR}/datasrc" "${datafile}")
-  set(dest_file "${CMAKE_BINARY_DIR}/data/${rel_path}")
+  set(dest_file "data/${rel_path}")
   get_filename_component(dest_dir "${dest_file}" DIRECTORY)
   file(MAKE_DIRECTORY "${dest_dir}")
 
@@ -1125,9 +1125,7 @@ foreach(datafile ${DATA})
   list(APPEND DATA_OUTPUTS "${dest_file}")
 endforeach()
 
-add_custom_target(copy_data ALL
-  DEPENDS ${DATA_OUTPUTS}
-)
+add_custom_target(copy_data ALL DEPENDS ${DATA_OUTPUTS})
 ########################################################################
 # CODE GENERATION
 ########################################################################
