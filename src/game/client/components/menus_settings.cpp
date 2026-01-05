@@ -1910,7 +1910,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		}
 
 		Right.HSplitTop(ButtonHeight, &Button, &Right);
-		UI()->DoScrollbarOption(&Config()->m_SndVolume, &Config()->m_SndVolume, &Button, Localize("Volume"), 0, 100, &CUI::ms_LogarithmicScrollbarScale);
+		UI()->DoScrollbarOption(&Config()->m_SndVolume, &Config()->m_SndVolume, &Button, Localize("Volume"), 0, 100);
 	}
 	else
 	{
