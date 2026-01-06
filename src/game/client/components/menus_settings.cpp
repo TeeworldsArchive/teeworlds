@@ -336,8 +336,8 @@ void CMenus::RenderSkinSelection(CUIRect MainView)
 	m_RefreshSkinSelector = s_ListBox.DoFilter();
 	s_ListBox.DoStart(60.0f, s_paSkinList.size(), 10, 1, OldSelected);
 
-	s_lTeeRenderInfos.set_size(0);
-	s_lTeeDatas.set_size(0);
+	s_lTeeRenderInfos.clear_size();
+	s_lTeeDatas.clear_size();
 	for(int i = 0; i < s_paSkinList.size(); ++i)
 	{
 		const CSkins::CSkin *s = s_paSkinList[i];
@@ -436,8 +436,8 @@ void CMenus::RenderSkinPartSelection(CUIRect MainView)
 	s_InitSkinPartList = s_ListBox.DoFilter();
 	s_ListBox.DoStart(60.0f, s_paList[m_TeePartSelected].size(), 5, 1, OldSelected);
 
-	s_lTeeRenderInfos.set_size(0);
-	s_lTeeDatas.set_size(0);
+	s_lTeeRenderInfos.clear_size();
+	s_lTeeDatas.clear_size();
 	for(int i = 0; i < s_paList[m_TeePartSelected].size(); ++i)
 	{
 		const CSkins::CSkinPart *s = s_paList[m_TeePartSelected][i];

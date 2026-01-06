@@ -253,6 +253,11 @@ public:
 		num_elements = new_size;
 	}
 
+	void clear_size()
+	{
+		num_elements = 0;
+	}
+
 	/*
 		Function: hint_size
 			Allocates the number of elements wanted but
