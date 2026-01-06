@@ -48,7 +48,22 @@ jobs:
           ninja:p
           zlib:p
           sdl3:p
-          freetype:p
+
+    - name: Checkout Freetype
+      uses: actions/checkout@v4
+      with:
+        repository: freetype/freetype
+        ref: VER-2-14-1
+        path: ./freetype
+
+    - name: Prepare Freetype
+      run: |
+        cd freetype
+        mkdir build
+        cd build
+        cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=/ucrt64 -D BUILD_SHARED_LIBS=true -D CMAKE_BUILD_TYPE=Release -D FT_DISABLE_ZLIB=TRUE -D FT_DISABLE_BZIP2=TRUE -D FT_DISABLE_PNG=TRUE -D FT_DISABLE_HARFBUZZ=TRUE -D FT_DISABLE_BROTLI=TRUE
+        ninja install
+  
     - run: set MSYSTEM=UCRT64
     - name: Build in debug mode
       env: ${{ matrix.env }}
