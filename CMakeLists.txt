@@ -1913,7 +1913,7 @@ else()
 
   list(REMOVE_DUPLICATES _DEPS)
   set(DEP_WHITELIST_REGEX
-    \"(libbz2-1|libbrotlidec|libglib-2.0-0|libiconv-8|freetype|SDL3|OpenGL|libfreetype|libfreetype-6|libSDL3|libGL|libgraphite2-3|zlib1|libglib|libharfbuzz|libpng16|libcrypto)\"
+    \"(freetype|SDL3|libcrypto)\"
   )
 
   list(FILTER _DEPS INCLUDE REGEX \"\${DEP_WHITELIST_REGEX}\")
