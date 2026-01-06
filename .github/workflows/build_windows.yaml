@@ -13,23 +13,21 @@ jobs:
         os: [windows-latest, windows-2022]
         include:
         - os: windows-latest
-          cmake-args: -G Ninja
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
           package-file: "*-win64.zip"
           archtitecture: "x86_64"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
             LDFLAGS: -Werror
-            PATH: /ucrt64/bin:/usr/bin:/bin
         - os: windows-2022
-          cmake-args: -G Ninja
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
           package-file: "*-win64.zip"
           archtitecture: "x86_64"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
             LDFLAGS: -Werror
-            PATH: /ucrt64/bin:/usr/bin:/bin
     defaults:
       run:
         shell: msys2 {0}

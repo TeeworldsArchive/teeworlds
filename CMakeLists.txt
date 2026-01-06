@@ -1876,13 +1876,33 @@ else()
 
   message(STATUS \"Extra binary dir is ${EXTRA_BIN_DIR}\")
 
+  set(POST_EXCLUDE_REGEXES)
   foreach(_FILE ${TARGET_FILE_LIST})
     if(EXISTS \"\${_FILE}\")
+      if(TARGET_OS STREQUAL \"windows\")
+        set(POST_EXCLUDE_REGEXES
+          \"api-ms-win\"
+          \"ext-ms-win\"
+        )
+      elif(TARGET_OS STREQUAL \"mac\")
+        set(POST_EXCLUDE_REGEXES
+          \"/usr/lib/.*\"
+          \"/System/Library/.*\"
+          \"/lib/.*\"
+        )
+      elif(TARGET_OS STREQUAL \"linux\")
+        set(POST_EXCLUDE_REGEXES
+          \"/lib.*/.*\"
+          \"/usr/lib.*/.*\"
+        )
+      endif()
+
       file(GET_RUNTIME_DEPENDENCIES
         EXECUTABLES \"\${_FILE}\"
         RESOLVED_DEPENDENCIES_VAR _RESOLVED
         UNRESOLVED_DEPENDENCIES_VAR _UNRESOLVED
         DIRECTORIES \"${EXTRA_BIN_DIR}\"
+        POST_EXCLUDE_REGEXES \${POST_EXCLUDE_REGEXES}
       )
       list(APPEND _DEPS \${_RESOLVED})
       list(APPEND UNRESOLVED_DEPS \${_UNRESOLVED})
@@ -1893,7 +1913,7 @@ else()
 
   list(REMOVE_DUPLICATES _DEPS)
   set(DEP_WHITELIST_REGEX
-    \"(freetype|SDL3|OpenGL|libfreetype|libfreetype-6|libSDL3|libGL|opengl32|glu32|libcrypto)\"
+    \"(libbz2-1|libbrotlidec|libglib-2.0-0|libiconv-8|freetype|SDL3|OpenGL|libfreetype|libfreetype-6|libSDL3|libGL|libgraphite2-3|zlib1|libglib|libharfbuzz|libpng16|libcrypto)\"
   )
 
   list(FILTER _DEPS INCLUDE REGEX \"\${DEP_WHITELIST_REGEX}\")
@@ -2072,7 +2092,8 @@ foreach(target ${TARGETS_OWN})
     target_compile_options(${target} PRIVATE /wd4800) # Implicit conversion of int to bool.
   endif()
   if(TARGET_OS STREQUAL "windows")
-    target_compile_definitions(${target} PRIVATE _WIN32_WINNT=0x0501)
+    target_compile_definitions(${target} PRIVATE _WIN32_WINNT=0x0A00)
+    target_compile_definitions(${target} PRIVATE WINVER=0x0A00)
     target_compile_definitions(${target} PRIVATE UNICODE) # Windows headers
     target_compile_definitions(${target} PRIVATE _UNICODE) # C-runtime
   endif()
