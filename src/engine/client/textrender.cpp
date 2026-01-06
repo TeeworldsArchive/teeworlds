@@ -257,7 +257,6 @@ bool CGlyphMap::SetFaceByName(FT_Face *pFace, const char *pFamilyName)
 	if(Face)
 	{
 		*pFace = Face;
-		printf("PostScript Name: %s\n", Face->family_name);
 		return true;
 	}
 	return false;

@@ -63,7 +63,7 @@ MACRO_CONFIG_INT(GfxHighDetail, gfx_high_detail, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG
 MACRO_CONFIG_INT(GfxTextureQuality, gfx_texture_quality, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Don't scale textures down")
 MACRO_CONFIG_INT(GfxFsaaSamples, gfx_fsaa_samples, 0, 0, 16, CFGFLAG_SAVE | CFGFLAG_CLIENT, "FSAA Samples")
 MACRO_CONFIG_INT(GfxFinish, gfx_finish, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Wait until the GPU has finished the current frame before starting the new one")
-MACRO_CONFIG_INT(GfxAsyncRender, gfx_asyncrender, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Render asynchronously")
+MACRO_CONFIG_INT(GfxAsyncRender, gfx_asyncrender, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Render asynchronously")
 MACRO_CONFIG_INT(GfxMaxFps, gfx_maxfps, 144, 30, 2000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Maximum FPS (when Limit FPS is enabled)")
 MACRO_CONFIG_INT(GfxLimitFps, gfx_limitfps, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Limit FPS")
 MACRO_CONFIG_INT(GfxUseX11XRandRWM, gfx_use_x11xrandr_wm, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Let SDL use the X11 XRandR window manager")

@@ -62,8 +62,51 @@ public:
 	void RenderCursor(vec2 Center, float Size) { RenderCursor(Center.x, Center.y, Size); }
 
 	// object render methods
+	struct CRenderTeeData
+	{
+		// tee
+		class CAnimState *m_pAnim;
+		const CTeeRenderInfo *m_pInfo;
+		int m_Emote;
+		vec2 m_Dir;
+		vec2 m_Pos;
+		float m_Alpha;
+		bool m_XmasHat;
+		// hand
+		vec2 m_HandDir;
+		float m_AngleOffset;
+		vec2 m_PostRotOffset;
+		enum
+		{
+			RENDER_PHASE_OUTLINE_FEET = 0,
+			RENDER_PHASE_OUTLINE_DECORATION,
+			RENDER_PHASE_OUTLINE_BODY,
+			RENDER_PHASE_OUTLINE_EYES,
+			RENDER_PHASE_OUTLINE_FEET_FRONT,
+
+			RENDER_PHASE_FILLING_FEET,
+			RENDER_PHASE_FILLING_TEEBOT_BACKGROUND,
+			RENDER_PHASE_FILLING_TEEBOT_FOREGROUND,
+			RENDER_PHASE_FILLING_DECORATION,
+			RENDER_PHASE_FILLING_BODY,
+			RENDER_PHASE_FILLING_MARKING,
+			RENDER_PHASE_FILLING_BODY_SHADOW,
+			RENDER_PHASE_FILLING_EYES,
+			RENDER_PHASE_FILLING_XMASHAT,
+			RENDER_PHASE_FILLING_FEET_FRONT,
+
+			NUM_RENDER_PHASES,
+			RENDER_PHASE_OUTLINES_END = RENDER_PHASE_OUTLINE_FEET_FRONT,
+			RENDER_PHASE_FILLINGS_START = RENDER_PHASE_FILLING_FEET,
+
+			// extra phase for hand
+			RENDER_PHASE_HAND = -1,
+		};
+	};
+	void RenderTeePhase(const CRenderTeeData *pData, int RenderPhase);
 	void RenderTee(class CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, float Alpha = 1.0f, bool XmasHat = true);
 	void RenderTeeHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset);
+	void RenderTeeList(const CRenderTeeData *pData, int Num, bool WithHand = false);
 
 	// map render methods (render_map.cpp)
 	static void RenderEvalEnvelope(const CEnvPoint *pPoints, int NumPoints, int Channels, float Time, float *pResult);

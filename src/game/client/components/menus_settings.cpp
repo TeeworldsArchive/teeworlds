@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include <base/tl/array.h>
 #include <base/color.h>
 #include <base/math.h>
 
@@ -27,6 +28,8 @@
 #include "binds.h"
 #include "countryflags.h"
 #include "menus.h"
+static array<CTeeRenderInfo> s_lTeeRenderInfos;
+static array<CRenderTools::CRenderTeeData> s_lTeeDatas;
 
 CMenusKeyBinder::CMenusKeyBinder()
 {
@@ -333,6 +336,8 @@ void CMenus::RenderSkinSelection(CUIRect MainView)
 	m_RefreshSkinSelector = s_ListBox.DoFilter();
 	s_ListBox.DoStart(60.0f, s_paSkinList.size(), 10, 1, OldSelected);
 
+	s_lTeeRenderInfos.set_size(0);
+	s_lTeeDatas.set_size(0);
 	for(int i = 0; i < s_paSkinList.size(); ++i)
 	{
 		const CSkins::CSkin *s = s_paSkinList[i];
@@ -347,7 +352,8 @@ void CMenus::RenderSkinSelection(CUIRect MainView)
 		CListboxItem Item = s_ListBox.DoNextItem(&s_paSkinList[i], OldSelected == i);
 		if(Item.m_Visible)
 		{
-			CTeeRenderInfo Info;
+			CTeeRenderInfo &Info = s_lTeeRenderInfos.emplace();
+			CRenderTools::CRenderTeeData &Data = s_lTeeDatas.emplace();
 			for(int p = 0; p < NUM_SKINPARTS; p++)
 			{
 				if(s->m_aUseCustomColors[p])
@@ -367,8 +373,12 @@ void CMenus::RenderSkinSelection(CUIRect MainView)
 
 			{
 				// interactive tee: tee is happy to be selected
-				int TeeEmote = (Item.m_Selected && s_LastSelectionTime + 0.75f > Client()->LocalTime()) ? EMOTE_HAPPY : EMOTE_NORMAL;
-				RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, TeeEmote, vec2(1.0f, 0.0f), vec2(Item.m_Rect.x + Item.m_Rect.w / 2, Item.m_Rect.y + Item.m_Rect.h / 2));
+				Data.m_pAnim = CAnimState::GetIdle();
+				Data.m_Emote = (Item.m_Selected && s_LastSelectionTime + 0.75f > Client()->LocalTime()) ? EMOTE_HAPPY : EMOTE_NORMAL;
+				Data.m_Dir = vec2(1.0f, 0.0f);
+				Data.m_Pos = vec2(Item.m_Rect.x + Item.m_Rect.w / 2, Item.m_Rect.y + Item.m_Rect.h / 2);
+				Data.m_Alpha = 1.0f;
+				Data.m_XmasHat = true;
 			}
 
 			CUIRect Label;
@@ -378,6 +388,9 @@ void CMenus::RenderSkinSelection(CUIRect MainView)
 			UI()->DoLabelSelected(&Label, s->m_aName, Item.m_Selected, 10.0f, TEXTALIGN_CENTER);
 		}
 	}
+	for(int i = 0; i < s_lTeeDatas.size(); i++)
+		s_lTeeDatas[i].m_pInfo = &s_lTeeRenderInfos[i];
+	RenderTools()->RenderTeeList(s_lTeeDatas.base_ptr(), s_lTeeDatas.size());
 
 	const int NewSelected = s_ListBox.DoEnd();
 	if(NewSelected != -1 && NewSelected != OldSelected)
@@ -423,6 +436,8 @@ void CMenus::RenderSkinPartSelection(CUIRect MainView)
 	s_InitSkinPartList = s_ListBox.DoFilter();
 	s_ListBox.DoStart(60.0f, s_paList[m_TeePartSelected].size(), 5, 1, OldSelected);
 
+	s_lTeeRenderInfos.set_size(0);
+	s_lTeeDatas.set_size(0);
 	for(int i = 0; i < s_paList[m_TeePartSelected].size(); ++i)
 	{
 		const CSkins::CSkinPart *s = s_paList[m_TeePartSelected][i];
@@ -434,7 +449,8 @@ void CMenus::RenderSkinPartSelection(CUIRect MainView)
 		CListboxItem Item = s_ListBox.DoNextItem(&s_paList[m_TeePartSelected][i], OldSelected == i);
 		if(Item.m_Visible)
 		{
-			CTeeRenderInfo Info;
+			CTeeRenderInfo &Info = s_lTeeRenderInfos.emplace();
+			CRenderTools::CRenderTeeData &Data = s_lTeeDatas.emplace();
 			for(int j = 0; j < NUM_SKINPARTS; j++)
 			{
 				int SkinPart = m_pClient->m_pSkins->FindSkinPart(j, CSkins::ms_apSkinVariables[j], false);
@@ -462,7 +478,9 @@ void CMenus::RenderSkinPartSelection(CUIRect MainView)
 
 			if(m_TeePartSelected == SKINPART_HANDS)
 			{
-				RenderTools()->RenderTeeHand(&Info, TeePos, vec2(1.0f, 0.0f), -pi * 0.5f, vec2(18, 0));
+				Data.m_HandDir = vec2(1.0f, 0.0f);
+				Data.m_AngleOffset = -pi * 0.5f;
+				Data.m_PostRotOffset = vec2(18, 0);
 			}
 			int TeePartEmote = EMOTE_NORMAL;
 			if(m_TeePartSelected == SKINPART_EYES)
@@ -470,7 +488,12 @@ void CMenus::RenderSkinPartSelection(CUIRect MainView)
 				float LocalTime = Client()->LocalTime();
 				TeePartEmote = (int) (LocalTime * 0.5f) % NUM_EMOTES;
 			}
-			RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, TeePartEmote, vec2(1.0f, 0.0f), TeePos);
+			Data.m_pAnim = CAnimState::GetIdle();
+			Data.m_Emote = TeePartEmote;
+			Data.m_Dir = vec2(1.0f, 0.0f);
+			Data.m_Pos = TeePos;
+			Data.m_Alpha = 1.0f;
+			Data.m_XmasHat = true;
 
 			CUIRect Label;
 			Item.m_Rect.Margin(5.0f, &Item.m_Rect);
@@ -479,6 +502,9 @@ void CMenus::RenderSkinPartSelection(CUIRect MainView)
 			UI()->DoLabelSelected(&Label, s->m_aName, Item.m_Selected, 10.0f, TEXTALIGN_CENTER);
 		}
 	}
+	for(int i = 0; i < s_lTeeDatas.size(); i++)
+		s_lTeeDatas[i].m_pInfo = &s_lTeeRenderInfos[i];
+	RenderTools()->RenderTeeList(s_lTeeDatas.base_ptr(), s_lTeeDatas.size(), m_TeePartSelected == SKINPART_HANDS);
 
 	const int NewSelected = s_ListBox.DoEnd();
 	if(NewSelected != -1 && NewSelected != OldSelected)

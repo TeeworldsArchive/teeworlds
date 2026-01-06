@@ -1,6 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include <base/tl/array.h>
+
 #include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
@@ -1159,6 +1161,8 @@ void CChat::OnRender()
 		}
 	}
 
+	array<CRenderTools::CRenderTeeData> lTeeDatas;
+	lTeeDatas.hint_size(8);
 	for(int i = StartLine; i < MAX_LINES; i++)
 	{
 		const CLine *pLine = &m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
@@ -1299,7 +1303,14 @@ void CChat::OnRender()
 				static CAnimState s_State;
 				s_State.Set(&g_pData->m_aAnimations[ANIM_BASE], 1.0f);
 				s_State.Add(&g_pData->m_aAnimations[ANIM_IDLE], 0, 1.0f);
-				RenderTools()->RenderTee(&s_State, &pLine->m_RenderInfo, EMOTE_NORMAL, vec2(1.f, 0.f), vec2(s_ChatCursor.AdvancePosition().x + FontSize / 3 * 2 - 1.f, y + FontSize / 3 * 2 + 1.f), Blend, false);
+				CRenderTools::CRenderTeeData &Data = lTeeDatas.emplace();
+				Data.m_pAnim = &s_State;
+				Data.m_pInfo = &pLine->m_RenderInfo;
+				Data.m_Emote = EMOTE_NORMAL;
+				Data.m_Dir = vec2(1.f, 0.f);
+				Data.m_Pos = vec2(s_ChatCursor.AdvancePosition().x + FontSize / 3 * 2 - 1.f, y + FontSize / 3 * 2 + 1.f);
+				Data.m_Alpha = Blend;
+				Data.m_XmasHat = false;
 				TextRender()->TextAdvance(&s_ChatCursor, FontSize + 1.f);
 			}
 			TextRender()->TextDeferred(&s_ChatCursor, pLine->m_aName, -1);
@@ -1335,6 +1346,7 @@ void CChat::OnRender()
 			TextRender()->DrawTextShadowed(&s_ChatCursor, ShadowOffset, Blend);
 		}
 	}
+	RenderTools()->RenderTeeList(lTeeDatas.base_ptr(), lTeeDatas.size());
 
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 	TextRender()->TextSecondaryColor(0.0f, 0.0f, 0.0f, 0.3f);
