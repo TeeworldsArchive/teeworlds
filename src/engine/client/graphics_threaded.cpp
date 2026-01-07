@@ -644,6 +644,40 @@ void CGraphics_Threaded::QuadsDraw(CQuadItem *pArray, int Num)
 	QuadsDrawTL(pArray, Num);
 }
 
+void CGraphics_Threaded::SingleQuadDrawTL(const CQuadItem *pQuad)
+{
+	CCommandBuffer::CPoint Center;
+
+	m_aVertices[m_NumVertices].m_Pos.x = pQuad->m_X;
+	m_aVertices[m_NumVertices].m_Pos.y = pQuad->m_Y;
+	m_aVertices[m_NumVertices].m_Tex = m_aTexture[0];
+	m_aVertices[m_NumVertices].m_Color = m_aColor[0];
+
+	m_aVertices[m_NumVertices + 1].m_Pos.x = pQuad->m_X + pQuad->m_Width;
+	m_aVertices[m_NumVertices + 1].m_Pos.y = pQuad->m_Y;
+	m_aVertices[m_NumVertices + 1].m_Tex = m_aTexture[1];
+	m_aVertices[m_NumVertices + 1].m_Color = m_aColor[1];
+
+	m_aVertices[m_NumVertices + 2].m_Pos.x = pQuad->m_X + pQuad->m_Width;
+	m_aVertices[m_NumVertices + 2].m_Pos.y = pQuad->m_Y + pQuad->m_Height;
+	m_aVertices[m_NumVertices + 2].m_Tex = m_aTexture[2];
+	m_aVertices[m_NumVertices + 2].m_Color = m_aColor[2];
+
+	m_aVertices[m_NumVertices + 3].m_Pos.x = pQuad->m_X;
+	m_aVertices[m_NumVertices + 3].m_Pos.y = pQuad->m_Y + pQuad->m_Height;
+	m_aVertices[m_NumVertices + 3].m_Tex = m_aTexture[3];
+	m_aVertices[m_NumVertices + 3].m_Color = m_aColor[3];
+
+	if(m_Rotation != 0)
+	{
+		Center.x = pQuad->m_X + pQuad->m_Width / 2;
+		Center.y = pQuad->m_Y + pQuad->m_Height / 2;
+
+		Rotate4(Center, &m_aVertices[m_NumVertices]);
+	}
+	AddVertices(4);
+}
+
 void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 {
 	CCommandBuffer::CPoint Center;

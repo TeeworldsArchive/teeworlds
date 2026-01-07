@@ -110,7 +110,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			Graphics()->QuadsBegin();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 			IGraphics::CQuadItem QuadItem(SeekBar.x + (SeekBar.w - 2 * Rounding) * Ratio, SeekBar.y, UI()->PixelSize(), SeekBar.h);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 		}
 

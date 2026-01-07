@@ -165,7 +165,7 @@ void CCountryFlags::Render(int CountryCode, const vec4 *pColor, float x, float y
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(pColor->r * pColor->a, pColor->g * pColor->a, pColor->b * pColor->a, pColor->a);
 		IGraphics::CQuadItem QuadItem(x, y, w, h);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->SingleQuadDrawTL(&QuadItem);
 		Graphics()->QuadsEnd();
 	}
 	else

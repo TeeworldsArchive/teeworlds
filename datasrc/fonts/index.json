@@ -1,16 +1,16 @@
 {
     "font files": [
         "DejaVuSans.ttf",
-        "LitcaneSansLite.ttc"
+        "LitcaneSans.ttc"
     ],
     "default": "DejaVu Sans",
     "language variants": {
-        "japanese": "Litcane Sans Lite",
-        "korean": "Litcane Sans Lite K",
-        "simplified_chinese": "Litcane Sans Lite SC", 
-        "traditional_chinese": "Litcane Sans Lite TC"
+        "japanese": "Litcane Sans",
+        "korean": "Litcane Sans K",
+        "simplified_chinese": "Litcane Sans SC", 
+        "traditional_chinese": "Litcane Sans TC"
     },
     "fallbacks": [
-        "Litcane Sans Lite"
+        "Litcane Sans"
     ]
 }

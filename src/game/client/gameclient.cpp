@@ -586,7 +586,7 @@ void CGameClient::StartRendering()
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor4(Top, Top, Bottom, Bottom);
 		IGraphics::CQuadItem QuadItem(0, 0, ScreenWidth, ScreenHeight);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->SingleQuadDrawTL(&QuadItem);
 		Graphics()->QuadsEnd();
 	}
 }

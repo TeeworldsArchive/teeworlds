@@ -183,7 +183,7 @@ void CHud::RenderNetworkIssueNotification()
 		Graphics()->QuadsBegin();
 		RenderTools()->SelectSprite(SPRITE_NETWORK_BAD);
 		IGraphics::CQuadItem QuadItem(x + Margin, 4, FontSize, FontSize);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->SingleQuadDrawTL(&QuadItem);
 		Graphics()->QuadsEnd();
 	}
 }
@@ -280,7 +280,7 @@ void CHud::RenderScoreHud()
 						Graphics()->QuadsBegin();
 						RenderTools()->SelectSprite(t == 0 ? SPRITE_FLAG_RED : SPRITE_FLAG_BLUE);
 						IGraphics::CQuadItem QuadItem(Whole - ScoreWidthMax - ImageSize, StartY + 1.0f + t * TeamOffset, ImageSize / 2, ImageSize);
-						Graphics()->QuadsDrawTL(&QuadItem, 1);
+						Graphics()->SingleQuadDrawTL(&QuadItem);
 						Graphics()->QuadsEnd();
 					}
 					else if(FlagCarrier[t] >= 0)
@@ -641,7 +641,7 @@ void CHud::RenderNinjaBar(float x, float y, float Progress)
 
 	IGraphics::CQuadItem QuadStartFull(x, y, EndWidth, BarHeight);
 	RenderTools()->SelectSprite(&g_pData->m_aSprites[SPRITE_NINJA_BAR_FULL_LEFT]);
-	Graphics()->QuadsDrawTL(&QuadStartFull, 1);
+	Graphics()->SingleQuadDrawTL(&QuadStartFull);
 	x += EndWidth;
 
 	const float FullBarWidth = MiddleBarWidth * Progress;
@@ -670,7 +670,7 @@ void CHud::RenderNinjaBar(float x, float y, float Progress)
 	else
 		RenderTools()->SelectSprite(&SpriteBarFull);
 
-	Graphics()->QuadsDrawTL(&QuadFull, 1);
+	Graphics()->SingleQuadDrawTL(&QuadFull);
 
 	// empty bar
 	// select the middle portion of the sprite so we don't get edge bleeding
@@ -691,13 +691,13 @@ void CHud::RenderNinjaBar(float x, float y, float Progress)
 	}
 
 	IGraphics::CQuadItem QuadEmpty(x + FullBarWidth, y, EmptyBarWidth, BarHeight);
-	Graphics()->QuadsDrawTL(&QuadEmpty, 1);
+	Graphics()->SingleQuadDrawTL(&QuadEmpty);
 
 	x += MiddleBarWidth;
 
 	IGraphics::CQuadItem QuadEndEmpty(x, y, EndWidth, BarHeight);
 	RenderTools()->SelectSprite(&g_pData->m_aSprites[SPRITE_NINJA_BAR_EMPTY_RIGHT]);
-	Graphics()->QuadsDrawTL(&QuadEndEmpty, 1);
+	Graphics()->SingleQuadDrawTL(&QuadEndEmpty);
 }
 
 void CHud::RenderHealthAndAmmo(const CNetObj_Character *pCharacter)
@@ -880,7 +880,7 @@ void CHud::RenderRaceTime(const CNetObj_PlayerInfoRace *pRaceInfo)
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(SPRITE_TIMERCLOCK_A);
 	IGraphics::CQuadItem QuadItem(Half - TimeWidth / 2 - 18.f, 20, 15, 15);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	static CTextCursor s_Cursor(12);

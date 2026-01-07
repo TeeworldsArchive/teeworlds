@@ -883,7 +883,7 @@ void CChat::OnRender()
 		}
 
 		Graphics()->SetColor(1, 1, 1, 1.0f * Blend);
-		Graphics()->QuadsDrawTL(&QuadIcon, 1);
+		Graphics()->SingleQuadDrawTL(&QuadIcon);
 		Graphics()->QuadsEnd();
 		Graphics()->WrapNormal();
 
@@ -1093,7 +1093,7 @@ void CChat::OnRender()
 			}
 
 			TextRender()->TextDeferred(&s_ChatCursor, pLine->m_aText, -1);
-			pLine->m_Size.y = s_ChatCursor.LineCount() * FontSize;
+			pLine->m_Size.y = s_ChatCursor.LineCount() * FontSize + 1.0f;
 			pLine->m_Size.x = s_ChatCursor.Width();
 		}
 	}
@@ -1255,12 +1255,12 @@ void CChat::OnRender()
 			Graphics()->SetColor(ShadowWhisper.r * ShadowWhisper.a * Blend, ShadowWhisper.g * ShadowWhisper.a * Blend,
 				ShadowWhisper.b * ShadowWhisper.a * Blend, ShadowWhisper.a * Blend);
 			IGraphics::CQuadItem Quad(qx + 0.2f, qy + 0.5f, qw, qh);
-			Graphics()->QuadsDrawTL(&Quad, 1);
+			Graphics()->SingleQuadDrawTL(&Quad);
 
 			// color pass
 			Graphics()->SetColor(ColorWhisper.r * Blend, ColorWhisper.g * Blend, ColorWhisper.b * Blend, Blend);
 			Quad = IGraphics::CQuadItem(qx, qy, qw, qh);
-			Graphics()->QuadsDrawTL(&Quad, 1);
+			Graphics()->SingleQuadDrawTL(&Quad);
 
 			Graphics()->QuadsEnd();
 			Graphics()->WrapNormal();

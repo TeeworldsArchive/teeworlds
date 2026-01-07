@@ -259,7 +259,7 @@ void CSpectator::OnRender()
 			Graphics()->QuadsBegin();
 			RenderTools()->SelectSprite(Flag == SPEC_FLAGRED ? SPRITE_FLAG_RED : SPRITE_FLAG_BLUE);
 			IGraphics::CQuadItem QuadItem(FlagPos.x, FlagPos.y, FlagSize.x, FlagSize.y);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 
 			x += FlagRect.w + Margin;
@@ -306,7 +306,7 @@ void CSpectator::OnRender()
 			Graphics()->QuadsBegin();
 			RenderTools()->SelectSprite(i == m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierBlue ? SPRITE_FLAG_BLUE : SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
 			IGraphics::CQuadItem QuadItem(PosX - PlayerRect.h / 4.0f, PlayerRect.y - PlayerRect.h * 0.05f, PlayerRect.h / 2.0f, PlayerRect.h);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 		}
 

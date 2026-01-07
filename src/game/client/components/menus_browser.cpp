@@ -528,7 +528,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 				Graphics()->SetColor(1.0f, 0.75f, 1.0f, 1.0f);
 				RenderTools()->SelectSprite(Selected ? SPRITE_BROWSE_HEART_B : SPRITE_BROWSE_HEART_A);
 				IGraphics::CQuadItem QuadItem(Icon.x, Icon.y, Icon.w, Icon.h);
-				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
 				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 				Graphics()->QuadsEnd();
 				UI()->DoTooltip(&pEntry->m_FriendState, &Icon, Localize("Friends are online on this server."));
@@ -2137,7 +2137,7 @@ void CMenus::DoGameIcon(const char *pName, const CUIRect *pRect)
 	Graphics()->TextureSet(Tex);
 	Graphics()->QuadsBegin();
 	IGraphics::CQuadItem QuadItem(pRect->x, pRect->y, pRect->w, pRect->h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 }
 

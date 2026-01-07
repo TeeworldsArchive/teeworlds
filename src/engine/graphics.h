@@ -169,6 +169,7 @@ public:
 		CQuadItem(float x, float y, float w, float h) : m_X(x), m_Y(y), m_Width(w), m_Height(h) {}
 	};
 	virtual void QuadsDraw(CQuadItem *pArray, int Num) = 0;
+	virtual void SingleQuadDrawTL(const CQuadItem *pQuad) = 0;
 	virtual void QuadsDrawTL(const CQuadItem *pArray, int Num) = 0;
 
 	struct CFreeformItem

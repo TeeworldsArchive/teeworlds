@@ -425,7 +425,7 @@ void CEditor::RenderBackground(CUIRect View, IGraphics::CTextureHandle Texture, 
 	Graphics()->SetColor(Brightness, Brightness, Brightness, 1.0f);
 	Graphics()->QuadsSetSubset(0, 0, View.w / Size, View.h / Size);
 	IGraphics::CQuadItem QuadItem(View.x, View.y, View.w, View.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 }
 
@@ -2650,7 +2650,7 @@ void CEditor::RenderSelectedImage(CUIRect View)
 	Graphics()->WrapClamp();
 	Graphics()->QuadsBegin();
 	IGraphics::CQuadItem QuadItem(View.x, View.y, View.w, View.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 	Graphics()->WrapNormal();
 }
@@ -2836,7 +2836,7 @@ void CEditor::RenderFileDialog()
 			Graphics()->BlendNormal();
 			Graphics()->QuadsBegin();
 			IGraphics::CQuadItem QuadItem(Preview.x, Preview.y, w, h);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 		}
 	}
@@ -2858,7 +2858,7 @@ void CEditor::RenderFileDialog()
 		Graphics()->QuadsBegin();
 		RenderTools()->SelectSprite(m_FilteredFileList[i]->m_IsDir ? SPRITE_FILE_FOLDER : SPRITE_FILE_MAP2);
 		IGraphics::CQuadItem QuadItem(FileIcon.x, FileIcon.y, FileIcon.w, FileIcon.h);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->SingleQuadDrawTL(&QuadItem);
 		Graphics()->QuadsEnd();
 
 		UI()->DoLabelSelected(&Label, m_FilteredFileList[i]->m_aName, Item.m_Selected, 10.0f, TEXTALIGN_ML);
@@ -3445,7 +3445,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				v.h = ColorBar.h;
 
 				IGraphics::CQuadItem QuadItem(v.x, v.y, v.w, v.h);
-				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
 			}
 			Graphics()->QuadsEnd();
 		}
@@ -3563,7 +3563,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 							Graphics()->SetColor(aColors[c].r * ColorMod, aColors[c].g * ColorMod, aColors[c].b * ColorMod, 1.0f);
 
 						IGraphics::CQuadItem QuadItem(Final.x, Final.y, Final.w, Final.h);
-						Graphics()->QuadsDrawTL(&QuadItem, 1);
+						Graphics()->SingleQuadDrawTL(&QuadItem);
 					}
 
 					{
@@ -3959,7 +3959,7 @@ void CEditor::Render()
 			if(ms_pUiGotContext == UI()->HotItem())
 				Graphics()->SetColor(1, 0, 0, 1);
 			IGraphics::CQuadItem QuadItem(mx, my, 16.0f, 16.0f);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 			Graphics()->WrapNormal();
 		}
@@ -3971,7 +3971,7 @@ void CEditor::Render()
 			Graphics()->QuadsBegin();
 			Graphics()->SetColor(m_SelectedColor.r, m_SelectedColor.g, m_SelectedColor.b, m_SelectedColor.a);
 			IGraphics::CQuadItem QuadItem(mx + 1.0f, my - 20.0f, 16.0f, 16.0f);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 		}
 	}
