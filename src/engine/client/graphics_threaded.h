@@ -323,6 +323,7 @@ public:
 		INITFLAG_BORDERLESS = 8,
 		INITFLAG_X11XRANDR = 16,
 		INITFLAG_HIGHDPI = 32,
+		INITFLAG_OPENGLES = 64,
 	};
 
 	virtual ~IGraphicsBackend() {}

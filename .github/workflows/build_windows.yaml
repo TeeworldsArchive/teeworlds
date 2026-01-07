@@ -108,8 +108,6 @@ jobs:
       run: |
         cd release
         cmake --build . --config Release --target package
-        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -DUSE_OPENGLES=ON -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
-        cmake --build . --config Release --target package
         mkdir artifacts
         mv ${{ matrix.package-file }} artifacts
 

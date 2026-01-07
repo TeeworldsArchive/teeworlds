@@ -1600,6 +1600,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	static const int s_GfxScreenWidth = Config()->m_GfxScreenWidth;
 	static const int s_GfxScreenHeight = Config()->m_GfxScreenHeight;
 	static const int s_GfxFsaaSamples = Config()->m_GfxFsaaSamples;
+	static const int s_GfxOpenGLES = Config()->m_GfxOpenGLES;
 	static const int s_GfxTextureQuality = Config()->m_GfxTextureQuality;
 	static const int s_GfxTextureCompression = Config()->m_GfxTextureCompression;
 
@@ -1701,6 +1702,15 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				Config()->m_GfxFsaaSamples *= 2;
 			m_CheckVideoSettings = true;
 		}
+	}
+
+	// OpenGL ES button
+	ScreenLeft.HSplitTop(Spacing, 0, &ScreenLeft);
+	ScreenLeft.HSplitTop(ButtonHeight, &Button, &ScreenLeft);
+	if(DoButton_CheckBox(&Config()->m_GfxOpenGLES, Localize("Enable OpenGL ES"), Config()->m_GfxOpenGLES, &Button))
+	{
+		Config()->m_GfxOpenGLES ^= 1;
+		m_CheckVideoSettings = true;
 	}
 
 	ScreenRight.HSplitTop(Spacing, 0, &ScreenRight);
@@ -1826,6 +1836,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			s_GfxScreenWidth != Config()->m_GfxScreenWidth ||
 			s_GfxScreenHeight != Config()->m_GfxScreenHeight ||
 			s_GfxFsaaSamples != Config()->m_GfxFsaaSamples ||
+			s_GfxOpenGLES != Config()->m_GfxOpenGLES ||
 			s_GfxTextureQuality != Config()->m_GfxTextureQuality ||
 			s_GfxTextureCompression != Config()->m_GfxTextureCompression ||
 			(CheckFullscreen && s_GfxFullscreen != Config()->m_GfxFullscreen);
@@ -2027,6 +2038,7 @@ void CMenus::ResetSettingsGraphics()
 	Config()->m_GfxTextureQuality = 1;
 	Config()->m_GfxTextureCompression = 0;
 	Config()->m_GfxHighDetail = 1;
+	Config()->m_GfxOpenGLES = 0;
 
 	if(Config()->m_GfxDisplayAllModes)
 	{

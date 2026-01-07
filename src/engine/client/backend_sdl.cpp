@@ -1,14 +1,10 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <base/detect.h>
-#include <SDL3/SDL.h>
-#ifdef CONF_USE_OPENGLES
-#include <engine/external/glad/gles2.h>
-#else
-#include <engine/external/glad/gl.h>
-#endif
-
 #include <base/tl/threading.h>
+
+#include <SDL3/SDL.h>
+#include <engine/external/glad/gl.h>
 
 #include "backend_sdl.h"
 #include "graphics_threaded.h"
@@ -77,19 +73,16 @@ void main()
 }
 )";
 
-#ifdef CONF_USE_OPENGLES
-static const char *s_ShaderVersion = R"(
+static const char *s_ShaderVersionES = R"(
 #version 320 es
 precision highp float;
 precision highp int;
 #define PRECISION_TYPE highp
 )";
-#else
 static const char *s_ShaderVersion = R"(
 #version 330 core
 #define PRECISION_TYPE
 )";
-#endif
 
 // ------------ CGraphicsBackend_Threaded
 
@@ -254,9 +247,9 @@ GLuint CCommandProcessorFragment_OpenGL::CompileShader(GLuint Type, const char *
 GLuint CCommandProcessorFragment_OpenGL::CreateShaderProgram(bool Is3D)
 {
 	char aBuf[2048];
-	str_format(aBuf, sizeof(aBuf), "%s%s%s", s_ShaderVersion, Is3D ? "\n" : "#define USE_2D_TEXTURE\n", s_VertexShaderSource);
+	str_format(aBuf, sizeof(aBuf), "%s%s%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, Is3D ? "\n" : "#define USE_2D_TEXTURE\n", s_VertexShaderSource);
 	GLuint VertexShader = CompileShader(GL_VERTEX_SHADER, aBuf);
-	str_format(aBuf, sizeof(aBuf), "%s%s%s", s_ShaderVersion, Is3D ? "\n" : "#define USE_2D_TEXTURE\n", s_FragmentShaderSource);
+	str_format(aBuf, sizeof(aBuf), "%s%s%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, Is3D ? "\n" : "#define USE_2D_TEXTURE\n", s_FragmentShaderSource);
 	GLuint FragmentShader = CompileShader(GL_FRAGMENT_SHADER, aBuf);
 
 	GLuint ShaderProgram = glCreateProgram();
@@ -452,6 +445,7 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 
 void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 {
+	m_IsOpenGLES = pCommand->m_IsOpenGLES;
 	// Create shader program
 	m_aRenderShader[0].m_ShaderProgram = CreateShaderProgram(false);
 	m_aRenderShader[1].m_ShaderProgram = CreateShaderProgram(true);
@@ -636,19 +630,25 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 
 	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_COMPRESSED)
 	{
-		switch(StoreOglformat)
+		if(m_IsOpenGLES)
 		{
-#ifdef CONF_USE_OPENGLES
-			case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB8_ETC2; break;
-			case GL_RED: StoreOglformat = GL_COMPRESSED_R11_EAC; break;
-			case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA8_ETC2_EAC; break;
-			default: StoreOglformat = GL_COMPRESSED_RGBA8_ETC2_EAC;
-#else
-			case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB; break;
-			case GL_RED: StoreOglformat = GL_COMPRESSED_RED; break;
-			case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA; break;
-			default: StoreOglformat = GL_COMPRESSED_RGBA;
-#endif
+			switch(StoreOglformat)
+			{
+				case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB8_ETC2; break;
+				case GL_RED: StoreOglformat = GL_COMPRESSED_R11_EAC; break;
+				case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA8_ETC2_EAC; break;
+				default: StoreOglformat = GL_COMPRESSED_RGBA8_ETC2_EAC;
+			}
+		}
+		else
+		{
+			switch(StoreOglformat)
+			{
+				case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB; break;
+				case GL_RED: StoreOglformat = GL_COMPRESSED_RED; break;
+				case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA; break;
+				default: StoreOglformat = GL_COMPRESSED_RGBA;
+			}
 		}
 	}
 
@@ -985,15 +985,18 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	// set gl attributes for OpenGL 3.3 Core Profile
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-#ifdef CONF_USE_OPENGLES
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-#else
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-#endif
+	if(Flags & IGraphicsBackend::INITFLAG_OPENGLES)
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	}
+	else
+	{
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	}
 
 	if(FsaaSamples)
 	{
@@ -1033,21 +1036,24 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 		return -1;
 	}
 
-#ifdef CONF_USE_OPENGLES
-	if(!gladLoadGLES2((GLADloadfunc) SDL_GL_GetProcAddress))
+	if(Flags & IGraphicsBackend::INITFLAG_OPENGLES)
 	{
-		dbg_msg("gfx", "failed to initialize GLAD");
-		return -1;
+		if(!gladLoadGLES2((GLADloadfunc) SDL_GL_GetProcAddress))
+		{
+			dbg_msg("gfx", "failed to initialize GLAD");
+			return -1;
+		}
+		dbg_msg("gfx", "using %s", glGetString(GL_VERSION));
 	}
-	dbg_msg("gfx", "using %s", glGetString(GL_VERSION));
-#else
-	if(!gladLoadGL((GLADloadfunc) SDL_GL_GetProcAddress))
+	else
 	{
-		dbg_msg("gfx", "failed to initialize GLAD");
-		return -1;
+		if(!gladLoadGL((GLADloadfunc) SDL_GL_GetProcAddress))
+		{
+			dbg_msg("gfx", "failed to initialize GLAD");
+			return -1;
+		}
+		dbg_msg("gfx", "using OpenGL %s", glGetString(GL_VERSION));
 	}
-	dbg_msg("gfx", "using OpenGL %s", glGetString(GL_VERSION));
-#endif
 	SDL_GetWindowSizeInPixels(m_pWindow, pScreenWidth, pScreenHeight); // drawable size may differ in high dpi mode
 
 	SDL_GL_SetSwapInterval(Flags & IGraphicsBackend::INITFLAG_VSYNC ? 1 : 0);
@@ -1071,6 +1077,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	CCommandProcessorFragment_OpenGL::CInitCommand CmdOpenGL;
 	CmdOpenGL.m_pTextureMemoryUsage = &m_TextureMemoryUsage;
 	CmdOpenGL.m_pTextureArraySize = &m_TextureArraySize;
+	CmdOpenGL.m_IsOpenGLES = Flags & IGraphicsBackend::INITFLAG_OPENGLES;
 	CmdBuffer.AddCommand(CmdOpenGL);
 	RunBuffer(&CmdBuffer);
 	WaitForIdle();

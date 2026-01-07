@@ -792,6 +792,8 @@ int CGraphics_Threaded::IssueInit()
 		Flags |= IGraphicsBackend::INITFLAG_RESIZABLE;
 	if(m_pConfig->m_GfxUseX11XRandRWM)
 		Flags |= IGraphicsBackend::INITFLAG_X11XRANDR;
+	if(m_pConfig->m_GfxOpenGLES)
+		Flags |= IGraphicsBackend::INITFLAG_OPENGLES;
 
 	return m_pBackend->Init("Teeworlds", &m_pConfig->m_GfxScreen, &m_pConfig->m_GfxScreenWidth,
 		&m_pConfig->m_GfxScreenHeight, &m_ScreenWidth, &m_ScreenHeight, m_pConfig->m_GfxFsaaSamples,
@@ -802,7 +804,22 @@ int CGraphics_Threaded::InitWindow()
 {
 	if(IssueInit() == 0)
 		return 0;
-
+	// try using opengl es
+	if(m_pConfig->m_GfxOpenGLES != 1)
+	{
+		m_pConfig->m_GfxOpenGLES = 1;
+		dbg_msg("gfx", "using OpenGL ES and trying again");
+		if(IssueInit() == 0)
+			return 0;
+	}
+	// try using opengl
+	else
+	{
+		m_pConfig->m_GfxOpenGLES = 0;
+		dbg_msg("gfx", "using OpenGL and trying again");
+		if(IssueInit() == 0)
+			return 0;
+	}
 	// try disabling fsaa
 	while(m_pConfig->m_GfxFsaaSamples)
 	{

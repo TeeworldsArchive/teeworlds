@@ -125,6 +125,7 @@ class CCommandProcessorFragment_OpenGL
 	bool m_LastUseTexture;
 	bool m_LastAlphaOnly;
 
+	bool m_IsOpenGLES;
 public:
 	enum
 	{
@@ -137,6 +138,7 @@ public:
 		CInitCommand() : CCommand(CMD_INIT) {}
 		volatile int *m_pTextureMemoryUsage;
 		int *m_pTextureArraySize;
+		bool m_IsOpenGLES;
 	};
 
 	struct CGLShutdownCommand : public CCommandBuffer::CCommand

@@ -88,9 +88,6 @@ pacman -S --needed ninja` on Arch Linux.)
 `-DCLIENT=OFF`: Disable generation of the client target. Can be useful on
 headless servers which don't have graphics libraries like SDL3 installed.
 
-`-DUSE_OPENGLES=ON`: Replace render backend with OpenGL ES. Can be useful on
-.
-
 Building on Linux or macOS (bam)
 ==========================
 > Bam support on Windows has been deprecated.
