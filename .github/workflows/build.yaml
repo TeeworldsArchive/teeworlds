@@ -123,7 +123,7 @@ jobs:
 
     - name: Download artifact for Release
       uses: softprops/action-gh-release@v2
-      if: github.ref_type != 'tag' && contains(matrix.os, 'latest')
+      if: github.ref_type != 'tag' && github.event_name != 'pull_request' && contains(matrix.os, 'latest')
       with:
         tag_name: nightly
         name: Nightly Build
