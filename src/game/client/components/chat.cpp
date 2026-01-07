@@ -801,7 +801,7 @@ void CChat::OnRender()
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
-	float x = 12.0f;
+	float x = 8.0f;
 	float y = Height - 20.0f;
 	float LineWidth = 200.0f;
 
@@ -863,7 +863,7 @@ void CChat::OnRender()
 		CatRect.h = CategoryHeight;
 		CatRect.Draw(CatRectColor, 2.0f, CUIRect::CORNER_R);
 
-		// draw chat icon
+		// draw chat iconx
 		Graphics()->WrapClamp();
 		IGraphics::CQuadItem QuadIcon;
 
@@ -1095,6 +1095,8 @@ void CChat::OnRender()
 			TextRender()->TextDeferred(&s_ChatCursor, pLine->m_aText, -1);
 			pLine->m_Size.y = s_ChatCursor.LineCount() * FontSize + 1.0f;
 			pLine->m_Size.x = s_ChatCursor.Width();
+			if(pLine->m_RenderInfo.m_aTextures[SKINPART_BODY].IsValid())
+				pLine->m_Size.x += FontSize + 1.0f;
 		}
 	}
 
@@ -1103,14 +1105,13 @@ void CChat::OnRender()
 	if(m_Show)
 	{
 		CUIRect Rect;
-		Rect.x = 0;
+		Rect.x = 0.0f;
 		Rect.y = HeightLimit - 2.0f;
 		Rect.w = LineWidth + x + 3.0f;
 		Rect.h = Height - HeightLimit - 22.f;
 
-		const vec4 LeftColor(0, 0, 0, 0.85f);
-		const vec4 RightColor(0, 0, 0, 0.05f);
-		Rect.Draw4(LeftColor, RightColor, LeftColor, RightColor, 3.0f, CUIRect::CORNER_R);
+		const vec4 Color = vec4(0.0f, 0.0f, 0.0f, 0.2f);
+		Rect.Draw4(Color, Color, Color, Color, 3.0f, CUIRect::CORNER_R);
 	}
 
 	// compute the page index
@@ -1211,12 +1212,24 @@ void CChat::OnRender()
 		const vec4 ColorHighlightOutline(0.0f, 0.4f, 1.0f,
 			mix(pLine->m_Mode == CHAT_TEAM ? 0.6f : 0.5f, 1.0f, HighlightBlend));
 
+		if(!m_Show)
+		{
+			CUIRect BgRect;
+			BgRect.x = 0.0f;
+			BgRect.y = y + 0.5f;
+			BgRect.w = Begin + pLine->m_Size.x + 2.0f;
+			BgRect.h = pLine->m_Size.y;
+
+			const vec4 Color = vec4(0.0f, 0.0f, 0.0f, Blend * 0.2f);
+			BgRect.Draw4(Color, Color, Color, Color, 2.0f, CUIRect::CORNER_R);
+		}
+
 		if(pLine->m_Highlighted && ColorHighlightBg.a > 0.001f)
 		{
 			CUIRect BgRect;
-			BgRect.x = Begin;
+			BgRect.x = 0.0f;
 			BgRect.y = y + 1.0f;
-			BgRect.w = pLine->m_Size.x - 2.0f;
+			BgRect.w = Begin + pLine->m_Size.x - 2.0f;
 			BgRect.h = pLine->m_Size.y;
 
 			vec4 LeftColor = ColorHighlightBg * ColorHighlightBg.a;
@@ -1308,10 +1321,10 @@ void CChat::OnRender()
 				Data.m_pInfo = &pLine->m_RenderInfo;
 				Data.m_Emote = EMOTE_NORMAL;
 				Data.m_Dir = vec2(1.f, 0.f);
-				Data.m_Pos = vec2(s_ChatCursor.AdvancePosition().x + FontSize / 3 * 2 - 1.f, y + FontSize / 3 * 2 + 1.f);
+				Data.m_Pos = vec2(s_ChatCursor.AdvancePosition().x + FontSize / 3 * 2 - 1.0f, y + FontSize / 3 * 2 + 1.0f);
 				Data.m_Alpha = Blend;
 				Data.m_XmasHat = false;
-				TextRender()->TextAdvance(&s_ChatCursor, FontSize + 1.f);
+				TextRender()->TextAdvance(&s_ChatCursor, FontSize + 1.0f);
 			}
 			TextRender()->TextDeferred(&s_ChatCursor, pLine->m_aName, -1);
 			TextRender()->TextDeferred(&s_ChatCursor, ": ", -1);
