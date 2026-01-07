@@ -1611,7 +1611,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	BottomView.HSplitTop(20.f, 0, &BottomView);
 
 	// render screen menu background
-	int NumOptions = 3;
+	int NumOptions = 4;
 	if(Graphics()->GetNumScreens() > 1 && !Config()->m_GfxFullscreen)
 		++NumOptions;
 	float ButtonHeight = 20.0f;
@@ -1628,7 +1628,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	ScreenLeft.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
 	// render textures menu background
-	NumOptions = 3;
+	NumOptions = 4;
 	BackgroundHeight = (float) (NumOptions + 1) * ButtonHeight + (float) NumOptions * Spacing;
 
 	MainView.HSplitTop(10.0f, 0, &MainView);
