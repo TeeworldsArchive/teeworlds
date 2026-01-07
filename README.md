@@ -2,14 +2,6 @@ TeeworldsArchive ![GitHub Actions](https://github.com/TeeworldsArchive/teeworlds
 ================
 Where Teeworlds lives on.
 
-<a href="https://repology.org/metapackage/teeworlds/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/teeworlds.svg" alt="Packaging status" align="right">
-</a>
-
-Teeworlds ![GitHub Actions](https://github.com/teeworlds/teeworlds/workflows/Build/badge.svg)
-=========
-
-A retro multiplayer shooter
 ---------------------------
 
 Teeworlds is a free online multiplayer game, available for all major
@@ -31,44 +23,49 @@ Originally written by Magnus Auvinen.
 
 Teeworlds supports two build systems: CMake and bam.
 
-Building on Linux or macOS (CMake)
+Building on Linux, Windows or macOS (CMake)
 ==========================
 
 Installing dependencies
 -----------------------
-
+```bash
     # Debian/Ubuntu
-    sudo apt install build-essential cmake git libfreetype6-dev libsdl2-dev libpnglite-dev libwavpack-dev python3
+    sudo apt install build-essential cmake git libfreetype6-dev libsdl3-dev libpnglite-dev libwavpack-dev python3
     
     # Fedora
-    sudo dnf install @development-tools cmake gcc-c++ git freetype-devel pnglite-devel python3 SDL2-devel wavpack-devel
+    sudo dnf install @development-tools cmake gcc-c++ git freetype-devel pnglite-devel python3 SDL3-devel wavpack-devel
     
     # Arch Linux (doesn't have pnglite in its repositories)
-    sudo pacman -S --needed base-devel cmake freetype2 git python sdl2 wavpack
+    sudo pacman -S --needed base-devel cmake freetype2 git python sdl3 wavpack
     
     # macOS
-    brew install cmake freetype sdl2
+    brew install cmake freetype sdl3
+
+    # MSYS2 (Windows)
+    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib
+```
 
 
 Downloading repository
 ----------------------
-
-    git clone https://github.com/teeworlds/teeworlds --recurse-submodules
+```bash
+    git clone https://github.com/teeworldsarchive/teeworlds --recurse-submodules
     cd teeworlds
     
     # If you already cloned the repository before, use:
     # git submodule update --init
-
+```
 
 Building
 --------
-
+```bash
     mkdir -p build
     cd build
-    cmake ..
-    make
+    cmake .. -GNinja
+    ninja
+```
 
-On subsequent builds, you only have to repeat the `make` step.
+On subsequent builds, you only have to repeat the `ninja` step.
 
 You can then run the client with `./teeworlds` and the server with
 `./teeworlds_srv`.
@@ -89,46 +86,51 @@ pacman -S --needed ninja` on Arch Linux.)
 **faster** builds.
 
 `-DCLIENT=OFF`: Disable generation of the client target. Can be useful on
-headless servers which don't have graphics libraries like SDL2 installed.
+headless servers which don't have graphics libraries like SDL3 installed.
+
+`-DUSE_OPENGLES=ON`: Replace render backend with OpenGL ES. Can be useful on
+.
 
 Building on Linux or macOS (bam)
 ==========================
+> Bam support on Windows has been deprecated.
 
 Installing dependencies
 -----------------------
-
-    # Debian/Ubuntu 19.10+
-    sudo apt install bam git libfreetype6-dev libsdl2-dev libpnglite-dev libwavpack-dev python3
+```bash
+    # Debian/Ubuntu 25.04+
+    sudo apt install bam git libfreetype6-dev libsdl3-dev libpnglite-dev libwavpack-dev python3
     
     # Fedora
-    sudo dnf install bam gcc-c++ git freetype-devel pnglite-devel python3 SDL2-devel wavpack-devel
+    sudo dnf install bam gcc-c++ git freetype-devel pnglite-devel python3 SDL3-devel wavpack-devel
     
     # Arch Linux (doesn't have pnglite in its repositories)
-    sudo pacman -S --needed base-devel bam freetype2 git python sdl2 wavpack
+    sudo pacman -S --needed base-devel bam freetype2 git python sdl3 wavpack
     
     # macOS
-    brew install bam freetype sdl2
+    brew install bam freetype sdl3
     
     # other (add bam to your path)
-    git clone https://github.com/teeworlds/bam
+    git clone https://github.com/matricks/bam
     cd bam
     ./make_unix.sh
-
+```
 
 Downloading repository
 ----------------------
-
-    git clone https://github.com/teeworlds/teeworlds --recurse-submodules
+```bash
+    git clone https://github.com/teeworldsarchive/teeworlds --recurse-submodules
     cd teeworlds
     
     # If you already cloned the repository before, use:
     # git submodule update --init
-
+```
 
 Building
 --------
-
+```bash
     bam
+```
 
 The compiled game is located in a sub-folder of `build`. You can run the client from there with `./teeworlds` and the server with `./teeworlds_srv`.
 
@@ -143,15 +145,3 @@ The following options can also be added.
 `conf=release` to build in release mode (defaults to `conf=debug`).
 
 `arch=x86` or `arch=x86_64` to force select an architecture.
-
-Building on Windows
-======================
-It is recommended to use MSYS2 (ucrt64, mingw-w64 didn't support the features we used in the codes.)
-```
-pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl2 mingw-w64-ucrt-x86_64-zlib
-
-# then
-cmake . -GNinja
-
-ninja
-```
