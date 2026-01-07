@@ -76,6 +76,18 @@ public:
 // takes care of opengl related rendering
 class CCommandProcessorFragment_OpenGL
 {
+	GLuint m_PrimitiveDrawVertexID;
+	GLuint m_PrimitiveDrawBufferID;
+
+	struct SRenderShader
+	{
+		GLuint m_ShaderProgram;
+		int m_UseTextureLoc;
+		int m_IsAlphaOnlyLoc;
+		int m_OurTextureLoc;
+		int m_ProjectionLoc;
+	} m_aRenderShader[2];
+
 	class CTexture
 	{
 	public:
@@ -90,6 +102,7 @@ class CCommandProcessorFragment_OpenGL
 		};
 		GLuint m_Tex2D;
 		GLuint m_Tex3D[MAX_ARRAYSIZE_TEX3D];
+		GLuint m_Sampler;
 		int m_State;
 		int m_Format;
 		int m_MemSize;
@@ -99,11 +112,24 @@ class CCommandProcessorFragment_OpenGL
 	int m_MaxTexSize;
 	int m_Max3DTexSize;
 	int m_TextureArraySize;
+	GLuint m_QuadDrawIndexBufferID;
+	int m_LastBlendMode;
+	int m_LastSrcBlendMode;
+	int m_CurrentShader;
+
+	bool m_LastClipEnable;
+	int m_aLast2DWarpMode[2]; // 0 = U, 1 = V
+
+	GLuint m_LastTexture2D;
+	GLuint m_LastTexture3D;
+	bool m_LastUseTexture;
+	bool m_LastAlphaOnly;
 
 public:
 	enum
 	{
 		CMD_INIT = CCommandBuffer::CMDGROUP_PLATFORM_OPENGL,
+		CMD_GL_SHUTDOWN,
 	};
 
 	struct CInitCommand : public CCommandBuffer::CCommand
@@ -113,14 +139,25 @@ public:
 		int *m_pTextureArraySize;
 	};
 
+	struct CGLShutdownCommand : public CCommandBuffer::CCommand
+	{
+		CGLShutdownCommand() :
+			CCommand(CMD_GL_SHUTDOWN) {}
+	};
+
 private:
 	static int TexFormatToOpenGLFormat(int TexFormat);
+	static int GetPixelSize(int TexFormat);
 	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
 	static void *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 
 	void SetState(const CCommandBuffer::CState &State);
 
+	GLuint CompileShader(GLuint Type, const char *pSource);
+	GLuint CreateShaderProgram(bool Is3D);
+
 	void Cmd_Init(const CInitCommand *pCommand);
+	void Cmd_Shutdown(const CGLShutdownCommand *pCommand);
 	void Cmd_Texture_Update(const CCommandBuffer::CTextureUpdateCommand *pCommand);
 	void Cmd_Texture_Destroy(const CCommandBuffer::CTextureDestroyCommand *pCommand);
 	void Cmd_Texture_Create(const CCommandBuffer::CTextureCreateCommand *pCommand);
@@ -192,7 +229,6 @@ class CGraphicsBackend_SDL_OpenGL : public CGraphicsBackend_Threaded
 	volatile int m_TextureMemoryUsage;
 	int m_NumScreens;
 	int m_TextureArraySize;
-	SDL_DisplayID DisplayIDFromIndex(int Index) const;
 
 public:
 	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight);
@@ -214,7 +250,7 @@ public:
 	virtual bool WindowActive();
 	virtual bool WindowOpen();
 
-	void *GetWindowHandle() override;
+	virtual void *GetWindowHandle();
 };
 
 #endif // ENGINE_CLIENT_BACKEND_SDL_H

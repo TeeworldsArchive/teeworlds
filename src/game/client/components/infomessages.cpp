@@ -275,7 +275,7 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 
 			float Size = 56.0f;
 			IGraphics::CQuadItem QuadItem(x, y - 16, Size / 2, Size);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 		}
 	}
@@ -312,7 +312,7 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 
 				float Size = 56.0f;
 				IGraphics::CQuadItem QuadItem(x - 56, y - 16, Size / 2, Size);
-				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
 				Graphics()->QuadsEnd();
 			}
 		}
@@ -378,7 +378,7 @@ void CInfoMessages::RenderFinishMsg(CInfoMsg *pInfoMsg, float x, float y) const
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_RACEFLAG].m_Id);
 	Graphics()->QuadsBegin();
 	IGraphics::CQuadItem QuadItem(x, y, 52, 52);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	x -= 10.0f;

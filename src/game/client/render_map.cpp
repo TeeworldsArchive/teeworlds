@@ -445,7 +445,7 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 
 					Graphics()->QuadsSetSubsetFree(x0, y0, x1, y1, x2, y2, x3, y3, Index);
 					IGraphics::CQuadItem QuadItem(x * Scale, y * Scale, Scale, Scale);
-					Graphics()->QuadsDrawTL(&QuadItem, 1);
+					Graphics()->SingleQuadDrawTL(&QuadItem);
 				}
 			}
 			x += pTiles[c].m_Skip;

@@ -222,7 +222,7 @@ void CLayerTiles::BrushSelecting(CUIRect Rect)
 	m_pEditor->Graphics()->SetColor(FillColor.r * FillColor.a, FillColor.g * FillColor.a, FillColor.b * FillColor.a, FillColor.a);
 	Snap(&Rect);
 	IGraphics::CQuadItem QuadItem(Rect.x, Rect.y, Rect.w, Rect.h);
-	m_pEditor->Graphics()->QuadsDrawTL(&QuadItem, 1);
+	m_pEditor->Graphics()->SingleQuadDrawTL(&QuadItem);
 	m_pEditor->Graphics()->QuadsEnd();
 	char aBuf[16];
 	str_format(aBuf, sizeof(aBuf), "%d,%d", ConvertX(Rect.w), ConvertY(Rect.h));

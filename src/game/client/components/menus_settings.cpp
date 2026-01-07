@@ -1,9 +1,9 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
-#include <base/tl/array.h>
 #include <base/color.h>
 #include <base/math.h>
+#include <base/tl/array.h>
 
 #include <engine/engine.h>
 #include <engine/graphics.h>
@@ -115,7 +115,7 @@ void CMenus::RenderHSLPicker(CUIRect MainView)
 		ColorArray[3] = IGraphics::CColorVertex(3, c.r, c.g, c.b, 1.0f);
 		Graphics()->SetColorVertex(ColorArray, 4);
 		IGraphics::CQuadItem QuadItem(Picker.x, Picker.y, Picker.w, Picker.h);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->SingleQuadDrawTL(&QuadItem);
 
 		// white blending
 		ColorArray[0] = IGraphics::CColorVertex(0, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -124,7 +124,7 @@ void CMenus::RenderHSLPicker(CUIRect MainView)
 		ColorArray[3] = IGraphics::CColorVertex(3, 1.0f, 1.0f, 1.0f, 1.0f);
 		Graphics()->SetColorVertex(ColorArray, 4);
 		IGraphics::CQuadItem WhiteGradient(Picker.x, Picker.y + Picker.h * (1 - 2 * Dark) / ((1 - Dark) * 2), Picker.w, Picker.h / ((1 - Dark) * 2));
-		Graphics()->QuadsDrawTL(&WhiteGradient, 1);
+		Graphics()->SingleQuadDrawTL(&WhiteGradient);
 
 		// black blending
 		ColorArray[0] = IGraphics::CColorVertex(0, 0.0f, 0.0f, 0.0f, 1.0f - 2 * Dark);
@@ -133,7 +133,7 @@ void CMenus::RenderHSLPicker(CUIRect MainView)
 		ColorArray[3] = IGraphics::CColorVertex(3, 0.0f, 0.0f, 0.0f, 0.0f);
 		Graphics()->SetColorVertex(ColorArray, 4);
 		IGraphics::CQuadItem BlackGradient(Picker.x, Picker.y, Picker.w, Picker.h * (1 - 2 * Dark) / ((1 - Dark) * 2));
-		Graphics()->QuadsDrawTL(&BlackGradient, 1);
+		Graphics()->SingleQuadDrawTL(&BlackGradient);
 
 		Graphics()->QuadsEnd();
 
@@ -269,13 +269,13 @@ void CMenus::RenderHSLPicker(CUIRect MainView)
 				ColorArray[3] = IGraphics::CColorVertex(3, ColorL.r, ColorL.g, ColorL.b, ColorL.a);
 				Graphics()->SetColorVertex(ColorArray, 4);
 				IGraphics::CQuadItem QuadItem(Bar.x + Offset * j, Bar.y, Length, Bar.h);
-				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
 			}
 
 			// bar marker
 			Graphics()->SetColor(0.0f, 0.0f, 0.0f, 1.0f);
 			IGraphics::CQuadItem QuadItem(Bar.x + minimum(Bar.w, *apVars[i] / 255.0f * Bar.w), Bar.y, UI()->PixelSize(), Bar.h);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 
 			// button >
@@ -795,7 +795,7 @@ void CMenus::RenderThemeSelection(CUIRect MainView, bool Header)
 			Graphics()->QuadsBegin();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 			IGraphics::CQuadItem QuadItem(Icon.x, Icon.y, Icon.w, Icon.h);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 		}
 

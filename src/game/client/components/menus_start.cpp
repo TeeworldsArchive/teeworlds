@@ -21,7 +21,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1, 1, 1, 1);
 	IGraphics::CQuadItem QuadItem(MainView.w / 2 - 140, 60, 280, 70);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	const float Rounding = 10.0f;

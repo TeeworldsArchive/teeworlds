@@ -90,7 +90,7 @@ void CMenus::DoIcon(int ImageId, int SpriteId, const CUIRect *pRect, const vec4 
 		Graphics()->SetColor(pColor->r * pColor->a, pColor->g * pColor->a, pColor->b * pColor->a, pColor->a);
 	}
 	IGraphics::CQuadItem QuadItem(pRect->x, pRect->y, pRect->w, pRect->h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 }
 
@@ -104,11 +104,11 @@ bool CMenus::DoButton_Toggle(const void *pID, bool Checked, const CUIRect *pRect
 	}
 	RenderTools()->SelectSprite(Checked ? SPRITE_GUIBUTTON_ON : SPRITE_GUIBUTTON_OFF);
 	IGraphics::CQuadItem QuadItem(pRect->x, pRect->y, pRect->w, pRect->h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	if(UI()->HotItem() == pID && Active)
 	{
 		RenderTools()->SelectSprite(SPRITE_GUIBUTTON_HOVER);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->SingleQuadDrawTL(&QuadItem);
 	}
 	Graphics()->QuadsEnd();
 
@@ -136,7 +136,7 @@ bool CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText
 			Graphics()->QuadsBegin();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 			IGraphics::CQuadItem QuadItem(Image.x, Image.y, Image.w, Image.h);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
 
 			if(FadeVal > 0.0f)
@@ -145,7 +145,7 @@ bool CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText
 				Graphics()->WrapClamp();
 				Graphics()->QuadsBegin();
 				Graphics()->SetColor(1.0f * FadeVal, 1.0f * FadeVal, 1.0f * FadeVal, FadeVal);
-				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
 				Graphics()->QuadsEnd();
 			}
 			Graphics()->WrapNormal();
@@ -252,10 +252,10 @@ bool CMenus::DoButton_CheckBox(const void *pID, const char *pText, bool Checked,
 	if(UI()->HotItem() == pID)
 	{
 		RenderTools()->SelectSprite(SPRITE_MENU_CHECKBOX_HOVER);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->SingleQuadDrawTL(&QuadItem);
 	}
 	RenderTools()->SelectSprite(Checked ? SPRITE_MENU_CHECKBOX_ACTIVE : SPRITE_MENU_CHECKBOX_INACTIVE);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	UI()->DoLabel(&Label, pText, Label.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
@@ -293,7 +293,7 @@ bool CMenus::DoButton_SpriteID(CButtonContainer *pButtonContainer, int ImageID, 
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	RenderTools()->SelectSprite(SpriteID);
 	IGraphics::CQuadItem QuadItem(Icon.x, Icon.y, Icon.w, Icon.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	return UI()->DoButtonLogic(pButtonContainer, pRect);
@@ -321,7 +321,7 @@ float CMenus::DoIndependentDropdownMenu(void *pID, const CUIRect *pRect, const c
 		Graphics()->SetColor(0.6f, 0.6f, 0.6f, 1.0f);
 	RenderTools()->SelectSprite(*pActive ? SPRITE_MENU_EXPANDED : SPRITE_MENU_COLLAPSED);
 	IGraphics::CQuadItem QuadItem(Button.x, Button.y, Button.w, Button.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	Graphics()->QuadsEnd();
 
@@ -1407,7 +1407,7 @@ void CMenus::RenderMenu(CUIRect Screen)
 					Graphics()->QuadsBegin();
 					Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 					IGraphics::CQuadItem QuadItem(Item.m_Rect.x, Item.m_Rect.y, Item.m_Rect.w, Item.m_Rect.h);
-					Graphics()->QuadsDrawTL(&QuadItem, 1);
+					Graphics()->SingleQuadDrawTL(&QuadItem);
 					Graphics()->QuadsEnd();
 
 					UI()->DoLabelSelected(&Label, pEntry->m_aCountryCodeString, Item.m_Selected, 10.0f, TEXTALIGN_CENTER);
@@ -1797,7 +1797,7 @@ void CMenus::RenderBackground(float Time)
 		{
 			Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.045f);
 			IGraphics::CQuadItem QuadItem((x - OffsetTime) * Size * 2 + (y & 1) * Size, (y + OffsetTime) * Size, Size, Size);
-			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->SingleQuadDrawTL(&QuadItem);
 		}
 	Graphics()->QuadsEnd();
 
@@ -1807,7 +1807,7 @@ void CMenus::RenderBackground(float Time)
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(0, 0, 0, 0.5f);
 	IGraphics::CQuadItem QuadItem = IGraphics::CQuadItem(-100, -100, ScreenWidth + 200, ScreenHeight + 200);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	UI()->MapScreen();

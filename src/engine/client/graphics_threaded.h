@@ -58,6 +58,7 @@ public:
 
 	enum
 	{
+		MAX_VERTICES = 32 * 1024,
 		MAX_TEXTURES = 1024 * 4,
 	};
 
@@ -458,6 +459,7 @@ public:
 		float x2, float y2, float x3, float y3, int TextureIndex = -1);
 
 	virtual void QuadsDraw(CQuadItem *pArray, int Num);
+	virtual void SingleQuadDrawTL(const CQuadItem *pQuad);
 	virtual void QuadsDrawTL(const CQuadItem *pArray, int Num);
 	virtual void QuadsDrawFreeform(const CFreeformItem *pArray, int Num);
 	virtual void QuadsText(float x, float y, float Size, const char *pText);

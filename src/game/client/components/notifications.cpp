@@ -62,7 +62,7 @@ void CNotifications::RenderSoundNotification()
 	Graphics()->SetColor(1.0f * Fade, 1.0f * Fade, 1.0f * Fade, 1.0f * Fade);
 	RenderTools()->SelectSprite(Config()->m_SndEnable ? SPRITE_SOUNDICON_ON : SPRITE_SOUNDICON_MUTE);
 	IGraphics::CQuadItem QuadItem(Area.x, Area.y, Area.w, Area.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 }
 

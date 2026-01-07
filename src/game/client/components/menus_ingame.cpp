@@ -251,7 +251,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(SPRITE_GUIICON_MUTE);
 	IGraphics::CQuadItem QuadItem(Label.x, Label.y, Label.w, Label.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	Row.VSplitRight(2 * Spacing, &Row, 0);
@@ -260,7 +260,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(SPRITE_GUIICON_FRIEND);
 	QuadItem = IGraphics::CQuadItem(Label.x, Label.y, Label.w, Label.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	// scroll, ignore margins

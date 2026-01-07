@@ -70,15 +70,55 @@ void CRenderTools::RenderCursor(float CenterX, float CenterY, float Size)
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	IGraphics::CQuadItem QuadItem(CenterX, CenterY, Size, Size);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 	Graphics()->WrapNormal();
 }
 
 void CRenderTools::RenderTeePhase(const CRenderTeeData *pData, int RenderPhase)
 {
+	if(RenderPhase == CRenderTeeData::RENDER_PHASE_HAND)
+	{
+		// in-game hand size is 15 when tee size is 64
+		float BaseSize = 15.0f * (pData->m_pInfo->m_Size / 64.0f);
+
+		vec2 HandPos = pData->m_Pos + pData->m_HandDir;
+		float Angle = angle(pData->m_HandDir);
+		if(pData->m_HandDir.x < 0)
+			Angle -= pData->m_AngleOffset;
+		else
+			Angle += pData->m_AngleOffset;
+
+		vec2 DirX = pData->m_HandDir;
+		vec2 DirY(-pData->m_HandDir.y, pData->m_HandDir.x);
+
+		if(pData->m_HandDir.x < 0)
+			DirY = -DirY;
+
+		HandPos += DirX * pData->m_PostRotOffset.x;
+		HandPos += DirY * pData->m_PostRotOffset.y;
+
+		const vec4 Color = pData->m_pInfo->m_aColors[SKINPART_HANDS];
+		IGraphics::CQuadItem QuadOutline(HandPos.x, HandPos.y, 2 * BaseSize, 2 * BaseSize);
+		IGraphics::CQuadItem QuadHand = QuadOutline;
+
+		Graphics()->TextureSet(pData->m_pInfo->m_aTextures[SKINPART_HANDS]);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(Color.r, Color.g, Color.b, Color.a);
+		Graphics()->QuadsSetRotation(Angle);
+
+		SelectSprite(SPRITE_TEE_HAND_OUTLINE, 0, 0, 0);
+		Graphics()->QuadsDraw(&QuadOutline, 1);
+		SelectSprite(SPRITE_TEE_HAND, 0, 0, 0);
+		Graphics()->QuadsDraw(&QuadHand, 1);
+
+		Graphics()->QuadsSetRotation(0);
+		Graphics()->QuadsEnd();
+		return;
+	}
+
 	CAnimState *pAnim = pData->m_pAnim;
-	const CTeeRenderInfo *pInfo = pData->m_pInfo; 
+	const CTeeRenderInfo *pInfo = pData->m_pInfo;
 	int Emote = pData->m_Emote;
 	float Alpha = pData->m_Alpha;
 	bool XmasHat = pData->m_XmasHat;
@@ -94,7 +134,7 @@ void CRenderTools::RenderTeePhase(const CRenderTeeData *pData, int RenderPhase)
 	IGraphics::CQuadItem Item;
 
 	bool OutLine = RenderPhase <= CRenderTeeData::RENDER_PHASE_OUTLINES_END;
-	switch (RenderPhase)
+	switch(RenderPhase)
 	{
 		case CRenderTeeData::RENDER_PHASE_OUTLINE_FEET:
 		case CRenderTeeData::RENDER_PHASE_OUTLINE_FEET_FRONT:
@@ -180,7 +220,7 @@ void CRenderTools::RenderTeePhase(const CRenderTeeData *pData, int RenderPhase)
 			}
 			else
 				Graphics()->SetColor(pInfo->m_aColors[SKINPART_EYES].r * Alpha, pInfo->m_aColors[SKINPART_EYES].g * Alpha, pInfo->m_aColors[SKINPART_EYES].b * Alpha, Alpha);
-			
+
 			if(!OutLine)
 			{
 				switch(Emote)
@@ -300,44 +340,6 @@ void CRenderTools::RenderTeePhase(const CRenderTeeData *pData, int RenderPhase)
 			Graphics()->QuadsEnd();
 		}
 		break;
-		case CRenderTeeData::RENDER_PHASE_HAND:
-		{
-			// in-game hand size is 15 when tee size is 64
-			float BaseSize = 15.0f * (pInfo->m_Size / 64.0f);
-
-			vec2 HandPos = pData->m_Pos + pData->m_HandDir;
-			float Angle = angle(pData->m_HandDir);
-			if(pData->m_HandDir.x < 0)
-				Angle -= pData->m_AngleOffset;
-			else
-				Angle += pData->m_AngleOffset;
-
-			vec2 DirX = pData->m_HandDir;
-			vec2 DirY(-pData->m_HandDir.y, pData->m_HandDir.x);
-
-			if(pData->m_HandDir.x < 0)
-				DirY = -DirY;
-
-			HandPos += DirX * pData->m_PostRotOffset.x;
-			HandPos += DirY * pData->m_PostRotOffset.y;
-
-			const vec4 Color = pInfo->m_aColors[SKINPART_HANDS];
-			IGraphics::CQuadItem QuadOutline(HandPos.x, HandPos.y, 2 * BaseSize, 2 * BaseSize);
-			IGraphics::CQuadItem QuadHand = QuadOutline;
-
-			Graphics()->TextureSet(pInfo->m_aTextures[SKINPART_HANDS]);
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(Color.r, Color.g, Color.b, Color.a);
-			Graphics()->QuadsSetRotation(Angle);
-
-			SelectSprite(SPRITE_TEE_HAND_OUTLINE, 0, 0, 0);
-			Graphics()->QuadsDraw(&QuadOutline, 1);
-			SelectSprite(SPRITE_TEE_HAND, 0, 0, 0);
-			Graphics()->QuadsDraw(&QuadHand, 1);
-
-			Graphics()->QuadsSetRotation(0);
-			Graphics()->QuadsEnd();
-		}
 	}
 }
 

@@ -61,6 +61,7 @@ option(DOWNLOAD_DEPENDENCIES "Download dependencies (only available on Windows)"
 option(DOWNLOAD_GTEST "Download and compile GTest if not found" ${AUTO_DEPENDENCIES_DEFAULT})
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
+option(USE_OPENGLES "Use OpenGL ES 3.2" OFF)
 
 set(OpenGL_GL_PREFERENCE GLVND)
 
@@ -406,11 +407,22 @@ add_library(json EXCLUDE_FROM_ALL OBJECT ${DEP_JSON_SRC})
 set_src(DEP_MD5_SRC GLOB src/engine/external/md5 md5.c md5.h)
 add_library(md5 EXCLUDE_FROM_ALL OBJECT ${DEP_MD5_SRC})
 
-list(APPEND TARGETS_DEP json md5)
+if(USE_OPENGLES)
+  file(GLOB DEP_GLAD_SRC src/engine/external/glad/gles2.c src/engine/external/glad/gles2.h src/engine/external/glad/khrplatform.h)
+else()
+  file(GLOB DEP_GLAD_SRC src/engine/external/glad/gl.c src/engine/external/glad/gl.h src/engine/external/glad/khrplatform.h)
+endif()
+add_library(glad EXCLUDE_FROM_ALL OBJECT ${DEP_GLAD_SRC})
+
+list(APPEND TARGETS_DEP json md5 glad)
 set(DEP_JSON $<TARGET_OBJECTS:json>)
 set(DEP_MD5)
+set(DEP_GLAD)
 if(NOT CRYPTO_FOUND)
   set(DEP_MD5 $<TARGET_OBJECTS:md5>)
+endif()
+if(CLIENT)
+  set(DEP_GLAD $<TARGET_OBJECTS:glad>)
 endif()
 
 ########################################################################
@@ -814,7 +826,7 @@ set(EXPECTED_DATA
   editor/entities/reinfected.png
   emoticons.png
   fonts/DejaVuSans.ttf
-  fonts/LitcaneSansLite.ttc
+  fonts/LitcaneSans.ttc
   fonts/index.json
   game.png
   languages/belarusian.json
@@ -1452,7 +1464,7 @@ if(CLIENT)
   )
   set(CLIENT_SRC ${PLATFORM_CLIENT} ${ENGINE_CLIENT} ${GAME_CLIENT} ${GAME_EDITOR} ${GAME_GENERATED_CLIENT})
 
-  set(DEPS_CLIENT ${DEPS} ${PNGLITE_DEP} ${WAVPACK_DEP})
+  set(DEPS_CLIENT ${DEPS} ${PNGLITE_DEP} ${WAVPACK_DEP} ${DEP_GLAD})
 
   # Libraries
   set(LIBS_CLIENT
@@ -1789,7 +1801,11 @@ if(TARGET_OS AND TARGET_BITS)
   endif()
 endif()
 
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
+if(USE_OPENGLES AND CLIENT)
+  set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-OpenGLES-${CPACK_SYSTEM_NAME})
+else()
+  set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
+endif()
 set(CPACK_ARCHIVE_PORTABLE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-src)
 set(CPACK_SOURCE_FILES
@@ -2111,6 +2127,9 @@ foreach(target ${TARGETS_OWN})
   endif()
   if(HEADLESS_CLIENT)
     target_compile_definitions(${target} PRIVATE CONF_HEADLESS_CLIENT)
+  endif()
+  if(USE_OPENGLES)
+    target_compile_definitions(${target} PRIVATE CONF_USE_OPENGLES)
   endif()
 endforeach()
 

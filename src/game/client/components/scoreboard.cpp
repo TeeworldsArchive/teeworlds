@@ -598,7 +598,7 @@ float CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const c
 
 				float Size = LineHeight;
 				IGraphics::CQuadItem QuadItem(TeeOffset + 4.0f, y - 2.0f - Spacing / 2.0f, Size / 2.0f, Size);
-				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
 				Graphics()->QuadsEnd();
 			}
 
@@ -614,7 +614,7 @@ float CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const c
 					Graphics()->SetColor(Color.r, Color.g, Color.b, Color.a);
 				}
 				IGraphics::CQuadItem QuadItem(TeeOffset + TeeLength / 2 - 10 * TeeSizeMod, y - 2.0f + Spacing, 20 * TeeSizeMod, 20 * TeeSizeMod);
-				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
 				Graphics()->QuadsEnd();
 			}
 			else
@@ -766,7 +766,7 @@ void CScoreboard::RenderNetworkQuality(float x, float w)
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(SPRITE_NETWORK_GOOD);
 	IGraphics::CQuadItem QuadItem(x + 20.0f, 12.5f, 25.0f, 25.0f);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	x += 50.0f;

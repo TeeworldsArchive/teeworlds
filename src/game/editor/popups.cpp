@@ -856,7 +856,7 @@ bool CEditor::PopupSelectImage(void *pContext, CUIRect View)
 		pEditor->Graphics()->WrapClamp();
 		pEditor->Graphics()->QuadsBegin();
 		IGraphics::CQuadItem QuadItem(ImageView.x, ImageView.y, ImageView.w, ImageView.h);
-		pEditor->Graphics()->QuadsDrawTL(&QuadItem, 1);
+		pEditor->Graphics()->SingleQuadDrawTL(&QuadItem);
 		pEditor->Graphics()->QuadsEnd();
 		pEditor->Graphics()->WrapNormal();
 	}
@@ -1073,7 +1073,7 @@ bool CEditor::PopupColorPicker(void *pContext, CUIRect View)
 	pEditor->Graphics()->SetColorVertex(ColorArray, 4);
 
 	IGraphics::CQuadItem QuadItem(SVPicker.x, SVPicker.y, SVPicker.w, SVPicker.h);
-	pEditor->Graphics()->QuadsDrawTL(&QuadItem, 1);
+	pEditor->Graphics()->SingleQuadDrawTL(&QuadItem);
 
 	// base: transparent - black
 	ColorArray[0] = IGraphics::CColorVertex(0, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -1083,7 +1083,7 @@ bool CEditor::PopupColorPicker(void *pContext, CUIRect View)
 
 	pEditor->Graphics()->SetColorVertex(ColorArray, 4);
 
-	pEditor->Graphics()->QuadsDrawTL(&QuadItem, 1);
+	pEditor->Graphics()->SingleQuadDrawTL(&QuadItem);
 
 	pEditor->Graphics()->QuadsEnd();
 
@@ -1131,13 +1131,13 @@ bool CEditor::PopupColorPicker(void *pContext, CUIRect View)
 		ColorArray[3] = IGraphics::CColorVertex(3, ColorBottom.r, ColorBottom.g, ColorBottom.b, ColorBottom.a);
 		pEditor->Graphics()->SetColorVertex(ColorArray, 4);
 		IGraphics::CQuadItem QuadItem(HuePicker.x, HuePicker.y + Offset * j, HuePicker.w, Offset);
-		pEditor->Graphics()->QuadsDrawTL(&QuadItem, 1);
+		pEditor->Graphics()->SingleQuadDrawTL(&QuadItem);
 	}
 
 	// marker
 	pEditor->Graphics()->SetColor(0.5f, 0.5f, 0.5f, 1.0f);
 	IGraphics::CQuadItem QuadItemMarker(HuePicker.x, HuePicker.y + (1.0f - hsv.x) * HuePicker.h, HuePicker.w, pEditor->UI()->PixelSize());
-	pEditor->Graphics()->QuadsDrawTL(&QuadItemMarker, 1);
+	pEditor->Graphics()->SingleQuadDrawTL(&QuadItemMarker);
 
 	pEditor->Graphics()->QuadsEnd();
 

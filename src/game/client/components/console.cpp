@@ -471,7 +471,7 @@ void CGameConsole::OnRender()
 		IGraphics::CColorVertex(3, 0, 0, 0, 0.0f)};
 	Graphics()->SetColorVertex(Array, 4);
 	IGraphics::CQuadItem QuadItem(0, ConsoleHeight, Screen.w, 10.0f);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	// do background
@@ -482,7 +482,7 @@ void CGameConsole::OnRender()
 		Graphics()->SetColor(0.4f, 0.2f, 0.2f, 0.9f);
 	Graphics()->QuadsSetSubset(0, -ConsoleHeight * 0.075f, Screen.w * 0.075f * 0.5f, 0);
 	QuadItem = IGraphics::CQuadItem(0, 0, Screen.w, ConsoleHeight);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	// do small bar shadow
@@ -494,7 +494,7 @@ void CGameConsole::OnRender()
 	Array[3] = IGraphics::CColorVertex(3, 0, 0, 0, 0.25f);
 	Graphics()->SetColorVertex(Array, 4);
 	QuadItem = IGraphics::CQuadItem(0, ConsoleHeight - 20, Screen.w, 10);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	// do the lower bar
@@ -503,7 +503,7 @@ void CGameConsole::OnRender()
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.9f);
 	Graphics()->QuadsSetSubset(0, 0.1f, Screen.w * 0.015f, 1 - 0.1f);
 	QuadItem = IGraphics::CQuadItem(0, ConsoleHeight - 10.0f, Screen.w, 10.0f);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	ConsoleHeight -= 36.0f;
