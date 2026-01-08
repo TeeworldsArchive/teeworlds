@@ -126,6 +126,7 @@ class CCommandProcessorFragment_OpenGL
 	bool m_LastAlphaOnly;
 
 	bool m_IsOpenGLES;
+
 public:
 	enum
 	{

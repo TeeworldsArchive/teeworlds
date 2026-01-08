@@ -3,8 +3,8 @@
 #include <base/detect.h>
 #include <base/tl/threading.h>
 
-#include <SDL3/SDL.h>
 #include <engine/external/glad/gl.h>
+#include <SDL3/SDL.h>
 
 #include "backend_sdl.h"
 #include "graphics_threaded.h"
