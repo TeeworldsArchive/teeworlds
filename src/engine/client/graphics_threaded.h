@@ -360,7 +360,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	{
 		NUM_CMDBUFFERS = 2,
 
-		MAX_VERTICES = 32 * 1024,
 		MAX_TEXTURES = 1024 * 4,
 
 		DRAWING_QUADS = 1,
@@ -379,7 +378,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	class CConfig *m_pConfig;
 	class IConsole *m_pConsole;
 
-	CCommandBuffer::CVertex m_aVertices[MAX_VERTICES];
+	CCommandBuffer::CVertex m_aVertices[CCommandBuffer::MAX_VERTICES];
 	int m_NumVertices;
 
 	CCommandBuffer::CColor m_aColor[4];

@@ -9,8 +9,6 @@
 #include "backend_sdl.h"
 #include "graphics_threaded.h"
 
-static constexpr GLenum BUFFER_INIT_INDEX_TARGET = GL_ELEMENT_ARRAY_BUFFER;
-
 static const char *s_VertexShaderSource = R"(
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec3 aTexCoord;
@@ -55,9 +53,7 @@ void main()
 	#endif
        	if(IsAlphaOnly)
         {
-			vec4 FinalColor = vec4(Color.rgb, texColor.r * Color.a);
-            // Alpha-only textures: use red channel as alpha, color from vertex color
-            FragColor = FinalColor;
+            FragColor = vec4(Color.rgb, texColor.r * Color.a);
         }
         else
         {
@@ -481,11 +477,11 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 			glUniform1i(m_aRenderShader[i].m_OurTextureLoc, 0);
 	}
 
-	glGenBuffers(1, &m_PrimitiveDrawBufferID);
 	glGenVertexArrays(1, &m_PrimitiveDrawVertexID);
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_PrimitiveDrawBufferID);
 	glBindVertexArray(m_PrimitiveDrawVertexID);
+
+	glGenBuffers(1, &m_PrimitiveDrawBufferID);
+	glBindBuffer(GL_ARRAY_BUFFER, m_PrimitiveDrawBufferID);
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
@@ -495,7 +491,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(CCommandBuffer::CVertex), (void *) (sizeof(float) * 5));
 
 	glGenBuffers(1, &m_QuadDrawIndexBufferID);
-	glBindBuffer(BUFFER_INIT_INDEX_TARGET, m_QuadDrawIndexBufferID);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_QuadDrawIndexBufferID);
 
 	unsigned int aIndices[CCommandBuffer::MAX_VERTICES / 4 * 6];
 	int Primq = 0;
@@ -509,7 +505,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 		aIndices[i + 5] = Primq + 3;
 		Primq += 4;
 	}
-	glBufferData(BUFFER_INIT_INDEX_TARGET, sizeof(unsigned int) * CCommandBuffer::MAX_VERTICES / 4 * 6, aIndices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * CCommandBuffer::MAX_VERTICES / 4 * 6, aIndices, GL_STATIC_DRAW);
 
 	m_pTextureMemoryUsage = pCommand->m_pTextureMemoryUsage;
 	*m_pTextureMemoryUsage = 0;
@@ -542,11 +538,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::
 {
 	if(m_aTextures[pCommand->m_Slot].m_State & CTexture::STATE_TEX2D)
 	{
-		if(m_LastTexture2D != m_aTextures[pCommand->m_Slot].m_Tex2D)
-		{
-			m_LastTexture2D = m_aTextures[pCommand->m_Slot].m_Tex2D;
-			glBindTexture(GL_TEXTURE_2D, m_LastTexture2D);
-		}
+		glBindTexture(GL_TEXTURE_2D, m_aTextures[pCommand->m_Slot].m_Tex2D);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, pCommand->m_X, pCommand->m_Y,
 			pCommand->m_Width, pCommand->m_Height,
 			TexFormatToOpenGLFormat(pCommand->m_Format),
@@ -984,6 +976,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 
 	// set gl attributes for OpenGL 3.3 Core Profile
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 
 	if(Flags & IGraphicsBackend::INITFLAG_OPENGLES)
 	{

@@ -98,7 +98,7 @@ void CGraphics_Threaded::FlushVertices()
 void CGraphics_Threaded::AddVertices(int Count)
 {
 	m_NumVertices += Count;
-	if((m_NumVertices + Count) >= MAX_VERTICES)
+	if((m_NumVertices + Count) >= CCommandBuffer::MAX_VERTICES)
 		FlushVertices();
 }
 
