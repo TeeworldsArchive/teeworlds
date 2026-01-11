@@ -48,6 +48,8 @@ void CRenderTools::SelectSprite(const CDataSprite *pSpr, int Flags, int sx, int 
 		std::swap(x1, x2);
 
 	Graphics()->QuadsSetSubset(x1, y1, x2, y2);
+	if(Flags & SPRITE_FLAG_STAINED_ONLY)
+		Graphics()->StainedOnly(true);
 }
 
 void CRenderTools::SelectSprite(int Id, int Flags, int sx, int sy)

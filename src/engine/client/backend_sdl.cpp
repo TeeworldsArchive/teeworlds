@@ -41,6 +41,7 @@ in vec4 Color;
 uniform PRECISION_TYPE SAMPLER_TYPE ourTexture;
 uniform bool useTexture;
 uniform bool IsAlphaOnly;
+uniform bool IsStainedOnly;
 
 void main()
 {
@@ -55,6 +56,18 @@ void main()
         {
             FragColor = vec4(Color.rgb, texColor.r * Color.a);
         }
+		else if(IsStainedOnly)
+		{
+			const float epsilon = 0.2;
+			if(abs(texColor.r - texColor.g) < epsilon && abs(texColor.r - texColor.b) < epsilon)
+			{
+				FragColor = texColor * vec4(Color.rgb * Color.a, Color.a);
+			}
+			else
+			{
+				FragColor = vec4(texColor.rgb, texColor.a * Color.a);
+			}
+		}
         else
         {
             // Regular RGBA textures
@@ -297,6 +310,7 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		glUseProgram(Shader.m_ShaderProgram);
 		m_CurrentShader = (State.m_Dimension == 3 ? 1 : 0);
 	}
+	glUniform1i(Shader.m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
 	// Get uniform locations
 	const int &UseTextureLoc = Shader.m_UseTextureLoc;
 	const int &IsAlphaOnlyLoc = Shader.m_IsAlphaOnlyLoc;
@@ -466,6 +480,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	{
 		m_aRenderShader[i].m_UseTextureLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "useTexture");
 		m_aRenderShader[i].m_IsAlphaOnlyLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "IsAlphaOnly");
+		m_aRenderShader[i].m_IsStainedOnlyLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "IsStainedOnly");
 		m_aRenderShader[i].m_OurTextureLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "ourTexture");
 		m_aRenderShader[i].m_ProjectionLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "projection");
 
@@ -666,7 +681,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 		else
 		{
 			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			if(pCommand->m_Flags & CCommandBuffer::TEXTFLAG_LINEARMIPMAPS)
+			if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_LINEARMIPMAPS)
 				glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			else
 				glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -976,7 +991,6 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 
 	// set gl attributes for OpenGL 3.3 Core Profile
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 
 	if(Flags & IGraphicsBackend::INITFLAG_OPENGLES)
 	{
@@ -989,6 +1003,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 	}
 
 	if(FsaaSamples)

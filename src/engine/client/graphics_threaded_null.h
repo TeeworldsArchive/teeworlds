@@ -29,6 +29,8 @@ public:
 
 	virtual int MemoryUsage() const { return 0; };
 
+	virtual void StainedOnly(bool Flag) {};
+
 	virtual void MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY) {};
 	virtual void GetScreen(float *pTopLeftX, float *pTopLeftY, float *pBottomRightX, float *pBottomRightY)
 	{

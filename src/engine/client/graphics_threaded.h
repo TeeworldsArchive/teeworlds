@@ -108,7 +108,7 @@ public:
 		TEXFLAG_QUALITY = 4,
 		TEXFLAG_TEXTURE3D = 8,
 		TEXFLAG_TEXTURE2D = 16,
-		TEXTFLAG_LINEARMIPMAPS = 32,
+		TEXFLAG_LINEARMIPMAPS = 32,
 	};
 
 	enum
@@ -174,6 +174,8 @@ public:
 		int m_ClipY;
 		int m_ClipW;
 		int m_ClipH;
+
+		bool m_IsStainedOnly;
 	};
 
 	struct CClearCommand : public CCommand
@@ -422,6 +424,8 @@ public:
 	virtual void WrapMode(int WrapU, int WrapV);
 
 	virtual int MemoryUsage() const;
+
+	virtual void StainedOnly(bool Flag);
 
 	virtual void MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY);
 	virtual void GetScreen(float *pTopLeftX, float *pTopLeftY, float *pBottomRightX, float *pBottomRightY);

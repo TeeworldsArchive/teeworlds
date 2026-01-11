@@ -257,7 +257,9 @@ void CSpectator::OnRender()
 			Graphics()->BlendNormal();
 			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 			Graphics()->QuadsBegin();
-			RenderTools()->SelectSprite(Flag == SPEC_FLAGRED ? SPRITE_FLAG_RED : SPRITE_FLAG_BLUE);
+
+			RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_STAINED_ONLY);
+			Graphics()->SetColor(Flag == SPEC_FLAGRED ? gs_RedTeamColor : gs_BlueTeamColor);
 			IGraphics::CQuadItem QuadItem(FlagPos.x, FlagPos.y, FlagSize.x, FlagSize.y);
 			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();
@@ -304,7 +306,9 @@ void CSpectator::OnRender()
 			Graphics()->BlendNormal();
 			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 			Graphics()->QuadsBegin();
-			RenderTools()->SelectSprite(i == m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierBlue ? SPRITE_FLAG_BLUE : SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
+
+			RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_FLIP_X | SPRITE_FLAG_STAINED_ONLY);
+			Graphics()->SetColor(i == m_pClient->m_Snap.m_pGameDataFlag->m_FlagDropTickBlue ? gs_BlueTeamColor : gs_RedTeamColor);
 			IGraphics::CQuadItem QuadItem(PosX - PlayerRect.h / 4.0f, PlayerRect.y - PlayerRect.h * 0.05f, PlayerRect.h / 2.0f, PlayerRect.h);
 			Graphics()->SingleQuadDrawTL(&QuadItem);
 			Graphics()->QuadsEnd();

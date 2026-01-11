@@ -338,10 +338,12 @@ void CStats::OnRender()
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 		Graphics()->QuadsBegin();
 		Graphics()->QuadsSetRotation(-0.39f);
-		RenderTools()->SelectSprite(SPRITE_FLAG_BLUE, SPRITE_FLAG_FLIP_X);
+		RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_FLIP_X | SPRITE_FLAG_STAINED_ONLY);
+		Graphics()->SetColor(gs_BlueTeamColor);
 		RenderTools()->DrawSprite(x + px - 10, y + HeaderHeight / 2.0f, 48);
 		Graphics()->QuadsSetRotation(0.39f);
-		RenderTools()->SelectSprite(SPRITE_FLAG_RED);
+		RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_STAINED_ONLY);
+		Graphics()->SetColor(gs_RedTeamColor);
 		RenderTools()->DrawSprite(x + px + 10, y + HeaderHeight / 2.0f, 48);
 		Graphics()->QuadsEnd();
 	}
@@ -585,10 +587,8 @@ void CStats::OnRender()
 				for(int n = 0; n < DisplayedFlagsCount; n++)
 				{
 					Graphics()->QuadsSetRotation(0.18f);
-					if(m_pClient->m_aClients[aPlayers[j]].m_Team == TEAM_RED)
-						RenderTools()->SelectSprite(SPRITE_FLAG_BLUE);
-					else
-						RenderTools()->SelectSprite(SPRITE_FLAG_RED);
+					Graphics()->SetColor(m_pClient->m_aClients[aPlayers[j]].m_Team == TEAM_RED ? gs_BlueTeamColor : gs_RedTeamColor);
+					RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_STAINED_ONLY);
 					RenderTools()->DrawSprite(x + TempX, y + 25, 48);
 					TempX += Space;
 				}

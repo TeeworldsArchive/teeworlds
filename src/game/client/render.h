@@ -8,11 +8,15 @@
 #include <game/mapitems.h>
 #include <generated/protocol.h>
 
+static const vec4 gs_RedTeamColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+static const vec4 gs_BlueTeamColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+
 // sprite renderings
 enum
 {
 	SPRITE_FLAG_FLIP_Y = 1,
 	SPRITE_FLAG_FLIP_X = 2,
+	SPRITE_FLAG_STAINED_ONLY = 4,
 
 	LAYERRENDERFLAG_OPAQUE = 1,
 	LAYERRENDERFLAG_TRANSPARENT = 2,
@@ -29,6 +33,7 @@ public:
 			m_aColors[i] = vec4(1, 1, 1, 1);
 		m_Size = 1.0f;
 		m_GotAirJump = 1;
+		m_TeamColor = vec4(1, 1, 1, 1);
 	};
 
 	IGraphics::CTextureHandle m_aTextures[NUM_SKINPARTS];
@@ -39,6 +44,7 @@ public:
 	vec4 m_aColors[NUM_SKINPARTS];
 	float m_Size;
 	int m_GotAirJump;
+	vec4 m_TeamColor;
 };
 
 typedef void (*ENVELOPE_EVAL)(float TimeOffset, int Env, float *pChannels, void *pUser);

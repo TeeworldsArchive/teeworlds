@@ -133,6 +133,7 @@ CGraphics_Threaded::CGraphics_Threaded()
 	m_State.m_BlendMode = CCommandBuffer::BLEND_NONE;
 	m_State.m_WrapModeU = WRAP_REPEAT;
 	m_State.m_WrapModeV = WRAP_REPEAT;
+	m_State.m_IsStainedOnly = false;
 
 	m_CurrentCommandBuffer = 0;
 	m_pCommandBuffer = 0x0;
@@ -213,6 +214,11 @@ void CGraphics_Threaded::WrapMode(int WrapU, int WrapV)
 int CGraphics_Threaded::MemoryUsage() const
 {
 	return m_pBackend->MemoryUsage();
+}
+
+void CGraphics_Threaded::StainedOnly(bool Flag)
+{
+	m_State.m_IsStainedOnly = Flag;
 }
 
 void CGraphics_Threaded::MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY)
@@ -358,7 +364,7 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 	if(Flags & IGraphics::TEXLOAD_MULTI_DIMENSION)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE3D;
 	if(Flags & IGraphics::TEXLOAD_LINEARMIPMAPS)
-		Cmd.m_Flags |= CCommandBuffer::TEXTFLAG_LINEARMIPMAPS;
+		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_LINEARMIPMAPS;
 
 	// copy texture data
 	int MemSize = Width * Height * Cmd.m_PixelSize;
@@ -521,7 +527,9 @@ void CGraphics_Threaded::QuadsBegin()
 
 	QuadsSetSubset(0, 0, 1, 1, -1);
 	QuadsSetRotation(0);
+	StainedOnly(false);
 	SetColor(1, 1, 1, 1);
+	
 	m_TextureArrayIndex = m_pBackend->GetTextureArraySize() > 1 ? -1 : 0;
 }
 

@@ -594,7 +594,8 @@ float CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const c
 				Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 				Graphics()->QuadsBegin();
 
-				RenderTools()->SelectSprite(pInfo->m_ClientID == m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierBlue ? SPRITE_FLAG_BLUE : SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
+				RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_FLIP_X | SPRITE_FLAG_STAINED_ONLY);
+				Graphics()->SetColor(pInfo->m_ClientID == m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierBlue ? gs_BlueTeamColor : gs_RedTeamColor);
 
 				float Size = LineHeight;
 				IGraphics::CQuadItem QuadItem(TeeOffset + 4.0f, y - 2.0f - Spacing / 2.0f, Size / 2.0f, Size);

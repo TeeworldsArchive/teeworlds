@@ -278,7 +278,8 @@ void CHud::RenderScoreHud()
 						Graphics()->BlendNormal();
 						Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 						Graphics()->QuadsBegin();
-						RenderTools()->SelectSprite(t == 0 ? SPRITE_FLAG_RED : SPRITE_FLAG_BLUE);
+						RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_STAINED_ONLY);
+						Graphics()->SetColor(t == 0 ? gs_RedTeamColor : gs_BlueTeamColor);
 						IGraphics::CQuadItem QuadItem(Whole - ScoreWidthMax - ImageSize, StartY + 1.0f + t * TeamOffset, ImageSize / 2, ImageSize);
 						Graphics()->SingleQuadDrawTL(&QuadItem);
 						Graphics()->QuadsEnd();

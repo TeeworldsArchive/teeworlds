@@ -1106,9 +1106,9 @@ void CChat::OnRender()
 	{
 		CUIRect Rect;
 		Rect.x = 0.0f;
-		Rect.y = HeightLimit - 2.0f;
+		Rect.y = HeightLimit - 6.0f;
 		Rect.w = LineWidth + x + 3.0f;
-		Rect.h = Height - HeightLimit - 22.f;
+		Rect.h = Height - HeightLimit - 18.f;
 
 		const vec4 Color = vec4(0.0f, 0.0f, 0.0f, 0.2f);
 		Rect.Draw4(Color, Color, Color, Color, 3.0f, CUIRect::CORNER_R);
@@ -1153,7 +1153,7 @@ void CChat::OnRender()
 		{
 			static CTextCursor s_PageCursor(FontSize - 1.0f);
 			s_PageCursor.Reset();
-			s_PageCursor.MoveTo(6.0f, HeightLimit - 3.0f);
+			s_PageCursor.MoveTo(6.0f, HeightLimit - 6.0f);
 			char aBuf[128];
 			str_format(aBuf, sizeof(aBuf), Localize("-Page %d/%d-"), m_BacklogPage + 1, Page + 1);
 			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.6f);
@@ -1201,9 +1201,9 @@ void CChat::OnRender()
 		const vec4 ShadowColor = pLine->m_Mode == CHAT_WHISPER ? ShadowWhisper : ShadowBlack;
 		const vec4 ColorSystem(1.0f, 1.0f, 0.5f, 1);
 		const vec4 ColorWhisper(0.4f, 1.0f, 1.0f, 1);
-		const vec4 ColorRed(1.0f, 0.5f, 0.5f, 1);
-		const vec4 ColorBlue(0.7f, 0.7f, 1.0f, 1);
-		const vec4 ColorSpec(0.75f, 0.5f, 0.75f, 1);
+		const vec4 ColorRed = gs_RedTeamColor * vec4(0.9f, 0.9f, 0.9f, 1.0f);
+		const vec4 ColorBlue = gs_BlueTeamColor * vec4(0.9f, 0.9f, 0.9f, 1.0f);
+		const vec4 ColorSpec(0.75f, 0.75f, 0.75f, 0.5f);
 		const vec4 ColorAllPre(0.8f, 0.8f, 0.8f, 1);
 		const vec4 ColorAllText(1.0f, 1.0f, 1.0f, 1);
 		const vec4 ColorTeamPre(0.45f, 0.9f, 0.45f, 1);
@@ -1322,7 +1322,7 @@ void CChat::OnRender()
 				Data.m_Emote = EMOTE_NORMAL;
 				Data.m_Dir = vec2(1.f, 0.f);
 				Data.m_Pos = vec2(s_ChatCursor.AdvancePosition().x + FontSize / 3 * 2 - 1.0f, y + FontSize / 3 * 2 + 1.0f);
-				Data.m_Alpha = Blend;
+				Data.m_Alpha = Blend * TextColorName.a;
 				Data.m_XmasHat = false;
 				TextRender()->TextAdvance(&s_ChatCursor, FontSize + 1.0f);
 			}
@@ -1343,6 +1343,7 @@ void CChat::OnRender()
 			TextColorLine = ColorTeamText;
 		else
 			TextColorLine = ColorAllText;
+		TextColorLine.a *= TextColorName.a;
 
 		TextRender()->TextColor(TextColorLine);
 		if(pLine->m_Highlighted)

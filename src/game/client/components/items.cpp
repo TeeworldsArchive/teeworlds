@@ -184,8 +184,9 @@ void CItems::RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent,
 	Graphics()->BlendNormal();
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 	Graphics()->QuadsBegin();
-	RenderTools()->SelectSprite(pCurrent->m_Team == TEAM_RED ? SPRITE_FLAG_RED : SPRITE_FLAG_BLUE);
+	RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_STAINED_ONLY);
 	Graphics()->QuadsSetRotation(0.0f);
+	Graphics()->SetColor(pCurrent->m_Team == TEAM_RED ? gs_RedTeamColor : gs_BlueTeamColor);
 	IGraphics::CQuadItem QuadItem(Pos.x, Pos.y - Size * 0.75f, Size, Size * 2);
 	Graphics()->QuadsDraw(&QuadItem, 1);
 	Graphics()->QuadsEnd();

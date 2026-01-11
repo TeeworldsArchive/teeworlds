@@ -84,6 +84,7 @@ class CCommandProcessorFragment_OpenGL
 		GLuint m_ShaderProgram;
 		int m_UseTextureLoc;
 		int m_IsAlphaOnlyLoc;
+		int m_IsStainedOnlyLoc;
 		int m_OurTextureLoc;
 		int m_ProjectionLoc;
 	} m_aRenderShader[2];

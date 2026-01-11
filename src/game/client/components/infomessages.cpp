@@ -268,10 +268,11 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 			Graphics()->QuadsBegin();
 
+			RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_STAINED_ONLY);
 			if(pInfoMsg->m_Player1ID == pInfoMsg->m_FlagCarrierBlue)
-				RenderTools()->SelectSprite(SPRITE_FLAG_BLUE);
+				Graphics()->SetColor(gs_BlueTeamColor);
 			else
-				RenderTools()->SelectSprite(SPRITE_FLAG_RED);
+				Graphics()->SetColor(gs_RedTeamColor);
 
 			float Size = 56.0f;
 			IGraphics::CQuadItem QuadItem(x, y - 16, Size / 2, Size);
@@ -305,10 +306,11 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 				Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 				Graphics()->QuadsBegin();
 
+				RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_FLIP_X | SPRITE_FLAG_STAINED_ONLY);
 				if(pInfoMsg->m_Player2ID == pInfoMsg->m_FlagCarrierBlue)
-					RenderTools()->SelectSprite(SPRITE_FLAG_BLUE, SPRITE_FLAG_FLIP_X);
+					Graphics()->SetColor(gs_BlueTeamColor);
 				else
-					RenderTools()->SelectSprite(SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
+					Graphics()->SetColor(gs_RedTeamColor);
 
 				float Size = 56.0f;
 				IGraphics::CQuadItem QuadItem(x - 56, y - 16, Size / 2, Size);
