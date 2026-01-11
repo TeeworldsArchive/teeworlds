@@ -60,7 +60,7 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		Kill.m_Player1RenderInfo = m_pClient->m_aClients[Kill.m_Player1ID].m_RenderInfo;
 
 		Kill.m_Player2ID = pMsg->m_Killer;
-		Kill.m_Player3ID = pMsg->m_Assister;
+		Kill.m_Player3ID = pMsg->m_Assist;
 
 		float FontSize = Kill.m_Player3ID >= 0 ? 20.0f : 36.0f;
 		if(Kill.m_Player2ID >= 0)
