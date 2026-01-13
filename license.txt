@@ -1,5 +1,5 @@
-Copyright (C) 2007-2025 Magnus Auvinen
-Copyright (C) 2026 Teeworlds Archive Project
+Teeworlds                 Copyright (C) 2007-2025 Magnus Auvinen
+Teeworlds Archive Project Copyright (C) 2025-2026 Teeworlds Archive Project Contributors
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
