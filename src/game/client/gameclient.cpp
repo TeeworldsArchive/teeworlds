@@ -1295,7 +1295,6 @@ void CGameClient::OnNewSnapshot()
 
 						// limit evolving to 3 seconds
 						int EvolvePrevTick = minimum(pCharInfo->m_Prev.m_Tick + Client()->GameTickSpeed() * 3, Client()->PrevGameTick());
-						int EvolveCurTick = minimum(pCharInfo->m_Cur.m_Tick + Client()->GameTickSpeed() * 3, Client()->GameTick());
 
 						// reuse the evolved char
 						if(m_aClients[Item.m_ID].m_Evolved.m_Tick == EvolvePrevTick)
@@ -1304,17 +1303,7 @@ void CGameClient::OnNewSnapshot()
 							if(mem_comp(pData, pOld, sizeof(CNetObj_Character)) == 0)
 								pCharInfo->m_Cur = m_aClients[Item.m_ID].m_Evolved;
 						}
-
-						if(pCharInfo->m_Prev.m_Tick)
-							EvolveCharacter(&pCharInfo->m_Prev, EvolvePrevTick);
-						if(pCharInfo->m_Cur.m_Tick)
-							EvolveCharacter(&pCharInfo->m_Cur, EvolveCurTick);
-
-						m_aClients[Item.m_ID].m_Evolved = m_Snap.m_aCharacters[Item.m_ID].m_Cur;
 					}
-
-					if(Item.m_ID != m_LocalClientID || !Config()->m_ClPredict || Client()->State() == IClient::STATE_DEMOPLAYBACK)
-						ProcessTriggeredEvents(pCharInfo->m_Cur.m_TriggeredEvents, vec2(pCharInfo->m_Cur.m_X, pCharInfo->m_Cur.m_Y));
 				}
 			}
 			else if(Item.m_Type == NETOBJTYPE_SPECTATORINFO)
@@ -1369,6 +1358,10 @@ void CGameClient::OnNewSnapshot()
 			else if(Item.m_Type == NETOBJTYPE_GAMEDATARACE)
 			{
 				m_Snap.m_pGameDataRace = (const CNetObj_GameDataRace *) pData;
+			}
+			else if(Item.m_Type == NETOBJTYPE_GAMEDATAPREDICTION)
+			{
+				m_Snap.m_pGameDataPrediction = (const CNetObj_GameDataPrediction *) pData;
 			}
 			else if(Item.m_Type == NETOBJTYPE_FLAG)
 			{
@@ -1437,9 +1430,23 @@ void CGameClient::OnNewSnapshot()
 		}
 	}
 
-	// calc some player stats
+	// calc some player stats, also trigger events
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
+		if(m_Snap.m_aCharacters[i].m_Active)
+		{
+			int EvolvePrevTick = minimum(m_Snap.m_aCharacters[i].m_Prev.m_Tick + Client()->GameTickSpeed() * 3, Client()->PrevGameTick());
+			int EvolveCurTick = minimum(m_Snap.m_aCharacters[i].m_Cur.m_Tick + Client()->GameTickSpeed() * 3, Client()->GameTick());
+			if(m_Snap.m_aCharacters[i].m_Prev.m_Tick)
+				EvolveCharacter(&m_Snap.m_aCharacters[i].m_Prev, EvolvePrevTick);
+			if(m_Snap.m_aCharacters[i].m_Cur.m_Tick)
+				EvolveCharacter(&m_Snap.m_aCharacters[i].m_Cur, EvolveCurTick);
+
+			m_aClients[i].m_Evolved = m_Snap.m_aCharacters[i].m_Cur;
+			if(i != m_LocalClientID || !Config()->m_ClPredict || Client()->State() == IClient::STATE_DEMOPLAYBACK || !GameDataPredictInput() || !GameDataPredictEvent())
+				ProcessTriggeredEvents(m_Snap.m_aCharacters[i].m_Cur.m_TriggeredEvents, vec2(m_Snap.m_aCharacters[i].m_Cur.m_X, m_Snap.m_aCharacters[i].m_Cur.m_Y));
+		}
+
 		if(!m_Snap.m_apPlayerInfos[i])
 			continue;
 
@@ -1581,7 +1588,7 @@ void CGameClient::OnPredict()
 
 			mem_zero(&World.m_apCharacters[c]->m_Input, sizeof(World.m_apCharacters[c]->m_Input));
 
-			if(m_LocalClientID == c)
+			if(m_LocalClientID == c && GameDataPredictInput())
 			{
 				// apply player input
 				const int *pInput = Client()->GetInput(Tick);
@@ -1620,7 +1627,7 @@ void CGameClient::OnPredict()
 			// necessary to trigger events for them here. Also, our predictions
 			// for other players will often be wrong, so it's safer not to
 			// trigger events here.
-			if(m_LocalClientID != -1 && World.m_apCharacters[m_LocalClientID] && Config()->m_ClPredict)
+			if(m_LocalClientID != -1 && World.m_apCharacters[m_LocalClientID] && Config()->m_ClPredict && GameDataPredictInput() && GameDataPredictEvent())
 			{
 				ProcessTriggeredEvents(
 					World.m_apCharacters[m_LocalClientID]->m_TriggeredEvents,

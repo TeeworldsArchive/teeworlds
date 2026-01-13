@@ -159,6 +159,7 @@ public:
 		const CNetObj_GameDataTeam *m_pGameDataTeam;
 		const CNetObj_GameDataFlag *m_pGameDataFlag;
 		const CNetObj_GameDataRace *m_pGameDataRace;
+		const CNetObj_GameDataPrediction *m_pGameDataPrediction;
 		int m_GameDataFlagSnapID;
 
 		int m_NotReadyCount;
@@ -308,6 +309,10 @@ public:
 	void DoTeamChangeMessage(const char *pName, int ClientID, int Team);
 
 	int GetClientID(const char *pName);
+
+	// ----- gamedata prediction helper -----
+	bool GameDataPredictInput() { return !m_Snap.m_pGameDataPrediction || m_Snap.m_pGameDataPrediction->m_PredictionFlags & GAMEPREDICTIONFLAG_INPUT; }
+	bool GameDataPredictEvent() { return !m_Snap.m_pGameDataPrediction || m_Snap.m_pGameDataPrediction->m_PredictionFlags & GAMEPREDICTIONFLAG_EVENT; }
 
 	// ----- send functions -----
 	// TODO: move these
