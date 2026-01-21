@@ -124,5 +124,4 @@ jobs:
         tag_name: nightly
         name: Nightly Build
         files: release/artifacts/*
-        draft: true
         prerelease: true
