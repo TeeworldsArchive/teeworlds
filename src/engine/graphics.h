@@ -114,6 +114,7 @@ public:
 
 	int ScreenWidth() const { return m_ScreenWidth; }
 	int ScreenHeight() const { return m_ScreenHeight; }
+	float ScreenUIScale() const { return (ScreenHeight() < 900.0f) ? 1.0f : (ScreenHeight() / 900.0f); }
 	float ScreenAspect() const { return (float) ScreenWidth() / (float) ScreenHeight(); }
 	float ScreenHiDPIScale() const { return m_ScreenHiDPIScale; }
 	int DesktopWidth() const { return m_DesktopScreenWidth; }

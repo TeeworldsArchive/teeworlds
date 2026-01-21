@@ -183,7 +183,7 @@ void CUI::ConvertCursorMove(float *pX, float *pY, int CursorType) const
 
 const CUIRect *CUI::Screen()
 {
-	m_Screen.h = 600;
+	m_Screen.h = Graphics()->ScreenUIScale() * 600;
 	m_Screen.w = Graphics()->ScreenAspect() * m_Screen.h;
 	return &m_Screen;
 }

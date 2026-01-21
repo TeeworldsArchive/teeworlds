@@ -299,6 +299,8 @@ void CMenus::SaveFilters()
 	Writer.BeginArray();
 	for(int i = 0; i < m_lFilters.size(); i++)
 	{
+		if(m_lFilters[i].Custom() != CBrowserFilter::FILTER_CUSTOM)
+			continue;
 		// part start
 		Writer.BeginObject();
 		Writer.WriteAttribute(m_lFilters[i].Name());
@@ -2195,7 +2197,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView)
 	MainView.VSplitRight(20.0f, &ServerList, &SidebarButton);
 
 	if(m_SidebarActive)
-		ServerList.VSplitRight(150.0f, &ServerList, &Sidebar);
+		ServerList.VSplitRight(Graphics()->ScreenUIScale() * 150.0f, &ServerList, &Sidebar);
 
 	// server list
 	RenderServerbrowserServerList(ServerList);

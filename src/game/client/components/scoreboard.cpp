@@ -235,9 +235,10 @@ float CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const c
 	if(m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS)
 		PlayerLines = maximum(m_pClient->m_GameInfo.m_aTeamSize[Team ^ 1], PlayerLines);
 
-	// clamp to 16
-	if(PlayerLines > 16)
-		PlayerLines = 16;
+	const int MaxPlayerLines = minimum<int>(round_to_int(Graphics()->ScreenUIScale() * 16), MAX_CLIENTS);
+	// clamp to MaxPlayerLines
+	if(PlayerLines > MaxPlayerLines)
+		PlayerLines = MaxPlayerLines;
 
 	char aBuf[128] = {0};
 
@@ -415,8 +416,8 @@ float CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const c
 	y += LineHeight;
 	float FontSize = HeadlineFontsize;
 
-	const int MAX_IDS = 16;
-	int RenderScoreIDs[MAX_IDS];
+	const int MAX_IDS = MaxPlayerLines;
+	int RenderScoreIDs[MAX_CLIENTS];
 	int NumRenderScoreIDs = 0;
 	int HoleSizes[2];
 	for(int i = 0; i < MAX_IDS; ++i)

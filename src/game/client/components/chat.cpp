@@ -801,7 +801,7 @@ void CChat::OnRender()
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
-	float x = 8.0f;
+	float x = 8.0;
 	float y = Height - 20.0f;
 	float LineWidth = 200.0f;
 
@@ -856,10 +856,11 @@ void CChat::OnRender()
 		else if(ChatMode == CHAT_WHISPER)
 			CatRectColor = CRCWhisper;
 
+		float x0 = (x + 2.0f) * Graphics()->ScreenUIScale();
 		CUIRect CatRect;
 		CatRect.x = 0;
 		CatRect.y = y;
-		CatRect.w = CategoryWidth + x + 2.0f + IconOffsetX;
+		CatRect.w = CategoryWidth + x0 + 2.0f + IconOffsetX;
 		CatRect.h = CategoryHeight;
 		CatRect.Draw(CatRectColor, 2.0f, CUIRect::CORNER_R);
 
@@ -894,8 +895,8 @@ void CChat::OnRender()
 		TextRender()->TextColor(1, 1, 1, Blend);
 		float ClientIDWidth = 0;
 		if(ChatMode == CHAT_WHISPER)
-			ClientIDWidth = UI()->DrawClientID(CategoryFontSize, vec2(x + IconOffsetX, y), m_WhisperTarget);
-		s_CategoryCursor.MoveTo(x + IconOffsetX + ClientIDWidth, y);
+			ClientIDWidth = UI()->DrawClientID(CategoryFontSize, vec2(x0 + IconOffsetX, y), m_WhisperTarget);
+		s_CategoryCursor.MoveTo(x0 + IconOffsetX + ClientIDWidth, y);
 		TextRender()->DrawTextOutlined(&s_CategoryCursor);
 
 		vec2 CursorPosition = s_CategoryCursor.CursorPosition();
@@ -912,7 +913,7 @@ void CChat::OnRender()
 			m_BufferedCursor.MoveTo(CursorPosition);
 
 			// calculate WidthLimit
-			m_BufferedCursor.m_MaxWidth = LineWidth + x + 3.0f - s_CategoryCursor.Width();
+			m_BufferedCursor.m_MaxWidth = LineWidth + x0 + 3.0f - s_CategoryCursor.Width();
 			m_BufferedCursor.m_MaxLines = 1;
 			m_BufferedCursor.m_Flags = TEXTFLAG_ELLIPSIS;
 
