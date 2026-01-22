@@ -29,6 +29,39 @@ static void digest_str(const unsigned char *digest, size_t digest_len, char *str
 	}
 }
 
+static int parse_str(unsigned char *out, const char *str, size_t len)
+{
+	unsigned char c;
+	unsigned byte_index;
+	unsigned i;
+	int val;
+	for(i = 0; i < len; i++)
+	{
+		c = str[i];
+
+		if(c >= '0' && c <= '9')
+			val = c - '0';
+		else if(c >= 'a' && c <= 'f')
+			val = c - 'a' + 10;
+		else if(c >= 'A' && c <= 'F')
+			val = c - 'A' + 10;
+		else
+			return -1; // invalid character
+
+		byte_index = i / 2;
+		if(i % 2 == 0)
+		{
+			out[byte_index] = (unsigned char) (val << 4);
+		}
+		else
+		{
+			out[byte_index] |= (unsigned char) val;
+		}
+	}
+
+	return 0;
+}
+
 SHA256_DIGEST sha256(const void *message, size_t message_len)
 {
 	SHA256_CTX ctxt;
@@ -40,6 +73,18 @@ SHA256_DIGEST sha256(const void *message, size_t message_len)
 void sha256_str(SHA256_DIGEST digest, char *str, size_t max_len)
 {
 	digest_str(digest.data, sizeof(digest.data), str, max_len);
+}
+
+int sha256_from_str(SHA256_DIGEST *out, const char *str)
+{
+	unsigned len;
+	if(!str || !out)
+		return -1;
+	len = str_length(str);
+	if(len != SHA256_MAXSTRSIZE - 1)
+		return -1;
+
+	return parse_str(out->data, str, len);
 }
 
 int sha256_comp(SHA256_DIGEST digest1, SHA256_DIGEST digest2)
@@ -58,6 +103,18 @@ MD5_DIGEST md5(const void *message, size_t message_len)
 void md5_str(MD5_DIGEST digest, char *str, size_t max_len)
 {
 	digest_str(digest.data, sizeof(digest.data), str, max_len);
+}
+
+int md5_from_str(MD5_DIGEST *out, const char *str)
+{
+	unsigned len;
+	if(!str || !out)
+		return -1;
+	len = str_length(str);
+	if(len != MD5_MAXSTRSIZE - 1)
+		return -1;
+
+	return parse_str(out->data, str, len);
 }
 
 int md5_comp(MD5_DIGEST digest1, MD5_DIGEST digest2)

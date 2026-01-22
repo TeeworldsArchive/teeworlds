@@ -529,7 +529,7 @@ void CGraphics_Threaded::QuadsBegin()
 	QuadsSetRotation(0);
 	StainedOnly(false);
 	SetColor(1, 1, 1, 1);
-	
+
 	m_TextureArrayIndex = m_pBackend->GetTextureArraySize() > 1 ? -1 : 0;
 }
 

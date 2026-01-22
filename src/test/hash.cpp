@@ -42,3 +42,14 @@ TEST(Hash, Sha256Eq)
 {
 	EXPECT_EQ(sha256("", 0), sha256("", 0));
 }
+
+TEST(Hash, Sha256FromStr)
+{
+	char QUICK_BROWN_FOX[] = "The quick brown fox jumps over the lazy dog.";
+	SHA256_DIGEST digest = sha256(QUICK_BROWN_FOX, str_length(QUICK_BROWN_FOX));
+	Expect(digest, "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c");
+
+	SHA256_DIGEST digest_from_str;
+	EXPECT_FALSE(sha256_from_str(&digest_from_str, "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c"));
+	EXPECT_EQ(digest, digest_from_str);
+}
