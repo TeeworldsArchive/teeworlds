@@ -3773,7 +3773,7 @@ void CEditor::RenderMenubar(CUIRect MenuBar)
 	// Exit editor button
 	static int s_ExitButton;
 	ExitButton.VSplitRight(13.f, 0, &ExitButton);
-	if(DoButton_Editor(&s_ExitButton, "\xE2\x9C\x95", 1, &ExitButton, 0, "[ctrl+shift+e] Exit"))
+	if(DoButton_Editor(&s_ExitButton, "\xE2\x9C\x95", 1, &ExitButton, 0, "[ctrl+shift+e] Exit") || Input()->KeyIsPressed(KEY_ESCAPE))
 	{
 		Config()->m_ClEditor ^= 1;
 		Input()->MouseModeRelative();
