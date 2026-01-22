@@ -328,5 +328,7 @@ public:
 	bool ToggleFullscreen();
 	void ToggleWindowBordered();
 	void ToggleWindowVSync();
+
+	virtual void OpenURL(const char *pUrl);
 };
 #endif

@@ -2499,6 +2499,11 @@ void CClient::ToggleWindowVSync()
 		Config()->m_GfxVsync ^= 1;
 }
 
+void CClient::OpenURL(const char *pUrl)
+{
+	SDL_OpenURL(pUrl);
+}
+
 void CClient::ConchainWindowVSync(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;

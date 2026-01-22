@@ -823,6 +823,7 @@ set(EXPECTED_DATA
   fonts/DejaVuSans.ttf
   fonts/LitcaneSans.ttc
   fonts/index.json
+  fonts/remixicon.ttf
   game.png
   languages/belarusian.json
   languages/bosnian.json

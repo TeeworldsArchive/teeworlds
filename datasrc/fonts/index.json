@@ -1,7 +1,8 @@
 {
     "font files": [
         "DejaVuSans.ttf",
-        "LitcaneSans.ttc"
+        "LitcaneSans.ttc",
+        "remixicon.ttf"
     ],
     "default": "DejaVu Sans",
     "language variants": {
@@ -11,6 +12,7 @@
         "traditional_chinese": "Litcane Sans TC"
     },
     "fallbacks": [
-        "Litcane Sans"
+        "Litcane Sans",
+        "remixicon"
     ]
 }

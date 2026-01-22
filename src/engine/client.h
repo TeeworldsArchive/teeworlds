@@ -153,6 +153,8 @@ public:
 	virtual bool ConnectionProblems() const = 0;
 
 	virtual bool SoundInitFailed() const = 0;
+
+	virtual void OpenURL(const char *pUrl) = 0;
 };
 
 class IGameClient : public IInterface
