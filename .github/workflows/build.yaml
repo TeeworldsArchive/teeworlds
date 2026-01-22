@@ -10,38 +10,57 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, ubuntu-22.04]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
         include:
         - os: ubuntu-latest
           cmake-args: -G Ninja
           build-target: package
           package-file: "*-linux_x86_64.tar.xz"
           archtitecture: "x86_64"
+          shell: "bash"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
-        - os: ubuntu-22.04
-          cmake-path: /usr/bin/
-          cmake-args: -G Ninja
+        - os: windows-latest
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
           build-target: package
-          package-file: "*-linux_x86_64.tar.xz"
+          package-file: "*-win64.zip"
           archtitecture: "x86_64"
+          shell: "msys2"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
+            LDFLAGS: -Werror
         - os: macOS-latest
           cmake-args: -G Ninja
           build-target: package_dmg
           package-file: "*-macos.dmg"
           archtitecture: "arm64"
+          shell: "bash"
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
             CXXFLAGS: -Werror
+    defaults:
+      run:
+        shell: ${{ matrix.shell }} {0}
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: true
+
+    - name: Prepare MSYS2 (Windows)
+      if: contains(matrix.os, 'windows')
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        pacboy: >-
+          toolchain:p
+          cmake:p
+          ninja:p
+          zlib:p
+          sdl3:p
 
     - name: Checkout SDL3
       if: contains(matrix.os, 'ubuntu')
@@ -61,6 +80,23 @@ jobs:
         cmake . -DCMAKE_BUILD_TYPE=Release
         sudo make install
 
+    - name: Checkout Freetype
+      if: contains(matrix.os, 'windows')
+      uses: actions/checkout@v4
+      with:
+        repository: freetype/freetype
+        ref: VER-2-14-1
+        path: ./freetype
+
+    - name: Prepare Windows
+      if: contains(matrix.os, 'windows')
+      run: |
+        cd freetype
+        mkdir build
+        cd build
+        cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=/ucrt64 -D BUILD_SHARED_LIBS=true -D CMAKE_BUILD_TYPE=Release -D FT_DISABLE_ZLIB=TRUE -D FT_DISABLE_BZIP2=TRUE -D FT_DISABLE_PNG=TRUE -D FT_DISABLE_HARFBUZZ=TRUE -D FT_DISABLE_BROTLI=TRUE
+        ninja install
+  
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
       run: |
@@ -123,7 +159,7 @@ jobs:
 
     - name: Download artifact for Release
       uses: softprops/action-gh-release@v2
-      if: github.ref_type != 'tag' && github.event_name != 'pull_request' && contains(matrix.os, 'latest')
+      if: github.ref_type != 'tag' && github.event_name != 'pull_request'
       with:
         tag_name: nightly
         name: Nightly Build
