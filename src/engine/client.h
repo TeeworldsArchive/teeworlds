@@ -155,6 +155,9 @@ public:
 	virtual bool SoundInitFailed() const = 0;
 
 	virtual void OpenURL(const char *pUrl) = 0;
+	virtual void OpenLocalServer() = 0;
+	virtual void CloseLocalServer() = 0;
+	virtual bool IsLocalServerRunning() = 0;
 };
 
 class IGameClient : public IInterface

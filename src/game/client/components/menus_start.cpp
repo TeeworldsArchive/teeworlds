@@ -42,14 +42,16 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	if(DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &Button, Config()->m_ClShowStartMenuImages ? "settings" : 0, CUIRect::CORNER_ALL, Rounding, 0.5f) || CheckHotKey(KEY_S))
 		NewPage = PAGE_SETTINGS;
 
-	/*
 	TopMenu.HSplitBottom(5.0f, &TopMenu, 0); // little space
 	TopMenu.HSplitBottom(40.0f, &TopMenu, &Button);
 	static CButtonContainer s_LocalServerButton;
-	if(DoButton_Menu(&s_LocalServerButton, Localize("Local server"), 0, &Button, Config()->m_ClShowStartMenuImages ? "local_server" : 0, CUIRect::CORNER_ALL, Rounding, 0.5f))
+	if(DoButton_Menu(&s_LocalServerButton, Client()->IsLocalServerRunning() ? Localize("Shutdown server") : Localize("Local server"), 0, &Button, Config()->m_ClShowStartMenuImages ? "local_server" : 0, CUIRect::CORNER_ALL, Rounding, 0.5f))
 	{
+		if(Client()->IsLocalServerRunning())
+			Client()->CloseLocalServer();
+		else
+			Client()->OpenLocalServer();
 	}
-	*/
 
 	TopMenu.HSplitBottom(5.0f, &TopMenu, 0); // little space
 	TopMenu.HSplitBottom(40.0f, &TopMenu, &Button);

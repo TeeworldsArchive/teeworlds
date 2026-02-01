@@ -52,6 +52,10 @@
 #undef main
 #endif
 
+#include <signal.h>
+
+volatile sig_atomic_t InterruptSignaled = 0;
+
 void CGraph::Init(float Min, float Max)
 {
 	m_MinRange = m_Min = Min;
@@ -302,6 +306,8 @@ CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotD
 	m_ReceivedSnapshots = 0;
 
 	m_VersionInfo.m_State = CVersionInfo::STATE_INIT;
+
+	m_LocalServerProcess = 0;
 }
 
 // ----- send functions -----
@@ -2182,6 +2188,12 @@ void CClient::Run()
 
 		// update local time
 		m_LocalTime = (time_get() - m_LocalStartTime) / (float) time_freq();
+
+		if(InterruptSignaled)
+		{
+			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", "interrupted");
+			break;
+		}
 	}
 
 	GameClient()->OnShutdown();
@@ -2194,6 +2206,7 @@ void CClient::Run()
 
 	m_ServerBrowser.SaveServerlist();
 
+	CloseLocalServer();
 	// shutdown SDL
 	SDL_Quit();
 }
@@ -2504,6 +2517,36 @@ void CClient::OpenURL(const char *pUrl)
 	SDL_OpenURL(pUrl);
 }
 
+void CClient::OpenLocalServer()
+{
+#ifdef CONF_FAMILY_WINDOWS
+	static const char *apArgs[] = {".\\teeworlds_srv.exe", 0};
+#else
+	static const char *apArgs[] = {"./teeworlds_srv", 0};
+#endif
+	if(!m_LocalServerProcess)
+		m_LocalServerProcess = SDL_CreateProcess(apArgs, false);
+}
+
+void CClient::CloseLocalServer()
+{
+	if(m_LocalServerProcess)
+	{
+		if(!SDL_KillProcess(static_cast<SDL_Process *>(m_LocalServerProcess), false))
+		{
+			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "waiting for local server shutdown...");
+			SDL_WaitProcess(static_cast<SDL_Process *>(m_LocalServerProcess), true, 0);
+		}
+		SDL_DestroyProcess(static_cast<SDL_Process *>(m_LocalServerProcess));
+		m_LocalServerProcess = 0;
+	}
+}
+
+bool CClient::IsLocalServerRunning()
+{
+	return m_LocalServerProcess;
+}
+
 void CClient::ConchainWindowVSync(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
@@ -2559,6 +2602,14 @@ void CClient::DoVersionSpecificActions()
 	Config()->m_ClLastVersionPlayed = CLIENT_VERSION;
 }
 
+void HandleSigIntTerm(int Param)
+{
+	InterruptSignaled = 1;
+
+	// Exit the next time a signal is received
+	signal(SIGINT, SIG_DFL);
+	signal(SIGTERM, SIG_DFL);
+}
 /*
 	Server Time
 	Client Mirror Time
@@ -2598,7 +2649,14 @@ int main(int argc, const char **argv)
 		}
 	}
 
-	bool RandInitFailed = secure_random_init() != 0;
+	if(secure_random_init() != 0)
+	{
+		dbg_msg("secure", "could not initialize secure RNG");
+		return -1;
+	}
+
+	signal(SIGINT, HandleSigIntTerm);
+	signal(SIGTERM, HandleSigIntTerm);
 
 	CClient *pClient = CreateClient();
 	IKernel *pKernel = IKernel::Create();
@@ -2617,12 +2675,6 @@ int main(int argc, const char **argv)
 	IEngineMap *pEngineMap = CreateEngineMap();
 	IMapChecker *pMapChecker = CreateMapChecker();
 	IEngineMasterServer *pEngineMasterServer = CreateEngineMasterServer();
-
-	if(RandInitFailed)
-	{
-		dbg_msg("secure", "could not initialize secure RNG");
-		return -1;
-	}
 
 	{
 		bool RegisterFail = false;

@@ -190,6 +190,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	int64 TickStartTime(int Tick);
 
+	void *m_LocalServerProcess;
 public:
 	IEngine *Engine() { return m_pEngine; }
 	IEngineGraphics *Graphics() { return m_pGraphics; }
@@ -330,5 +331,8 @@ public:
 	void ToggleWindowVSync();
 
 	virtual void OpenURL(const char *pUrl);
+	virtual void OpenLocalServer();
+	virtual void CloseLocalServer();
+	virtual bool IsLocalServerRunning();
 };
 #endif
