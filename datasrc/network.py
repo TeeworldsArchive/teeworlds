@@ -20,6 +20,7 @@ GameMsgIDs = Enum("GAMEMSG", ["TEAM_SWAP", "SPEC_INVALID_ID", "TEAM_SHUFFLE", "T
 
 							"GAME_PAUSED"]) # todo 0.8: sort (1 para)
 
+GamePredictionFlags = Flags("GAMEPREDICTIONFLAG", ["EVENT", "INPUT"])
 
 RawHeader = '''
 
@@ -82,6 +83,7 @@ Flags = [
 	GameStateFlags,
 	CoreEventFlags,
 	RaceFlags,
+    GamePredictionFlags,
 ]
 
 Objects = [
@@ -269,6 +271,10 @@ Objects = [
 		NetIntRange("m_Precision", 0, 3),
 		NetFlag("m_RaceFlags", RaceFlags),
 	]),
+    
+	NetObjectEx("GameDataPrediction", "game-data-prediction@netobj.teeworlds.wiki", [
+        NetFlag("m_PredictionFlags", GamePredictionFlags),
+	])
 ]
 
 Messages = [

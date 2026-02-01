@@ -744,6 +744,11 @@ void IGameController::Snap(int SnappingClient)
 		pGameDataTeam->m_TeamscoreBlue = m_aTeamscore[TEAM_BLUE];
 	}
 
+	CNetObj_GameDataPrediction *pGameDataPrediction = static_cast<CNetObj_GameDataPrediction *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATAPREDICTION, 0, sizeof(CNetObj_GameDataPrediction)));
+	if(!pGameDataPrediction)
+		return;
+
+	pGameDataPrediction->m_PredictionFlags = GAMEPREDICTIONFLAG_EVENT | GAMEPREDICTIONFLAG_INPUT;
 	// demo recording
 	if(SnappingClient == -1)
 	{
