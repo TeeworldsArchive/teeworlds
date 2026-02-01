@@ -2323,7 +2323,7 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 
 	// load map
 	const unsigned Crc = bytes_be_to_uint(m_DemoPlayer.Info()->m_Header.m_aMapCrc);
-	pError = LoadMapSearch(m_DemoPlayer.Info()->m_Header.m_aMapName, 0, Crc);
+	pError = LoadMapSearch(m_DemoPlayer.Info()->m_Header.m_aMapName, m_DemoPlayer.Info()->m_FoundSha256 ? &m_DemoPlayer.Info()->m_Sha256 : 0, Crc);
 	if(pError)
 	{
 		DisconnectWithReason(pError);

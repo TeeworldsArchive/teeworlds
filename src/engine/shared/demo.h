@@ -57,6 +57,9 @@ public:
 	{
 		CDemoHeader m_Header;
 
+		bool m_FoundSha256;	
+		SHA256_DIGEST m_Sha256;
+
 		IDemoPlayer::CInfo m_Info;
 
 		int64 m_LastUpdate;

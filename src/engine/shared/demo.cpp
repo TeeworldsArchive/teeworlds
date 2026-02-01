@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <base/math.h>
 #include <base/system.h>
+#include <base/uuid.h>
 
 #include <engine/console.h>
 #include <engine/storage.h>
@@ -13,9 +14,12 @@
 #include "network.h"
 #include "snapshot.h"
 
+const Uuid SHA256_EXTENSION = {{0x6b, 0xe6, 0xda, 0x4a, 0xce, 0xbd, 0x38, 0x0c, 0x9b, 0x5b, 0x12, 0x89, 0xc8, 0x42, 0xd7, 0x80}};
+
 static const unsigned char gs_aHeaderMarker[7] = {'T', 'W', 'D', 'E', 'M', 'O', 0};
-static const unsigned char gs_ActVersion = 5;
+static const unsigned char gs_ActVersion = 6;
 static const unsigned char gs_OldVersion = 4;
+static const unsigned char gs_Sha256Version = 6; // This was included in DDNet.
 static const unsigned char gs_VersionTickCompression = 5; // demo files with this version or higher will use `CHUNKTICKFLAG_TICK_COMPRESSED`
 static const int gs_LengthOffset = 152;
 static const int gs_NumMarkersOffset = 176;
@@ -105,6 +109,10 @@ int CDemoRecorder::Start(const char *pFilename, const char *pNetVersion, const c
 	// Header.m_aNumTimelineMarkers - add this on stop
 	// Header.m_aTimelineMarkers - add this on stop
 	io_write(DemoFile, &Header, sizeof(Header));
+
+	// write sha256
+	io_write(DemoFile, SHA256_EXTENSION.m_aData, sizeof(SHA256_EXTENSION.m_aData));
+	io_write(DemoFile, &Sha256, sizeof(SHA256_DIGEST));
 
 	// write map data
 	unsigned char aChunk[1024 * 64];
@@ -657,6 +665,27 @@ const char *CDemoPlayer::Load(const char *pFilename, int StorageType, const char
 		return m_aErrorMsg;
 	}
 
+	m_Info.m_FoundSha256 = false;
+	m_Info.m_Sha256 = SHA256_ZEROED;
+	if(m_Info.m_Header.m_Version >= gs_Sha256Version)
+	{
+		Uuid ExtensionUuid;
+		const unsigned ExtensionUuidSize = io_read(m_File, &ExtensionUuid.m_aData, sizeof(ExtensionUuid.m_aData));
+		if(ExtensionUuidSize == sizeof(ExtensionUuid.m_aData) && ExtensionUuid == SHA256_EXTENSION)
+		{
+			if(io_read(m_File, &m_Info.m_Sha256, sizeof(SHA256_DIGEST)) != sizeof(SHA256_DIGEST))
+			{
+				str_copy(m_aErrorMsg, "error reading sha256", sizeof(m_aErrorMsg));
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_player", m_aErrorMsg);
+				mem_zero(&m_Info.m_Header, sizeof(CDemoHeader));
+				io_close(m_File);
+				m_File = 0;
+				return m_aErrorMsg;
+			}
+			m_Info.m_FoundSha256 = true;
+		}
+	}
+
 	if(m_Info.m_Header.m_Version < gs_OldVersion)
 	{
 		str_format(m_aErrorMsg, sizeof(m_aErrorMsg), "demo version %d is not supported", m_Info.m_Header.m_Version);
@@ -692,6 +721,15 @@ const char *CDemoPlayer::Load(const char *pFilename, int StorageType, const char
 	char aMapFilename[128];
 	str_format(aMapFilename, sizeof(aMapFilename), "downloadedmaps/%s_%08x.map", m_Info.m_Header.m_aMapName, Crc);
 	IOHANDLE MapFile = m_pStorage->OpenFile(aMapFilename, IOFLAG_READ, IStorage::TYPE_ALL);
+
+	if(!MapFile && m_Info.m_FoundSha256)
+	{
+		// try with sha256
+		char aSha256[SHA256_MAXSTRSIZE];
+		sha256_str(m_Info.m_Sha256, aSha256, sizeof(aSha256));
+		str_format(aMapFilename, sizeof(aMapFilename), "downloadedmaps/%s_%s.map", m_Info.m_Header.m_aMapName, aSha256);
+		MapFile = m_pStorage->OpenFile(aMapFilename, IOFLAG_READ, IStorage::TYPE_ALL, 0, 0, CDataFileReader::CheckSha256, &m_Info.m_Sha256);
+	}
 
 	if(MapFile)
 	{
