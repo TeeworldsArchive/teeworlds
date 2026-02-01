@@ -53,7 +53,7 @@ void CBroadcast::RenderServerBroadcast()
 	if(DeltaTime > DisplayDuration)
 		return;
 
-	const float Height = 300;
+	const float Height = 300 * Graphics()->ScreenUIScale();
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0, 0, Width, Height);
 
@@ -91,12 +91,12 @@ void CBroadcast::RenderClientBroadcast()
 	if(Client()->LocalTime() >= m_BroadcastTime)
 		return;
 
-	const float Height = 300;
+	const float Height = 300 * Graphics()->ScreenUIScale();
 	const float Width = Height * Graphics()->ScreenAspect();
 
 	Graphics()->MapScreen(0, 0, Width, Height);
 
-	m_ClientBroadcastCursor.MoveTo(300 * Graphics()->ScreenAspect() / 2, 40.0f);
+	m_ClientBroadcastCursor.MoveTo(300 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect() / 2, 40.0f);
 	TextRender()->DrawTextOutlined(&m_ClientBroadcastCursor);
 }
 
@@ -107,7 +107,7 @@ CBroadcast::CBroadcast()
 
 void CBroadcast::DoClientBroadcast(const char *pText)
 {
-	const float Height = 300;
+	const float Height = 300 * Graphics()->ScreenUIScale();
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0, 0, Width, Height);
 
@@ -201,7 +201,7 @@ void CBroadcast::OnBroadcastMessage(const CNetMsg_Sv_Broadcast *pMsg)
 	SegmentIndices[m_NumSegments] = ServerMsgLen;
 	aBuf[ServerMsgLen] = 0;
 
-	const float Height = 300;
+	const float Height = 300 * Graphics()->ScreenUIScale();
 	const float Width = Height * Graphics()->ScreenAspect();
 	const float LineMaxWidth = Width * 0.5f - 10.0f;
 

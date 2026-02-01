@@ -860,7 +860,7 @@ void CScoreboard::OnRender()
 		}
 	}
 
-	const float Height = 400.0f * 3.0f;
+	const float Height = 400.0f * 3.0f * Graphics()->ScreenUIScale();
 	Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0, 0, Width, Height);
 	static CTextCursor s_Cursor(FontSize);

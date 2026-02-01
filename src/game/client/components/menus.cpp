@@ -28,6 +28,7 @@
 #include <generated/client_data.h>
 #include <mastersrv/mastersrv.h>
 
+#include "chat.h"
 #include "countryflags.h"
 #include "maplayers.h"
 #include "menus.h"
@@ -1621,7 +1622,7 @@ bool CMenus::OnCursorMove(float x, float y, int CursorType)
 {
 	m_LastInput = time_get();
 
-	if(!m_MenuActive)
+	if(!IsActive() && !m_pClient->m_pChat->IsActive())
 		return false;
 
 	// prev mouse position
@@ -1735,7 +1736,7 @@ void CMenus::OnRender()
 		PopupMessage(Localize("Disconnected"), Localize("The server is running a non-standard tuning on a pure game type."), Localize("Ok"));
 	}
 
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK || IsActive())
+	if(Client()->State() == IClient::STATE_DEMOPLAYBACK || IsActive() || m_pClient->m_pChat->IsActive())
 	{
 		// update the ui
 		const CUIRect *pScreen = UI()->Screen();
@@ -1747,10 +1748,10 @@ void CMenus::OnRender()
 		UI()->MapScreen();
 		if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 			RenderDemoPlayer(*pScreen);
-		else
+		else if(IsActive())
 			RenderMenu(*pScreen);
 
-		if(IsActive())
+		if(IsActive() || m_pClient->m_pChat->IsActive())
 		{
 			UI()->RenderTooltip();
 			RenderTools()->RenderCursor(MouseX, MouseY, 24.0f);
@@ -1766,6 +1767,8 @@ void CMenus::OnRender()
 			}
 		}
 	}
+	UI()->MapScreen();
+	UI()->RenderToast();
 
 	UI()->FinishCheck();
 	UI()->ClearHotkeys();
@@ -1783,7 +1786,7 @@ bool CMenus::IsBackgroundNeeded() const
 
 void CMenus::RenderBackground(float Time)
 {
-	const float ScreenHeight = 300.0f;
+	const float ScreenHeight = 300.0f * Graphics()->ScreenUIScale();
 	const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0, 0, ScreenWidth, ScreenHeight);
 

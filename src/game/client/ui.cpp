@@ -73,6 +73,7 @@ CUI::CUI()
 	m_aTooltipText[0] = '\0';
 
 	m_NumPopupMenus = 0;
+	m_ToastTime = -time_freq() * 10;
 }
 
 void CUI::Init(class IKernel *pKernel)
@@ -882,6 +883,58 @@ void CUI::RenderTooltip()
 	// Clear active tooltip. DoTooltip must be called each render call.
 	m_pActiveTooltip = 0;
 	m_aTooltipText[0] = '\0';
+}
+
+void CUI::DoToast(const char *pText)
+{
+	str_copy(m_aToastText, pText, sizeof(m_aToastText));
+	m_ToastTime = time_get();
+}
+
+void CUI::RenderToast()
+{
+	const int64 Now = time_get();
+	const int64 TimeFreq = time_freq();
+
+	const int64 SecondsFade = TimeFreq / 16;
+	const int64 SecondsFadeOutStart = TimeFreq * 2;
+	if(Now > m_ToastTime + SecondsFadeOutStart + SecondsFade)
+		return;
+
+	const int64 TimePast = Now - m_ToastTime;
+	float AlphaFactor;
+	if(Now > m_ToastTime + SecondsFadeOutStart)
+		AlphaFactor = 1.0f - (TimePast - SecondsFadeOutStart) / (float) SecondsFade;
+	else if(Now > m_ToastTime + SecondsFade)
+		AlphaFactor = 1.0f;
+	else
+		AlphaFactor = TimePast / (float) SecondsFade;
+
+	const float Rounding = 4.0f;
+	const float Spacing = 4.0f;
+	const float Border = 1.0f;
+
+	CUIRect Toast = *Screen();
+	Toast.HSplitBottom(72.0f, 0, &Toast);
+	Toast.HSplitBottom(48.0f, &Toast, 0);
+
+	static CTextCursor s_Cursor;
+	s_Cursor.Reset();
+	s_Cursor.m_FontSize = 10.0f;
+	s_Cursor.m_MaxLines = -1;
+	s_Cursor.m_MaxWidth = Screen()->w / 4.0f;
+	vec4 OldTextColor = TextRender()->GetColor();
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, AlphaFactor);
+	TextRender()->TextDeferred(&s_Cursor, m_aToastText, -1);
+	TextRender()->TextColor(OldTextColor);
+	Toast.x = Screen()->Center().x - s_Cursor.Width() / 2.0f - Rounding / 2.0f;
+	Toast.w = s_Cursor.Width() + Rounding * 2;
+	Toast.Draw(vec4(0.0f, 0.2f, 0.0f, 0.4f * AlphaFactor), Rounding);
+	Toast.Margin(Border, &Toast);
+	Toast.Draw(vec4(0.5f, 0.7f, 0.5f, 0.8f * AlphaFactor), Rounding);
+	Toast.Margin(Spacing, &Toast);
+	ApplyCursorAlign(&s_Cursor, &Toast, TEXTALIGN_ML);
+	TextRender()->DrawTextOutlined(&s_Cursor);
 }
 
 void CUI::DoPopupMenu(int X, int Y, int Width, int Height, void *pContext, bool (*pfnFunc)(void *pContext, CUIRect View), int Corners)

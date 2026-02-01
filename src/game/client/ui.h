@@ -160,6 +160,9 @@ class CUI
 	CUIRect m_TooltipAnchor;
 	char m_aTooltipText[256];
 
+	char m_aToastText[256];
+	int64 m_ToastTime;
+
 	class
 	{
 	public:
@@ -306,6 +309,10 @@ public:
 	// tooltips
 	void DoTooltip(const void *pID, const CUIRect *pRect, const char *pText);
 	void RenderTooltip();
+
+	// toast notification
+	void DoToast(const char *pText);
+	void RenderToast();
 
 	// popup menu
 	void DoPopupMenu(int X, int Y, int Width, int Height, void *pContext, bool (*pfnFunc)(void *pContext, CUIRect View), int Corners = CUIRect::CORNER_ALL);

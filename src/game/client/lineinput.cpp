@@ -449,7 +449,7 @@ void CLineInput::RenderCandidates()
 	const float FontSize = 7.0f;
 	const float HMargin = 8.0f;
 	const float VMargin = 4.0f;
-	const float Height = 300;
+	const float Height = 300 * s_pGraphics->ScreenUIScale();
 	const float Width = Height * s_pGraphics->ScreenAspect();
 	const int ScreenWidth = s_pGraphics->ScreenWidth();
 	const int ScreenHeight = s_pGraphics->ScreenHeight();

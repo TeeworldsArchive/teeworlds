@@ -162,7 +162,7 @@ void CStats::OnRender()
 	if(!IsActive())
 		return;
 
-	const float Height = 400.0f * 3.0f;
+	const float Height = 400.0f * 3.0f * Graphics()->ScreenUIScale();
 	const float Width = Height * Graphics()->ScreenAspect();
 
 	const float HeaderHeight = 50.0f;

@@ -35,8 +35,8 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		return;
 
 	// hint TextRender to render text, deferred, with correct fontsize
-	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
-	float Height = 400 * 3.0f;
+	float Width = 400 * 3.0f * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect();
+	float Height = 400 * 3.0f * Graphics()->ScreenUIScale();
 	Graphics()->MapScreen(0, 0, Width * 1.5f, Height * 1.5f);
 
 	bool Race = m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_RACE;
@@ -221,8 +221,8 @@ void CInfoMessages::OnRender()
 	if(!Config()->m_ClShowhud || Client()->State() < IClient::STATE_ONLINE)
 		return;
 
-	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
-	float Height = 400 * 3.0f;
+	float Width = 400 * 3.0f * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect();
+	float Height = 400 * 3.0f * Graphics()->ScreenUIScale();
 
 	Graphics()->MapScreen(0, 0, Width * 1.5f, Height * 1.5f);
 	float StartX = Width * 1.5f - 10.0f;

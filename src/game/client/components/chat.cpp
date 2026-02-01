@@ -252,7 +252,7 @@ bool CChat::OnInput(IInput::CEvent Event)
 
 	const bool CtrlPressed = Input()->KeyIsPressed(KEY_LCTRL) || Input()->KeyIsPressed(KEY_RCTRL);
 
-	if(Event.m_Flags & IInput::FLAG_PRESS && (Event.m_Key == KEY_ESCAPE || Event.m_Key == KEY_MOUSE_1 || Event.m_Key == KEY_MOUSE_2))
+	if(Event.m_Flags & IInput::FLAG_PRESS && (Event.m_Key == KEY_ESCAPE || Event.m_Key == KEY_MOUSE_3))
 	{
 		if(IsTypingCommand() && m_CommandManager.CommandCount() - m_FilteredCount)
 		{
@@ -480,7 +480,7 @@ bool CChat::OnInput(IInput::CEvent Event)
 	{
 		ClearChatBuffer();
 	}
-	else if(Event.m_Key != KEY_MOUSE_1 && Event.m_Key != KEY_MOUSE_2)
+	else if(Event.m_Key != KEY_MOUSE_3)
 	{
 		// Save Chat Buffer
 		m_ChatBufferMode = m_Mode;
@@ -796,7 +796,7 @@ void CChat::OnRender()
 		--m_PendingChatCounter;
 	}
 
-	const float Height = 300.0f;
+	const float Height = 300.0f * Graphics()->ScreenUIScale();
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 	float x = 8.0;
@@ -1211,6 +1211,12 @@ void CChat::OnRender()
 		const vec4 ColorHighlightOutline(0.0f, 0.4f, 1.0f,
 			mix(pLine->m_Mode == CHAT_TEAM ? 0.6f : 0.5f, 1.0f, HighlightBlend));
 
+		CUIRect TestRect;
+		TestRect.x = 0.0f;
+		TestRect.y = (y + 0.5f) * 2;
+		TestRect.w = (LineWidth + x + 3.0f) * (600.0f / 300.0f);
+		TestRect.h = pLine->m_Size.y * (600.0f / 300.0f);
+
 		if(!m_Show)
 		{
 			CUIRect BgRect;
@@ -1220,6 +1226,23 @@ void CChat::OnRender()
 			BgRect.h = pLine->m_Size.y;
 
 			const vec4 Color = vec4(0.0f, 0.0f, 0.0f, Blend * 0.2f);
+			BgRect.Draw4(Color, Color, Color, Color, 2.0f, CUIRect::CORNER_R);
+		}
+		else if(UI()->MouseHovered(&TestRect))
+		{
+			CUIRect BgRect;
+			BgRect.x = 0.0f;
+			BgRect.y = y + 0.5f;
+			BgRect.w = LineWidth + x + 3.0f;
+			BgRect.h = pLine->m_Size.y;
+
+			UI()->DoTooltip(pLine, &TestRect, Localize("Click to copy line to clipboard."));
+			if(UI()->MouseButtonClicked(0))
+			{
+				Input()->SetClipboardText(pLine->m_aText);
+				UI()->DoToast(Localize("Successfully copied"));
+			}
+			const vec4 Color = vec4(0.2f, 0.2f, 0.2f, 0.2f);
 			BgRect.Draw4(Color, Color, Color, Color, 2.0f, CUIRect::CORNER_R);
 		}
 

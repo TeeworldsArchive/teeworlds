@@ -22,8 +22,8 @@ void CDebugHud::RenderNetCorrections()
 	if(!Config()->m_Debug || Config()->m_DbgGraphs || !m_pClient->m_Snap.m_pLocalCharacter || !m_pClient->m_Snap.m_pLocalPrevCharacter)
 		return;
 
-	float Width = 300 * Graphics()->ScreenAspect();
-	Graphics()->MapScreen(0, 0, Width, 300);
+	float Width = 300 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect();
+	Graphics()->MapScreen(0, 0, Width, 300 * Graphics()->ScreenUIScale());
 
 	/*float speed = distance(vec2(netobjects.local_prev_character->x, netobjects.local_prev_character->y),
 		vec2(netobjects.local_character->x, netobjects.local_character->y));*/
@@ -96,7 +96,7 @@ void CDebugHud::RenderTuning()
 
 	CTuningParams StandardTuning;
 
-	Graphics()->MapScreen(0, 0, 300 * Graphics()->ScreenAspect(), 300);
+	Graphics()->MapScreen(0, 0, 300 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 300 * Graphics()->ScreenUIScale());
 
 	static CTextCursor s_CursorStandard(5.0f, 25.0f, 50.0f);
 	static CTextCursor s_CursorCurrent(5.0f, 50.0f, 50.0f);

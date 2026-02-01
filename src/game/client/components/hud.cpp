@@ -13,6 +13,7 @@
 
 #include "binds.h"
 #include "camera.h"
+#include "chat.h"
 #include "controls.h"
 #include "hud.h"
 #include "menus.h"
@@ -43,7 +44,7 @@ bool CHud::IsLargeWarmupTimerShown()
 
 void CHud::RenderGameTimer()
 {
-	float x = 300.0f * Graphics()->ScreenAspect() / 2.0f;
+	float x = 300.0f * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect() / 2.0f;
 
 	int Time = 0;
 	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH)
@@ -61,7 +62,7 @@ void CHud::RenderGameTimer()
 		Time = (Client()->GameTick() - m_pClient->m_Snap.m_pGameData->m_GameStartTick) / Client()->GameTickSpeed();
 
 	static CTextCursor s_Cursor(10.0f);
-	s_Cursor.MoveTo(x, 2.0f);
+	s_Cursor.MoveTo(x, 2.0f * Graphics()->ScreenUIScale());
 	s_Cursor.m_Align = TEXTALIGN_TC;
 	s_Cursor.Reset(Time);
 
@@ -82,7 +83,7 @@ void CHud::RenderGameTimer()
 	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH)
 	{
 		static CTextCursor s_SuddenDeathCursor(12.0f);
-		s_SuddenDeathCursor.MoveTo(x, 14.0f);
+		s_SuddenDeathCursor.MoveTo(x, 14.0f * Graphics()->ScreenUIScale());
 		s_SuddenDeathCursor.m_Align = TEXTALIGN_TC;
 		s_SuddenDeathCursor.Reset(g_Localization.Version());
 		const char *pText = Localize("Sudden Death");
@@ -97,14 +98,14 @@ void CHud::RenderPauseTimer()
 		char aBuf[256];
 		const char *pText = Localize("Game paused");
 		static CTextCursor s_GamePausedCursor;
-		s_GamePausedCursor.MoveTo(150 * Graphics()->ScreenAspect(), 50);
+		s_GamePausedCursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 50 * Graphics()->ScreenUIScale());
 		s_GamePausedCursor.m_Align = TEXTALIGN_TC;
 		s_GamePausedCursor.m_FontSize = 20.0f;
 		s_GamePausedCursor.Reset(g_Localization.Version());
 		TextRender()->TextOutlined(&s_GamePausedCursor, pText, -1);
 
 		static CTextCursor s_Cursor;
-		s_Cursor.MoveTo(150 * Graphics()->ScreenAspect(), 75);
+		s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 75 * Graphics()->ScreenUIScale());
 		s_Cursor.m_Align = TEXTALIGN_TC;
 		s_Cursor.m_FontSize = 16.0f;
 
@@ -140,7 +141,7 @@ void CHud::RenderStartCountdown()
 	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags & GAMESTATEFLAG_STARTCOUNTDOWN)
 	{
 		static CTextCursor s_LabelCursor(20.0f);
-		s_LabelCursor.MoveTo(150 * Graphics()->ScreenAspect(), 50);
+		s_LabelCursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 50 * Graphics()->ScreenUIScale());
 		s_LabelCursor.m_Align = TEXTALIGN_TC;
 
 		const char *pText = Localize("Game starts in");
@@ -152,7 +153,7 @@ void CHud::RenderStartCountdown()
 			return;
 
 		static CTextCursor s_Cursor(16.0f);
-		s_Cursor.MoveTo(150 * Graphics()->ScreenAspect(), 75);
+		s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 75 * Graphics()->ScreenUIScale());
 		s_Cursor.m_Align = TEXTALIGN_TC;
 
 		char aBuf[32];
@@ -166,17 +167,17 @@ void CHud::RenderStartCountdown()
 
 void CHud::RenderNetworkIssueNotification()
 {
-	float x = 300.0f * Graphics()->ScreenAspect() / 2.0f - 15.0f;
+	float x = 300.0f * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect() / 2.0f - 15.0f * Graphics()->ScreenUIScale();
 	float FontSize = 10.0f;
 
 	// render network indicator when 2/5 and under
 	const int NetScore = Client()->GetInputtimeMarginStabilityScore();
 	if(NetScore > 250)
 	{
-		float Margin = 2.0f;
+		float Margin = 2.0f * Graphics()->ScreenUIScale();
 		x = x - 5.0f - FontSize - Margin * 2;
 		Graphics()->BlendNormal();
-		CUIRect RectBox = {x, 4 - Margin, FontSize + 2 * Margin, FontSize + 2 * Margin};
+		CUIRect RectBox = {x, 4 * Graphics()->ScreenUIScale() - Margin, FontSize + 2 * Margin, FontSize + 2 * Margin};
 		vec4 Color = vec4(0.0f, 0.0f, 0.0f, 0.3f);
 		RectBox.Draw(Color, 1.0f);
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_NETWORKICONS].m_Id);
@@ -193,7 +194,7 @@ void CHud::RenderDeadNotification()
 	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags == 0 && m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS && m_pClient->m_Snap.m_pLocalInfo && (m_pClient->m_Snap.m_pLocalInfo->m_PlayerFlags & PLAYERFLAG_DEAD))
 	{
 		static CTextCursor s_Cursor(16.0f);
-		s_Cursor.MoveTo(150 * Graphics()->ScreenAspect(), 50);
+		s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 50 * Graphics()->ScreenUIScale());
 		s_Cursor.m_Align = TEXTALIGN_TC;
 
 		const char *pText = Localize("Wait for next round");
@@ -209,8 +210,8 @@ void CHud::RenderScoreHud()
 	if(!(m_pClient->m_Snap.m_pGameData->m_GameStateFlags & (GAMESTATEFLAG_ROUNDOVER | GAMESTATEFLAG_GAMEOVER)))
 	{
 		int GameFlags = m_pClient->m_GameInfo.m_GameFlags;
-		float Whole = 300 * Graphics()->ScreenAspect();
-		float StartY = 229.0f;
+		float Whole = 300 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect();
+		float StartY = 229.0f * Graphics()->ScreenUIScale();
 		const float TeamOffset = 20.0f;
 
 		if(GameFlags & GAMEFLAG_TEAMS && m_pClient->m_Snap.m_pGameDataTeam && !(GameFlags & GAMEFLAG_RACE))
@@ -234,7 +235,7 @@ void CHud::RenderScoreHud()
 			}
 
 			float ScoreWidthMax = maximum(maximum(s_TeamscoreCursors[0].Width(), s_TeamscoreCursors[1].Width()), s_ExpectedScoreWidth);
-			float Split = 3.0f;
+			float Split = 3.0f * Graphics()->ScreenUIScale();
 			float ImageSize = GameFlags & GAMEFLAG_FLAGS ? 16.0f : Split;
 
 			for(int t = 0; t < NUM_TEAMS; t++)
@@ -486,7 +487,7 @@ void CHud::RenderWarmupTimer()
 
 		if(LargeTimer)
 		{
-			s_Cursor.MoveTo(150 * Graphics()->ScreenAspect(), 50);
+			s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 50 * Graphics()->ScreenUIScale());
 			s_Cursor.m_Align = TEXTALIGN_TC;
 			s_Cursor.m_LineSpacing = 5.0f;
 
@@ -499,7 +500,7 @@ void CHud::RenderWarmupTimer()
 		}
 		else
 		{
-			s_Cursor.MoveTo(10, 45);
+			s_Cursor.MoveTo(10 * Graphics()->ScreenUIScale(), 45 * Graphics()->ScreenUIScale());
 			s_Cursor.m_Align = TEXTALIGN_TL;
 			s_Cursor.m_LineSpacing = 1.0f;
 
@@ -542,7 +543,7 @@ void CHud::RenderConnectionWarning()
 	{
 		const char *pText = Localize("Connection Problems...");
 		static CTextCursor s_Cursor(24.0f);
-		s_Cursor.MoveTo(150 * Graphics()->ScreenAspect(), 50.0f);
+		s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 50.0f * Graphics()->ScreenUIScale());
 		s_Cursor.m_Align = TEXTALIGN_TC;
 		s_Cursor.Reset(g_Localization.Version());
 		TextRender()->TextOutlined(&s_Cursor, pText, -1);
@@ -835,7 +836,7 @@ void CHud::RenderSpectatorNotification()
 		{
 			const char *pText = Localize("Click on a player or flag to follow it");
 			static CTextCursor s_Cursor(16.0f);
-			s_Cursor.MoveTo(150 * Graphics()->ScreenAspect(), 30);
+			s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 30 * Graphics()->ScreenUIScale());
 			s_Cursor.m_Align = TEXTALIGN_TC;
 			s_Cursor.Reset(g_Localization.Version());
 			TextRender()->TextOutlined(&s_Cursor, pText, -1);
@@ -875,18 +876,18 @@ void CHud::RenderRaceTime(const CNetObj_PlayerInfoRace *pRaceInfo)
 	int RaceTime = (Client()->GameTick() - pRaceInfo->m_RaceStartTick) * 1000 / Client()->GameTickSpeed();
 	FormatTime(aBuf, sizeof(aBuf), RaceTime, minimum(m_pClient->RacePrecision(), 1));
 
-	float Half = 300.0f * Graphics()->ScreenAspect() / 2.0f;
+	float Half = 300.0f * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect() / 2.0f;
 
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_TIMERCLOCK].m_Id);
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(SPRITE_TIMERCLOCK_A);
-	IGraphics::CQuadItem QuadItem(Half - TimeWidth / 2 - 18.f, 20, 15, 15);
+	IGraphics::CQuadItem QuadItem(Half - TimeWidth / 2 - 18.f, 20 * Graphics()->ScreenUIScale(), 15 * Graphics()->ScreenUIScale(), 15 * Graphics()->ScreenUIScale());
 	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	static CTextCursor s_Cursor(12);
 	s_Cursor.Reset();
-	s_Cursor.MoveTo(Half - TimeWidth / 2, 20);
+	s_Cursor.MoveTo(Half - TimeWidth / 2, 20 * Graphics()->ScreenUIScale());
 	TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
 }
 
@@ -913,12 +914,12 @@ void CHud::RenderCheckpoint()
 		else if(!m_CheckpointDiff)
 			TextRender()->TextColor(1, 1, 1, a); // white
 
-		float Half = 300.0f * Graphics()->ScreenAspect() / 2.0f;
+		float Half = 300.0f * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect() / 2.0f;
 
 		static CTextCursor s_Cursor(10);
 		s_Cursor.m_Align = TEXTALIGN_TC;
 		s_Cursor.Reset();
-		s_Cursor.MoveTo(Half, 33);
+		s_Cursor.MoveTo(Half, 33 * Graphics()->ScreenUIScale());
 		TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
 
 		TextRender()->TextColor(1, 1, 1, 1);
@@ -974,8 +975,8 @@ void CHud::OnRender()
 
 	bool Race = m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_RACE;
 
-	m_Width = 300.0f * Graphics()->ScreenAspect();
-	m_Height = 300.0f;
+	m_Height = 300.0f * Graphics()->ScreenUIScale();
+	m_Width = m_Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
 
 	if(Config()->m_ClShowhud)
@@ -1018,5 +1019,7 @@ void CHud::OnRender()
 		RenderVoting();
 		RenderLocalTime((m_Width / 7) * 3);
 	}
+	if(m_pClient->m_pChat->IsActive())
+		return;
 	RenderCursor();
 }

@@ -577,7 +577,7 @@ void CGameClient::StartRendering()
 	else if(m_pMenus->IsBackgroundNeeded())
 	{
 		// render background color
-		const float ScreenHeight = 300.0f;
+		const float ScreenHeight = 300.0f * Graphics()->ScreenUIScale();
 		const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
 		const vec4 Bottom(0.45f, 0.45f, 0.45f, 1.0f);
 		const vec4 Top(0.45f, 0.45f, 0.45f, 1.0f);
