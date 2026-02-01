@@ -552,9 +552,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 	else if(MsgType == NETMSGTYPE_SV_COMMANDINFO)
 	{
 		CNetMsg_Sv_CommandInfo *pMsg = (CNetMsg_Sv_CommandInfo *) pRawMsg;
-		if(!m_CommandManager.AddCommand(pMsg->m_Name, pMsg->m_HelpText, pMsg->m_ArgsFormat, ServerCommandCallback, this))
-			dbg_msg("chat_commands", "adding server chat command: name='%s' args='%s' help='%s'", pMsg->m_Name, pMsg->m_ArgsFormat, pMsg->m_HelpText);
-		else
+		if(m_CommandManager.AddCommand(pMsg->m_Name, pMsg->m_HelpText, pMsg->m_ArgsFormat, ServerCommandCallback, this) == 1)
 			dbg_msg("chat_commands", "failed to add command '%s'", pMsg->m_Name);
 	}
 	else if(MsgType == NETMSGTYPE_SV_COMMANDINFOREMOVE)
