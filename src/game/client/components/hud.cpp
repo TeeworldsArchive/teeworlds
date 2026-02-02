@@ -261,14 +261,14 @@ void CHud::RenderScoreHud()
 					s_PlayerCountCursors[t].MoveTo(minimum(Whole - s_PlayerCountCursors[t].Width() - 1.0f, Whole - ScoreWidthMax - ImageSize - 2 * Split), StartY + (t + 1) * TeamOffset - 3.0f);
 					TextRender()->DrawTextOutlined(&s_PlayerCountCursors[t]);
 				}
-				StartY += 8.0f;
+				StartY += 8.0f * Graphics()->ScreenUIScale();
 			}
 
 			if(GameFlags & GAMEFLAG_FLAGS && m_pClient->m_Snap.m_pGameDataFlag)
 			{
 				int FlagCarrier[2] = {m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierRed, m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierBlue};
 				int FlagDropTick[2] = {m_pClient->m_Snap.m_pGameDataFlag->m_FlagDropTickRed, m_pClient->m_Snap.m_pGameDataFlag->m_FlagDropTickBlue};
-				StartY = 229.0f;
+				StartY = 229.0f * Graphics()->ScreenUIScale();
 
 				for(int t = 0; t < 2; t++)
 				{
@@ -311,7 +311,7 @@ void CHud::RenderScoreHud()
 						RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0),
 							vec2(Whole - ScoreWidthMax - Info.m_Size / 2 - Split, StartY + 1.0f + Info.m_Size / 2 + t * TeamOffset));
 					}
-					StartY += 8.0f;
+					StartY += 8.0f * Graphics()->ScreenUIScale();
 				}
 			}
 		}
