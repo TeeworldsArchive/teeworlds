@@ -946,6 +946,7 @@ void CChat::OnRender()
 		else
 		{
 			m_Input.Activate(CHAT); // ensure the input is active
+			UI()->SetActiveItem(&m_Input);
 
 			CTextCursor *pCursor = m_Input.GetCursor();
 			pCursor->m_FontSize = InputFontSize;
