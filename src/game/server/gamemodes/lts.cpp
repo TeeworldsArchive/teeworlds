@@ -12,7 +12,7 @@ CGameControllerLTS::CGameControllerLTS(CGameContext *pGameServer) : IGameControl
 	/*
 	m_pGameType = "LTS";
 	*/
-	m_pGameType = "LTS Archived";
+	m_pGameType = "LTS*";
 	m_GameFlags = GAMEFLAG_TEAMS | GAMEFLAG_SURVIVAL;
 	m_MaxPlayerSlots = 16;
 }

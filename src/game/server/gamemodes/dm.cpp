@@ -7,6 +7,6 @@ CGameControllerDM::CGameControllerDM(CGameContext *pGameServer) : IGameControlle
 	/*
 	m_pGameType = "DM";
 	*/
-	m_pGameType = "DM Archived";
+	m_pGameType = "DM*";
 	m_MaxPlayerSlots = 16;
 }

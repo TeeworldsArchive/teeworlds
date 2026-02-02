@@ -18,7 +18,7 @@ CGameControllerCTF::CGameControllerCTF(CGameContext *pGameServer) : IGameControl
 	/*
 	m_pGameType = "CTF";
 	*/
-	m_pGameType = "CTF Archived";
+	m_pGameType = "CTF*";
 	m_GameFlags = GAMEFLAG_TEAMS | GAMEFLAG_FLAGS;
 	m_MaxPlayerSlots = 16;
 }
