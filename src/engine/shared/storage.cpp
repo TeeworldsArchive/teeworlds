@@ -298,7 +298,7 @@ public:
 			for(int i = 0; i < m_NumPaths; ++i)
 				fs_listdir(GetPath(i, pPath, aBuffer, sizeof(aBuffer)), pfnCallback, i, pUser);
 		}
-		else if(Type >= 0 && Type < m_NumPaths)
+		else if((Type >= 0 && Type < m_NumPaths) || Type == TYPE_APP)
 		{
 			// list wanted directory
 			fs_listdir(GetPath(Type, pPath, aBuffer, sizeof(aBuffer)), pfnCallback, Type, pUser);
@@ -314,7 +314,7 @@ public:
 			for(int i = 0; i < m_NumPaths; ++i)
 				fs_listdir_fileinfo(GetPath(i, pPath, aBuffer, sizeof(aBuffer)), pfnCallback, i, pUser);
 		}
-		else if(Type >= 0 && Type < m_NumPaths)
+		else if((Type >= 0 && Type < m_NumPaths) || Type == TYPE_APP)
 		{
 			// list wanted directory
 			fs_listdir_fileinfo(GetPath(Type, pPath, aBuffer, sizeof(aBuffer)), pfnCallback, Type, pUser);
@@ -323,6 +323,11 @@ public:
 
 	const char *GetPath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize)
 	{
+		if(Type == TYPE_APP)
+		{
+			str_format(pBuffer, BufferSize, "%s%s%s", m_aAppDir, !m_aAppDir[0] ? "" : "/", pDir);
+			return pBuffer;
+		}
 		str_format(pBuffer, BufferSize, "%s%s%s", m_aaStoragePaths[Type], !m_aaStoragePaths[Type][0] ? "" : "/", pDir);
 		return pBuffer;
 	}
@@ -362,7 +367,7 @@ public:
 			IOHANDLE Handle = 0;
 			int LB = 0, UB = m_NumPaths; // check all available directories
 
-			if(Type >= 0 && Type < m_NumPaths) // check wanted directory
+			if((Type >= 0 && Type < m_NumPaths) || Type == TYPE_APP) // check wanted directory
 			{
 				LB = Type;
 				UB = Type + 1;
@@ -490,7 +495,7 @@ public:
 					return true;
 			}
 		}
-		else if(Type >= 0 && Type < m_NumPaths)
+		else if((Type >= 0 && Type < m_NumPaths) || Type == TYPE_APP)
 		{
 			// search within wanted directory
 			fs_listdir(GetPath(Type, pCBData->m_pPath, aBuf, sizeof(aBuf)), FindFileCallback, Type, pCBData);
@@ -531,7 +536,7 @@ public:
 
 	virtual bool RemoveFile(const char *pFilename, int Type)
 	{
-		if(Type < 0 || Type >= m_NumPaths)
+		if((Type < 0 || Type >= m_NumPaths) && Type != TYPE_APP)
 			return false;
 
 		char aBuffer[IO_MAX_PATH_LENGTH];
@@ -540,7 +545,7 @@ public:
 
 	virtual bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type)
 	{
-		if(Type < 0 || Type >= m_NumPaths)
+		if((Type < 0 || Type >= m_NumPaths) && Type != TYPE_APP)
 			return false;
 		char aOldBuffer[IO_MAX_PATH_LENGTH];
 		char aNewBuffer[IO_MAX_PATH_LENGTH];
@@ -549,7 +554,7 @@ public:
 
 	virtual bool CreateFolder(const char *pFoldername, int Type)
 	{
-		if(Type < 0 || Type >= m_NumPaths)
+		if(Type < 0 || Type >= m_NumPaths) // there's no need for TYPE_APP, as we have already run this program :3
 			return false;
 
 		char aBuffer[IO_MAX_PATH_LENGTH];
@@ -558,7 +563,7 @@ public:
 
 	virtual void GetCompletePath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize)
 	{
-		if(Type < 0 || Type >= m_NumPaths)
+		if((Type < 0 || Type >= m_NumPaths) && Type != TYPE_APP)
 		{
 			if(BufferSize > 0)
 				pBuffer[0] = 0;

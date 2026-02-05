@@ -14,6 +14,7 @@ public:
 	{
 		TYPE_SAVE = 0,
 		TYPE_ALL = -1,
+		TYPE_APP = -2,
 
 		STORAGETYPE_BASIC = 0,
 		STORAGETYPE_SERVER,

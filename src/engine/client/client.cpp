@@ -307,7 +307,7 @@ CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotD
 
 	m_VersionInfo.m_State = CVersionInfo::STATE_INIT;
 
-	m_LocalServerProcess = 0;
+	m_pLocalServerProcess = 0;
 }
 
 // ----- send functions -----
@@ -2520,31 +2520,43 @@ void CClient::OpenURL(const char *pUrl)
 void CClient::OpenLocalServer()
 {
 #ifdef CONF_FAMILY_WINDOWS
-	static const char *apArgs[] = {".\\teeworlds_srv.exe", 0};
+	static const char *pServer = "teeworlds_srv.exe";
 #else
-	static const char *apArgs[] = {"./teeworlds_srv", 0};
+	static const char *pServer = "teeworlds_srv";
 #endif
-	if(!m_LocalServerProcess)
-		m_LocalServerProcess = SDL_CreateProcess(apArgs, false);
+	char aPath[IO_MAX_PATH_LENGTH];	
+	Storage()->GetCompletePath(IStorage::TYPE_APP, pServer, aPath, sizeof(aPath));
+	const char *apArgs[2] = {aPath, 0};
+
+	if(!m_pLocalServerProcess)
+	{
+		m_pLocalServerProcess = SDL_CreateProcess(apArgs, false);
+		if(!m_pLocalServerProcess)
+		{
+			char aBuf[512];
+			str_format(aBuf, sizeof(aBuf), "failed to open local server: %s", SDL_GetError());
+			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
+		}
+	}
 }
 
 void CClient::CloseLocalServer()
 {
-	if(m_LocalServerProcess)
+	if(m_pLocalServerProcess)
 	{
-		if(!SDL_KillProcess(static_cast<SDL_Process *>(m_LocalServerProcess), false))
+		if(!SDL_KillProcess(static_cast<SDL_Process *>(m_pLocalServerProcess), false))
 		{
 			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "waiting for local server shutdown...");
-			SDL_WaitProcess(static_cast<SDL_Process *>(m_LocalServerProcess), true, 0);
+			SDL_WaitProcess(static_cast<SDL_Process *>(m_pLocalServerProcess), true, 0);
 		}
-		SDL_DestroyProcess(static_cast<SDL_Process *>(m_LocalServerProcess));
-		m_LocalServerProcess = 0;
+		SDL_DestroyProcess(static_cast<SDL_Process *>(m_pLocalServerProcess));
+		m_pLocalServerProcess = 0;
 	}
 }
 
 bool CClient::IsLocalServerRunning()
 {
-	return m_LocalServerProcess;
+	return m_pLocalServerProcess;
 }
 
 void CClient::ConchainWindowVSync(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

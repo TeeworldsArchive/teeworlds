@@ -190,7 +190,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	int64 TickStartTime(int Tick);
 
-	void *m_LocalServerProcess;
+	void *m_pLocalServerProcess;
 public:
 	IEngine *Engine() { return m_pEngine; }
 	IEngineGraphics *Graphics() { return m_pGraphics; }
