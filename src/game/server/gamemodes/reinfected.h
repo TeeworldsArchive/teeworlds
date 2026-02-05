@@ -16,13 +16,17 @@ protected:
 
 	virtual bool IsInfectionStarted();
 	virtual void StartRandomInfection();
-	void AddScoreForInfection(int InfectedID);
+	virtual void Infect(int InfectedID);
+	virtual void Cure(int CureID);
+	virtual void AddScoreForInfection(int InfectedID);
 
 public:
 	CGameControllerReinfected(class CGameContext *pGameServer);
 	virtual ~CGameControllerReinfected();
 
 	virtual bool IsFriendlyFire(int ClientID1, int ClientID2) const;
+
+	virtual void OnRoundStart();
 
 	virtual void OnPlayerConnect(class CPlayer *pPlayer);
 	virtual void OnPlayerDisconnect(class CPlayer *pPlayer);

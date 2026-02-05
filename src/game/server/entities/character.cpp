@@ -183,7 +183,7 @@ void CCharacter::HandleNinja()
 
 			// Hit a player, give him damage and stuffs...
 			GameServer()->CreateSound(aEnts[i]->m_Pos, SOUND_NINJA_HIT);
-			if(m_NumObjectsHit < MAX_PLAYERS)
+			if(m_NumObjectsHit < VANILLA_MAX_PLAYERS)
 				m_apHitObjects[m_NumObjectsHit++] = aEnts[i];
 
 			// set his velocity to fast upward (for now)

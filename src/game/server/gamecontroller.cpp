@@ -41,7 +41,7 @@ IGameController::IGameController(CGameContext *pGameServer)
 	m_GameInfo.m_MatchNum = (str_length(Config()->m_SvMaprotation) && Config()->m_SvMatchesPerMap) ? Config()->m_SvMatchesPerMap : 0;
 	m_GameInfo.m_ScoreLimit = Config()->m_SvScorelimit;
 	m_GameInfo.m_TimeLimit = Config()->m_SvTimelimit;
-	m_MaxPlayerSlots = MAX_PLAYERS;
+	m_MaxPlayerSlots = MAX_CLIENTS;
 
 	// map
 	m_aMapWish[0] = 0;

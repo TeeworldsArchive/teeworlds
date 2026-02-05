@@ -226,7 +226,7 @@ void CGameContext::SendChat(int ChatterClientID, int Mode, int To, const char *p
 	Msg.m_TargetID = -1;
 
 	if(Mode == CHAT_ALL)
-		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ChatterClientID == -1 ? To : -1);
 	else if(Mode == CHAT_TEAM)
 	{
 		// pack one for the recording only
@@ -245,7 +245,8 @@ void CGameContext::SendChat(int ChatterClientID, int Mode, int To, const char *p
 	{
 		// send to the clients
 		Msg.m_TargetID = To;
-		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ChatterClientID);
+		if(ChatterClientID != -1)
+			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ChatterClientID);
 		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, To);
 	}
 }

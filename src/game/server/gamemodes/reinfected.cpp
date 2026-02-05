@@ -34,7 +34,6 @@ public:
 		m_HumanNum = 0;
 	}
 
-	void Infect(CCharacter *pCharacter) { Infect(pCharacter->GetPlayer()->GetCID()); }
 	void Infect(int ClientID)
 	{
 		if(IsInfected(ClientID))
@@ -140,6 +139,8 @@ void CGameControllerReinfected::RefreshPlayerSkin(CPlayer *pPlayer, bool Sync)
 	}
 	if(Reinfected()->IsInfected(ClientID))
 		pPlayer->m_TeeInfos = Reinfected()->m_aInfectedInfos[ClientID];
+	else
+		pPlayer->m_TeeInfos = Reinfected()->m_aTeeInfos[ClientID];
 }
 
 bool CGameControllerReinfected::IsInfectionStarted()
@@ -149,6 +150,48 @@ bool CGameControllerReinfected::IsInfectionStarted()
 
 void CGameControllerReinfected::StartRandomInfection()
 {
+	int InfectedNum = 3;
+	if(GetRealPlayerNum() < 4)
+		InfectedNum = 1;
+	else if(GetRealPlayerNum() < 8)
+		InfectedNum = 2;
+
+	InfectedNum -= Reinfected()->m_InfectedNum;
+	if(InfectedNum > 0)
+	{
+		int aPlayers[MAX_CLIENTS];
+		int ActivePlayerNum = 0;
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
+				aPlayers[ActivePlayerNum++] = i;
+		}
+
+		char aBuf[128];
+		for(int i = 0; i < InfectedNum; i++)
+		{
+			int RandomInfected = random_int() % ActivePlayerNum;
+			if(Reinfected()->IsInfected(i))
+			{
+				i--;
+				continue;
+			}
+			Infect(aPlayers[RandomInfected]);
+
+			str_format(aBuf, sizeof(aBuf), "'%s' has been infected!", Server()->ClientName(aPlayers[RandomInfected]));
+			GameServer()->SendChat(-1, CHAT_ALL, -1, aBuf);
+		}
+	}
+}
+
+void CGameControllerReinfected::Infect(int InfectedID)
+{
+	Reinfected()->Infect(InfectedID);
+}
+
+void CGameControllerReinfected::Cure(int CureID)
+{
+	Reinfected()->Cure(CureID);
 }
 
 void CGameControllerReinfected::AddScoreForInfection(int InfectedID)
@@ -183,11 +226,16 @@ bool CGameControllerReinfected::IsFriendlyFire(int ClientID1, int ClientID2) con
 	return false;
 }
 
+void CGameControllerReinfected::OnRoundStart()
+{
+	Reinfected()->ResetGame();
+}
+
 void CGameControllerReinfected::OnPlayerConnect(CPlayer *pPlayer)
 {
 	IGameController::OnPlayerConnect(pPlayer);
 	if(IsInfectionStarted())
-		Reinfected()->Infect(pPlayer->GetCID());
+		Infect(pPlayer->GetCID());
 	Reinfected()->AddPlayerToList(pPlayer->GetCID());
 	RefreshPlayerSkin(pPlayer, true);
 }
@@ -215,7 +263,7 @@ bool CGameControllerReinfected::CanCharacterPickup(CCharacter *pChr) const
 int CGameControllerReinfected::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, int Weapon)
 {
 	if(IsInfectionStarted() && Weapon != WEAPON_GAME)
-		Reinfected()->Infect(pVictim);
+		Infect(pVictim->GetPlayer()->GetCID());
 
 	if(!pKiller || Weapon == WEAPON_GAME)
 		return 0;
@@ -290,7 +338,7 @@ int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Dire
 
 			if(!Reinfected()->IsInfected(pTarget))
 			{
-				Reinfected()->Infect(pTarget);
+				Infect(pTarget->GetPlayer()->GetCID());
 				AddScoreForInfection(ClientID);
 			}
 			else
@@ -334,10 +382,17 @@ bool CGameControllerReinfected::DoWincheckMatch()
 	if(Reinfected()->m_InfectedNum > 0 && Reinfected()->m_HumanNum == 0)
 	{
 		EndMatch();
+		GameServer()->SendChat(-1, CHAT_ALL, -1, "It's zombie time!");
+		return true;
+	}
+	else if(m_GameInfo.m_TimeLimit > 0 && (Server()->Tick() - m_GameStartTick) >= m_GameInfo.m_TimeLimit * Server()->TickSpeed() * 60)
+	{
+		EndMatch();
+		GameServer()->SendChat(-1, CHAT_ALL, -1, "Don't be panic!");
 		return true;
 	}
 
-	if(Reinfected()->m_InfectedNum == 0 && IsInfectionStarted())
+	if(IsInfectionStarted())
 	{
 		StartRandomInfection();
 	}
@@ -356,7 +411,7 @@ void CGameControllerReinfected::DoTeamChange(CPlayer *pPlayer, int Team, bool Do
 	else
 	{
 		if(IsInfectionStarted())
-			Reinfected()->Infect(pPlayer->GetCID());
+			Infect(pPlayer->GetCID());
 		Reinfected()->AddPlayerToList(pPlayer->GetCID());
 	}
 
@@ -368,4 +423,5 @@ void CGameControllerReinfected::RefreshClientSkin(int ClientID, bool Sync)
 	if(!GameServer()->m_apPlayers[ClientID])
 		return;
 	RefreshPlayerSkin(GameServer()->m_apPlayers[ClientID], Sync);
+	GameServer()->SendSkinChange(ClientID, -1);
 }
