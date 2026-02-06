@@ -88,9 +88,8 @@ pacman -S --needed ninja` on Arch Linux.)
 `-DCLIENT=OFF`: Disable generation of the client target. Can be useful on
 headless servers which don't have graphics libraries like SDL3 installed.
 
-Building on Linux or macOS (bam)
+Building on Linux, Windows or macOS (Bam)
 ==========================
-> Bam support on Windows has been deprecated.
 
 Installing dependencies
 -----------------------
@@ -106,6 +105,9 @@ Installing dependencies
     
     # macOS
     brew install bam freetype sdl3
+
+    # MSYS2 (Windows)
+    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib
     
     # other (add bam to your path)
     git clone https://github.com/matricks/bam

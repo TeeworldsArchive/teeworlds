@@ -171,12 +171,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
         include:
         - os: ubuntu-latest
           archtitecture: "x86_64"
+          shell: "bash"
+        - os: windows-latest
+          archtitecture: "x86_64"
+          shell: "msys2"
         - os: macOS-latest
           archtitecture: "arm64"
+          shell: "bash"
+    defaults:
+      run:
+        shell: ${{ matrix.shell }} {0}
 
     steps:
     - uses: actions/checkout@v4
@@ -197,6 +205,20 @@ jobs:
         repository: libsdl-org/SDL
         ref: release-3.2.28
         path: ./SDL
+    
+    - name: Prepare MSYS2 (Windows)
+      if: contains(matrix.os, 'windows')
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        pacboy: >-
+          toolchain:p
+          cmake:p
+          ninja:p
+          zlib:p
+          sdl3:p
+          freetype:p
 
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
@@ -210,6 +232,12 @@ jobs:
         cmake . -DCMAKE_BUILD_TYPE=Release
         sudo make install
 
+    - name: Prepare Windows
+      if: contains(matrix.os, 'windows')
+      run: |
+        cd bam
+        ./make_win64_msvc.bat
+
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
       run: |
@@ -217,6 +245,7 @@ jobs:
         brew install sdl3
         cd bam
         ./make_unix.sh
+    - run: pkg-config --cflags freetype2
 
     - name: Build in debug mode
       run: ./bam/bam conf=debug all

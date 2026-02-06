@@ -15,8 +15,8 @@ SDL = {
 		
 		local apply = function(option, settings)
 			if option.use_pkgconfig == true then
-				settings.cc.flags:Add("`pkg-config --cflags sdl3`")
-				settings.link.flags:Add("`pkg-config --libs sdl3`")
+				settings.cc.flags:Add(RunCommand("pkg-config --cflags sdl3"))
+				settings.link.flags:Add(RunCommand("pkg-config --libs sdl3"))
 			end
 		end
 		
