@@ -159,7 +159,7 @@ jobs:
 
     - name: Download artifact for Release
       uses: softprops/action-gh-release@v2
-      if: github.ref_type != 'tag' && github.event_name != 'pull_request'
+      if: github.ref_type != 'tag' && github.event_name != 'pull_request' && github.ref_name == 'mods'
       with:
         tag_name: nightly
         name: Nightly Build

@@ -12,9 +12,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: false
     - name: Delete Nightly Build
-      if: github.ref_type != 'tag'
+      if: github.ref_type != 'tag' && github.ref_name == 'mods'
       run: |
         gh release delete nightly --cleanup-tag --yes
       
