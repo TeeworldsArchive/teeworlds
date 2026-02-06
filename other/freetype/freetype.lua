@@ -11,7 +11,7 @@ FreeType = {
 			if ExecuteSilent("pkg-config --exists freetype2") == 0 then
 				option.value = true
 				option.use_pkgconfig = true
-			elseif ExecuteSilent("freetype-config") == 0 and ExecuteSilent("freetype-config --cflags") == 0 then
+			elseif ExecuteSilent("freetype-config") > 0 and ExecuteSilent("freetype-config --cflags") == 0 then
 				option.value = true
 				option.use_ftconfig = true
 			end
@@ -19,11 +19,11 @@ FreeType = {
 
 		local apply = function(option, settings)
 			if option.use_pkgconfig == true then
-				settings.cc.flags:Add("`pkg-config --cflags freetype2`")
-				settings.link.flags:Add("`pkg-config --libs freetype2`")
+				settings.cc.flags:Add(RunCommand("pkg-config --cflags freetype2"))
+				settings.link.flags:Add(RunCommand("pkg-config --libs freetype2"))
 			elseif option.use_ftconfig == true then
-				settings.cc.flags:Add("`freetype-config --cflags`")
-				settings.link.flags:Add("`freetype-config --libs`")
+				settings.cc.flags:Add(RunCommand("freetype-config --cflags"))
+				settings.link.flags:Add(RunCommand("freetype-config --libs"))
 			end
 		end
 

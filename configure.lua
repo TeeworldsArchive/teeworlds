@@ -499,3 +499,22 @@ function OptLibrary(name, header, desc)
 	return o
 end
 
+function RunCommand(command)
+	local res = nil
+	local tmpfile = os.tmpname()
+	if family == "windows" then
+		res = Execute(command .. " >" .. tmpfile .. " 2>&1")
+	else
+		res = Execute(command .. " >" .. tmpfile .. " 2>/dev/null")
+	end
+	if res == 0 then
+		local file = io.open(tmpfile, "r")
+		if file then
+			local output = file:read("*a")
+			file:close()
+			os.remove(tmpfile)
+			return output:gsub("%s+$", "")
+		end
+	end
+	return ""
+end

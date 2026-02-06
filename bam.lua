@@ -402,12 +402,6 @@ end
 
 -- create all targets for specified configuration & architecture
 function GenerateSettings(conf, arch, builddir, compiler, headless)
-	if family == "windows" then
-		print("Bam is not supported on the windows anymore because of it only support mingw32 and MSVC, but we use MSYS2 to build this project at now.")
-		print("Try using CMake instead! It is recommended to use MSYS2 to build the project!")
-		os.exit(1)
-	end
-
 	local settings = NewSettings()
 
 	-- Set compiler if explicitly requested
