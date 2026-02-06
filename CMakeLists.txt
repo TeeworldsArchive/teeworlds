@@ -1889,8 +1889,14 @@ else()
     if(EXISTS \"\${_FILE}\")
       if(TARGET_OS STREQUAL \"windows\")
         set(POST_EXCLUDE_REGEXES
-          \"api-ms-win\"
-          \"ext-ms-win\"
+          \".*api-ms-win.*\"
+          \".*ext-ms-win.*\"
+          \".*AzureAttest.*\"
+          \".*HvsiFileTrust.*\"
+          \".*PdmUtilities.*\"
+          \".*WTDSENSOR.*\"
+          \".*wpaxholder.*\"
+          \".*wtdccm.*\"
         )
       elif(TARGET_OS STREQUAL \"mac\")
         set(POST_EXCLUDE_REGEXES

@@ -1,6 +1,9 @@
 name: Delete Nightly Build
 
-on: [push]
+on:
+  push:
+    branches:
+      - mods
 
 jobs:
   delete:
@@ -14,7 +17,7 @@ jobs:
       with:
         submodules: false
     - name: Delete Nightly Build
-      if: github.ref_type != 'tag' && github.ref_name == 'mods'
+      if: github.ref_type != 'tag'
       run: |
         gh release delete nightly --cleanup-tag --yes
       

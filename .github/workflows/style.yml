@@ -3,6 +3,7 @@ name: Check style
 on:
   push:
     branches-ignore:
+      - mods
       - master
       - staging.tmp
       - trying.tmp
