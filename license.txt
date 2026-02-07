@@ -27,6 +27,10 @@ Authors:	android272, Chi11y (chi1), Crises, Daniel, Echchouik, Fisico,
 			red_com, serpis, SkizZ, somerunce, Sonix, Stephanator, teetow,
 			Ubu, Zatline
 
+Note: All audio files have been converted from WavePack (.wv) to Opus format. 
+This constitutes a modification under the terms of the CC-BY-SA 3.0 license.
+The resulting Opus files are therefore licensed under the same terms (CC-BY-SA 3.0).
+
 Teeworlds Archive Project: Bamcane
 
 ------------------------------------------------------------------------
