@@ -1,8 +1,10 @@
 CheckVersion("0.5")
 
 Import("configure.lua")
-Import("other/sdl/sdl.lua")
-Import("other/freetype/freetype.lua")
+Import("bamfind/sdl.lua")
+Import("bamfind/freetype.lua")
+Import("bamfind/opus.lua")
+Import("bamfind/opusfile.lua")
 
 --- Setup Config -------
 config = NewConfig()
@@ -13,6 +15,8 @@ config:Add(OptTestCompileC("buildwithoutsseflag", "#include <immintrin.h>\nint m
 config:Add(OptLibrary("zlib", "zlib.h", false))
 config:Add(SDL.OptFind("sdl", true))
 config:Add(FreeType.OptFind("freetype", true))
+config:Add(Opus.OptFind("opus", true))
+config:Add(Opusfile.OptFind("opusfile", true))
 config:Finalize("config.lua")
 
 generated_src_dir = "build/src"
@@ -89,7 +93,7 @@ function GenerateCommonSettings(settings, conf, arch, compiler)
 
 	-- Compile zlib if needed
 	local zlib = nil
-	if config.zlib.value == 1 then
+	if config.zlib.value == 1 then -- there's a issue need to fix, this should be true instead of 1, but if we do the correct way, we would get error.
 		settings.link.libs:Add("z")
 		if config.zlib.include_path then
 			settings.cc.includes:Add(config.zlib.include_path)
@@ -99,14 +103,19 @@ function GenerateCommonSettings(settings, conf, arch, compiler)
 		zlib = Compile(settings, Collect("src/engine/external/zlib/*.c"))
 	end
 
+	if config.opus.value == true then
+		if config.opus.include_path then
+			settings.cc.includes:Add(config.opus.include_path)
+		end
+	end
+
 	local md5 = Compile(settings, Collect("src/engine/external/md5/*.c"))
-	local wavpack = Compile(settings, Collect("src/engine/external/wavpack/*.c"))
 	local png = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
 	local json = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 	local glad = Compile(settings, Collect("src/engine/external/glad/gl.c"))
 
 	-- globally available libs
-	libs = {zlib=zlib, wavpack=wavpack, png=png, md5=md5, json=json, glad=glad}
+	libs = {zlib=zlib, png=png, md5=md5, json=json, glad=glad}
 end
 
 function GenerateMacOSSettings(settings, conf, arch, compiler)
@@ -360,13 +369,15 @@ end
 function BuildClient(settings, family, platform)
 	config.sdl:Apply(settings)
 	config.freetype:Apply(settings)
+	config.opus:Apply(settings)
+	config.opusfile:Apply(settings)
 	
 	local client = Compile(settings, Collect("src/engine/client/*.cpp"))
 	
 	local game_client = Compile(settings, CollectRecursive("src/game/client/*.cpp"), SharedClientFiles())
 	local game_editor = Compile(settings, Collect("src/game/editor/*.cpp"))
 	
-	Link(settings, "teeworlds", libs["zlib"], libs["md5"], libs["wavpack"], libs["png"], libs["json"], libs["glad"], client, game_client, game_editor)
+	Link(settings, "teeworlds", libs["zlib"], libs["md5"], libs["png"], libs["json"], libs["glad"], client, game_client, game_editor)
 end
 
 function BuildServer(settings, family, platform)
@@ -381,7 +392,7 @@ function BuildTools(settings)
 	local tools = {}
 	for i,v in ipairs(Collect("src/tools/*.cpp", "src/tools/*.c")) do
 		local toolname = PathFilename(PathBase(v))
-		tools[i] = Link(settings, toolname, Compile(settings, v), libs["zlib"], libs["md5"], libs["wavpack"], libs["png"], libs["json"])
+		tools[i] = Link(settings, toolname, Compile(settings, v), libs["zlib"], libs["md5"], libs["png"], libs["json"])
 	end
 	PseudoTarget(settings.link.Output(settings, "pseudo_tools") .. settings.link.extension, tools)
 end
@@ -396,7 +407,7 @@ end
 
 function BuildContent(settings, arch, conf)
 	local content = {}
-	table.insert(content, CopyToDir(settings.link.Output(settings, "data"), CollectRecursive(content_src_dir .. "*.png", content_src_dir .. "*.wv", content_src_dir .. "*.ttc", content_src_dir .. "*.ttf", content_src_dir .. "*.txt", content_src_dir .. "*.map", content_src_dir .. "*.rules", content_src_dir .. "*.json")))
+	table.insert(content, CopyToDir(settings.link.Output(settings, "data"), CollectRecursive(content_src_dir .. "*.png", content_src_dir .. "*.opus", content_src_dir .. "*.ttc", content_src_dir .. "*.ttf", content_src_dir .. "*.txt", content_src_dir .. "*.map", content_src_dir .. "*.rules", content_src_dir .. "*.json")))
 	PseudoTarget(settings.link.Output(settings, "content") .. settings.link.extension, content)
 end
 
@@ -446,7 +457,6 @@ function GenerateSettings(conf, arch, builddir, compiler, headless)
 	
 	settings.cc.includes:Add("src")
 	settings.cc.includes:Add("src/engine/external/pnglite")
-	settings.cc.includes:Add("src/engine/external/wavpack")
 	settings.cc.includes:Add(generated_src_dir)
 	
 	if family == "windows" then

@@ -30,19 +30,19 @@ Installing dependencies
 -----------------------
 ```bash
     # Debian/Ubuntu
-    sudo apt install build-essential cmake git libfreetype6-dev libsdl3-dev libpnglite-dev libwavpack-dev python3
+    sudo apt install build-essential cmake git libfreetype6-dev libsdl3-dev libpnglite-dev libopus-dev libopusfile-dev python3
     
     # Fedora
-    sudo dnf install @development-tools cmake gcc-c++ git freetype-devel pnglite-devel python3 SDL3-devel wavpack-devel
+    sudo dnf install @development-tools cmake gcc-c++ git freetype-devel pnglite-devel python3 SDL3-devel opus-devel opusfile-devel
     
     # Arch Linux (doesn't have pnglite in its repositories)
-    sudo pacman -S --needed base-devel cmake freetype2 git python sdl3 wavpack
+    sudo pacman -S --needed base-devel cmake freetype2 git python sdl3 opus opusfile
     
     # macOS
-    brew install cmake freetype sdl3
+    brew install cmake freetype sdl3 opus opusfile
 
     # MSYS2 (Windows)
-    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib
+    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib mingw-w64-ucrt-x86_64-opus mingw-w64-ucrt-x86_64-opusfile
 ```
 
 
@@ -95,19 +95,19 @@ Installing dependencies
 -----------------------
 ```bash
     # Debian/Ubuntu 25.04+
-    sudo apt install bam git libfreetype6-dev libsdl3-dev libpnglite-dev libwavpack-dev python3
+    sudo apt install bam git libfreetype6-dev libsdl3-dev libpnglite-dev libopus-dev libopusfile-dev python3
     
     # Fedora
-    sudo dnf install bam gcc-c++ git freetype-devel pnglite-devel python3 SDL3-devel wavpack-devel
+    sudo dnf install bam gcc-c++ git freetype-devel pnglite-devel python3 SDL3-devel opus-devel opusfile-devel
     
     # Arch Linux (doesn't have pnglite in its repositories)
-    sudo pacman -S --needed base-devel bam freetype2 git python sdl3 wavpack
+    sudo pacman -S --needed base-devel bam freetype2 git python sdl3 opus opusfile
     
     # macOS
-    brew install bam freetype sdl3
+    brew install bam freetype sdl3 opus opusfile
 
     # MSYS2 (Windows)
-    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib
+    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib mingw-w64-ucrt-x86_64-opus mingw-w64-ucrt-x86_64-opusfile
     
     # other (add bam to your path)
     git clone https://github.com/matricks/bam
