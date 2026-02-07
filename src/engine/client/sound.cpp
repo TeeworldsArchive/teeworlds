@@ -9,12 +9,11 @@
 #include <engine/shared/config.h>
 
 #include <SDL3/SDL.h>
+#include <opus.h>
+#include <opusfile.h>
 
 #include "sound.h"
 
-extern "C" {
-#include <wavpack.h>
-}
 #include <limits.h>
 #include <math.h>
 
@@ -68,8 +67,6 @@ static int m_SoundVolume = 100;
 static int m_NextVoice = 0;
 static int *m_pMixBuffer = 0; // buffer only used by the thread callback function
 static unsigned m_MaxFrames = 0;
-
-static IOHANDLE s_File;
 
 static short Int2Short(int i)
 {
@@ -335,49 +332,10 @@ void CSound::RateConvert(int SampleID)
 	pSample->m_NumFrames = NumFrames;
 }
 
-static int ReadDataOld(void *pBuffer, int Size)
-{
-	return io_read(s_File, pBuffer, Size);
-}
-
-#if defined(CONF_WAVPACK_OPEN_FILE_INPUT_EX)
-static int ReadData(void *pId, void *pBuffer, int Size)
-{
-	(void) pId;
-	return ReadDataOld(pBuffer, Size);
-}
-
-static int ReturnFalse(void *pId)
-{
-	(void) pId;
-	return 0;
-}
-
-static unsigned int GetPos(void *pId)
-{
-	(void) pId;
-	return io_tell(s_File);
-}
-
-static unsigned int GetLength(void *pId)
-{
-	(void) pId;
-	return io_length(s_File);
-}
-
-static int PushBackByte(void *pId, int Char)
-{
-	(void) pId;
-	return io_unread_byte(s_File, Char);
-}
-#endif
-
-ISound::CSampleHandle CSound::LoadWV(const char *pFilename)
+ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 {
 	CSample *pSample;
 	int SampleID = -1;
-	char aError[100];
-	WavpackContext *pContext;
 
 	// don't waste memory on sound when we are stress testing
 #ifdef CONF_DEBUG
@@ -393,10 +351,41 @@ ISound::CSampleHandle CSound::LoadWV(const char *pFilename)
 		return CSampleHandle();
 
 	lock_wait(m_SoundLock);
-	s_File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_ALL);
-	if(!s_File)
+	unsigned char *pFileData;
+	unsigned FileSize;
+	if(!m_pStorage->ReadFile(pFilename, IStorage::TYPE_ALL, (void **) &pFileData, &FileSize))
 	{
-		dbg_msg("sound/wv", "failed to open file. filename='%s'", pFilename);
+		dbg_msg("sound/opus", "failed to open file. filename='%s'", pFilename);
+		lock_unlock(m_SoundLock);
+		return CSampleHandle();
+	}
+
+	int Error = 0;
+	OggOpusFile *pOpusFile = op_open_memory(pFileData, FileSize, &Error);
+	if(!pOpusFile)
+	{
+		dbg_msg("sound/opus", "failed to open opus file '%s': error %d", pFilename, Error);
+		mem_free(pFileData);
+		lock_unlock(m_SoundLock);
+		return CSampleHandle();
+	}
+
+	int NumChannels = op_channel_count(pOpusFile, -1);;
+	if(NumChannels < 0 || NumChannels > 2)
+	{
+		dbg_msg("sound/opus", "only mono/stereo supported. channels=%d, file='%s'", NumChannels, pFilename);
+		op_free(pOpusFile);
+		mem_free(pFileData);
+		lock_unlock(m_SoundLock);
+		return CSampleHandle();
+	}
+
+	int TotalSamples = op_pcm_total(pOpusFile, -1);
+	if(TotalSamples < 0)
+	{
+		dbg_msg("sound/opus", "failed to get number of samples, error %d. file='%s'", TotalSamples, pFilename);
+		op_free(pOpusFile);
+		mem_free(pFileData);
 		lock_unlock(m_SoundLock);
 		return CSampleHandle();
 	}
@@ -404,90 +393,51 @@ ISound::CSampleHandle CSound::LoadWV(const char *pFilename)
 	SampleID = AllocID();
 	if(SampleID < 0)
 	{
-		io_close(s_File);
-		s_File = 0;
+		op_free(pOpusFile);
+		mem_free(pFileData);
 		lock_unlock(m_SoundLock);
 		return CSampleHandle();
 	}
 	pSample = &m_aSamples[SampleID];
-
-#if defined(CONF_WAVPACK_OPEN_FILE_INPUT_EX)
-	WavpackStreamReader Callback = {0};
-	Callback.can_seek = ReturnFalse;
-	Callback.get_length = GetLength;
-	Callback.get_pos = GetPos;
-	Callback.push_back_byte = PushBackByte;
-	Callback.read_bytes = ReadData;
-	pContext = WavpackOpenFileInputEx(&Callback, (void *) 1, 0, aError, 0, 0);
-#else
-	pContext = WavpackOpenFileInput(ReadDataOld, aError);
-#endif
-	if(pContext)
+	pSample->m_pData = (short *) mem_alloc((size_t) TotalSamples * NumChannels * sizeof(short));
+	if(!pSample->m_pData)
 	{
-		int m_aSamples = WavpackGetNumSamples(pContext);
-		int BitsPerSample = WavpackGetBitsPerSample(pContext);
-		unsigned int SampleRate = WavpackGetSampleRate(pContext);
-		int m_aChannels = WavpackGetNumChannels(pContext);
-		int *pData;
-		int *pSrc;
-		short *pDst;
-		int i;
-
-		pSample->m_Channels = m_aChannels;
-		pSample->m_Rate = SampleRate;
-
-		if(pSample->m_Channels > 2)
-		{
-			dbg_msg("sound/wv", "file is not mono or stereo. filename='%s'", pFilename);
-			io_close(s_File);
-			s_File = 0;
-			lock_unlock(m_SoundLock);
-			return CSampleHandle();
-		}
-
-		/*
-		if(snd->rate != 44100)
-		{
-			dbg_msg("sound/wv", "file is %d Hz, not 44100 Hz. filename='%s'", snd->rate, filename);
-			return -1;
-		}*/
-
-		if(BitsPerSample != 16)
-		{
-			dbg_msg("sound/wv", "bps is %d, not 16, filname='%s'", BitsPerSample, pFilename);
-			io_close(s_File);
-			s_File = 0;
-			lock_unlock(m_SoundLock);
-			return CSampleHandle();
-		}
-
-		pData = (int *) mem_alloc(4 * m_aSamples * m_aChannels);
-		WavpackUnpackSamples(pContext, pData, m_aSamples); // TODO: check return value
-		pSrc = pData;
-
-		pSample->m_pData = (short *) mem_alloc(2 * m_aSamples * m_aChannels);
-		pDst = pSample->m_pData;
-
-		for(i = 0; i < m_aSamples * m_aChannels; i++)
-			*pDst++ = (short) *pSrc++;
-
-		mem_free(pData);
-
-		pSample->m_NumFrames = m_aSamples;
-		pSample->m_LoopStart = -1;
-		pSample->m_LoopEnd = -1;
-		pSample->m_PausedAt = 0;
-	}
-	else
-	{
-		dbg_msg("sound/wv", "failed to open %s: %s", pFilename, aError);
+		op_free(pOpusFile);
+		mem_free(pFileData);
+		lock_unlock(m_SoundLock);
+		return CSampleHandle();
 	}
 
-	io_close(s_File);
-	s_File = NULL;
+	int Pos = 0;
+	while(Pos < TotalSamples)
+	{
+		int Read = (int)op_read(pOpusFile, pSample->m_pData + Pos * NumChannels, (TotalSamples - Pos) * NumChannels, nullptr);
+		if(Read < 0)
+		{
+			mem_free(pSample->m_pData);
+			op_free(pOpusFile);
+			mem_free(pFileData);
+			dbg_msg("sound/opus", "op_read error %d at %d. file='%s'", Read, Pos, pFilename);
+			return CSampleHandle();
+		}
+		else if(Read == 0) // EOF
+			break;
+
+		Pos += Read;
+	}
+
+	op_free(pOpusFile);
+	mem_free(pFileData);
+
+	pSample->m_Channels = NumChannels;
+	pSample->m_Rate = 48000;
+	pSample->m_NumFrames = (int)TotalSamples;
+	pSample->m_LoopStart = -1;
+	pSample->m_LoopEnd = -1;
+	pSample->m_PausedAt = 0;
 
 	if(m_pConfig->m_Debug)
-		dbg_msg("sound/wv", "loaded %s", pFilename);
+		dbg_msg("sound/opus", "loaded %s (%d samples, %d channels)", pFilename, TotalSamples, NumChannels);
 
 	RateConvert(SampleID);
 	lock_unlock(m_SoundLock);

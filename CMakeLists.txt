@@ -234,7 +234,8 @@ find_package(GTest)
 find_package(Pnglite)
 find_package(SDL3)
 find_package(Threads)
-find_package(Wavpack)
+find_package(Opus)
+find_package(Opusfile)
 
 
 if(TARGET_OS AND TARGET_OS STREQUAL "mac")
@@ -285,7 +286,8 @@ show_dependency_status("OpenSSL Crypto" CRYPTO)
 show_dependency_status("Pnglite" PNGLITE)
 show_dependency_status("Python3" Python3)
 show_dependency_status("SDL3" SDL3)
-show_dependency_status("Wavpack" WAVPACK)
+show_dependency_status("Opus" OPUS)
+show_dependency_status("Opusfile" OPUSFILE)
 show_dependency_status("Zlib" ZLIB)
 
 if(NOT(Python3_FOUND))
@@ -425,137 +427,137 @@ endif()
 ########################################################################
 
 set(EXPECTED_DATA
-  audio/foley_body_impact-01.wv
-  audio/foley_body_impact-02.wv
-  audio/foley_body_impact-03.wv
-  audio/foley_body_splat-01.wv
-  audio/foley_body_splat-02.wv
-  audio/foley_body_splat-03.wv
-  audio/foley_body_splat-04.wv
-  audio/foley_dbljump-01.wv
-  audio/foley_dbljump-02.wv
-  audio/foley_dbljump-03.wv
-  audio/foley_foot_left-01.wv
-  audio/foley_foot_left-02.wv
-  audio/foley_foot_left-03.wv
-  audio/foley_foot_left-04.wv
-  audio/foley_foot_right-01.wv
-  audio/foley_foot_right-02.wv
-  audio/foley_foot_right-03.wv
-  audio/foley_foot_right-04.wv
-  audio/foley_land-01.wv
-  audio/foley_land-02.wv
-  audio/foley_land-03.wv
-  audio/foley_land-04.wv
-  audio/hook_attach-01.wv
-  audio/hook_attach-02.wv
-  audio/hook_attach-03.wv
-  audio/hook_loop-01.wv
-  audio/hook_loop-02.wv
-  audio/hook_noattach-01.wv
-  audio/hook_noattach-02.wv
-  audio/hook_noattach-03.wv
-  audio/music_menu.wv
-  audio/sfx_ctf_cap_pl.wv
-  audio/sfx_ctf_drop.wv
-  audio/sfx_ctf_grab_en.wv
-  audio/sfx_ctf_grab_pl.wv
-  audio/sfx_ctf_rtn.wv
-  audio/sfx_hit_strong-01.wv
-  audio/sfx_hit_strong-02.wv
-  audio/sfx_hit_weak-01.wv
-  audio/sfx_hit_weak-02.wv
-  audio/sfx_hit_weak-03.wv
-  audio/sfx_msg-client.wv
-  audio/sfx_msg-highlight.wv
-  audio/sfx_msg-server.wv
-  audio/sfx_pickup_arm-01.wv
-  audio/sfx_pickup_arm-02.wv
-  audio/sfx_pickup_arm-03.wv
-  audio/sfx_pickup_arm-04.wv
-  audio/sfx_pickup_gun.wv
-  audio/sfx_pickup_hrt-01.wv
-  audio/sfx_pickup_hrt-02.wv
-  audio/sfx_pickup_launcher.wv
-  audio/sfx_pickup_ninja.wv
-  audio/sfx_pickup_sg.wv
-  audio/sfx_skid-01.wv
-  audio/sfx_skid-02.wv
-  audio/sfx_skid-03.wv
-  audio/sfx_skid-04.wv
-  audio/sfx_spawn_wpn-01.wv
-  audio/sfx_spawn_wpn-02.wv
-  audio/sfx_spawn_wpn-03.wv
-  audio/vo_teefault_cry-01.wv
-  audio/vo_teefault_cry-02.wv
-  audio/vo_teefault_ninja-01.wv
-  audio/vo_teefault_ninja-02.wv
-  audio/vo_teefault_ninja-03.wv
-  audio/vo_teefault_ninja-04.wv
-  audio/vo_teefault_pain_long-01.wv
-  audio/vo_teefault_pain_long-02.wv
-  audio/vo_teefault_pain_short-01.wv
-  audio/vo_teefault_pain_short-02.wv
-  audio/vo_teefault_pain_short-03.wv
-  audio/vo_teefault_pain_short-04.wv
-  audio/vo_teefault_pain_short-05.wv
-  audio/vo_teefault_pain_short-06.wv
-  audio/vo_teefault_pain_short-07.wv
-  audio/vo_teefault_pain_short-08.wv
-  audio/vo_teefault_pain_short-09.wv
-  audio/vo_teefault_pain_short-10.wv
-  audio/vo_teefault_pain_short-11.wv
-  audio/vo_teefault_pain_short-12.wv
-  audio/vo_teefault_sledge-01.wv
-  audio/vo_teefault_sledge-02.wv
-  audio/vo_teefault_sledge-03.wv
-  audio/vo_teefault_spawn-01.wv
-  audio/vo_teefault_spawn-02.wv
-  audio/vo_teefault_spawn-03.wv
-  audio/vo_teefault_spawn-04.wv
-  audio/vo_teefault_spawn-05.wv
-  audio/vo_teefault_spawn-06.wv
-  audio/vo_teefault_spawn-07.wv
-  audio/wp_flump_explo-01.wv
-  audio/wp_flump_explo-02.wv
-  audio/wp_flump_explo-03.wv
-  audio/wp_flump_launch-01.wv
-  audio/wp_flump_launch-02.wv
-  audio/wp_flump_launch-03.wv
-  audio/wp_gun_fire-01.wv
-  audio/wp_gun_fire-02.wv
-  audio/wp_gun_fire-03.wv
-  audio/wp_hammer_hit-01.wv
-  audio/wp_hammer_hit-02.wv
-  audio/wp_hammer_hit-03.wv
-  audio/wp_hammer_swing-01.wv
-  audio/wp_hammer_swing-02.wv
-  audio/wp_hammer_swing-03.wv
-  audio/wp_laser_bnce-01.wv
-  audio/wp_laser_bnce-02.wv
-  audio/wp_laser_bnce-03.wv
-  audio/wp_laser_fire-01.wv
-  audio/wp_laser_fire-02.wv
-  audio/wp_laser_fire-03.wv
-  audio/wp_ninja_attack-01.wv
-  audio/wp_ninja_attack-02.wv
-  audio/wp_ninja_attack-03.wv
-  audio/wp_ninja_attack-04.wv
-  audio/wp_ninja_hit-01.wv
-  audio/wp_ninja_hit-02.wv
-  audio/wp_ninja_hit-03.wv
-  audio/wp_ninja_hit-04.wv
-  audio/wp_noammo-01.wv
-  audio/wp_noammo-02.wv
-  audio/wp_noammo-03.wv
-  audio/wp_noammo-04.wv
-  audio/wp_noammo-05.wv
-  audio/wp_shotty_fire-01.wv
-  audio/wp_shotty_fire-02.wv
-  audio/wp_shotty_fire-03.wv
-  audio/wp_switch-01.wv
-  audio/wp_switch-02.wv
-  audio/wp_switch-03.wv
+  audio/foley_body_impact-01.opus
+  audio/foley_body_impact-02.opus
+  audio/foley_body_impact-03.opus
+  audio/foley_body_splat-01.opus
+  audio/foley_body_splat-02.opus
+  audio/foley_body_splat-03.opus
+  audio/foley_body_splat-04.opus
+  audio/foley_dbljump-01.opus
+  audio/foley_dbljump-02.opus
+  audio/foley_dbljump-03.opus
+  audio/foley_foot_left-01.opus
+  audio/foley_foot_left-02.opus
+  audio/foley_foot_left-03.opus
+  audio/foley_foot_left-04.opus
+  audio/foley_foot_right-01.opus
+  audio/foley_foot_right-02.opus
+  audio/foley_foot_right-03.opus
+  audio/foley_foot_right-04.opus
+  audio/foley_land-01.opus
+  audio/foley_land-02.opus
+  audio/foley_land-03.opus
+  audio/foley_land-04.opus
+  audio/hook_attach-01.opus
+  audio/hook_attach-02.opus
+  audio/hook_attach-03.opus
+  audio/hook_loop-01.opus
+  audio/hook_loop-02.opus
+  audio/hook_noattach-01.opus
+  audio/hook_noattach-02.opus
+  audio/hook_noattach-03.opus
+  audio/music_menu.opus
+  audio/sfx_ctf_cap_pl.opus
+  audio/sfx_ctf_drop.opus
+  audio/sfx_ctf_grab_en.opus
+  audio/sfx_ctf_grab_pl.opus
+  audio/sfx_ctf_rtn.opus
+  audio/sfx_hit_strong-01.opus
+  audio/sfx_hit_strong-02.opus
+  audio/sfx_hit_weak-01.opus
+  audio/sfx_hit_weak-02.opus
+  audio/sfx_hit_weak-03.opus
+  audio/sfx_msg-client.opus
+  audio/sfx_msg-highlight.opus
+  audio/sfx_msg-server.opus
+  audio/sfx_pickup_arm-01.opus
+  audio/sfx_pickup_arm-02.opus
+  audio/sfx_pickup_arm-03.opus
+  audio/sfx_pickup_arm-04.opus
+  audio/sfx_pickup_gun.opus
+  audio/sfx_pickup_hrt-01.opus
+  audio/sfx_pickup_hrt-02.opus
+  audio/sfx_pickup_launcher.opus
+  audio/sfx_pickup_ninja.opus
+  audio/sfx_pickup_sg.opus
+  audio/sfx_skid-01.opus
+  audio/sfx_skid-02.opus
+  audio/sfx_skid-03.opus
+  audio/sfx_skid-04.opus
+  audio/sfx_spawn_wpn-01.opus
+  audio/sfx_spawn_wpn-02.opus
+  audio/sfx_spawn_wpn-03.opus
+  audio/vo_teefault_cry-01.opus
+  audio/vo_teefault_cry-02.opus
+  audio/vo_teefault_ninja-01.opus
+  audio/vo_teefault_ninja-02.opus
+  audio/vo_teefault_ninja-03.opus
+  audio/vo_teefault_ninja-04.opus
+  audio/vo_teefault_pain_long-01.opus
+  audio/vo_teefault_pain_long-02.opus
+  audio/vo_teefault_pain_short-01.opus
+  audio/vo_teefault_pain_short-02.opus
+  audio/vo_teefault_pain_short-03.opus
+  audio/vo_teefault_pain_short-04.opus
+  audio/vo_teefault_pain_short-05.opus
+  audio/vo_teefault_pain_short-06.opus
+  audio/vo_teefault_pain_short-07.opus
+  audio/vo_teefault_pain_short-08.opus
+  audio/vo_teefault_pain_short-09.opus
+  audio/vo_teefault_pain_short-10.opus
+  audio/vo_teefault_pain_short-11.opus
+  audio/vo_teefault_pain_short-12.opus
+  audio/vo_teefault_sledge-01.opus
+  audio/vo_teefault_sledge-02.opus
+  audio/vo_teefault_sledge-03.opus
+  audio/vo_teefault_spawn-01.opus
+  audio/vo_teefault_spawn-02.opus
+  audio/vo_teefault_spawn-03.opus
+  audio/vo_teefault_spawn-04.opus
+  audio/vo_teefault_spawn-05.opus
+  audio/vo_teefault_spawn-06.opus
+  audio/vo_teefault_spawn-07.opus
+  audio/wp_flump_explo-01.opus
+  audio/wp_flump_explo-02.opus
+  audio/wp_flump_explo-03.opus
+  audio/wp_flump_launch-01.opus
+  audio/wp_flump_launch-02.opus
+  audio/wp_flump_launch-03.opus
+  audio/wp_gun_fire-01.opus
+  audio/wp_gun_fire-02.opus
+  audio/wp_gun_fire-03.opus
+  audio/wp_hammer_hit-01.opus
+  audio/wp_hammer_hit-02.opus
+  audio/wp_hammer_hit-03.opus
+  audio/wp_hammer_swing-01.opus
+  audio/wp_hammer_swing-02.opus
+  audio/wp_hammer_swing-03.opus
+  audio/wp_laser_bnce-01.opus
+  audio/wp_laser_bnce-02.opus
+  audio/wp_laser_bnce-03.opus
+  audio/wp_laser_fire-01.opus
+  audio/wp_laser_fire-02.opus
+  audio/wp_laser_fire-03.opus
+  audio/wp_ninja_attack-01.opus
+  audio/wp_ninja_attack-02.opus
+  audio/wp_ninja_attack-03.opus
+  audio/wp_ninja_attack-04.opus
+  audio/wp_ninja_hit-01.opus
+  audio/wp_ninja_hit-02.opus
+  audio/wp_ninja_hit-03.opus
+  audio/wp_ninja_hit-04.opus
+  audio/wp_noammo-01.opus
+  audio/wp_noammo-02.opus
+  audio/wp_noammo-03.opus
+  audio/wp_noammo-04.opus
+  audio/wp_noammo-05.opus
+  audio/wp_shotty_fire-01.opus
+  audio/wp_shotty_fire-02.opus
+  audio/wp_shotty_fire-03.opus
+  audio/wp_switch-01.opus
+  audio/wp_switch-02.opus
+  audio/wp_switch-03.opus
   countryflags/AD.png
   countryflags/AE.png
   countryflags/AF.png
@@ -1108,7 +1110,7 @@ if(NOT EXISTS ${PROJECT_SOURCE_DIR}/datasrc/maps/dm1.map)
   endforeach()
 endif()
 
-set_glob(DATA GLOB_RECURSE "json;map;png;rules;ttc;ttf;txt;wv" datasrc ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "json;map;png;rules;ttc;ttf;txt;opus" datasrc ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND DLLS
@@ -1460,7 +1462,7 @@ if(CLIENT)
   )
   set(CLIENT_SRC ${PLATFORM_CLIENT} ${ENGINE_CLIENT} ${GAME_CLIENT} ${GAME_EDITOR} ${GAME_GENERATED_CLIENT})
 
-  set(DEPS_CLIENT ${DEPS} ${PNGLITE_DEP} ${WAVPACK_DEP} ${DEP_GLAD})
+  set(DEPS_CLIENT ${DEPS} ${PNGLITE_DEP} ${DEP_GLAD})
 
   # Libraries
   set(LIBS_CLIENT
@@ -1468,7 +1470,8 @@ if(CLIENT)
     ${FREETYPE_LIBRARIES}
     ${PNGLITE_LIBRARIES}
     ${SDL3_LIBRARIES}
-    ${WAVPACK_LIBRARIES}
+    ${OPUS_LIBRARIES}
+    ${OPUSFILE_LIBRARIES}
     ${PLATFORM_CLIENT_LIBS}
   )
 
@@ -1499,25 +1502,9 @@ if(CLIENT)
     ${FREETYPE_INCLUDE_DIRS}
     ${PNGLITE_INCLUDE_DIRS}
     ${SDL3_INCLUDE_DIRS}
-    ${WAVPACK_INCLUDE_DIRS}
+    ${OPUS_INCLUDE_DIRS}
+    ${OPUSFILE_INCLUDE_DIRS}
   )
-
-  set(PARAMS "${WAVPACK_INCLUDE_DIRS};${WAVPACK_INCLUDE_DIRS}")
-  if(NOT(WAVPACK_OPEN_FILE_INPUT_EX_PARAMS STREQUAL PARAMS))
-    unset(WAVPACK_OPEN_FILE_INPUT_EX CACHE)
-  endif()
-  set(WAVPACK_OPEN_FILE_INPUT_EX_PARAMS "${PARAMS}" CACHE INTERNAL "")
-
-  set(CMAKE_REQUIRED_INCLUDES ${ORIGINAL_CMAKE_REQUIRED_INCLUDES} ${WAVPACK_INCLUDE_DIRS})
-  set(CMAKE_REQUIRED_LIBRARIES ${ORIGINAL_CMAKE_REQUIRED_LIBRARIES} ${WAVPACK_LIBRARIES})
-  check_symbol_exists(WavpackOpenFileInputEx wavpack.h WAVPACK_OPEN_FILE_INPUT_EX)
-  set(CMAKE_REQUIRED_INCLUDES ${ORIGINAL_CMAKE_REQUIRED_INCLUDES})
-  set(CMAKE_REQUIRED_LIBRARIES ${ORIGINAL_CMAKE_REQUIRED_LIBRARIES})
-
-  if(WAVPACK_OPEN_FILE_INPUT_EX)
-    target_compile_definitions(${TARGET_CLIENT} PRIVATE CONF_WAVPACK_OPEN_FILE_INPUT_EX)
-  endif()
-
   list(APPEND TARGETS_OWN ${TARGET_CLIENT})
   list(APPEND TARGETS_LINK ${TARGET_CLIENT})
 endif()

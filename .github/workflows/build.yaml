@@ -61,6 +61,8 @@ jobs:
           ninja:p
           zlib:p
           sdl3:p
+          opus:p
+          opusfile:p
 
     - name: Checkout SDL3
       if: contains(matrix.os, 'ubuntu')
@@ -74,7 +76,7 @@ jobs:
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt-get install pkg-config ninja-build libfreetype6-dev libgl1-mesa-dev -y
+        sudo apt-get install pkg-config ninja-build libfreetype6-dev libopus-dev libopusfile-dev libgl1-mesa-dev -y
         sudo apt-get install build-essential git cmake libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev libudev-dev libinput-dev libts-dev libjpeg-dev libwebp-dev -y
         cd SDL
         cmake . -DCMAKE_BUILD_TYPE=Release
@@ -101,7 +103,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update || true
-        brew install pkg-config sdl3 python3 ninja || true
+        brew install pkg-config sdl3 python3 ninja opus opusfile || true
         brew upgrade freetype
         sudo rm -rf /Library/Developer/CommandLineTools
 
@@ -219,12 +221,14 @@ jobs:
           zlib:p
           sdl3:p
           freetype:p
+          opus:p
+          opusfile:p
 
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt-get install libfreetype6-dev libsdl2-dev libgl1-mesa-dev -y
+        sudo apt-get install libfreetype6-dev libopus-dev libopusfile-dev libgl1-mesa-dev -y
         sudo apt-get install build-essential git cmake libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev libudev-dev libinput-dev libts-dev libjpeg-dev libwebp-dev -y
         cd bam
         ./make_unix.sh
@@ -242,10 +246,9 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update
-        brew install sdl3
+        brew install sdl3 opus opusfile || true
         cd bam
         ./make_unix.sh
-    - run: pkg-config --cflags freetype2
 
     - name: Build in debug mode
       run: ./bam/bam conf=debug all
@@ -257,7 +260,3 @@ jobs:
     - name: Test release
       run: ./build/${{ matrix.archtitecture }}/release/teeworlds_srv shutdown
 
-    - name: Create MacOS app using make_release.py
-      if: contains(matrix.os, 'macOS')
-      run: |
-        sudo python3 scripts/make_release.py master macos
