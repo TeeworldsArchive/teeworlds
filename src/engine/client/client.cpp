@@ -946,7 +946,7 @@ int CClient::UnpackServerInfo(CUnpacker *pUnpacker, CServerInfo *pInfo, int *pTo
 		return -1;
 	// drop standard gametype with more than VANILLA_MAX_PLAYERS
 	if(pInfo->m_MaxPlayers > VANILLA_MAX_PLAYERS && (str_comp(pInfo->m_aGameType, "DM") == 0 || str_comp(pInfo->m_aGameType, "TDM") == 0 || str_comp(pInfo->m_aGameType, "CTF") == 0 ||
-							str_comp(pInfo->m_aGameType, "LTS") == 0 || str_comp(pInfo->m_aGameType, "LMS") == 0))
+								str_comp(pInfo->m_aGameType, "LTS") == 0 || str_comp(pInfo->m_aGameType, "LMS") == 0))
 		return -1;
 
 	// use short version
@@ -2524,7 +2524,7 @@ void CClient::OpenLocalServer()
 #else
 	static const char *pServer = "teeworlds_srv";
 #endif
-	char aPath[IO_MAX_PATH_LENGTH];	
+	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_APP, pServer, aPath, sizeof(aPath));
 	const char *apArgs[2] = {aPath, 0};
 

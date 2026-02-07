@@ -370,7 +370,8 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 		return CSampleHandle();
 	}
 
-	int NumChannels = op_channel_count(pOpusFile, -1);;
+	int NumChannels = op_channel_count(pOpusFile, -1);
+	;
 	if(NumChannels < 0 || NumChannels > 2)
 	{
 		dbg_msg("sound/opus", "only mono/stereo supported. channels=%d, file='%s'", NumChannels, pFilename);
@@ -411,7 +412,7 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 	int Pos = 0;
 	while(Pos < TotalSamples)
 	{
-		int Read = (int)op_read(pOpusFile, pSample->m_pData + Pos * NumChannels, (TotalSamples - Pos) * NumChannels, nullptr);
+		int Read = (int) op_read(pOpusFile, pSample->m_pData + Pos * NumChannels, (TotalSamples - Pos) * NumChannels, nullptr);
 		if(Read < 0)
 		{
 			mem_free(pSample->m_pData);
@@ -431,7 +432,7 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 
 	pSample->m_Channels = NumChannels;
 	pSample->m_Rate = 48000;
-	pSample->m_NumFrames = (int)TotalSamples;
+	pSample->m_NumFrames = (int) TotalSamples;
 	pSample->m_LoopStart = -1;
 	pSample->m_LoopEnd = -1;
 	pSample->m_PausedAt = 0;

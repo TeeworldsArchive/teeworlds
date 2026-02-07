@@ -239,7 +239,7 @@ void CControls::OnRender()
 
 bool CControls::OnCursorMove(float x, float y, int CursorType)
 {
-	if(m_pClient->IsWorldPaused() ||  m_pClient->m_pChat->IsActive())
+	if(m_pClient->IsWorldPaused() || m_pClient->m_pChat->IsActive())
 		return false;
 
 	if(CursorType == IInput::CURSOR_JOYSTICK && Config()->m_JoystickAbsolute && m_pClient->m_Snap.m_pGameData && !m_pClient->m_Snap.m_SpecInfo.m_Active)
