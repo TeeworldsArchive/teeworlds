@@ -1076,10 +1076,7 @@ void CChat::OnRender()
 
 		if(pLine->m_Size.y < 0.0f)
 		{
-			float LineBegin = Begin;
-			if(Config()->m_ClShowSkinChat && pLine->m_ClientID >= 0)
-				LineBegin += FontSize + 1.0f;
-			s_ChatCursor.MoveTo(LineBegin, 0.0f);
+			s_ChatCursor.MoveTo(Begin, 0.0f);
 			s_ChatCursor.Reset();
 			s_ChatCursor.m_Flags = TEXTFLAG_WORD_WRAP | TEXTFLAG_NO_RENDER;
 			if(pLine->m_Mode == CHAT_WHISPER)
@@ -1091,6 +1088,8 @@ void CChat::OnRender()
 			{
 				float ClientIDWidth = UI()->GetClientIDRectWidth(FontSize);
 				TextRender()->TextAdvance(&s_ChatCursor, ClientIDWidth);
+				if(Config()->m_ClShowSkinChat)
+					TextRender()->TextAdvance(&s_ChatCursor, FontSize + 1.0f);
 				TextRender()->TextDeferred(&s_ChatCursor, pLine->m_aName, -1);
 				TextRender()->TextDeferred(&s_ChatCursor, ": ", -1);
 			}
