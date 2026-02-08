@@ -1914,7 +1914,7 @@ else()
 
   list(REMOVE_DUPLICATES _DEPS)
   set(DEP_WHITELIST_REGEX
-    \"(freetype|SDL3|libcrypto)\"
+    \"(freetype|SDL3|libcrypto|libopus|libopusfile|libopusurl)\"
   )
 
   list(FILTER _DEPS INCLUDE REGEX \"\${DEP_WHITELIST_REGEX}\")
