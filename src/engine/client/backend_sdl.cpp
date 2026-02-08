@@ -282,7 +282,7 @@ GLuint CCommandProcessorFragment_OpenGL::CreateShaderProgram(bool Is3D)
 	return ShaderProgram;
 }
 
-void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &State)
+bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &State)
 {
 	// clip
 	if(State.m_ClipEnable)
@@ -300,66 +300,69 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		m_LastClipEnable = false;
 	}
 	// texture handling
-	bool hasValidTexture = false;
+	bool HasValidTexture = false;
 	int SrcBlendMode = GL_ONE;
-
-	const SRenderShader &Shader = m_aRenderShader[State.m_Dimension == 3 ? 1 : 0];
-	bool NewShader = m_CurrentShader != (State.m_Dimension == 3 ? 1 : 0);
-	if(NewShader)
+	bool IsAlphaOnly = (m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA);
+	bool IsTexture3D = State.m_Dimension == 3;
+	const CRenderShader *pShader = &m_aRenderShader[IsTexture3D ? 1 : 0];
+	if(IsTexture3D != m_LastTexture3D)
 	{
-		glUseProgram(Shader.m_ShaderProgram);
-		m_CurrentShader = (State.m_Dimension == 3 ? 1 : 0);
+		glUseProgram(pShader->m_ShaderProgram);
+		glUniform1i(pShader->m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
+		m_LastStainedOnly = State.m_IsStainedOnly;
+		m_LastTextureID = -1;
+		m_LastTexture3D = IsTexture3D;
 	}
-	glUniform1i(Shader.m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
-	// Get uniform locations
-	const int &UseTextureLoc = Shader.m_UseTextureLoc;
-	const int &IsAlphaOnlyLoc = Shader.m_IsAlphaOnlyLoc;
+	else if(m_LastStainedOnly != State.m_IsStainedOnly)
+	{
+		glUniform1i(pShader->m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
+		m_LastStainedOnly = State.m_IsStainedOnly;
+	}
+
 	if(State.m_Texture >= 0 && State.m_Texture < CCommandBuffer::MAX_TEXTURES)
 	{
 		if(State.m_Dimension == 2 && (m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX2D))
 		{
-			// Bind 2D texture to texture unit 0
-			if(m_LastTexture2D != m_aTextures[State.m_Texture].m_Tex2D || !m_LastUseTexture || NewShader)
+			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex2D)
 			{
 				glBindTexture(GL_TEXTURE_2D, m_aTextures[State.m_Texture].m_Tex2D);
 				glBindSampler(0, m_aTextures[State.m_Texture].m_Sampler);
-				m_LastTexture2D = m_aTextures[State.m_Texture].m_Tex2D;
-				bool IsAlphaOnly = (m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA);
-				if(IsAlphaOnlyLoc != -1 && m_LastAlphaOnly != IsAlphaOnly)
-					glUniform1i(IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
-				if(UseTextureLoc != -1 && (!m_LastUseTexture || NewShader))
-					glUniform1i(UseTextureLoc, 1);
-
-				m_LastAlphaOnly = IsAlphaOnly;
-				m_LastUseTexture = true;
+				glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+				glUniform1i(pShader->m_UseTextureLoc, 1);
 			}
-			hasValidTexture = true;
+			else
+			{
+				if(m_LastAlphaOnly != IsAlphaOnly)
+					glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+				if(!m_LastUseTexture)
+					glUniform1i(pShader->m_UseTextureLoc, 1);
+			}
+
+			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex2D;
 		}
 		else if(State.m_Dimension == 3 && (m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX3D))
 		{
-			if(m_LastTexture3D != m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex] || !m_LastUseTexture || NewShader)
+			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex])
 			{
 				glBindTexture(GL_TEXTURE_3D, m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex]);
 				glBindSampler(0, m_aTextures[State.m_Texture].m_Sampler);
-				m_LastTexture3D = m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex];
-				bool IsAlphaOnly = (m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA);
-				if(IsAlphaOnlyLoc != -1 && m_LastAlphaOnly != IsAlphaOnly)
-					glUniform1i(IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
-				if(UseTextureLoc != -1 && (!m_LastUseTexture || NewShader))
-					glUniform1i(UseTextureLoc, 1);
-				m_LastUseTexture = true;
-				m_LastAlphaOnly = IsAlphaOnly;
+				glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+				glUniform1i(pShader->m_UseTextureLoc, 1);
 			}
-			hasValidTexture = true;
+			else
+			{
+				if(m_LastAlphaOnly != IsAlphaOnly)
+					glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+				if(!m_LastUseTexture)
+					glUniform1i(pShader->m_UseTextureLoc, 1);
+			}
+
+			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex];
 		}
 		else
 		{
 			dbg_msg("render", "invalid texture %d %d %d", State.m_Texture, State.m_Dimension, m_aTextures[State.m_Texture].m_State);
-			if(UseTextureLoc != -1 && m_LastUseTexture)
-				glUniform1i(UseTextureLoc, 0);
-			m_LastUseTexture = false;
-			m_LastTexture2D = -1;
-			m_LastTexture3D = -1;
+			return false;
 		}
 
 		// Set blend mode based on texture type
@@ -367,14 +370,18 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 			SrcBlendMode = GL_ONE;
 		else
 			SrcBlendMode = GL_SRC_ALPHA;
+		m_LastAlphaOnly = IsAlphaOnly;
+		m_LastUseTexture = true;
+		HasValidTexture = true;
 	}
 	else
 	{
-		if(IsAlphaOnlyLoc != -1 && (m_LastAlphaOnly || NewShader))
-			glUniform1i(IsAlphaOnlyLoc, 0);
+		if(m_LastAlphaOnly)
+			glUniform1i(pShader->m_IsAlphaOnlyLoc, 0);
+		if(m_LastUseTexture)
+			glUniform1i(pShader->m_UseTextureLoc, 0);
+
 		m_LastAlphaOnly = false;
-		if(UseTextureLoc != -1 && (m_LastUseTexture || NewShader))
-			glUniform1i(UseTextureLoc, 0);
 		m_LastUseTexture = false;
 	}
 
@@ -403,7 +410,7 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	}
 
 	// wrap mode - only set if we have a valid texture
-	if(hasValidTexture)
+	if(HasValidTexture)
 	{
 		if(State.m_Dimension == 2)
 		{
@@ -449,8 +456,9 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		-(State.m_ScreenBR.x + State.m_ScreenTL.x) / (State.m_ScreenBR.x - State.m_ScreenTL.x),
 		-(State.m_ScreenBR.y + State.m_ScreenTL.y) / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 1};
 
-	if(Shader.m_ProjectionLoc != -1)
-		glUniformMatrix4fv(Shader.m_ProjectionLoc, 1, GL_FALSE, orthoMatrix);
+	if(pShader->m_ProjectionLoc != -1)
+		glUniformMatrix4fv(pShader->m_ProjectionLoc, 1, GL_FALSE, orthoMatrix);
+	return true;
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
@@ -461,14 +469,13 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	m_aRenderShader[1].m_ShaderProgram = CreateShaderProgram(true);
 	m_LastBlendMode = CCommandBuffer::BLEND_NONE;
 	m_LastSrcBlendMode = GL_NONE;
-	m_CurrentShader = -1;
-	m_LastClipEnable = false;
 	m_aLast2DWarpMode[0] = -1;
 	m_aLast2DWarpMode[1] = -1;
-	m_LastTexture2D = -1;
-	m_LastTexture3D = -1;
-	m_LastUseTexture = false;
+	m_LastTexture3D = false;
 	m_LastAlphaOnly = false;
+	m_LastStainedOnly = false;
+	m_LastUseTexture = false;
+	m_LastTextureID = -1;
 
 	glDisable(GL_BLEND);
 
@@ -484,13 +491,12 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 		m_aRenderShader[i].m_OurTextureLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "ourTexture");
 		m_aRenderShader[i].m_ProjectionLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "projection");
 
-		if(m_aRenderShader[i].m_UseTextureLoc != -1)
-			glUniform1i(m_aRenderShader[i].m_UseTextureLoc, 0);
-		if(m_aRenderShader[i].m_IsAlphaOnlyLoc != -1)
-			glUniform1i(m_aRenderShader[i].m_IsAlphaOnlyLoc, 0);
-		if(m_aRenderShader[i].m_OurTextureLoc != -1)
-			glUniform1i(m_aRenderShader[i].m_OurTextureLoc, 0);
+		glUniform1i(m_aRenderShader[i].m_UseTextureLoc, 0);
+		glUniform1i(m_aRenderShader[i].m_IsAlphaOnlyLoc, 0);
+		glUniform1i(m_aRenderShader[i].m_IsStainedOnlyLoc, 0);
+		glUniform1i(m_aRenderShader[i].m_OurTextureLoc, 0);
 	}
+	glUseProgram(m_aRenderShader[0].m_ShaderProgram);
 
 	glGenVertexArrays(1, &m_PrimitiveDrawVertexID);
 	glBindVertexArray(m_PrimitiveDrawVertexID);
@@ -787,7 +793,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Clear(const CCommandBuffer::CClearCom
 
 void CCommandProcessorFragment_OpenGL::Cmd_Render(const CCommandBuffer::CRenderCommand *pCommand)
 {
-	SetState(pCommand->m_State);
+	if(!SetState(pCommand->m_State))
+		return;
 
 	glBufferData(GL_ARRAY_BUFFER, pCommand->m_PrimCount * 4 * sizeof(CCommandBuffer::CVertex), nullptr, GL_STREAM_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, pCommand->m_PrimCount * 4 * sizeof(CCommandBuffer::CVertex), pCommand->m_pVertices);

@@ -79,7 +79,7 @@ class CCommandProcessorFragment_OpenGL
 	GLuint m_PrimitiveDrawVertexID;
 	GLuint m_PrimitiveDrawBufferID;
 
-	struct SRenderShader
+	struct CRenderShader
 	{
 		GLuint m_ShaderProgram;
 		int m_UseTextureLoc;
@@ -116,15 +116,15 @@ class CCommandProcessorFragment_OpenGL
 	GLuint m_QuadDrawIndexBufferID;
 	int m_LastBlendMode;
 	int m_LastSrcBlendMode;
-	int m_CurrentShader;
+
+	bool m_LastTexture3D;
+	bool m_LastAlphaOnly;
+	bool m_LastStainedOnly;
+	bool m_LastUseTexture;
+	GLuint m_LastTextureID;
 
 	bool m_LastClipEnable;
 	int m_aLast2DWarpMode[2]; // 0 = U, 1 = V
-
-	GLuint m_LastTexture2D;
-	GLuint m_LastTexture3D;
-	bool m_LastUseTexture;
-	bool m_LastAlphaOnly;
 
 	bool m_IsOpenGLES;
 
@@ -155,7 +155,7 @@ private:
 	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
 	static void *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 
-	void SetState(const CCommandBuffer::CState &State);
+	bool SetState(const CCommandBuffer::CState &State);
 
 	GLuint CompileShader(GLuint Type, const char *pSource);
 	GLuint CreateShaderProgram(bool Is3D);
