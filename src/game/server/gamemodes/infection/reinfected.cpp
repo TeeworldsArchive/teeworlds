@@ -425,3 +425,5 @@ void CGameControllerReinfected::RefreshClientSkin(int ClientID, bool Sync)
 	RefreshPlayerSkin(GameServer()->m_apPlayers[ClientID], Sync);
 	GameServer()->SendSkinChange(ClientID, -1);
 }
+
+REGISTER_GAMEMODE("reinfected", CGameControllerReinfected);

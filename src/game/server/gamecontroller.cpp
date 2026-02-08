@@ -1372,3 +1372,26 @@ int IGameController::OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int
 
 	return ReloadTimer;
 }
+
+array<CGamemodeInfo> *GamemodesArray()
+{
+	static array<CGamemodeInfo> lGamemodes;
+	return &lGamemodes;
+}
+
+int NumGamemodes()
+{
+	return GamemodesArray()->size();
+}
+
+CGamemodeInfo *GetGamemodeInfo(int Index)
+{
+	return &GamemodesArray()->operator[](Index);
+}
+
+void RegisterGamemode(const char *pGameType, FCreateGameController pfnConstructor)
+{
+	CGamemodeInfo &Info = GamemodesArray()->emplace();
+	Info.m_pGameType = pGameType;
+	Info.m_pfnConstructor = pfnConstructor;
+}

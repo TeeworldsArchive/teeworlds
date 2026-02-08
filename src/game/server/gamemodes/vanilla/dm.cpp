@@ -10,3 +10,5 @@ CGameControllerDM::CGameControllerDM(CGameContext *pGameServer) : IGameControlle
 	m_pGameType = "DM*";
 	m_MaxPlayerSlots = 16;
 }
+
+REGISTER_GAMEMODE("dm", CGameControllerDM);

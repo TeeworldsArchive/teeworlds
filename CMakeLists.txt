@@ -1541,20 +1541,20 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamecontext.h
   gamecontroller.cpp
   gamecontroller.h
-  gamemodes/ctf.cpp
-  gamemodes/ctf.h
-  gamemodes/dm.cpp
-  gamemodes/dm.h
-  gamemodes/lms.cpp
-  gamemodes/lms.h
-  gamemodes/lts.cpp
-  gamemodes/lts.h
+  gamemodes/infection/reinfected.cpp
+  gamemodes/infection/reinfected.h
   gamemodes/mod.cpp
   gamemodes/mod.h
-  gamemodes/reinfected.cpp
-  gamemodes/reinfected.h
-  gamemodes/tdm.cpp
-  gamemodes/tdm.h
+  gamemodes/vanilla/ctf.cpp
+  gamemodes/vanilla/ctf.h
+  gamemodes/vanilla/dm.cpp
+  gamemodes/vanilla/dm.h
+  gamemodes/vanilla/lms.cpp
+  gamemodes/vanilla/lms.h
+  gamemodes/vanilla/lts.cpp
+  gamemodes/vanilla/lts.h
+  gamemodes/vanilla/tdm.cpp
+  gamemodes/vanilla/tdm.h
   gameworld.cpp
   gameworld.h
   player.cpp

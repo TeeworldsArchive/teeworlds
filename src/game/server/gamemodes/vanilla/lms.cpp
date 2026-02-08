@@ -73,3 +73,5 @@ void CGameControllerLMS::DoWincheckRound()
 		}
 	}
 }
+
+REGISTER_GAMEMODE("lms", CGameControllerLMS);

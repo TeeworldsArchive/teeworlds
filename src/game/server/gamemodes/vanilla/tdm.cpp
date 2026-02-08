@@ -35,3 +35,5 @@ int CGameControllerTDM::OnCharacterDeath(class CCharacter *pVictim, class CPlaye
 
 	return 0;
 }
+
+REGISTER_GAMEMODE("tdm", CGameControllerTDM);

@@ -262,6 +262,28 @@ public:
 
 	// return: Reload timer
 	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon);
+	virtual bool IsPureTuning() { return false; }
 };
+
+typedef IGameController *(*FCreateGameController)(class CGameContext *pGameServer);
+struct CGamemodeInfo
+{
+	const char *m_pGameType;
+	FCreateGameController m_pfnConstructor;
+};
+
+int NumGamemodes();
+CGamemodeInfo *GetGamemodeInfo(int Index);
+void RegisterGamemode(const char *pGameType, FCreateGameController pfnConstructor);
+
+class CGamemodeAutoRegister
+{
+public:
+	CGamemodeAutoRegister(const char *pGameType, FCreateGameController pfnConstructor) { RegisterGamemode(pGameType, pfnConstructor); }
+};
+
+#define REGISTER_GAMEMODE(GameType, GamemodeClass) \
+	static IGameController *GamemodeClass##Constructor(class CGameContext *pGameServer) { return new GamemodeClass(pGameServer); } \
+	static CGamemodeAutoRegister gs_##GamemodeClass##Register(GameType, GamemodeClass##Constructor)
 
 #endif

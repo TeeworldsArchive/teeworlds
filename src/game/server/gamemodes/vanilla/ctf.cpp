@@ -255,3 +255,5 @@ void CGameControllerCTF::Tick()
 	// do a win check(grabbing flags could trigger win condition)
 	DoWincheckMatch();
 }
+
+REGISTER_GAMEMODE("ctf", CGameControllerCTF);

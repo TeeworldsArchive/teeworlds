@@ -61,3 +61,5 @@ void CGameControllerLTS::DoWincheckRound()
 		EndRound();
 	}
 }
+
+REGISTER_GAMEMODE("lts", CGameControllerLTS);
