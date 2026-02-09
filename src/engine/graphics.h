@@ -71,6 +71,7 @@ protected:
 	int m_DesktopScreenWidth;
 	int m_DesktopScreenHeight;
 	float m_ScreenHiDPIScale;
+	float m_ScreenUIScale;
 
 public:
 	/* Constants: Texture Loading Flags
@@ -114,7 +115,7 @@ public:
 
 	int ScreenWidth() const { return m_ScreenWidth; }
 	int ScreenHeight() const { return m_ScreenHeight; }
-	float ScreenUIScale() const { return (ScreenHeight() < 900.0f) ? 1.0f : (ScreenHeight() / 900.0f); }
+	float ScreenUIScale() const { return m_ScreenUIScale; }
 	float ScreenAspect() const { return (float) ScreenWidth() / (float) ScreenHeight(); }
 	float ScreenHiDPIScale() const { return m_ScreenHiDPIScale; }
 	int DesktopWidth() const { return m_DesktopScreenWidth; }

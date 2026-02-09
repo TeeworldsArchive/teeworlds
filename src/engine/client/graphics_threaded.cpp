@@ -876,6 +876,7 @@ int CGraphics_Threaded::Init()
 		return -1;
 
 	m_ScreenHiDPIScale = m_ScreenWidth / (float) m_pConfig->m_GfxScreenWidth;
+	m_ScreenUIScale = (m_pConfig->m_GfxScreenHeight < 900.0f) ? 1.0f : (m_pConfig->m_GfxScreenHeight / 900.0f);
 
 	// create command buffers
 	for(int i = 0; i < NUM_CMDBUFFERS; i++)
