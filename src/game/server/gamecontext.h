@@ -14,6 +14,7 @@
 
 #include "eventhandler.h"
 #include "gameworld.h"
+#include "resource.h"
 
 /*
 	Tick
@@ -99,9 +100,11 @@ public:
 	class CPlayer *m_apPlayers[MAX_CLIENTS];
 
 	class IGameController *m_pController;
+	CServerResManager m_ResourceManager;
 	CGameWorld m_World;
 	CCommandManager m_CommandManager;
 
+	CServerResManager *ResourceManager() { return &m_ResourceManager; }
 	CCommandManager *CommandManager() { return &m_CommandManager; }
 
 	// helper functions
@@ -179,6 +182,7 @@ public:
 	void CreatePlayerSpawn(vec2 Pos);
 	void CreateDeath(vec2 Pos, int Who);
 	void CreateSound(vec2 Pos, int Sound, int64 Mask = -1);
+	void CreateCustomSound(vec2 Pos, Uuid Sound, int64 Mask = -1);
 
 	// ----- send functions -----
 	void SendChat(int ChatterClientID, int Mode, int To, const char *pText);

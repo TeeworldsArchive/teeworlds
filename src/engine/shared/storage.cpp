@@ -69,6 +69,7 @@ public:
 					fs_makedir(GetPath(TYPE_SAVE, "screenshots/auto", aPath, sizeof(aPath)));
 					fs_makedir(GetPath(TYPE_SAVE, "maps", aPath, sizeof(aPath)));
 					fs_makedir(GetPath(TYPE_SAVE, "downloadedmaps", aPath, sizeof(aPath)));
+					fs_makedir(GetPath(TYPE_SAVE, "downloadedres", aPath, sizeof(aPath)));
 					fs_makedir(GetPath(TYPE_SAVE, "skins", aPath, sizeof(aPath)));
 					fs_makedir(GetPath(TYPE_SAVE, "editor", aPath, sizeof(aPath)));
 				}

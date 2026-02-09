@@ -201,6 +201,21 @@ void CGameContext::CreateSound(vec2 Pos, int Sound, int64 Mask)
 	}
 }
 
+void CGameContext::CreateCustomSound(vec2 Pos, Uuid Sound, int64 Mask)
+{
+	if(!ResourceManager()->IsResourceSound(Sound))
+		return;
+
+	// create a sound
+	CNetEvent_CustomSoundWorld *pEvent = (CNetEvent_CustomSoundWorld *) m_Events.Create(NETEVENTTYPE_CUSTOMSOUNDWORLD, sizeof(CNetEvent_CustomSoundWorld), Mask);
+	if(pEvent)
+	{
+		pEvent->m_X = (int) Pos.x;
+		pEvent->m_Y = (int) Pos.y;
+		mem_copy(pEvent->m_Uuid, &Sound, sizeof(Uuid));
+	}
+}
+
 // ----- send functions -----
 void CGameContext::SendChat(int ChatterClientID, int Mode, int To, const char *pText)
 {
@@ -746,6 +761,8 @@ void CGameContext::OnClientEnter(int ClientID)
 		Msg.m_Team = NewClientInfoMsg.m_Team;
 		Server()->SendPackMsg(&Msg, MSGFLAG_NOSEND, -1);
 	}
+
+	ResourceManager()->OnClientEnter(ClientID);
 }
 
 void CGameContext::OnClientConnected(int ClientID, bool Dummy, bool AsSpec)
@@ -1147,6 +1164,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		{
 			CNetMsg_Cl_Command *pMsg = (CNetMsg_Cl_Command *) pRawMsg;
 			CommandManager()->OnCommand(pMsg->m_Name, pMsg->m_Arguments, ClientID);
+		}
+		else if(MsgID == NETMSGTYPE_CL_REQEUSTCUSTOMRES)
+		{
+			CNetMsg_Cl_ReqeustCustomRes *pMsg = (CNetMsg_Cl_ReqeustCustomRes *) pRawMsg;
+			ResourceManager()->SendResourceData(ClientID, *static_cast<const Uuid *>(pMsg->m_Uuid));
 		}
 	}
 	else
@@ -1721,6 +1743,7 @@ void CGameContext::OnInit()
 	m_World.SetGameServer(this);
 	m_Events.SetGameServer(this);
 	m_CommandManager.Init(m_pConsole, this, NewCommandHook, RemoveCommandHook);
+	m_ResourceManager.Init(this);
 
 	// HACK: only set static size for items, which were available in the first 0.7 release
 	// so new items don't break the snapshot delta

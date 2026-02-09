@@ -304,6 +304,33 @@ class NetVariable:
 	def emit_unpack_check(self):
 		return []
 
+
+class NetRawData(NetVariable):
+	def emit_declaration(self):
+		return [f"const void *{self.name};", f"int {self.name}Size;"]
+	def emit_unpack(self):
+		return [f"pMsg->{self.name}Size = pUnpacker->GetInt();", f"pMsg->{self.name} = pUnpacker->GetRaw(pMsg->{self.name}Size);"]
+	def emit_pack(self):
+		return [f"pPacker->AddInt({self.name}Size);", f"pPacker->AddRaw({self.name}, {self.name}Size);"]
+
+class NetRawDataFixed(NetVariable):
+	def __init__(self, name, data_size, default=None):
+		NetVariable.__init__(self,name,default=default)
+		self.data_size = data_size
+	def emit_declaration(self):
+		return [f"const void *{self.name};"]
+	def emit_unpack(self):
+		return [f"pMsg->{self.name} = pUnpacker->GetRaw({self.data_size});"]
+	def emit_pack(self):
+		return [f"pPacker->AddRaw({self.name}, {self.data_size});"]
+
+class NetRawDataFixedSnapshot(NetVariable):
+	def __init__(self, name, data_size, default=None):
+		NetVariable.__init__(self,name,default=default)
+		self.data_size = data_size
+	def emit_declaration(self):
+		return [f"unsigned char {self.name}[{self.data_size}];"]
+
 class NetString(NetVariable):
 	def emit_declaration(self):
 		return ["const char *%s;"%self.name]

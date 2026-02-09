@@ -47,6 +47,7 @@
 #include "components/notifications.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/resource.h"
 #include "components/scoreboard.h"
 #include "components/skins.h"
 #include "components/sounds.h"
@@ -119,6 +120,7 @@ static CPlayers gs_Players;
 static CNamePlates gs_NamePlates;
 static CItems gs_Items;
 static CMapImages gs_MapImages;
+static CClientResManager gs_ResourceManager;
 
 static CMapLayers gs_MapLayersBackGround(CMapLayers::TYPE_BACKGROUND);
 static CMapLayers gs_MapLayersForeGround(CMapLayers::TYPE_FOREGROUND);
@@ -260,11 +262,13 @@ void CGameClient::OnConsoleInit()
 	m_pMapLayersForeGround = &::gs_MapLayersForeGround;
 	m_pMapSounds = &::gs_MapSounds;
 	m_pStats = &::gs_Stats;
+	m_pResourceManager = &::gs_ResourceManager;
 
 	// make a list of all the systems, make sure to add them in the corrent render order
 	m_All.Add(m_pSkins);
 	m_All.Add(m_pCountryFlags);
 	m_All.Add(m_pMapimages);
+	m_All.Add(m_pResourceManager);
 	m_All.Add(m_pEffects); // doesn't render anything, just updates effects
 	m_All.Add(m_pParticles); // doesn't render anything, just updates all the particles
 	m_All.Add(m_pMapSounds);
@@ -1117,6 +1121,11 @@ void CGameClient::ProcessEvents()
 		{
 			CNetEvent_SoundWorld *ev = (CNetEvent_SoundWorld *) pData;
 			m_pSounds->PlayAt(CSounds::CHN_WORLD, ev->m_SoundID, 1.0f, vec2(ev->m_X, ev->m_Y));
+		}
+		else if(Item.m_Type == NETEVENTTYPE_CUSTOMSOUNDWORLD)
+		{
+			CNetEvent_CustomSoundWorld *ev = (CNetEvent_CustomSoundWorld *) pData;
+			m_pSounds->PlaySampleAt(CSounds::CHN_WORLD, m_pResourceManager->GetResourceSample(*reinterpret_cast<Uuid *>(&ev->m_Uuid)), 1.0f, vec2(ev->m_X, ev->m_Y));
 		}
 	}
 }

@@ -24,8 +24,12 @@ GameMsgIDs = Enum("GAMEMSG", ["TEAM_SWAP", "SPEC_INVALID_ID", "TEAM_SHUFFLE", "T
 
 GamePredictionFlags = Flags("GAMEPREDICTIONFLAG", ["EVENT", "INPUT"])
 
+Resources = Enum("RESOURCE", ["SOUND", "IMAGE"])
+
 RawHeader = '''
 
+#include <base/hash.h>
+#include <base/uuid.h>
 #include <engine/message.h>
 #include <engine/shared/protocol_ex.h>
 
@@ -77,6 +81,7 @@ Enums = [
 	Votes,
 	ChatModes,
 	GameMsgIDs,
+    Resources,
 ]
 
 Flags = [
@@ -276,6 +281,10 @@ Objects = [
     
 	NetObjectEx("GameDataPrediction", "game-data-prediction@netobj.teeworlds.wiki", [
         NetFlag("m_PredictionFlags", GamePredictionFlags),
+	]),
+
+	NetEventEx("CustomSoundWorld:Common", "custom-sound-world@netevent.teeworlds.wiki", [
+        NetRawDataFixedSnapshot("m_Uuid", "sizeof(Uuid)")
 	])
 ]
 
@@ -492,4 +501,19 @@ Messages = [
 			NetStringStrict("m_Arguments")
 	]),
 
+	NetMessageEx("Sv_CustomRes", "custom-res@netmsg.teeworlds.wiki", [
+			NetRawDataFixed("m_Uuid", "sizeof(Uuid)"),
+            NetEnum("m_Type", Resources),
+			NetStringStrict("m_Name"),
+			NetIntAny("m_Crc"),
+            NetIntRange("m_Size", 0, 'max_int'),
+            NetRawDataFixed("m_Sha256", "sizeof(SHA256_DIGEST)"),
+	]),
+	NetMessageEx("Sv_CustomResData", "custom-res-data@netmsg.teeworlds.wiki", [
+			NetRawDataFixed("m_Uuid", "sizeof(Uuid)"),
+            NetRawData("m_Data"),
+	]),
+	NetMessageEx("Cl_ReqeustCustomRes", "request-custom-res@netmsg.teeworlds.wiki", [
+			NetRawDataFixed("m_Uuid", "sizeof(Uuid)"),
+    ]),
 ]

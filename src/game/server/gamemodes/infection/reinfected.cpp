@@ -166,6 +166,14 @@ void CGameControllerReinfected::StartRandomInfection()
 			aPlayers.remove_index_fast(RandomInfected);
 			GameServer()->SendChat(-1, CHAT_ALL, -1, aBuf);
 		}
+		Uuid Sound = calculate_uuid("ninja_attack_04");
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(GameServer()->m_apPlayers[i])
+			{
+				GameServer()->CreateCustomSound(GameServer()->m_apPlayers[i]->m_ViewPos, Sound, CmaskOne(i));
+			}
+		}
 	}
 }
 
@@ -203,6 +211,8 @@ CGameControllerReinfected::CGameControllerReinfected(CGameContext *pGameServer) 
 {
 	m_pGameType = "Reinfected";
 	m_pHelper = new CReinfectedHelper(this);
+
+	GameServer()->ResourceManager()->AddResource("audio/wp_ninja_attack-04.opus", "ninja_attack_04", calculate_uuid("ninja_attack_04"));
 }
 
 CGameControllerReinfected::~CGameControllerReinfected()

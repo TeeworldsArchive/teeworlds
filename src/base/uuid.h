@@ -46,6 +46,16 @@ inline bool operator!=(const Uuid &that, const Uuid &other)
 {
 	return !(that == other);
 }
+
+inline bool operator<(const Uuid &that, const Uuid &other)
+{
+	return uuid_comp(that, other) < 0;
+}
+
+inline bool operator<=(const Uuid &that, const Uuid &other)
+{
+	return uuid_comp(that, other) < 1;
+}
 #endif
 
 #endif // BASE_UUID_H

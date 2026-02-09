@@ -1319,6 +1319,7 @@ set_src(GAME_SHARED GLOB src/game
   layers.cpp
   layers.h
   mapitems.h
+  resource.h
   tuning.h
   variables.h
   version.h
@@ -1435,6 +1436,8 @@ if(CLIENT)
     components/particles.h
     components/players.cpp
     components/players.h
+    components/resource.cpp
+    components/resource.h
     components/scoreboard.cpp
     components/scoreboard.h
     components/skins.cpp
@@ -1575,6 +1578,8 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gameworld.h
   player.cpp
   player.h
+  resource.cpp
+  resource.h
 )
 set(GAME_GENERATED_SERVER
   src/generated/server_data.cpp

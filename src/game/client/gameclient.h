@@ -349,6 +349,7 @@ public:
 	class CMapLayers *m_pMapLayersBackGround;
 	class CMapLayers *m_pMapLayersForeGround;
 	class CMapSounds *m_pMapSounds;
+	class CClientResManager *m_pResourceManager;
 };
 
 void FormatTime(char *pBuf, int Size, int Time, int Precision);
