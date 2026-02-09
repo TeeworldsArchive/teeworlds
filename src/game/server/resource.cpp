@@ -51,11 +51,11 @@ void CServerResManager::SendResourceData(int ClientID, const Uuid RequestUuid)
         else
             pTarget->m_aDownloadChunks[ClientID]++;
 
-        CNetMsg_Sv_CustomResData Msg;
-        Msg.m_Uuid = &pTarget->m_Uuid;
-        Msg.m_Data = &pTarget->m_pData[Offset];
-        Msg.m_DataSize = ChunkSize;
-        Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientID);
+		CNetMsg_Sv_CustomResData Msg;
+		Msg.m_Uuid = &pTarget->m_Uuid;
+		Msg.m_Data = &pTarget->m_pData[Offset];
+		Msg.m_DataSize = ChunkSize;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, ClientID);
 
         if(Config()->m_Debug)
         {
@@ -101,21 +101,21 @@ void CServerResManager::AddResource(const char *pPath, const char *pName, const 
 
 void CServerResManager::OnClientEnter(int ClientID)
 {
-    if(Server()->GetClientVersion(ClientID) < 0x0706)
-        return;
-    for(int i = 0; i < m_lResources.size(); i++)
-    {
-        CNetMsg_Sv_CustomRes Resource;
-        Resource.m_Uuid = &m_lResources[i].m_Uuid;
-        Resource.m_Type = m_lResources[i].m_Type;
-        Resource.m_Name = m_lResources[i].m_aName;
-        Resource.m_Crc = m_lResources[i].m_Crc;
-        Resource.m_Sha256 = &m_lResources[i].m_Sha256;
-        Resource.m_Size = m_lResources[i].m_DataSize;
-        Server()->SendPackMsg(&Resource, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientID);
+	if(Server()->GetClientVersion(ClientID) < 0x0706)
+		return;
+	for(int i = 0; i < m_lResources.size(); i++)
+	{
+		CNetMsg_Sv_CustomRes Resource;
+		Resource.m_Uuid = &m_lResources[i].m_Uuid;
+		Resource.m_Type = m_lResources[i].m_Type;
+		Resource.m_Name = m_lResources[i].m_aName;
+		Resource.m_Crc = m_lResources[i].m_Crc;
+		Resource.m_Sha256 = &m_lResources[i].m_Sha256;
+		Resource.m_Size = m_lResources[i].m_DataSize;
+		Server()->SendPackMsg(&Resource, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, ClientID);
 
-        m_lResources[i].m_aDownloadChunks[i] = 0;
-    }
+		m_lResources[i].m_aDownloadChunks[ClientID] = 0;
+	}
 }
 
 void CServerResManager::Clear()
