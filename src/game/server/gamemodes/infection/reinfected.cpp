@@ -203,6 +203,8 @@ CGameControllerReinfected::CGameControllerReinfected(CGameContext *pGameServer) 
 {
 	m_pGameType = "Reinfected";
 	m_pHelper = new CReinfectedHelper(this);
+
+	GameServer()->ResourceManager()->AddResource("mapres/sun.png", "sun", calculate_uuid("sun"));
 }
 
 CGameControllerReinfected::~CGameControllerReinfected()
@@ -391,6 +393,36 @@ void CGameControllerReinfected::OnCharacterSpawn(CCharacter *pChr)
 		pChr->EnableWeapon(WEAPON_HAMMER);
 		pChr->SetWeapon(WEAPON_HAMMER);
 	}
+}
+
+void CGameControllerReinfected::Tick()
+{
+	IGameController::Tick();
+
+	if(GameServer()->m_World.m_ResetRequested || GameServer()->m_World.m_Paused)
+		return;
+
+	DoWincheckMatch();
+}
+
+void CGameControllerReinfected::Snap(int SnappingClient)
+{
+	IGameController::Snap(SnappingClient);
+
+	CCharacter *pChr = GameServer()->GetPlayerChar(SnappingClient);
+	if(!pChr)
+		return;
+
+	CNetObj_CustomImageEntity *pEntity = static_cast<CNetObj_CustomImageEntity *>(Server()->SnapNewItem(NETOBJTYPE_CUSTOMIMAGEENTITY, 0, sizeof(CNetObj_CustomImageEntity)));
+	if(!pEntity)
+		return;
+	Uuid UuidSun = calculate_uuid("sun");
+	mem_copy(pEntity->m_Uuid, &UuidSun, sizeof(pEntity->m_Uuid));
+	pEntity->m_X = round_to_int(pChr->GetPos().x);
+	pEntity->m_Y = round_to_int(pChr->GetPos().y) - 64;
+	pEntity->m_Width = 64;
+	pEntity->m_Height = 64;
+	pEntity->m_Angle = round_to_int(fmod(Server()->Tick() / 50.0f, pi * 2) * 256.0f);
 }
 
 bool CGameControllerReinfected::DoWincheckMatch()

@@ -23,9 +23,12 @@ class CClientResManager : public CComponent
     sorted_array<CClientResource> m_lResources;
     void RequestDownload(const Uuid *pRequest);
     bool LoadResource(CClientResource *pResource);
+
+    void RenderImageEntity(const CNetObj_CustomImageEntity *pPrev, const CNetObj_CustomImageEntity *pCur);
 public:
     CClientResManager();
     virtual void OnMapLoad();
+    virtual void OnRender();
 	virtual void OnMessage(int MsgType, void *pRawMsg);
 
     bool IsResourceSound(Uuid ResID);

@@ -51,7 +51,7 @@ void CServerResManager::SendResourceData(int ClientID, const Uuid RequestUuid)
         else
             pTarget->m_aDownloadChunks[ClientID]++;
 
-		CNetMsg_Sv_CustomResData Msg;
+		CNetMsg_Sv_CustomResourceData Msg;
 		Msg.m_Uuid = &pTarget->m_Uuid;
 		Msg.m_Data = &pTarget->m_pData[Offset];
 		Msg.m_DataSize = ChunkSize;
@@ -105,7 +105,7 @@ void CServerResManager::OnClientEnter(int ClientID)
 		return;
 	for(int i = 0; i < m_lResources.size(); i++)
 	{
-		CNetMsg_Sv_CustomRes Resource;
+		CNetMsg_Sv_CustomResource Resource;
 		Resource.m_Uuid = &m_lResources[i].m_Uuid;
 		Resource.m_Type = m_lResources[i].m_Type;
 		Resource.m_Name = m_lResources[i].m_aName;

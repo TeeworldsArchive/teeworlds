@@ -1,5 +1,6 @@
 #include <base/hash.h>
 #include <engine/shared/datafile.h>
+#include <generated/client_data.h>
 
 #include "resource.h"
 #include "sounds.h"
@@ -9,9 +10,9 @@ static void FormatResourcePath(char *pBuffer, int BufferSize, const char *pName,
     char aSha256[SHA256_MAXSTRSIZE];
     sha256_str(*pSha256, aSha256, sizeof(aSha256));
     if(Temp)
-        str_format(pBuffer, BufferSize, "downloadedres/%s_%08x%s.res.%d.tmp", pName, *pCrc, aSha256, pid());
+        str_format(pBuffer, BufferSize, "downloadedres/%s_%08x%s.twres.%d.tmp", pName, *pCrc, aSha256, pid());
     else
-        str_format(pBuffer, BufferSize, "downloadedres/%s_%08x%s.res", pName, *pCrc, aSha256);
+        str_format(pBuffer, BufferSize, "downloadedres/%s_%08x%s.twres", pName, *pCrc, aSha256);
 }
 
 CClientResManager::CClientResManager()
@@ -21,7 +22,10 @@ CClientResManager::CClientResManager()
 
 void CClientResManager::RequestDownload(const Uuid *pRequest)
 {
-    CNetMsg_Cl_ReqeustCustomRes Msg;
+    if(!pRequest)
+        return;
+
+    CNetMsg_Cl_ReqeustCustomResource Msg;
     Msg.m_Uuid = pRequest;
     Client()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD);
 }
@@ -47,6 +51,25 @@ bool CClientResManager::LoadResource(CClientResource *pResource)
     return true;
 }
 
+void CClientResManager::RenderImageEntity(const CNetObj_CustomImageEntity *pPrev, const CNetObj_CustomImageEntity *pCur)
+{
+    Uuid TextureID;
+    mem_copy(&TextureID, pCur->m_Uuid, sizeof(Uuid));
+    IGraphics::CTextureHandle Texture = GetResourceTexture(TextureID);
+    Texture = Texture.IsValid() ? Texture : g_pData->m_aImages[IMAGE_DEADTEE].m_Id; // fallback
+    vec2 Pos = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCur->m_X, pCur->m_Y), Client()->IntraGameTick());
+	vec2 Size = mix(vec2(pPrev->m_Width, pPrev->m_Height), vec2(pCur->m_Width, pCur->m_Height), Client()->IntraGameTick());
+    float Angle = mix(pPrev->m_Angle / 256.0f, pCur->m_Angle / 256.0f, Client()->IntraGameTick());
+
+	Graphics()->BlendNormal();
+    Graphics()->TextureSet(Texture);
+	Graphics()->QuadsBegin();
+	Graphics()->QuadsSetRotation(Angle);
+	IGraphics::CQuadItem QuadItem(Pos.x, Pos.y, Size.x, Size.y);
+	Graphics()->QuadsDraw(&QuadItem, 1);
+	Graphics()->QuadsEnd();
+}
+
 void CClientResManager::OnMapLoad()
 {
     for(int i = 0; i < m_lResources.size(); i++)
@@ -59,11 +82,28 @@ void CClientResManager::OnMapLoad()
     m_lResources.clear();
 }
 
+void CClientResManager::OnRender()
+{
+	int Num = Client()->SnapNumItems(IClient::SNAP_CURRENT);
+	for(int i = 0; i < Num; i++)
+	{
+		IClient::CSnapItem Item;
+		const void *pData = Client()->SnapGetItem(IClient::SNAP_CURRENT, i, &Item);
+
+		if(Item.m_Type == NETOBJTYPE_CUSTOMIMAGEENTITY)
+		{
+			const void *pPrev = Client()->SnapFindItem(IClient::SNAP_PREV, Item.m_Type, Item.m_ID);
+			if(pPrev)
+			    RenderImageEntity((const CNetObj_CustomImageEntity *) pPrev, (const CNetObj_CustomImageEntity *) pData);
+		}
+	}
+}
+
 void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
 {
-	if(MsgType == NETMSGTYPE_SV_CUSTOMRES)
+	if(MsgType == NETMSGTYPE_SV_CUSTOMRESOURCE)
 	{
-		CNetMsg_Sv_CustomRes *pMsg = (CNetMsg_Sv_CustomRes *) pRawMsg;
+		CNetMsg_Sv_CustomResource *pMsg = (CNetMsg_Sv_CustomResource *) pRawMsg;
         
         // protect the player from nasty map names
         for(int i = 0; pMsg->m_Name[i]; i++)
@@ -82,6 +122,16 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
             Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "resource", "invalid resource size");
             return;
         }
+        {
+            CClientResource TargetRes;
+            TargetRes.m_Uuid = *static_cast<const Uuid *>(pMsg->m_Uuid);
+            sorted_array<CClientResource>::range r = ::find_binary(m_lResources.all(), TargetRes);
+            if(!r.empty()) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
+            {
+                Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "resource", "invalid resource uuid");
+                return;
+            }
+        }
         CClientResource Resource;
         str_copy(Resource.m_aName, pMsg->m_Name, sizeof(Resource.m_aName));
         Resource.m_Crc = pMsg->m_Crc;
@@ -91,6 +141,7 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
         Resource.m_DownloadedSize = 0;
         Resource.m_Sample = ISound::CSampleHandle();
         Resource.m_Texture = IGraphics::CTextureHandle();
+        Resource.m_Type = pMsg->m_Type;
         mem_copy(&Resource.m_Sha256, pMsg->m_Sha256, sizeof(SHA256_DIGEST));
         FormatResourcePath(Resource.m_aPath, sizeof(Resource.m_aPath), Resource.m_aName, false, &Resource.m_Sha256, &Resource.m_Crc);
         FormatResourcePath(Resource.m_aTempPath, sizeof(Resource.m_aTempPath), Resource.m_aName, true, &Resource.m_Sha256, &Resource.m_Crc);
@@ -102,9 +153,9 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
             RequestDownload(&m_lResources[Index].m_Uuid);
         }
     }
-    else if(MsgType == NETMSGTYPE_SV_CUSTOMRESDATA)
+    else if(MsgType == NETMSGTYPE_SV_CUSTOMRESOURCEDATA)
     {
-		CNetMsg_Sv_CustomResData *pMsg = (CNetMsg_Sv_CustomResData *) pRawMsg;
+		CNetMsg_Sv_CustomResourceData *pMsg = (CNetMsg_Sv_CustomResourceData *) pRawMsg;
         Uuid TargetResource = *static_cast<const Uuid *>(pMsg->m_Uuid);
 
         CClientResource TargetRes;

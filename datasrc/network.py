@@ -284,8 +284,25 @@ Objects = [
 	]),
 
 	NetEventEx("CustomSoundWorld:Common", "custom-sound-world@netevent.teeworlds.wiki", [
-        NetRawDataFixedSnapshot("m_Uuid", "sizeof(Uuid)")
-	])
+        NetRawDataFixedSnapshot("m_Uuid", "sizeof(Uuid)"),
+	]),
+
+	NetObjectEx("CustomObject", "custom-entity@netobj.teeworlds.wiki", [
+        NetRawDataFixedSnapshot("m_Uuid", "sizeof(Uuid)"),
+		NetIntAny("m_X"),
+		NetIntAny("m_Y"),
+	]),
+
+	NetObjectEx("CustomImageEntity:CustomObject", "custom-image-entity@netobj.teeworlds.wiki", [
+		NetIntAny("m_Angle"),
+        NetIntAny("m_Width"),
+        NetIntAny("m_Height"),
+	]),
+
+	NetObjectEx("CustomSoundEntity:CustomObject", "custom-sound-entity@netobj.teeworlds.wiki", [
+		NetIntAny("m_Vol"),
+        NetIntAny("m_Offset"),
+	]),
 ]
 
 Messages = [
@@ -501,7 +518,7 @@ Messages = [
 			NetStringStrict("m_Arguments")
 	]),
 
-	NetMessageEx("Sv_CustomRes", "custom-res@netmsg.teeworlds.wiki", [
+	NetMessageEx("Sv_CustomResource", "custom-resource@netmsg.teeworlds.wiki", [
 			NetRawDataFixed("m_Uuid", "sizeof(Uuid)"),
             NetEnum("m_Type", Resources),
 			NetStringStrict("m_Name"),
@@ -509,11 +526,11 @@ Messages = [
             NetIntRange("m_Size", 0, 'max_int'),
             NetRawDataFixed("m_Sha256", "sizeof(SHA256_DIGEST)"),
 	]),
-	NetMessageEx("Sv_CustomResData", "custom-res-data@netmsg.teeworlds.wiki", [
+	NetMessageEx("Sv_CustomResourceData", "custom-resource-data@netmsg.teeworlds.wiki", [
 			NetRawDataFixed("m_Uuid", "sizeof(Uuid)"),
             NetRawData("m_Data"),
 	]),
-	NetMessageEx("Cl_ReqeustCustomRes", "request-custom-res@netmsg.teeworlds.wiki", [
+	NetMessageEx("Cl_ReqeustCustomResource", "request-custom-resource@netmsg.teeworlds.wiki", [
 			NetRawDataFixed("m_Uuid", "sizeof(Uuid)"),
     ]),
 ]

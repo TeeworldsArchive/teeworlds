@@ -1165,9 +1165,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			CNetMsg_Cl_Command *pMsg = (CNetMsg_Cl_Command *) pRawMsg;
 			CommandManager()->OnCommand(pMsg->m_Name, pMsg->m_Arguments, ClientID);
 		}
-		else if(MsgID == NETMSGTYPE_CL_REQEUSTCUSTOMRES)
+		else if(MsgID == NETMSGTYPE_CL_REQEUSTCUSTOMRESOURCE)
 		{
-			CNetMsg_Cl_ReqeustCustomRes *pMsg = (CNetMsg_Cl_ReqeustCustomRes *) pRawMsg;
+			CNetMsg_Cl_ReqeustCustomResource *pMsg = (CNetMsg_Cl_ReqeustCustomResource *) pRawMsg;
 			ResourceManager()->SendResourceData(ClientID, *static_cast<const Uuid *>(pMsg->m_Uuid));
 		}
 	}

@@ -40,6 +40,8 @@ public:
 	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon);
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
 
+	virtual void Tick();
+	virtual void Snap(int SnappingClient);
 	virtual bool DoWincheckMatch();
 	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg);
 
