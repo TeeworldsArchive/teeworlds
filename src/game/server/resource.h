@@ -1,7 +1,7 @@
 #ifndef GAME_SERVER_RESOURCE_H
 #define GAME_SERVER_RESOURCE_H
 
-#include <base/tl/sorted_array.h>
+#include <base/tl/array.h>
 #include <game/resource.h>
 
 class CServerResManager
@@ -18,8 +18,10 @@ class CServerResManager
         int m_aDownloadChunks[MAX_CLIENTS];
     };
 
-    sorted_array<CServerResource> m_lResources;
+    int m_aResourceSendIndex[MAX_CLIENTS];
+    array<CServerResource> m_lResources;
     int m_ChunksPerRequest;
+
 public:
     CServerResManager();
     ~CServerResManager();
@@ -29,9 +31,8 @@ public:
     void SendResourceData(int ClientID, const Uuid RequestUuid);
     void OnClientEnter(int ClientID);
     void Clear();
-
-    bool IsResourceSound(Uuid ResID);
-    bool IsResourceImage(Uuid ResID);
+	void TrySendResourceInfo(int ClientID);
+    CServerResource *FindResource(Uuid ResourceID);
 };
 
 #endif // GAME_SERVER_RESOURCE_H

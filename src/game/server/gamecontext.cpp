@@ -203,7 +203,7 @@ void CGameContext::CreateSound(vec2 Pos, int Sound, int64 Mask)
 
 void CGameContext::CreateCustomSound(vec2 Pos, Uuid Sound, int64 Mask)
 {
-	if(!ResourceManager()->IsResourceSound(Sound))
+	if(!ResourceManager()->FindResource(Sound))
 		return;
 
 	// create a sound
@@ -574,6 +574,7 @@ void CGameContext::OnTick()
 		{
 			m_apPlayers[i]->Tick();
 			m_apPlayers[i]->PostTick();
+			m_ResourceManager.TrySendResourceInfo(i);
 		}
 	}
 

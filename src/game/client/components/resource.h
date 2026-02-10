@@ -1,7 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_RESOURCE_H
 #define GAME_CLIENT_COMPONENTS_RESOURCE_H
 
-#include <base/tl/sorted_array.h>
+#include <base/tl/array.h>
 #include <base/uuid.h>
 #include <engine/graphics.h>
 #include <engine/sound.h>
@@ -21,20 +21,18 @@ class CClientResManager : public CComponent
         IOHANDLE m_DownloadTemp;
     };
 
-    sorted_array<CClientResource> m_lResources;
+    array<CClientResource> m_lResources;
     void RequestDownload(const Uuid *pRequest);
     bool LoadResource(CClientResource *pResource);
 
     void RenderImageEntity(const CNetObj_CustomImageEntity *pPrev, const CNetObj_CustomImageEntity *pCur);
 public:
     CClientResManager();
-    virtual void OnMapLoad();
     virtual void OnRender();
 	virtual void OnMessage(int MsgType, void *pRawMsg);
 	virtual void OnStateChange(int NewState, int OldState);
+    CClientResource *FindResource(Uuid ResourceID);
 
-    bool IsResourceSound(Uuid ResID);
-    bool IsResourceImage(Uuid ResID);
     ISound::CSampleHandle GetResourceSample(Uuid ResID);
     IGraphics::CTextureHandle GetResourceTexture(Uuid ResID);
 };

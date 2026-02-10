@@ -11,6 +11,16 @@ IServer *CServerResManager::Server() { return m_pGameContext->Server(); }
 IStorage *CServerResManager::Storage() { return m_pGameContext->Storage(); }
 CConfig *CServerResManager::Config() { return m_pGameContext->Config(); }
 
+CServerResManager::CServerResource *CServerResManager::FindResource(Uuid ResourceID)
+{
+	for(int i = 0; i < m_lResources.size(); i++)
+    {
+        if(m_lResources[i].m_Uuid == ResourceID)
+            return &m_lResources[i];
+    }
+    return nullptr;
+}
+
 CServerResManager::CServerResManager()
 {
 }
@@ -28,14 +38,10 @@ void CServerResManager::Init(CGameContext *pGameContext)
 
 void CServerResManager::SendResourceData(int ClientID, const Uuid RequestUuid)
 {
-	CServerResource Res;
-	Res.m_Uuid = RequestUuid;
-	sorted_array<CServerResource>::range r = ::find_binary(m_lResources.all(), Res);
-	if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-		return;
-
     int ChunkSize = CResource::CHUNK_SIZE;
-    CServerResource *pTarget = &r.front();
+    CServerResource *pTarget = FindResource(RequestUuid);
+    if(!pTarget)
+        return;
 
     // send resource chunks, copied from map download
     for(int i = 0; i < Config()->m_SvResDownloadSpeed && pTarget->m_aDownloadChunks[ClientID] >= 0; ++i)
@@ -105,20 +111,7 @@ void CServerResManager::OnClientEnter(int ClientID)
 {
 	if(Server()->GetClientVersion(ClientID) < 0x0706)
 		return;
-	for(int i = 0; i < m_lResources.size(); i++)
-	{
-		CNetMsg_Sv_CustomResource Resource;
-		Resource.m_Uuid = &m_lResources[i].m_Uuid;
-		Resource.m_Type = m_lResources[i].m_Type;
-		Resource.m_Name = m_lResources[i].m_aName;
-		Resource.m_Crc = m_lResources[i].m_Crc;
-		Resource.m_Sha256 = &m_lResources[i].m_Sha256;
-		Resource.m_Size = m_lResources[i].m_DataSize;
-        Resource.m_ChunkPerRequest = m_ChunksPerRequest;
-		Server()->SendPackMsg(&Resource, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, ClientID);
-
-		m_lResources[i].m_aDownloadChunks[ClientID] = 0;
-	}
+    m_aResourceSendIndex[ClientID] = 0;
 }
 
 void CServerResManager::Clear()
@@ -129,24 +122,30 @@ void CServerResManager::Clear()
             mem_free(m_lResources[i].m_pData);
         m_lResources[i].m_pData = 0;
     }
+    for(int i = 0; i < MAX_CLIENTS; i++)
+    {
+        m_aResourceSendIndex[i] = -1;
+    }
 }
 
-bool CServerResManager::IsResourceSound(Uuid ResID)
+void CServerResManager::TrySendResourceInfo(int ClientID)
 {
-	CServerResource Res;
-	Res.m_Uuid = ResID;
-	sorted_array<CServerResource>::range r = ::find_binary(m_lResources.all(), Res);
-	if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-		return false;
-	return r.front().m_Type == RESOURCE_SOUND;
-}
+    if(!GameServer()->m_apPlayers[ClientID])
+        return;
 
-bool CServerResManager::IsResourceImage(Uuid ResID)
-{
-	CServerResource Res;
-	Res.m_Uuid = ResID;
-	sorted_array<CServerResource>::range r = ::find_binary(m_lResources.all(), Res);
-	if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-		return false;
-	return r.front().m_Type == RESOURCE_IMAGE;
+    int Index = m_aResourceSendIndex[ClientID];
+    if(Index < 0 || Index >= m_lResources.size())
+        return;
+    CNetMsg_Sv_CustomResource Resource;
+    Resource.m_Uuid = &m_lResources[Index].m_Uuid;
+    Resource.m_Type = m_lResources[Index].m_Type;
+    Resource.m_Name = m_lResources[Index].m_aName;
+    Resource.m_Crc = m_lResources[Index].m_Crc;
+    Resource.m_Sha256 = &m_lResources[Index].m_Sha256;
+    Resource.m_Size = m_lResources[Index].m_DataSize;
+    Resource.m_ChunkPerRequest = m_ChunksPerRequest;
+    Server()->SendPackMsg(&Resource, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, ClientID);
+
+    m_lResources[Index].m_aDownloadChunks[ClientID] = 0;
+    m_aResourceSendIndex[ClientID]++;
 }

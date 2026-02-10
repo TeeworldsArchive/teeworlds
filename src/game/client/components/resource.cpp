@@ -70,18 +70,6 @@ void CClientResManager::RenderImageEntity(const CNetObj_CustomImageEntity *pPrev
 	Graphics()->QuadsEnd();
 }
 
-void CClientResManager::OnMapLoad()
-{
-    for(int i = 0; i < m_lResources.size(); i++)
-    {
-        if(m_lResources[i].m_Sample.IsValid())
-            m_pClient->m_pSounds->UnloadSample(&m_lResources[i].m_Sample);
-        if(m_lResources[i].m_Texture.IsValid())
-            Graphics()->UnloadTexture(&m_lResources[i].m_Texture);
-    }
-    m_lResources.clear();
-}
-
 void CClientResManager::OnRender()
 {
 	int Num = Client()->SnapNumItems(IClient::SNAP_CURRENT);
@@ -122,15 +110,11 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
             Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "resource", "invalid resource size");
             return;
         }
+
+        if(FindResource(*static_cast<const Uuid *>(pMsg->m_Uuid))) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
         {
-            CClientResource TargetRes;
-            TargetRes.m_Uuid = *static_cast<const Uuid *>(pMsg->m_Uuid);
-            sorted_array<CClientResource>::range r = ::find_binary(m_lResources.all(), TargetRes);
-            if(!r.empty()) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-            {
-                Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "resource", "invalid resource uuid");
-                return;
-            }
+            Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "resource", "invalid resource uuid");
+            return;
         }
         CClientResource Resource;
         str_copy(Resource.m_aName, pMsg->m_Name, sizeof(Resource.m_aName));
@@ -146,6 +130,7 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
         mem_copy(&Resource.m_Sha256, pMsg->m_Sha256, sizeof(SHA256_DIGEST));
         FormatResourcePath(Resource.m_aPath, sizeof(Resource.m_aPath), Resource.m_aName, false, &Resource.m_Sha256, &Resource.m_Crc);
         FormatResourcePath(Resource.m_aTempPath, sizeof(Resource.m_aTempPath), Resource.m_aName, true, &Resource.m_Sha256, &Resource.m_Crc);
+        Resource.m_DownloadTemp = 0;
 
         int Index = m_lResources.add(Resource);
         if(!LoadResource(&m_lResources[Index]))
@@ -158,41 +143,38 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
     {
 		CNetMsg_Sv_CustomResourceData *pMsg = (CNetMsg_Sv_CustomResourceData *) pRawMsg;
         Uuid TargetResource = *static_cast<const Uuid *>(pMsg->m_Uuid);
-
-        CClientResource TargetRes;
-        TargetRes.m_Uuid = TargetResource;
-        sorted_array<CClientResource>::range r = ::find_binary(m_lResources.all(), TargetRes);
-        if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
+        CClientResource *pResource = FindResource(TargetResource);
+        if(!pResource)
             return;
-
-        CClientResource &Resource = r.front();
-        Resource.m_DownloadedSize += pMsg->m_DataSize;
-        if(Resource.m_DownloadedSize > Resource.m_DataSize)
+        pResource->m_DownloadedSize += pMsg->m_DataSize;
+        if(pResource->m_DownloadedSize > pResource->m_DataSize)
         {
-            io_close(Resource.m_DownloadTemp);
-            Storage()->RemoveFile(Resource.m_aTempPath, IStorage::TYPE_SAVE);
-            m_lResources.remove(Resource);
+            io_close(pResource->m_DownloadTemp);
+            pResource->m_DownloadTemp = 0;
+            Storage()->RemoveFile(pResource->m_aTempPath, IStorage::TYPE_SAVE);
+            m_lResources.remove(*pResource);
             return; // invalid!
         }
-        io_write(Resource.m_DownloadTemp, pMsg->m_Data, pMsg->m_DataSize);
-        if(Resource.m_DownloadedSize == Resource.m_DataSize)
+        io_write(pResource->m_DownloadTemp, pMsg->m_Data, pMsg->m_DataSize);
+        if(pResource->m_DownloadedSize == pResource->m_DataSize)
         {
             char aBuf[128];
-            str_format(aBuf, sizeof(aBuf), Localize("Resource '%s': download complete"), Resource.m_aName);
+            str_format(aBuf, sizeof(aBuf), Localize("Resource '%s': download complete"), pResource->m_aName);
             UI()->DoToast(aBuf);
-            io_close(Resource.m_DownloadTemp);
+            io_close(pResource->m_DownloadTemp);
+            pResource->m_DownloadTemp = 0;
 
-            Storage()->RemoveFile(Resource.m_aPath, IStorage::TYPE_SAVE);
-            Storage()->RenameFile(Resource.m_aTempPath, Resource.m_aPath, IStorage::TYPE_SAVE);
+            Storage()->RemoveFile(pResource->m_aPath, IStorage::TYPE_SAVE);
+            Storage()->RenameFile(pResource->m_aTempPath, pResource->m_aPath, IStorage::TYPE_SAVE);
 
-            if(!LoadResource(&Resource))
+            if(!LoadResource(pResource))
             {
-                Storage()->RemoveFile(Resource.m_aPath, IStorage::TYPE_SAVE);
-                m_lResources.remove(Resource);
+                Storage()->RemoveFile(pResource->m_aPath, IStorage::TYPE_SAVE);
+                m_lResources.remove(*pResource);
                 return; // invalid!
             }
         }
-        else if((pMsg->m_ChunkIndex + 1) % Resource.m_ChunkPerRequest == 0)
+        else if((pMsg->m_ChunkIndex + 1) % pResource->m_ChunkPerRequest == 0)
             RequestDownload(&TargetResource);
     }
 }
@@ -220,42 +202,28 @@ void CClientResManager::OnStateChange(int NewState, int OldState)
     }
 }
 
-bool CClientResManager::IsResourceSound(Uuid ResID)
+CClientResManager::CClientResource *CClientResManager::FindResource(Uuid ResourceID)
 {
-	CClientResource Res;
-	Res.m_Uuid = ResID;
-	sorted_array<CClientResource>::range r = ::find_binary(m_lResources.all(), Res);
-	if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-		return false;
-	return r.front().m_Type == RESOURCE_SOUND;
-}
-
-bool CClientResManager::IsResourceImage(Uuid ResID)
-{
-	CClientResource Res;
-	Res.m_Uuid = ResID;
-	sorted_array<CClientResource>::range r = ::find_binary(m_lResources.all(), Res);
-	if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-		return false;
-	return r.front().m_Type == RESOURCE_IMAGE;
+	for(int i = 0; i < m_lResources.size(); i++)
+    {
+        if(m_lResources[i].m_Uuid == ResourceID)
+            return &m_lResources[i];
+    }
+    return nullptr;
 }
 
 ISound::CSampleHandle CClientResManager::GetResourceSample(Uuid ResID)
 {
-	CClientResource Res;
-	Res.m_Uuid = ResID;
-	sorted_array<CClientResource>::range r = ::find_binary(m_lResources.all(), Res);
-	if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-		return ISound::CSampleHandle();
-	return r.front().m_Sample;
+    CClientResource *pResource = FindResource(ResID);
+    if(pResource)
+	    return pResource->m_Sample;
+    return ISound::CSampleHandle();
 }
 
 IGraphics::CTextureHandle CClientResManager::GetResourceTexture(Uuid ResID)
 {
-	CClientResource Res;
-	Res.m_Uuid = ResID;
-	sorted_array<CClientResource>::range r = ::find_binary(m_lResources.all(), Res);
-	if(r.empty() || r.size() > 1) // there couldn't be uuid collision, if that happened, then the server-side resource name must be wrong.
-		return IGraphics::CTextureHandle();
-	return r.front().m_Texture;
+    CClientResource *pResource = FindResource(ResID);
+    if(pResource)
+	    return pResource->m_Texture;
+    return IGraphics::CTextureHandle();
 }
