@@ -19,6 +19,7 @@ class CServerResManager
     };
 
     sorted_array<CServerResource> m_lResources;
+    int m_ChunksPerRequest;
 public:
     CServerResManager();
     ~CServerResManager();

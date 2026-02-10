@@ -23,6 +23,7 @@ CServerResManager::~CServerResManager()
 void CServerResManager::Init(CGameContext *pGameContext)
 {
     m_pGameContext = pGameContext;
+    m_ChunksPerRequest = Config()->m_SvResDownloadSpeed;
 }
 
 void CServerResManager::SendResourceData(int ClientID, const Uuid RequestUuid)
@@ -53,6 +54,7 @@ void CServerResManager::SendResourceData(int ClientID, const Uuid RequestUuid)
 
 		CNetMsg_Sv_CustomResourceData Msg;
 		Msg.m_Uuid = &pTarget->m_Uuid;
+        Msg.m_ChunkIndex = Chunk;
 		Msg.m_Data = &pTarget->m_pData[Offset];
 		Msg.m_DataSize = ChunkSize;
 		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, ClientID);
@@ -112,6 +114,7 @@ void CServerResManager::OnClientEnter(int ClientID)
 		Resource.m_Crc = m_lResources[i].m_Crc;
 		Resource.m_Sha256 = &m_lResources[i].m_Sha256;
 		Resource.m_Size = m_lResources[i].m_DataSize;
+        Resource.m_ChunkPerRequest = m_ChunksPerRequest;
 		Server()->SendPackMsg(&Resource, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, ClientID);
 
 		m_lResources[i].m_aDownloadChunks[ClientID] = 0;

@@ -1344,6 +1344,17 @@ void CGameClient::OnNewSnapshot()
 					}
 				}
 			}
+			else if(Item.m_Type == NETOBJTYPE_CHARACTERGAMETEXTURE)
+			{
+				if(Item.m_ID < MAX_CLIENTS)
+				{
+					CSnapState::CCharacterInfo *pCharInfo = &m_Snap.m_aCharacters[Item.m_ID];
+					Uuid GameTextureID;
+					mem_copy(&GameTextureID, ((const CNetObj_CharacterGameTexture *) pData)->m_Uuid, sizeof(Uuid));
+					pCharInfo->m_UseCustomGameTexture = true;
+					pCharInfo->m_GameTexture = m_pResourceManager->GetResourceTexture(GameTextureID);
+				}
+			}
 			else if(Item.m_Type == NETOBJTYPE_SPECTATORINFO)
 			{
 				m_Snap.m_pSpectatorInfo = (const CNetObj_SpectatorInfo *) pData;
@@ -1479,6 +1490,8 @@ void CGameClient::OnNewSnapshot()
 				EvolveCharacter(&m_Snap.m_aCharacters[i].m_Prev, EvolvePrevTick);
 			if(m_Snap.m_aCharacters[i].m_Cur.m_Tick)
 				EvolveCharacter(&m_Snap.m_aCharacters[i].m_Cur, EvolveCurTick);
+			if(!m_Snap.m_aCharacters[i].m_UseCustomGameTexture || !m_Snap.m_aCharacters[i].m_GameTexture.IsValid())
+				m_Snap.m_aCharacters[i].m_GameTexture = g_pData->m_aImages[IMAGE_GAME].m_Id;
 
 			m_aClients[i].m_Evolved = m_Snap.m_aCharacters[i].m_Cur;
 			if(i != m_LocalClientID || !Config()->m_ClPredict || Client()->State() == IClient::STATE_DEMOPLAYBACK || !GameDataPredictInput() || !GameDataPredictEvent())

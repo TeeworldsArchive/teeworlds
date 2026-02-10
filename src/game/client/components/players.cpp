@@ -45,7 +45,7 @@ void CPlayers::RenderHook(
 	// draw hook
 	if(Prev.m_HookState > 0 && Player.m_HookState > 0)
 	{
-		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
+		Graphics()->TextureSet(m_pClient->m_Snap.m_aCharacters[ClientID].m_GameTexture);
 		Graphics()->QuadsBegin();
 
 		vec2 HookPos;
@@ -195,7 +195,7 @@ void CPlayers::RenderPlayer(
 	// draw gun
 	if(Player.m_Weapon >= 0)
 	{
-		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
+		Graphics()->TextureSet(m_pClient->m_Snap.m_aCharacters[ClientID].m_GameTexture);
 		Graphics()->QuadsBegin();
 		Graphics()->QuadsSetRotation(State.GetAttach()->m_Angle * pi * 2 + Angle);
 

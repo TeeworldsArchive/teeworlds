@@ -142,6 +142,7 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
         Resource.m_Sample = ISound::CSampleHandle();
         Resource.m_Texture = IGraphics::CTextureHandle();
         Resource.m_Type = pMsg->m_Type;
+        Resource.m_ChunkPerRequest = pMsg->m_ChunkPerRequest;
         mem_copy(&Resource.m_Sha256, pMsg->m_Sha256, sizeof(SHA256_DIGEST));
         FormatResourcePath(Resource.m_aPath, sizeof(Resource.m_aPath), Resource.m_aName, false, &Resource.m_Sha256, &Resource.m_Crc);
         FormatResourcePath(Resource.m_aTempPath, sizeof(Resource.m_aTempPath), Resource.m_aName, true, &Resource.m_Sha256, &Resource.m_Crc);
@@ -191,8 +192,31 @@ void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
                 return; // invalid!
             }
         }
-        else
+        else if((pMsg->m_ChunkIndex + 1) % Resource.m_ChunkPerRequest == 0)
             RequestDownload(&TargetResource);
+    }
+}
+
+void CClientResManager::OnStateChange(int NewState, int OldState)
+{
+	if(NewState == IClient::STATE_OFFLINE)
+	{
+        if(OldState >= IClient::STATE_CONNECTING && NewState <= IClient::STATE_ONLINE)
+        {
+            for(int i = 0; i < m_lResources.size(); i++)
+            {
+                if(m_lResources[i].m_Sample.IsValid())
+                    m_pClient->m_pSounds->UnloadSample(&m_lResources[i].m_Sample);
+                if(m_lResources[i].m_Texture.IsValid())
+                    Graphics()->UnloadTexture(&m_lResources[i].m_Texture);
+                if(m_lResources[i].m_DownloadTemp)
+                {
+                    io_close(m_lResources[i].m_DownloadTemp);
+                    Storage()->RemoveFile(m_lResources[i].m_aTempPath, IStorage::TYPE_SAVE);
+                }
+            }
+            m_lResources.clear();
+        }
     }
 }
 

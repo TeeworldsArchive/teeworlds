@@ -303,6 +303,10 @@ Objects = [
 		NetIntAny("m_Vol"),
         NetIntAny("m_Offset"),
 	]),
+
+	NetObjectEx("CharacterGameTexture", "character-game-texture@netobj.teeworlds.wiki", [
+        NetRawDataFixedSnapshot("m_Uuid", "sizeof(Uuid)"),
+	]),
 ]
 
 Messages = [
@@ -523,11 +527,13 @@ Messages = [
             NetEnum("m_Type", Resources),
 			NetStringStrict("m_Name"),
 			NetIntAny("m_Crc"),
+            NetIntRange("m_ChunkPerRequest", 0, 'max_int'),
             NetIntRange("m_Size", 0, 'max_int'),
             NetRawDataFixed("m_Sha256", "sizeof(SHA256_DIGEST)"),
 	]),
 	NetMessageEx("Sv_CustomResourceData", "custom-resource-data@netmsg.teeworlds.wiki", [
 			NetRawDataFixed("m_Uuid", "sizeof(Uuid)"),
+            NetIntRange("m_ChunkIndex", 0, 'max_int'),
             NetRawData("m_Data"),
 	]),
 	NetMessageEx("Cl_ReqeustCustomResource", "request-custom-resource@netmsg.teeworlds.wiki", [

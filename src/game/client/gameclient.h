@@ -193,6 +193,8 @@ public:
 
 			// interpolated position
 			vec2 m_Position;
+			bool m_UseCustomGameTexture;
+			IGraphics::CTextureHandle m_GameTexture;
 		};
 
 		CCharacterInfo m_aCharacters[MAX_CLIENTS];

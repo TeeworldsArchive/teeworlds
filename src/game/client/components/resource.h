@@ -15,6 +15,7 @@ class CClientResManager : public CComponent
         char m_aPath[IO_MAX_PATH_LENGTH];
         char m_aTempPath[IO_MAX_PATH_LENGTH];
         int m_DownloadedSize;
+        int m_ChunkPerRequest;
         ISound::CSampleHandle m_Sample;
         IGraphics::CTextureHandle m_Texture;
         IOHANDLE m_DownloadTemp;
@@ -30,6 +31,7 @@ public:
     virtual void OnMapLoad();
     virtual void OnRender();
 	virtual void OnMessage(int MsgType, void *pRawMsg);
+	virtual void OnStateChange(int NewState, int OldState);
 
     bool IsResourceSound(Uuid ResID);
     bool IsResourceImage(Uuid ResID);
