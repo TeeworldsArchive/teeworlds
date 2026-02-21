@@ -31,7 +31,7 @@ static const char *s_FragmentShaderSource = R"(
 #ifdef USE_2D_TEXTURE
     #define SAMPLER_TYPE sampler2D
 #else
-    #define SAMPLER_TYPE sampler3D
+    #define SAMPLER_TYPE sampler2DArray
 #endif
 out vec4 FragColor;
 
@@ -312,6 +312,8 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		m_LastStainedOnly = State.m_IsStainedOnly;
 		m_LastTextureID = -1;
 		m_LastTexture3D = IsTexture3D;
+		if(IsTexture3D)
+			glBindSampler(0, m_Sampler2DArray);
 	}
 	else if(m_LastStainedOnly != State.m_IsStainedOnly)
 	{
@@ -326,7 +328,6 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex2D)
 			{
 				glBindTexture(GL_TEXTURE_2D, m_aTextures[State.m_Texture].m_Tex2D);
-				glBindSampler(0, m_aTextures[State.m_Texture].m_Sampler);
 				glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
 				glUniform1i(pShader->m_UseTextureLoc, 1);
 			}
@@ -340,12 +341,11 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 
 			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex2D;
 		}
-		else if(State.m_Dimension == 3 && (m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX3D))
+		else if(State.m_Dimension == 3 && (m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX2DARRAY))
 		{
-			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex])
+			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex2DArray)
 			{
-				glBindTexture(GL_TEXTURE_3D, m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex]);
-				glBindSampler(0, m_aTextures[State.m_Texture].m_Sampler);
+				glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[State.m_Texture].m_Tex2DArray);
 				glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
 				glUniform1i(pShader->m_UseTextureLoc, 1);
 			}
@@ -357,7 +357,7 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 					glUniform1i(pShader->m_UseTextureLoc, 1);
 			}
 
-			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex3D[State.m_TextureArrayIndex];
+			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex2DArray;
 		}
 		else
 		{
@@ -385,28 +385,23 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		m_LastUseTexture = false;
 	}
 
-	if((State.m_BlendMode != m_LastBlendMode || m_LastSrcBlendMode != SrcBlendMode) && State.m_BlendMode != CCommandBuffer::BLEND_NONE)
+	if(m_LastSrcBlendMode != SrcBlendMode && State.m_BlendMode != CCommandBuffer::BLEND_NONE)
 	{
 		// blend
 		switch(State.m_BlendMode)
 		{
 			case CCommandBuffer::BLEND_NONE:
-				glDisable(GL_BLEND);
+				// glDisable(GL_BLEND);
 				break;
 			case CCommandBuffer::BLEND_ALPHA:
-				glEnable(GL_BLEND);
+				// glEnable(GL_BLEND);
 				glBlendFunc(SrcBlendMode, GL_ONE_MINUS_SRC_ALPHA);
-				break;
-			case CCommandBuffer::BLEND_ADDITIVE:
-				glEnable(GL_BLEND);
-				glBlendFunc(SrcBlendMode, GL_ONE);
 				break;
 			default:
 				dbg_msg("render", "unknown blendmode %d\n", State.m_BlendMode);
 		};
 
 		m_LastSrcBlendMode = SrcBlendMode;
-		m_LastBlendMode = State.m_BlendMode;
 	}
 
 	// wrap mode - only set if we have a valid texture
@@ -414,42 +409,36 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	{
 		if(State.m_Dimension == 2)
 		{
-			if(m_aLast2DWarpMode[0] != State.m_WrapModeU)
+			int WrapSamplerType = SAMPLER2D_REPEAT_REPEAT;
+			switch(State.m_WrapModeU)
 			{
-				switch(State.m_WrapModeU)
-				{
-					case IGraphics::WRAP_REPEAT:
-						glSamplerParameteri(m_aTextures[State.m_Texture].m_Sampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
-						break;
-					case IGraphics::WRAP_CLAMP:
-						glSamplerParameteri(m_aTextures[State.m_Texture].m_Sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-						break;
-					default:
-						dbg_msg("render", "unknown wrapmode u %d", State.m_WrapModeU);
-				};
-				m_aLast2DWarpMode[0] = State.m_WrapModeU;
-			}
-
-			if(m_aLast2DWarpMode[1] != State.m_WrapModeV)
-			{
-				switch(State.m_WrapModeV)
-				{
-					case IGraphics::WRAP_REPEAT:
-						glSamplerParameteri(m_aTextures[State.m_Texture].m_Sampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
-						break;
-					case IGraphics::WRAP_CLAMP:
-						glSamplerParameteri(m_aTextures[State.m_Texture].m_Sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-						break;
-					default:
-						dbg_msg("render", "unknown wrapmode v %d", State.m_WrapModeV);
-				};
-				m_aLast2DWarpMode[1] = State.m_WrapModeV;
-			}
+				case IGraphics::WRAP_REPEAT:
+					switch(State.m_WrapModeV)
+					{
+						case IGraphics::WRAP_REPEAT: WrapSamplerType = SAMPLER2D_REPEAT_REPEAT; break;
+						case IGraphics::WRAP_CLAMP: WrapSamplerType = SAMPLER2D_REPEAT_CLAMP; break;
+						default: dbg_msg("render", "unknown wrapmode v %d", State.m_WrapModeV);
+					};
+					break;
+				case IGraphics::WRAP_CLAMP:
+					switch(State.m_WrapModeV)
+					{
+						case IGraphics::WRAP_REPEAT: WrapSamplerType = SAMPLER2D_CLAMP_REPEAT; break;
+						case IGraphics::WRAP_CLAMP: WrapSamplerType = SAMPLER2D_CLAMP_CLAMP; break;
+						default: dbg_msg("render", "unknown wrapmode v %d", State.m_WrapModeV);
+					};
+					break;
+				default: dbg_msg("render", "unknown wrapmode u %d", State.m_WrapModeU);
+			};
+			GLuint SamplerID = m_aSampler2D[m_aTextures[State.m_Texture].m_BasicSamplerType][WrapSamplerType];
+			if(m_LastSampler != SamplerID)
+				glBindSampler(0, SamplerID);
+			m_LastSampler = SamplerID;
 		}
 	}
 
 	// screen mapping - Set projection matrix uniform
-	float orthoMatrix[16] = {
+	float OrthoMatrix[16] = {
 		2.0f / (State.m_ScreenBR.x - State.m_ScreenTL.x), 0, 0, 0,
 		0, 2.0f / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 0,
 		0, 0, -1, 0,
@@ -457,7 +446,7 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		-(State.m_ScreenBR.y + State.m_ScreenTL.y) / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 1};
 
 	if(pShader->m_ProjectionLoc != -1)
-		glUniformMatrix4fv(pShader->m_ProjectionLoc, 1, GL_FALSE, orthoMatrix);
+		glUniformMatrix4fv(pShader->m_ProjectionLoc, 1, GL_FALSE, OrthoMatrix);
 	return true;
 }
 
@@ -467,22 +456,55 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	// Create shader program
 	m_aRenderShader[0].m_ShaderProgram = CreateShaderProgram(false);
 	m_aRenderShader[1].m_ShaderProgram = CreateShaderProgram(true);
-	m_LastBlendMode = CCommandBuffer::BLEND_NONE;
 	m_LastSrcBlendMode = GL_NONE;
-	m_aLast2DWarpMode[0] = -1;
-	m_aLast2DWarpMode[1] = -1;
 	m_LastTexture3D = false;
 	m_LastAlphaOnly = false;
 	m_LastStainedOnly = false;
 	m_LastUseTexture = false;
 	m_LastTextureID = -1;
+	m_LastSampler = 0;
 
-	glDisable(GL_BLEND);
+	glEnable(GL_BLEND);
 
 	// set some default settings
 	glActiveTexture(GL_TEXTURE0);
 
-	// Initialize shader uniforms with default values
+	glGenSamplers(1, &m_Sampler2DArray);
+	glSamplerParameteri(m_Sampler2DArray, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glSamplerParameteri(m_Sampler2DArray, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glSamplerParameteri(m_Sampler2DArray, GL_TEXTURE_WRAP_R, GL_REPEAT);
+	glSamplerParameteri(m_Sampler2DArray, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glSamplerParameteri(m_Sampler2DArray, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// generate 2D samplers
+	glGenSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aSampler2D);
+	for(int i = 0; i < NUM_WRAP_SAMPLERS; i++)
+	{
+		glSamplerParameteri(m_aSampler2D[SAMPLER2D_NOMIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aSampler2D[SAMPLER2D_NOMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glSamplerParameteri(m_aSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+
+	for(int i = 0; i < NUM_BASIC_SAMPLERS; i++)
+	{
+		// u
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+
+		// v
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_T, GL_REPEAT);
+	}
+
+
+	// initialize shader uniforms with default values
 	for(int i = 0; i < 2; i++)
 	{
 		m_aRenderShader[i].m_UseTextureLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "useTexture");
@@ -531,12 +553,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	m_pTextureMemoryUsage = pCommand->m_pTextureMemoryUsage;
 	*m_pTextureMemoryUsage = 0;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m_MaxTexSize);
-	glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &m_Max3DTexSize);
-	dbg_msg("render", "opengl max texture sizes: %d, %d(3D)", m_MaxTexSize, m_Max3DTexSize);
-	if(m_Max3DTexSize < IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION)
-		dbg_msg("render", "*** warning *** max 3D texture size is too low - using the fallback system");
-	m_TextureArraySize = IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION / minimum(m_Max3DTexSize, IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION);
-	*pCommand->m_pTextureArraySize = m_TextureArraySize;
+	glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &m_Max2DArrayLayers);
+	dbg_msg("render", "opengl max texture sizes: %d, max array texture layers: %d", m_MaxTexSize, m_Max2DArrayLayers);
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glDisable(GL_SCISSOR_TEST);
@@ -553,6 +571,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const CGLShutdownCommand *pC
 	glDeleteVertexArrays(1, &m_PrimitiveDrawVertexID);
 	glDeleteShader(m_aRenderShader[0].m_ShaderProgram);
 	glDeleteShader(m_aRenderShader[1].m_ShaderProgram);
+	glDeleteSamplers(1, &m_Sampler2DArray);
+	glDeleteSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aSampler2D);
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::CTextureUpdateCommand *pCommand)
@@ -572,10 +592,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Destroy(const CCommandBuffer:
 {
 	if(m_aTextures[pCommand->m_Slot].m_State & CTexture::STATE_TEX2D)
 		glDeleteTextures(1, &m_aTextures[pCommand->m_Slot].m_Tex2D);
-	if(m_aTextures[pCommand->m_Slot].m_State & CTexture::STATE_TEX3D)
-		glDeleteTextures(m_TextureArraySize, m_aTextures[pCommand->m_Slot].m_Tex3D);
-	if(m_aTextures[pCommand->m_Slot].m_Sampler != 0)
-		glDeleteSamplers(1, &m_aTextures[pCommand->m_Slot].m_Sampler);
+	if(m_aTextures[pCommand->m_Slot].m_State & CTexture::STATE_TEX2DARRAY)
+		glDeleteTextures(1, &m_aTextures[pCommand->m_Slot].m_Tex2DArray);
 	*m_pTextureMemoryUsage -= m_aTextures[pCommand->m_Slot].m_MemSize;
 	m_aTextures[pCommand->m_Slot].m_State = CTexture::STATE_EMPTY;
 	m_aTextures[pCommand->m_Slot].m_MemSize = 0;
@@ -590,21 +608,13 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 	// resample if needed
 	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA || pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB)
 	{
-		int MaxTexSize = m_MaxTexSize;
-		if((pCommand->m_Flags & CCommandBuffer::TEXFLAG_TEXTURE3D) && m_Max3DTexSize >= CTexture::MIN_GL_MAX_3D_TEXTURE_SIZE)
-		{
-			if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_TEXTURE2D)
-				MaxTexSize = minimum(MaxTexSize, m_Max3DTexSize * IGraphics::NUMTILES_DIMENSION);
-			else
-				MaxTexSize = m_Max3DTexSize * IGraphics::NUMTILES_DIMENSION;
-		}
-		if(Width > MaxTexSize || Height > MaxTexSize)
+		if(Width > m_MaxTexSize || Height > m_MaxTexSize)
 		{
 			do
 			{
 				Width >>= 1;
 				Height >>= 1;
-			} while(Width > MaxTexSize || Height > MaxTexSize);
+			} while(Width > m_MaxTexSize || Height > m_MaxTexSize);
 
 			void *pTmpData = Rescale(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
 			if(pTexData != pCommand->m_pData)
@@ -664,9 +674,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 			}
 		}
 	}
-
-	glGenSamplers(1, &m_aTextures[pCommand->m_Slot].m_Sampler);
-	glBindSampler(0, m_aTextures[pCommand->m_Slot].m_Sampler);
+	m_aTextures[pCommand->m_Slot].m_BasicSamplerType = SAMPLER2D_NOMIPMAPS;
 	// 2D texture
 	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_TEXTURE2D)
 	{
@@ -675,22 +683,13 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 		m_aTextures[pCommand->m_Slot].m_State |= CTexture::STATE_TEX2D;
 		glBindTexture(GL_TEXTURE_2D, m_aTextures[pCommand->m_Slot].m_Tex2D);
 
-		// Set texture parameters
-		glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		if(!Mipmaps)
 		{
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexImage2D(GL_TEXTURE_2D, 0, StoreOglformat, Width, Height, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
 		}
 		else
 		{
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_LINEARMIPMAPS)
-				glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			else
-				glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			m_aTextures[pCommand->m_Slot].m_BasicSamplerType = (pCommand->m_Flags & CCommandBuffer::TEXFLAG_LINEARMIPMAPS) ? SAMPLER2D_LINERMIPMAPS : SAMPLER2D_MIPMAPS;
 			glTexImage2D(GL_TEXTURE_2D, 0, StoreOglformat, Width, Height, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
@@ -710,78 +709,51 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 		}
 	}
 
-	// 3D texture - in the existing code, add this check
-	if((pCommand->m_Flags & CCommandBuffer::TEXFLAG_TEXTURE3D) && m_Max3DTexSize >= CTexture::MIN_GL_MAX_3D_TEXTURE_SIZE)
+	// 2D array texture
+	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_TEXTURE2DARRAY)
 	{
-		int TileWidth = Width / IGraphics::NUMTILES_DIMENSION;
-		int TileHeight = Height / IGraphics::NUMTILES_DIMENSION;
-		int Depth = minimum(m_Max3DTexSize, IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION);
+		const int TileWidth = Width / IGraphics::NUMTILES_DIMENSION;
+		const int TileHeight = Height / IGraphics::NUMTILES_DIMENSION;
+		const int Depth = IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION;
 
-		// Allocate memory for 3D texture data
-		int MemSize = TileWidth * TileHeight * Depth * pCommand->m_PixelSize;
+		// allocate memory for 3D texture data
+		const int MemSize = TileWidth * TileHeight * Depth * pCommand->m_PixelSize;
 		char *pTmpData = (char *) mem_alloc(MemSize);
 		mem_zero(pTmpData, MemSize);
 
-		// Copy and reorder texture data - fix the data copying logic
 		const int TileSize = TileWidth * TileHeight * pCommand->m_PixelSize;
 		const int TileRowSize = TileWidth * pCommand->m_PixelSize;
 
-		// Copy tiles from 2D atlas to 3D texture slices
-		for(int i = 0; i < Depth && i < IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION; i++)
+		// copy
+		for(int i = 0; i < Depth; i++)
 		{
 			const int px = (i % IGraphics::NUMTILES_DIMENSION) * TileWidth;
 			const int py = (i / IGraphics::NUMTILES_DIMENSION) * TileHeight;
 
 			for(int y = 0; y < TileHeight; y++)
 			{
-				const int srcOffset = ((py + y) * Width + px) * pCommand->m_PixelSize;
-				const int dstOffset = (i * TileSize) + (y * TileRowSize);
-				mem_copy(pTmpData + dstOffset, (char *) pTexData + srcOffset, TileRowSize);
+				const int SrcOffset = ((py + y) * Width + px) * pCommand->m_PixelSize;
+				const int DestOffset = (i * TileSize) + (y * TileRowSize);
+				mem_copy(pTmpData + DestOffset, (char *) pTexData + SrcOffset, TileRowSize);
 			}
 		}
 
-		// Free original data if it was rescaled
+		// free original data
 		mem_free(pTexData);
 
-		// Create 3D textures
-		glGenTextures(m_TextureArraySize, m_aTextures[pCommand->m_Slot].m_Tex3D);
-		m_aTextures[pCommand->m_Slot].m_State |= CTexture::STATE_TEX3D;
-		for(int i = 0; i < m_TextureArraySize; ++i)
-		{
-			glBindTexture(GL_TEXTURE_3D, m_aTextures[pCommand->m_Slot].m_Tex3D[i]);
+		// create textures
+		glGenTextures(1, &m_aTextures[pCommand->m_Slot].m_Tex2DArray);
+		m_aTextures[pCommand->m_Slot].m_State |= CTexture::STATE_TEX2DARRAY;
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[pCommand->m_Slot].m_Tex2DArray);
+		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, StoreOglformat, TileWidth, TileHeight, Depth, 0, Oglformat, GL_UNSIGNED_BYTE, pTmpData);
 
-			// Set 3D texture parameters
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_WRAP_R, GL_REPEAT);
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glSamplerParameteri(m_aTextures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-			// Upload 3D texture data
-			if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_ALPHA)
-			{
-				glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, TileWidth, TileHeight, Depth, 0, GL_RED, GL_UNSIGNED_BYTE, pTmpData);
-			}
-			else if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA)
-			{
-				glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, TileWidth, TileHeight, Depth, 0, Oglformat, GL_UNSIGNED_BYTE, pTmpData);
-			}
-			else if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB)
-			{
-				glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, TileWidth, TileHeight, Depth, 0, Oglformat, GL_UNSIGNED_BYTE, pTmpData);
-			}
-			else
-			{
-				glTexImage3D(GL_TEXTURE_3D, 0, StoreOglformat, TileWidth, TileHeight, Depth, 0, Oglformat, GL_UNSIGNED_BYTE, pTmpData);
-			}
-
-			m_aTextures[pCommand->m_Slot].m_MemSize += TileWidth * TileHeight * Depth * pCommand->m_PixelSize;
-		}
+		m_aTextures[pCommand->m_Slot].m_MemSize += TileWidth * TileHeight * Depth * pCommand->m_PixelSize;
 		pTexData = pTmpData;
 	}
 
 	*m_pTextureMemoryUsage += m_aTextures[pCommand->m_Slot].m_MemSize;
 
+	// free data
 	mem_free(pTexData);
 }
 
@@ -1091,7 +1063,6 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	CmdBuffer.AddCommand(CmdSDL);
 	CCommandProcessorFragment_OpenGL::CInitCommand CmdOpenGL;
 	CmdOpenGL.m_pTextureMemoryUsage = &m_TextureMemoryUsage;
-	CmdOpenGL.m_pTextureArraySize = &m_TextureArraySize;
 	CmdOpenGL.m_IsOpenGLES = Flags & IGraphicsBackend::INITFLAG_OPENGLES;
 	CmdBuffer.AddCommand(CmdOpenGL);
 	RunBuffer(&CmdBuffer);

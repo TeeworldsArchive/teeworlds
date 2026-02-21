@@ -96,25 +96,20 @@ class CCommandProcessorFragment_OpenGL
 		{
 			STATE_EMPTY = 0,
 			STATE_TEX2D = 1,
-			STATE_TEX3D = 2,
-
-			MIN_GL_MAX_3D_TEXTURE_SIZE = 64, // GL_MAX_3D_TEXTURE_SIZE must be at least 64 according to the standard
-			MAX_ARRAYSIZE_TEX3D = IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION / MIN_GL_MAX_3D_TEXTURE_SIZE, // = 4
+			STATE_TEX2DARRAY = 2,
 		};
 		GLuint m_Tex2D;
-		GLuint m_Tex3D[MAX_ARRAYSIZE_TEX3D];
-		GLuint m_Sampler;
+		GLuint m_Tex2DArray;
 		int m_State;
 		int m_Format;
 		int m_MemSize;
+		int m_BasicSamplerType;
 	};
 	CTexture m_aTextures[CCommandBuffer::MAX_TEXTURES];
 	volatile int *m_pTextureMemoryUsage;
 	int m_MaxTexSize;
-	int m_Max3DTexSize;
-	int m_TextureArraySize;
+	int m_Max2DArrayLayers;
 	GLuint m_QuadDrawIndexBufferID;
-	int m_LastBlendMode;
 	int m_LastSrcBlendMode;
 
 	bool m_LastTexture3D;
@@ -124,10 +119,25 @@ class CCommandProcessorFragment_OpenGL
 	GLuint m_LastTextureID;
 
 	bool m_LastClipEnable;
-	int m_aLast2DWarpMode[2]; // 0 = U, 1 = V
 
 	bool m_IsOpenGLES;
 
+	GLuint m_LastSampler;
+	enum
+	{
+		SAMPLER2D_NOMIPMAPS = 0,
+		SAMPLER2D_MIPMAPS,
+		SAMPLER2D_LINERMIPMAPS,
+		NUM_BASIC_SAMPLERS,
+
+		SAMPLER2D_REPEAT_REPEAT = 0,
+		SAMPLER2D_REPEAT_CLAMP,
+		SAMPLER2D_CLAMP_CLAMP,
+		SAMPLER2D_CLAMP_REPEAT,
+		NUM_WRAP_SAMPLERS,
+	};
+	GLuint m_aSampler2D[NUM_BASIC_SAMPLERS][NUM_WRAP_SAMPLERS];
+	GLuint m_Sampler2DArray;
 public:
 	enum
 	{
@@ -139,7 +149,6 @@ public:
 	{
 		CInitCommand() : CCommand(CMD_INIT) {}
 		volatile int *m_pTextureMemoryUsage;
-		int *m_pTextureArraySize;
 		bool m_IsOpenGLES;
 	};
 
@@ -232,14 +241,12 @@ class CGraphicsBackend_SDL_OpenGL : public CGraphicsBackend_Threaded
 	ICommandProcessor *m_pProcessor;
 	volatile int m_TextureMemoryUsage;
 	int m_NumScreens;
-	int m_TextureArraySize;
 
 public:
 	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight);
 	virtual int Shutdown();
 
 	virtual int MemoryUsage() const;
-	virtual int GetTextureArraySize() const { return m_TextureArraySize; }
 
 	virtual int GetNumScreens() const { return m_NumScreens; }
 

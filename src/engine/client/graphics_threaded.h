@@ -106,7 +106,7 @@ public:
 		TEXFLAG_NOMIPMAPS = 1,
 		TEXFLAG_COMPRESSED = 2,
 		TEXFLAG_QUALITY = 4,
-		TEXFLAG_TEXTURE3D = 8,
+		TEXFLAG_TEXTURE2DARRAY = 8,
 		TEXFLAG_TEXTURE2D = 16,
 		TEXFLAG_LINEARMIPMAPS = 32,
 	};
@@ -122,8 +122,7 @@ public:
 	enum
 	{
 		BLEND_NONE = 0,
-		BLEND_ALPHA,
-		BLEND_ADDITIVE,
+		BLEND_ALPHA
 	};
 
 	struct CPoint
@@ -163,7 +162,6 @@ public:
 		int m_WrapModeU;
 		int m_WrapModeV;
 		int m_Texture;
-		int m_TextureArrayIndex;
 		int m_Dimension;
 		CPoint m_ScreenTL;
 		CPoint m_ScreenBR;
@@ -334,7 +332,6 @@ public:
 	virtual int Shutdown() = 0;
 
 	virtual int MemoryUsage() const = 0;
-	virtual int GetTextureArraySize() const = 0;
 
 	virtual int GetNumScreens() const = 0;
 
@@ -395,7 +392,6 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	CTextureHandle m_InvalidTexture;
 
-	int m_TextureArrayIndex;
 	int m_aTextureIndices[MAX_TEXTURES];
 	int m_FirstFreeTexture;
 	int m_TextureMemoryUsage;
@@ -417,7 +413,6 @@ public:
 
 	virtual void BlendNone();
 	virtual void BlendNormal();
-	virtual void BlendAdditive();
 
 	virtual void WrapNormal();
 	virtual void WrapClamp();
@@ -456,7 +451,6 @@ public:
 	virtual void SetColor(float r, float g, float b, float a);
 	virtual void SetColor4(const vec4 &TopLeft, const vec4 &TopRight, const vec4 &BottomLeft, const vec4 &BottomRight);
 
-	void TilesetFallbackSystem(int TextureIndex);
 	virtual void QuadsSetSubset(float TlU, float TlV, float BrU, float BrV, int TextureIndex = -1);
 	virtual void QuadsSetSubsetFree(
 		float x0, float y0, float x1, float y1,

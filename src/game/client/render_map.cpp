@@ -242,36 +242,12 @@ void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlag
 			a = aChannels[3];
 		}
 
-		/*bool Opaque = false;
-		 TODO: Analyze quadtexture
-		if(a < 0.01f || (q->m_aColors[0].a < 0.01f && q->m_aColors[1].a < 0.01f && q->m_aColors[2].a < 0.01f && q->m_aColors[3].a < 0.01f))
-			Opaque = true;
-
-		if(Opaque && !(RenderFlags&LAYERRENDERFLAG_OPAQUE))
-			continue;
-		if(!Opaque && !(RenderFlags&LAYERRENDERFLAG_TRANSPARENT))
-			continue;
-		*/
 		vec2 aTexCoords[4];
 		for(int k = 0; k < 4; k++)
 		{
 			aTexCoords[k].x = fx2f(q->m_aTexcoords[k].x);
 			aTexCoords[k].y = fx2f(q->m_aTexcoords[k].y);
 		}
-
-		// Check if we want to repeat the texture
-		// Otherwise clamp to the edge to prevent texture bleeding
-		bool RepeatU = false, RepeatV = false;
-		for(int k = 0; k < 4; k++)
-		{
-			if(aTexCoords[k].x < 0.0f || aTexCoords[k].x > 1.0f)
-				RepeatU = true;
-			if(aTexCoords[k].y < 0.0f || aTexCoords[k].y > 1.0f)
-				RepeatV = true;
-		}
-		Graphics()->WrapMode(
-			RepeatU ? IGraphics::WRAP_REPEAT : IGraphics::WRAP_CLAMP,
-			RepeatV ? IGraphics::WRAP_REPEAT : IGraphics::WRAP_CLAMP);
 
 		Graphics()->QuadsSetSubsetFree(
 			aTexCoords[0].x, aTexCoords[0].y,
@@ -325,7 +301,6 @@ void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlag
 		Graphics()->QuadsDrawFreeform(&Freeform, 1);
 	}
 	Graphics()->QuadsEnd();
-	Graphics()->WrapNormal();
 }
 
 void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale, vec4 Color, int RenderFlags,

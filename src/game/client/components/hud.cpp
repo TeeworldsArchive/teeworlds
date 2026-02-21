@@ -713,7 +713,6 @@ void CHud::RenderHealthAndAmmo(const CNetObj_Character *pCharacter)
 	IGraphics::CQuadItem Array[10];
 
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
-	Graphics()->WrapClamp();
 
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -768,7 +767,6 @@ void CHud::RenderHealthAndAmmo(const CNetObj_Character *pCharacter)
 		Array[i++] = IGraphics::CQuadItem(x + h * 12, y + 12, 12, 12);
 	Graphics()->QuadsDrawTL(Array, i);
 	Graphics()->QuadsEnd();
-	Graphics()->WrapNormal();
 }
 
 void CHud::RenderSpectatorHud()

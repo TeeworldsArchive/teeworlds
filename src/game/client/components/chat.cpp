@@ -863,7 +863,6 @@ void CChat::OnRender()
 		CatRect.Draw(CatRectColor, 2.0f, CUIRect::CORNER_R);
 
 		// draw chat iconx
-		Graphics()->WrapClamp();
 		IGraphics::CQuadItem QuadIcon;
 
 		if(ChatMode == CHAT_WHISPER)
@@ -884,7 +883,6 @@ void CChat::OnRender()
 		Graphics()->SetColor(1, 1, 1, 1.0f * Blend);
 		Graphics()->SingleQuadDrawTL(&QuadIcon);
 		Graphics()->QuadsEnd();
-		Graphics()->WrapNormal();
 
 		// render chat input
 		s_CategoryCursor.m_Flags = TEXTFLAG_WORD_WRAP;
@@ -1276,7 +1274,6 @@ void CChat::OnRender()
 			const float qy = LineBaseY - qh - 0.5f;
 
 			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CHATWHISPER].m_Id);
-			Graphics()->WrapClamp();
 
 			Graphics()->QuadsBegin();
 
@@ -1301,7 +1298,6 @@ void CChat::OnRender()
 			Graphics()->SingleQuadDrawTL(&Quad);
 
 			Graphics()->QuadsEnd();
-			Graphics()->WrapNormal();
 			TextRender()->TextAdvance(&s_ChatCursor, 12.5f);
 		}
 
