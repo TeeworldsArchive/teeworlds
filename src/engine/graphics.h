@@ -87,6 +87,7 @@ public:
 		TEXLOAD_ARRAY_256 = 4,
 		TEXLOAD_MULTI_DIMENSION = 8,
 		TEXLOAD_LINEARMIPMAPS = 16,
+		TEXLOAD_FONT = 32,
 
 		NUMTILES_DIMENSION = 16, // number of tiles in each dimension within a texture
 	};
@@ -144,7 +145,7 @@ public:
 
 	virtual int UnloadTexture(CTextureHandle *pIndex) = 0;
 	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
-	virtual int LoadTextureRawSub(CTextureHandle TextureID, int x, int y, int Width, int Height, int Format, const void *pData) = 0;
+	virtual int LoadTextureRawSub(CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData) = 0;
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
 	virtual void TextureSet(CTextureHandle Texture) = 0;
 	void TextureClear() { TextureSet(CTextureHandle()); }

@@ -28,17 +28,12 @@ void main()
 )";
 
 static const char *s_FragmentShaderSource = R"(
-#ifdef USE_2D_TEXTURE
-    #define SAMPLER_TYPE sampler2D
-#else
-    #define SAMPLER_TYPE sampler2DArray
-#endif
 out vec4 FragColor;
 
 in vec3 TexCoord;
 in vec4 Color;
 
-uniform PRECISION_TYPE SAMPLER_TYPE ourTexture;
+uniform PRECISION_TYPE sampler2DArray ourTexture;
 uniform bool useTexture;
 uniform bool IsAlphaOnly;
 uniform bool IsStainedOnly;
@@ -47,14 +42,10 @@ void main()
 {
     if(useTexture)
     {
-	#ifdef USE_2D_TEXTURE
-        vec4 texColor = texture(ourTexture, TexCoord.xy);
-	#else
 		vec4 texColor = texture(ourTexture, TexCoord.xyz);
-	#endif
        	if(IsAlphaOnly)
         {
-            FragColor = vec4(Color.rgb, texColor.r * Color.a);
+            FragColor = vec4(Color.rgb * texColor.r * Color.a, texColor.r * Color.a);
         }
 		else if(IsStainedOnly)
 		{
@@ -253,12 +244,12 @@ GLuint CCommandProcessorFragment_OpenGL::CompileShader(GLuint Type, const char *
 	return Shader;
 }
 
-GLuint CCommandProcessorFragment_OpenGL::CreateShaderProgram(bool Is3D)
+GLuint CCommandProcessorFragment_OpenGL::CreateShaderProgram()
 {
 	char aBuf[2048];
-	str_format(aBuf, sizeof(aBuf), "%s%s%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, Is3D ? "\n" : "#define USE_2D_TEXTURE\n", s_VertexShaderSource);
+	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, s_VertexShaderSource);
 	GLuint VertexShader = CompileShader(GL_VERTEX_SHADER, aBuf);
-	str_format(aBuf, sizeof(aBuf), "%s%s%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, Is3D ? "\n" : "#define USE_2D_TEXTURE\n", s_FragmentShaderSource);
+	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, s_FragmentShaderSource);
 	GLuint FragmentShader = CompileShader(GL_FRAGMENT_SHADER, aBuf);
 
 	GLuint ShaderProgram = glCreateProgram();
@@ -302,62 +293,59 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	// texture handling
 	bool HasValidTexture = false;
 	int SrcBlendMode = GL_ONE;
-	bool IsAlphaOnly = (m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA);
+	bool IsAlphaOnly = m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA;
 	bool IsTexture3D = State.m_Dimension == 3;
-	const CRenderShader *pShader = &m_aRenderShader[IsTexture3D ? 1 : 0];
 	if(IsTexture3D != m_LastTexture3D)
 	{
-		glUseProgram(pShader->m_ShaderProgram);
-		glUniform1i(pShader->m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
-		m_LastStainedOnly = State.m_IsStainedOnly;
-		m_LastTextureID = -1;
 		m_LastTexture3D = IsTexture3D;
 		if(IsTexture3D)
 			glBindSampler(0, m_Sampler2DArray);
 	}
-	else if(m_LastStainedOnly != State.m_IsStainedOnly)
+	if(m_LastStainedOnly != State.m_IsStainedOnly)
 	{
-		glUniform1i(pShader->m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
+		glUniform1i(m_RenderShader.m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
 		m_LastStainedOnly = State.m_IsStainedOnly;
 	}
 
 	if(State.m_Texture >= 0 && State.m_Texture < CCommandBuffer::MAX_TEXTURES)
 	{
-		if(State.m_Dimension == 2 && (m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX2D))
-		{
-			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex2D)
-			{
-				glBindTexture(GL_TEXTURE_2D, m_aTextures[State.m_Texture].m_Tex2D);
-				glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
-				glUniform1i(pShader->m_UseTextureLoc, 1);
-			}
-			else
-			{
-				if(m_LastAlphaOnly != IsAlphaOnly)
-					glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
-				if(!m_LastUseTexture)
-					glUniform1i(pShader->m_UseTextureLoc, 1);
-			}
-
-			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex2D;
-		}
-		else if(State.m_Dimension == 3 && (m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX2DARRAY))
+		if(State.m_Dimension == 3 && (m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX2DARRAY))
 		{
 			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex2DArray)
 			{
 				glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[State.m_Texture].m_Tex2DArray);
-				glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
-				glUniform1i(pShader->m_UseTextureLoc, 1);
+				glUniform1i(m_RenderShader.m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+				glUniform1i(m_RenderShader.m_UseTextureLoc, 1);
+				m_LastSampler = 0;
 			}
 			else
 			{
 				if(m_LastAlphaOnly != IsAlphaOnly)
-					glUniform1i(pShader->m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+					glUniform1i(m_RenderShader.m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
 				if(!m_LastUseTexture)
-					glUniform1i(pShader->m_UseTextureLoc, 1);
+					glUniform1i(m_RenderShader.m_UseTextureLoc, 1);
 			}
 
 			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex2DArray;
+		}
+		else if(m_aTextures[State.m_Texture].m_State & CTexture::STATE_TEX2D) // so that we can fallback to 2D when the texture is for fonts.
+		{
+			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Tex2D)
+			{
+				glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[State.m_Texture].m_Tex2D);
+				glUniform1i(m_RenderShader.m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+				glUniform1i(m_RenderShader.m_UseTextureLoc, 1);
+				m_LastSampler = 0;
+			}
+			else
+			{
+				if(m_LastAlphaOnly != IsAlphaOnly)
+					glUniform1i(m_RenderShader.m_IsAlphaOnlyLoc, IsAlphaOnly ? 1 : 0);
+				if(!m_LastUseTexture)
+					glUniform1i(m_RenderShader.m_UseTextureLoc, 1);
+			}
+
+			m_LastTextureID = m_aTextures[State.m_Texture].m_Tex2D;
 		}
 		else
 		{
@@ -366,7 +354,7 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		}
 
 		// Set blend mode based on texture type
-		if(m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_RGBA)
+		if(m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_RGBA || m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA)
 			SrcBlendMode = GL_ONE;
 		else
 			SrcBlendMode = GL_SRC_ALPHA;
@@ -377,9 +365,9 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	else
 	{
 		if(m_LastAlphaOnly)
-			glUniform1i(pShader->m_IsAlphaOnlyLoc, 0);
+			glUniform1i(m_RenderShader.m_IsAlphaOnlyLoc, 0);
 		if(m_LastUseTexture)
-			glUniform1i(pShader->m_UseTextureLoc, 0);
+			glUniform1i(m_RenderShader.m_UseTextureLoc, 0);
 
 		m_LastAlphaOnly = false;
 		m_LastUseTexture = false;
@@ -445,8 +433,8 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		-(State.m_ScreenBR.x + State.m_ScreenTL.x) / (State.m_ScreenBR.x - State.m_ScreenTL.x),
 		-(State.m_ScreenBR.y + State.m_ScreenTL.y) / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 1};
 
-	if(pShader->m_ProjectionLoc != -1)
-		glUniformMatrix4fv(pShader->m_ProjectionLoc, 1, GL_FALSE, OrthoMatrix);
+	if(m_RenderShader.m_ProjectionLoc != -1)
+		glUniformMatrix4fv(m_RenderShader.m_ProjectionLoc, 1, GL_FALSE, OrthoMatrix);
 	return true;
 }
 
@@ -454,8 +442,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 {
 	m_IsOpenGLES = pCommand->m_IsOpenGLES;
 	// Create shader program
-	m_aRenderShader[0].m_ShaderProgram = CreateShaderProgram(false);
-	m_aRenderShader[1].m_ShaderProgram = CreateShaderProgram(true);
+	m_RenderShader.m_ShaderProgram = CreateShaderProgram();
 	m_LastSrcBlendMode = GL_NONE;
 	m_LastTexture3D = false;
 	m_LastAlphaOnly = false;
@@ -501,24 +488,26 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// i
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	}
 
 
 	// initialize shader uniforms with default values
-	for(int i = 0; i < 2; i++)
-	{
-		m_aRenderShader[i].m_UseTextureLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "useTexture");
-		m_aRenderShader[i].m_IsAlphaOnlyLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "IsAlphaOnly");
-		m_aRenderShader[i].m_IsStainedOnlyLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "IsStainedOnly");
-		m_aRenderShader[i].m_OurTextureLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "ourTexture");
-		m_aRenderShader[i].m_ProjectionLoc = glGetUniformLocation(m_aRenderShader[i].m_ShaderProgram, "projection");
+	m_RenderShader.m_UseTextureLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "useTexture");
+	m_RenderShader.m_IsAlphaOnlyLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "IsAlphaOnly");
+	m_RenderShader.m_IsStainedOnlyLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "IsStainedOnly");
+	m_RenderShader.m_OurTextureLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "ourTexture");
+	m_RenderShader.m_ProjectionLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "projection");
 
-		glUniform1i(m_aRenderShader[i].m_UseTextureLoc, 0);
-		glUniform1i(m_aRenderShader[i].m_IsAlphaOnlyLoc, 0);
-		glUniform1i(m_aRenderShader[i].m_IsStainedOnlyLoc, 0);
-		glUniform1i(m_aRenderShader[i].m_OurTextureLoc, 0);
-	}
-	glUseProgram(m_aRenderShader[0].m_ShaderProgram);
+	glUniform1i(m_RenderShader.m_UseTextureLoc, 0);
+	glUniform1i(m_RenderShader.m_IsAlphaOnlyLoc, 0);
+	glUniform1i(m_RenderShader.m_IsStainedOnlyLoc, 0);
+	glUniform1i(m_RenderShader.m_OurTextureLoc, 0);
+	glUseProgram(m_RenderShader.m_ShaderProgram);
 
 	glGenVertexArrays(1, &m_PrimitiveDrawVertexID);
 	glBindVertexArray(m_PrimitiveDrawVertexID);
@@ -569,8 +558,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const CGLShutdownCommand *pC
 	glDeleteBuffers(1, &m_PrimitiveDrawBufferID);
 	glDeleteBuffers(1, &m_QuadDrawIndexBufferID);
 	glDeleteVertexArrays(1, &m_PrimitiveDrawVertexID);
-	glDeleteShader(m_aRenderShader[0].m_ShaderProgram);
-	glDeleteShader(m_aRenderShader[1].m_ShaderProgram);
+	glDeleteShader(m_RenderShader.m_ShaderProgram);
 	glDeleteSamplers(1, &m_Sampler2DArray);
 	glDeleteSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aSampler2D);
 }
@@ -579,9 +567,9 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::
 {
 	if(m_aTextures[pCommand->m_Slot].m_State & CTexture::STATE_TEX2D)
 	{
-		glBindTexture(GL_TEXTURE_2D, m_aTextures[pCommand->m_Slot].m_Tex2D);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, pCommand->m_X, pCommand->m_Y,
-			pCommand->m_Width, pCommand->m_Height,
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[pCommand->m_Slot].m_Tex2D);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, pCommand->m_X, pCommand->m_Y, pCommand->m_Z,
+			pCommand->m_Width, pCommand->m_Height, 1,
 			TexFormatToOpenGLFormat(pCommand->m_Format),
 			GL_UNSIGNED_BYTE, pCommand->m_pData);
 	}
@@ -679,23 +667,25 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_TEXTURE2D)
 	{
 		bool Mipmaps = !(pCommand->m_Flags & CCommandBuffer::TEXFLAG_NOMIPMAPS);
+		bool IsFont = pCommand->m_Flags & CCommandBuffer::TEXFLAG_FONT;
 		glGenTextures(1, &m_aTextures[pCommand->m_Slot].m_Tex2D);
 		m_aTextures[pCommand->m_Slot].m_State |= CTexture::STATE_TEX2D;
-		glBindTexture(GL_TEXTURE_2D, m_aTextures[pCommand->m_Slot].m_Tex2D);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[pCommand->m_Slot].m_Tex2D);
 
+		const int Depth = IsFont ? 2 : 1;
 		if(!Mipmaps)
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, StoreOglformat, Width, Height, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, StoreOglformat, Width, Height, Depth, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
 		}
 		else
 		{
 			m_aTextures[pCommand->m_Slot].m_BasicSamplerType = (pCommand->m_Flags & CCommandBuffer::TEXFLAG_LINEARMIPMAPS) ? SAMPLER2D_LINERMIPMAPS : SAMPLER2D_MIPMAPS;
-			glTexImage2D(GL_TEXTURE_2D, 0, StoreOglformat, Width, Height, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
-			glGenerateMipmap(GL_TEXTURE_2D);
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, StoreOglformat, Width, Height, Depth, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
+			glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
 		}
 
 		// calculate memory usage
-		m_aTextures[pCommand->m_Slot].m_MemSize = Width * Height * pCommand->m_PixelSize;
+		m_aTextures[pCommand->m_Slot].m_MemSize = Width * Height * Depth * pCommand->m_PixelSize;
 		if(Mipmaps)
 		{
 			int TexWidth = Width;
@@ -704,7 +694,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 			{
 				TexWidth >>= 1;
 				TexHeight >>= 1;
-				m_aTextures[pCommand->m_Slot].m_MemSize += TexWidth * TexHeight * pCommand->m_PixelSize;
+				m_aTextures[pCommand->m_Slot].m_MemSize += TexWidth * TexHeight * Depth * pCommand->m_PixelSize;
 			}
 		}
 	}
@@ -825,7 +815,7 @@ CCommandProcessorFragment_OpenGL::CCommandProcessorFragment_OpenGL()
 {
 	mem_zero(m_aTextures, sizeof(m_aTextures));
 	m_pTextureMemoryUsage = 0;
-	mem_zero(m_aRenderShader, sizeof(m_aRenderShader));
+	mem_zero(&m_RenderShader, sizeof(m_RenderShader));
 }
 
 bool CCommandProcessorFragment_OpenGL::RunCommand(const CCommandBuffer::CCommand *pBaseCommand)

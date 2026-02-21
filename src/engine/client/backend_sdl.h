@@ -87,7 +87,7 @@ class CCommandProcessorFragment_OpenGL
 		int m_IsStainedOnlyLoc;
 		int m_OurTextureLoc;
 		int m_ProjectionLoc;
-	} m_aRenderShader[2];
+	} m_RenderShader;
 
 	class CTexture
 	{
@@ -167,7 +167,7 @@ private:
 	bool SetState(const CCommandBuffer::CState &State);
 
 	GLuint CompileShader(GLuint Type, const char *pSource);
-	GLuint CreateShaderProgram(bool Is3D);
+	GLuint CreateShaderProgram();
 
 	void Cmd_Init(const CInitCommand *pCommand);
 	void Cmd_Shutdown(const CGLShutdownCommand *pCommand);

@@ -109,6 +109,7 @@ public:
 		TEXFLAG_TEXTURE2DARRAY = 8,
 		TEXFLAG_TEXTURE2D = 16,
 		TEXFLAG_LINEARMIPMAPS = 32,
+		TEXFLAG_FONT = 64,
 	};
 
 	enum
@@ -250,6 +251,7 @@ public:
 
 		int m_X;
 		int m_Y;
+		int m_Z;
 		int m_Width;
 		int m_Height;
 		int m_Format;
@@ -431,7 +433,7 @@ public:
 
 	virtual int UnloadTexture(IGraphics::CTextureHandle *pIndex);
 	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
-	virtual int LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int Width, int Height, int Format, const void *pData);
+	virtual int LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData);
 
 	// simple uncompressed RGBA loaders
 	virtual IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);

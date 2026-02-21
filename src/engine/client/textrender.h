@@ -96,7 +96,7 @@ class CGlyphMap
 	CHeap m_Heap;
 	IGraphics *m_pGraphics;
 	FT_Stroker m_FtStroker;
-	IGraphics::CTextureHandle m_aTextures[2];
+	IGraphics::CTextureHandle m_Texture;
 	CAtlas m_aAtlasPages[NUM_PAGES_PER_DIM * NUM_PAGES_PER_DIM];
 	int m_ActiveAtlasIndex;
 	sorted_array<CGlyphIndex> m_Glyphs;
@@ -123,7 +123,7 @@ public:
 	CGlyphMap(IGraphics *pGraphics, FT_Library FtLibrary);
 	~CGlyphMap();
 
-	IGraphics::CTextureHandle GetTexture(int Index) const { return m_aTextures[Index]; }
+	IGraphics::CTextureHandle GetTexture() const { return m_Texture; }
 	FT_Face GetDefaultFace() const { return m_DefaultFace; }
 	int AddFace(FT_Face Face);
 	void SetDefaultFaceByName(const char *pFamilyName);

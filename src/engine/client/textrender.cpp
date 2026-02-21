@@ -154,18 +154,15 @@ void CGlyphMap::InitTexture(int Width, int Height)
 	for(int i = 0; i < m_Glyphs.size(); ++i)
 		m_Glyphs[i].m_pGlyph->m_Rendered = false;
 
-	int TextureSize = Width * Height;
+	int TextureSize = Width * Height * 2;
 
 	void *pMem = mem_alloc(TextureSize);
 	mem_zero(pMem, TextureSize);
 
-	for(int i = 0; i < 2; i++)
-	{
-		if(m_aTextures[i].IsValid())
-			m_pGraphics->UnloadTexture(&m_aTextures[i]);
+	if(m_Texture.IsValid())
+		m_pGraphics->UnloadTexture(&m_Texture);
 
-		m_aTextures[i] = m_pGraphics->LoadTextureRaw(Width, Height, CImageInfo::FORMAT_ALPHA, pMem, CImageInfo::FORMAT_ALPHA, IGraphics::TEXLOAD_NOMIPMAPS);
-	}
+	m_Texture = m_pGraphics->LoadTextureRaw(Width, Height, CImageInfo::FORMAT_ALPHA, pMem, CImageInfo::FORMAT_ALPHA, IGraphics::TEXLOAD_NOMIPMAPS | IGraphics::TEXLOAD_FONT);
 	dbg_msg("textrender", "memory usage: %d", TextureSize);
 	mem_free(pMem);
 }
@@ -227,7 +224,7 @@ int CGlyphMap::FitGlyph(int Width, int Height, ivec2 *pPosition)
 
 void CGlyphMap::UploadGlyph(int TextureIndex, int PosX, int PosY, int Width, int Height, const unsigned char *pData)
 {
-	m_pGraphics->LoadTextureRawSub(m_aTextures[TextureIndex], PosX, PosY,
+	m_pGraphics->LoadTextureRawSub(m_Texture, PosX, PosY, TextureIndex,
 		Width, Height, CImageInfo::FORMAT_ALPHA, pData);
 }
 
@@ -1089,7 +1086,7 @@ void CTextRender::DrawText(CTextCursor *pCursor, vec2 Offset, int Texture, bool 
 	vec2 AlignOffset = vec2(AlignBox.x, AlignBox.y);
 
 	vec4 LastColor = vec4(-1, -1, -1, -1);
-	Graphics()->TextureSet(m_pGlyphMap->GetTexture(Texture));
+	Graphics()->TextureSet(m_pGlyphMap->GetTexture());
 	Graphics()->QuadsBegin();
 
 	int Line = -1;
@@ -1135,7 +1132,7 @@ void CTextRender::DrawText(CTextCursor *pCursor, vec2 Offset, int Texture, bool 
 			LastColor = Color;
 		}
 
-		Graphics()->QuadsSetSubset(pGlyph->m_aUvCoords[0], pGlyph->m_aUvCoords[1], pGlyph->m_aUvCoords[2], pGlyph->m_aUvCoords[3]);
+		Graphics()->QuadsSetSubset(pGlyph->m_aUvCoords[0], pGlyph->m_aUvCoords[1], pGlyph->m_aUvCoords[2], pGlyph->m_aUvCoords[3], Texture);
 
 		float AnchorX = (int) ((Anchor.x + LineOffset) * ScreenScale.x) / ScreenScale.x;
 		float AnchorY = (int) (Anchor.y * ScreenScale.y) / ScreenScale.y;

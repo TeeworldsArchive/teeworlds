@@ -296,7 +296,7 @@ static int ImageFormatToTexFormat(int Format)
 	return CCommandBuffer::TEXFORMAT_RGBA;
 }
 
-int CGraphics_Threaded::LoadTextureRawSub(CTextureHandle TextureID, int x, int y, int Width, int Height, int Format, const void *pData)
+int CGraphics_Threaded::LoadTextureRawSub(CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData)
 {
 	if(!TextureID.IsValid())
 		return 0;
@@ -305,6 +305,7 @@ int CGraphics_Threaded::LoadTextureRawSub(CTextureHandle TextureID, int x, int y
 	Cmd.m_Slot = TextureID.Id();
 	Cmd.m_X = x;
 	Cmd.m_Y = y;
+	Cmd.m_Z = z;
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 	Cmd.m_Format = ImageFormatToTexFormat(Format);
@@ -360,9 +361,10 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE2DARRAY;
 	if(Flags & IGraphics::TEXLOAD_LINEARMIPMAPS)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_LINEARMIPMAPS;
-
+	if(Flags & IGraphics::TEXLOAD_FONT)
+		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_FONT;
 	// copy texture data
-	int MemSize = Width * Height * Cmd.m_PixelSize;
+	int MemSize = Width * Height * Cmd.m_PixelSize * ((Flags & IGraphics::TEXLOAD_FONT) ? 2 : 1);
 	void *pTmpData = mem_alloc(MemSize);
 	mem_copy(pTmpData, pData, MemSize);
 	Cmd.m_pData = pTmpData;
