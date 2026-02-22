@@ -23,7 +23,10 @@ void CMapImages::LoadMapImages(IMap *pMap, class CLayers *pLayers, int MapType)
 
 	// unload all textures
 	for(int i = 0; i < m_Info[MapType].m_Count; i++)
-		Graphics()->UnloadTexture(&(m_Info[MapType].m_aTextures[i]));
+	{
+		Graphics()->UnloadTexture(&(m_Info[MapType].m_aTextures[i].m_Quads));
+		Graphics()->UnloadTexture(&(m_Info[MapType].m_aTextures[i].m_Tilemap));
+	}
 	m_Info[MapType].m_Count = 0;
 
 	int Start;
@@ -33,7 +36,6 @@ void CMapImages::LoadMapImages(IMap *pMap, class CLayers *pLayers, int MapType)
 	// load new textures
 	for(int i = 0; i < m_Info[MapType].m_Count; i++)
 	{
-		int TextureFlags = 0;
 		bool FoundQuadLayer = false;
 		bool FoundTileLayer = false;
 		for(int k = 0; k < pLayers->NumLayers(); k++)
@@ -44,8 +46,6 @@ void CMapImages::LoadMapImages(IMap *pMap, class CLayers *pLayers, int MapType)
 			if(!FoundTileLayer && pLayer->m_Type == LAYERTYPE_TILES && ((const CMapItemLayerTilemap *) pLayer)->m_Image == i)
 				FoundTileLayer = true;
 		}
-		if(FoundTileLayer)
-			TextureFlags = FoundQuadLayer ? IGraphics::TEXLOAD_MULTI_DIMENSION : IGraphics::TEXLOAD_ARRAY_256;
 
 		CMapItemImage *pImg = (CMapItemImage *) pMap->GetItem(Start + i, 0, 0);
 		if(pImg->m_External || (pImg->m_Version > 1 && pImg->m_MustBe1 != 1))
@@ -53,12 +53,18 @@ void CMapImages::LoadMapImages(IMap *pMap, class CLayers *pLayers, int MapType)
 			char Buf[IO_MAX_PATH_LENGTH];
 			char *pName = (char *) pMap->GetData(pImg->m_ImageName);
 			str_format(Buf, sizeof(Buf), "mapres/%s.png", pName);
-			m_Info[MapType].m_aTextures[i] = Graphics()->LoadTexture(Buf, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, TextureFlags);
+			if(FoundQuadLayer)
+				m_Info[MapType].m_aTextures[i].m_Quads = Graphics()->LoadTexture(Buf, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+			if(FoundTileLayer)
+				m_Info[MapType].m_aTextures[i].m_Tilemap = Graphics()->LoadTexture(Buf, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP | IGraphics::TEXLOAD_NOMIPMAPS);
 		}
 		else
 		{
 			void *pData = pMap->GetData(pImg->m_ImageData);
-			m_Info[MapType].m_aTextures[i] = Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, CImageInfo::FORMAT_RGBA, pData, CImageInfo::FORMAT_RGBA, TextureFlags);
+			if(FoundQuadLayer)
+				m_Info[MapType].m_aTextures[i].m_Quads = Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, 1, CImageInfo::FORMAT_RGBA, pData, CImageInfo::FORMAT_RGBA, 0);
+			if(FoundTileLayer)
+				m_Info[MapType].m_aTextures[i].m_Tilemap = Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, 1, CImageInfo::FORMAT_RGBA, pData, CImageInfo::FORMAT_RGBA, IGraphics::TEXLOAD_TILEMAP | IGraphics::TEXLOAD_NOMIPMAPS);
 			pMap->UnloadData(pImg->m_ImageData);
 		}
 	}
@@ -84,7 +90,7 @@ IGraphics::CTextureHandle CMapImages::GetEasterTexture()
 {
 	if(!m_EasterIsLoaded)
 	{
-		m_EasterTexture = Graphics()->LoadTexture("mapres/easter.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_ARRAY_256);
+		m_EasterTexture = Graphics()->LoadTexture("mapres/easter.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 		if(!m_EasterTexture.IsValid())
 			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "mapimages", "Failed to load easter.png");
 		m_EasterIsLoaded = true;
@@ -92,11 +98,11 @@ IGraphics::CTextureHandle CMapImages::GetEasterTexture()
 	return m_EasterTexture;
 }
 
-IGraphics::CTextureHandle CMapImages::Get(int Index) const
+IGraphics::CTextureHandle CMapImages::Get(int Index, bool IsQuads) const
 {
 	if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
-		return m_Info[MAP_TYPE_GAME].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_GAME].m_Count)];
-	return m_Info[MAP_TYPE_MENU].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_MENU].m_Count)];
+		return IsQuads ? m_Info[MAP_TYPE_GAME].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_GAME].m_Count)].m_Quads : m_Info[MAP_TYPE_GAME].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_GAME].m_Count)].m_Tilemap;
+	return IsQuads ? m_Info[MAP_TYPE_MENU].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_MENU].m_Count)].m_Quads : m_Info[MAP_TYPE_MENU].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_MENU].m_Count)].m_Tilemap;
 }
 
 int CMapImages::Num() const

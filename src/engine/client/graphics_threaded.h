@@ -106,10 +106,7 @@ public:
 		TEXFLAG_NOMIPMAPS = 1,
 		TEXFLAG_COMPRESSED = 2,
 		TEXFLAG_QUALITY = 4,
-		TEXFLAG_TEXTURE2DARRAY = 8,
-		TEXFLAG_TEXTURE2D = 16,
-		TEXFLAG_LINEARMIPMAPS = 32,
-		TEXFLAG_FONT = 64,
+		TEXFLAG_LINEARMIPMAPS = 8,
 	};
 
 	enum
@@ -163,7 +160,6 @@ public:
 		int m_WrapModeU;
 		int m_WrapModeV;
 		int m_Texture;
-		int m_Dimension;
 		CPoint m_ScreenTL;
 		CPoint m_ScreenBR;
 
@@ -235,6 +231,7 @@ public:
 
 		int m_Width;
 		int m_Height;
+		int m_Layers;
 		int m_PixelSize;
 		int m_Format;
 		int m_StoreFormat;
@@ -432,7 +429,7 @@ public:
 	virtual void LinesDraw(const CLineItem *pArray, int Num);
 
 	virtual int UnloadTexture(IGraphics::CTextureHandle *pIndex);
-	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Layers, int Format, const void *pData, int StoreFormat, int Flags);
 	virtual int LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData);
 
 	// simple uncompressed RGBA loaders

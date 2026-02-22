@@ -289,7 +289,7 @@ public:
 	void AnalyzeTileFlags();
 	void LoadAutoMapper();
 
-	IGraphics::CTextureHandle m_Texture;
+	IGraphics::CTextureHandle m_aTextures[2]; // 0 for quads, 1 for tilemap
 	int m_External;
 	char m_aName[128];
 	unsigned char m_aTileFlags[256];

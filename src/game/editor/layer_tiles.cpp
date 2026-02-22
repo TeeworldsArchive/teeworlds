@@ -155,7 +155,7 @@ void CLayerTiles::MakePalette()
 void CLayerTiles::Render()
 {
 	if(m_Image >= 0 && m_Image < m_pEditor->m_Map.m_lImages.size())
-		m_Texture = m_pEditor->m_Map.m_lImages[m_Image]->m_Texture;
+		m_Texture = m_pEditor->m_Map.m_lImages[m_Image]->m_aTextures[1];
 	Graphics()->TextureSet(m_Texture);
 	vec4 Color = vec4(m_Color.r / 255.0f, m_Color.g / 255.0f, m_Color.b / 255.0f, m_Color.a / 255.0f);
 	Graphics()->BlendNone();

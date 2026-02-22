@@ -323,7 +323,7 @@ int CGraphics_Threaded::LoadTextureRawSub(CTextureHandle TextureID, int x, int y
 	return 0;
 }
 
-IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
+IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Height, int Layers, int Format, const void *pData, int StoreFormat, int Flags)
 {
 	// don't waste memory on texture if we are stress testing
 #ifdef CONF_DEBUG
@@ -340,33 +340,56 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 	Cmd.m_Slot = Tex;
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
+	Cmd.m_Layers = Layers;
 	Cmd.m_PixelSize = CImageInfo::GetPixelSize(Format);
 	Cmd.m_Format = ImageFormatToTexFormat(Format);
 	Cmd.m_StoreFormat = ImageFormatToTexFormat(StoreFormat);
 
 	// flags
-	Cmd.m_Flags = CCommandBuffer::TEXFLAG_TEXTURE2D;
+	Cmd.m_Flags = 0;
 	if(Flags & IGraphics::TEXLOAD_NOMIPMAPS)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_NOMIPMAPS;
 	if(m_pConfig->m_GfxTextureCompression)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_COMPRESSED;
 	if(m_pConfig->m_GfxTextureQuality || Flags & TEXLOAD_NORESAMPLE)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_QUALITY;
-	if(Flags & IGraphics::TEXLOAD_ARRAY_256)
-	{
-		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE2DARRAY;
-		Cmd.m_Flags &= ~CCommandBuffer::TEXFLAG_TEXTURE2D;
-	}
-	if(Flags & IGraphics::TEXLOAD_MULTI_DIMENSION)
-		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE2DARRAY;
 	if(Flags & IGraphics::TEXLOAD_LINEARMIPMAPS)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_LINEARMIPMAPS;
-	if(Flags & IGraphics::TEXLOAD_FONT)
-		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_FONT;
 	// copy texture data
-	int MemSize = Width * Height * Cmd.m_PixelSize * ((Flags & IGraphics::TEXLOAD_FONT) ? 2 : 1);
-	void *pTmpData = mem_alloc(MemSize);
-	mem_copy(pTmpData, pData, MemSize);
+	int MemSize = Width * Height * Layers * Cmd.m_PixelSize;
+	unsigned char *pTmpData = (unsigned char *) mem_alloc(MemSize);
+	if(Flags & IGraphics::TEXLOAD_TILEMAP)
+	{
+		const int TileWidth = Width / IGraphics::NUMTILES_DIMENSION;
+		const int TileHeight = Height / IGraphics::NUMTILES_DIMENSION;
+		const int Layers = IGraphics::NUMTILES_DIMENSION * IGraphics::NUMTILES_DIMENSION;
+
+		Cmd.m_Width = TileWidth;
+		Cmd.m_Height = TileHeight;
+		Cmd.m_Layers = Layers;
+
+		// allocate memory for 3D texture data
+		const int TileSize = TileWidth * TileHeight * Cmd.m_PixelSize;
+		const int TileRowSize = TileWidth * Cmd.m_PixelSize;
+
+		// copy
+		for(int i = 0; i < Layers; i++)
+		{
+			const int px = (i % IGraphics::NUMTILES_DIMENSION) * TileWidth;
+			const int py = (i / IGraphics::NUMTILES_DIMENSION) * TileHeight;
+
+			for(int y = 0; y < TileHeight; y++)
+			{
+				const int SrcOffset = ((py + y) * Width + px) * Cmd.m_PixelSize;
+				const int DestOffset = (i * TileSize) + (y * TileRowSize);
+				mem_copy(pTmpData + DestOffset, (char *) pData + SrcOffset, TileRowSize);
+			}
+		}
+	}
+	else
+	{
+		mem_copy(pTmpData, pData, MemSize);
+	}
 	Cmd.m_pData = pTmpData;
 
 	//
@@ -389,7 +412,7 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename,
 		if(StoreFormat == CImageInfo::FORMAT_AUTO)
 			StoreFormat = Img.m_Format;
 
-		ID = LoadTextureRaw(Img.m_Width, Img.m_Height, Img.m_Format, Img.m_pData, StoreFormat, Flags);
+		ID = LoadTextureRaw(Img.m_Width, Img.m_Height, 1, Img.m_Format, Img.m_pData, StoreFormat, Flags);
 		mem_free(Img.m_pData);
 		if(ID.Id() != m_InvalidTexture.Id() && m_pConfig->m_Debug)
 			dbg_msg("graphics/texture", "loaded %s", pFilename);
@@ -504,7 +527,6 @@ void CGraphics_Threaded::TextureSet(CTextureHandle TextureID)
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->TextureSet within begin");
 	m_State.m_Texture = TextureID.Id();
-	m_State.m_Dimension = 2;
 }
 
 void CGraphics_Threaded::Clear(float r, float g, float b)
@@ -591,7 +613,6 @@ void CGraphics_Threaded::QuadsSetSubset(float TlU, float TlV, float BrU, float B
 	m_aTexture[2].v = BrV;
 
 	m_aTexture[0].i = m_aTexture[1].i = m_aTexture[2].i = m_aTexture[3].i = TextureIndex;
-	m_State.m_Dimension = (TextureIndex < 0) ? 2 : 3;
 }
 
 void CGraphics_Threaded::QuadsSetSubsetFree(
@@ -608,7 +629,6 @@ void CGraphics_Threaded::QuadsSetSubsetFree(
 	m_aTexture[3].v = y3;
 
 	m_aTexture[0].i = m_aTexture[1].i = m_aTexture[2].i = m_aTexture[3].i = TextureIndex;
-	m_State.m_Dimension = (TextureIndex < 0) ? 2 : 3;
 }
 
 void CGraphics_Threaded::QuadsDraw(CQuadItem *pArray, int Num)
@@ -891,7 +911,7 @@ int CGraphics_Threaded::Init()
 			aNullTextureData[4 * (y * 32 + x) + 3] = 255;
 		}
 
-	m_InvalidTexture = LoadTextureRaw(32, 32, CImageInfo::FORMAT_RGBA, aNullTextureData, CImageInfo::FORMAT_RGBA, TEXLOAD_NORESAMPLE | TEXLOAD_MULTI_DIMENSION);
+	m_InvalidTexture = LoadTextureRaw(32, 32, 1, CImageInfo::FORMAT_RGBA, aNullTextureData, CImageInfo::FORMAT_RGBA, TEXLOAD_NORESAMPLE);
 	return 0;
 }
 

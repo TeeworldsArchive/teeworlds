@@ -331,7 +331,8 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 					if(m_pEditor->Graphics()->LoadPNG(&ImgInfo, aBuf, IStorage::TYPE_ALL))
 					{
 						*pImg = ImgInfo;
-						pImg->m_Texture = m_pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_MULTI_DIMENSION);
+						pImg->m_aTextures[0] = m_pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+						pImg->m_aTextures[1] = m_pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 						ImgInfo.m_pData = 0;
 						pImg->m_External = 1;
 					}
@@ -346,7 +347,8 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 					void *pData = DataFile.GetData(pItem->m_ImageData);
 					pImg->m_pData = mem_alloc(pImg->m_Width * pImg->m_Height * 4);
 					mem_copy(pImg->m_pData, pData, pImg->m_Width * pImg->m_Height * 4);
-					pImg->m_Texture = m_pEditor->Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, pImg->m_Format, pImg->m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_MULTI_DIMENSION);
+					pImg->m_aTextures[0] = m_pEditor->Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, 1, pImg->m_Format, pImg->m_pData, CImageInfo::FORMAT_AUTO, 0);
+					pImg->m_aTextures[1] = m_pEditor->Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, 1, pImg->m_Format, pImg->m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 				}
 
 				// copy image name

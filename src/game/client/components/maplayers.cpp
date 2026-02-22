@@ -350,7 +350,7 @@ void CMapLayers::OnRender()
 						if(pTMap->m_Image == -1)
 							Graphics()->TextureClear();
 						else
-							Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pTMap->m_Image));
+							Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pTMap->m_Image, false));
 
 						CTile *pTiles = (CTile *) pLayers->Map()->GetData(pTMap->m_Data);
 						Graphics()->BlendNone();
@@ -367,7 +367,7 @@ void CMapLayers::OnRender()
 						if(pQLayer->m_Image == -1)
 							Graphics()->TextureClear();
 						else
-							Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pQLayer->m_Image));
+							Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pQLayer->m_Image, true));
 
 						CQuad *pQuads = (CQuad *) pLayers->Map()->GetDataSwapped(pQLayer->m_Data);
 

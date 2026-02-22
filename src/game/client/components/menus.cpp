@@ -78,6 +78,8 @@ CMenus::CMenus()
 	m_ActiveListBox = ACTLB_NONE;
 
 	m_PopupCountrySelection = -2;
+
+	m_NumGameIcon = 0;
 }
 
 void CMenus::DoIcon(int ImageId, int SpriteId, const CUIRect *pRect, const vec4 *pColor)
@@ -809,7 +811,7 @@ int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser
 	}
 
 	CMenuImage MenuImage;
-	MenuImage.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	MenuImage.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, 1, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 
 	unsigned char *d = (unsigned char *) Info.m_pData;
 	// int Pitch = Info.m_Width*4;
@@ -862,7 +864,7 @@ int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser
 		}
 	*/
 
-	MenuImage.m_GreyTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	MenuImage.m_GreyTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, 1, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 	mem_free(Info.m_pData);
 
 	// set menu image data

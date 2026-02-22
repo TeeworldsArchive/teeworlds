@@ -162,7 +162,7 @@ void CGlyphMap::InitTexture(int Width, int Height)
 	if(m_Texture.IsValid())
 		m_pGraphics->UnloadTexture(&m_Texture);
 
-	m_Texture = m_pGraphics->LoadTextureRaw(Width, Height, CImageInfo::FORMAT_ALPHA, pMem, CImageInfo::FORMAT_ALPHA, IGraphics::TEXLOAD_NOMIPMAPS | IGraphics::TEXLOAD_FONT);
+	m_Texture = m_pGraphics->LoadTextureRaw(Width, Height, 2, CImageInfo::FORMAT_ALPHA, pMem, CImageInfo::FORMAT_ALPHA, IGraphics::TEXLOAD_NOMIPMAPS);
 	dbg_msg("textrender", "memory usage: %d", TextureSize);
 	mem_free(pMem);
 }

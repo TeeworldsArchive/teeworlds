@@ -2125,19 +2125,20 @@ void CMenus::DoGameIcon(const char *pName, const CUIRect *pRect)
 	str_sanitize_filename(aNameBuf);
 
 	// get texture
-	IGraphics::CTextureHandle Tex = m_GameIconDefault;
-	for(int i = 0; i < m_lGameIcons.size(); ++i)
+	int Index = m_GameIconDefaultIndex;
+	for(int i = 0; i < m_NumGameIcon; ++i)
 	{
-		if(!str_comp_nocase(aNameBuf, m_lGameIcons[i].m_Name))
+		if(!str_comp_nocase(aNameBuf, m_aGameIcons[i].m_Name))
 		{
-			Tex = m_lGameIcons[i].m_IconTexture;
+			Index = m_aGameIcons[i].m_IconIndex;
 			break;
 		}
 	}
 
 	// draw icon
-	Graphics()->TextureSet(Tex);
+	Graphics()->TextureSet(m_GameIconTexture);
 	Graphics()->QuadsBegin();
+	Graphics()->QuadsSetSubset(0, 0, 1, 1, Index);
 	IGraphics::CQuadItem QuadItem(pRect->x, pRect->y, pRect->w, pRect->h);
 	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
@@ -2158,7 +2159,7 @@ int CMenus::GameIconScan(const char *pName, int IsDir, int DirType, void *pUser)
 	char aBuf[IO_MAX_PATH_LENGTH];
 	str_format(aBuf, sizeof(aBuf), "ui/gametypes/%s", pName);
 	CImageInfo Info;
-	if(!pSelf->Graphics()->LoadPNG(&Info, aBuf, DirType) || Info.m_Width != CGameIcon::GAMEICON_SIZE || (Info.m_Height != CGameIcon::GAMEICON_SIZE && Info.m_Height != CGameIcon::GAMEICON_OLDHEIGHT))
+	if(!pSelf->Graphics()->LoadPNG(&Info, aBuf, DirType) || Info.m_Width != CGameIcon::GAMEICON_SIZE || (Info.m_Height != CGameIcon::GAMEICON_SIZE && Info.m_Height != CGameIcon::GAMEICON_OLDHEIGHT) || Info.m_Format != CImageInfo::FORMAT_RGBA)
 	{
 		str_format(aBuf, sizeof(aBuf), "failed to load gametype icon '%s'", aGameIconName);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", aBuf);
@@ -2168,11 +2169,26 @@ int CMenus::GameIconScan(const char *pName, int IsDir, int DirType, void *pUser)
 	str_format(aBuf, sizeof(aBuf), "loaded gametype icon '%s'", aGameIconName);
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", aBuf);
 
-	GameIcon.m_IconTexture = pSelf->Graphics()->LoadTextureRaw(CGameIcon::GAMEICON_SIZE, CGameIcon::GAMEICON_SIZE, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	if(pSelf->m_GameIconTexture.IsValid())
+	{
+		GameIcon.m_IconIndex = pSelf->m_NumGameIcon;
+		pSelf->Graphics()->LoadTextureRawSub(pSelf->m_GameIconTexture, 0, 0, pSelf->m_NumGameIcon, CGameIcon::GAMEICON_SIZE, CGameIcon::GAMEICON_SIZE, CImageInfo::FORMAT_RGBA, Info.m_pData);
+	}
+	else
+	{
+		const int IconMemSize = CGameIcon::GAMEICON_SIZE * CGameIcon::GAMEICON_SIZE * CImageInfo::GetPixelSize(CImageInfo::FORMAT_RGBA);
+		unsigned char *pData = (unsigned char *) mem_alloc(IconMemSize * MAX_GAMEICONS);
+		mem_zero(pData, IconMemSize * MAX_GAMEICONS);
+		mem_copy(pData, Info.m_pData, IconMemSize);
+		mem_free(Info.m_pData);
+		GameIcon.m_IconIndex = 0;
+		Info.m_pData = pData;
+		pSelf->m_GameIconTexture = pSelf->Graphics()->LoadTextureRaw(CGameIcon::GAMEICON_SIZE, CGameIcon::GAMEICON_SIZE, MAX_GAMEICONS, CImageInfo::FORMAT_RGBA, Info.m_pData, CImageInfo::FORMAT_RGBA, IGraphics::TEXLOAD_LINEARMIPMAPS);
+	}
 	mem_free(Info.m_pData);
-	pSelf->m_lGameIcons.add(GameIcon);
+	pSelf->m_aGameIcons[pSelf->m_NumGameIcon++] = GameIcon;
 	if(!str_comp_nocase(aGameIconName, "mod"))
-		pSelf->m_GameIconDefault = GameIcon.m_IconTexture;
+		pSelf->m_GameIconDefaultIndex = GameIcon.m_IconIndex;
 	return 0;
 }
 

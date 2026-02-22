@@ -60,7 +60,7 @@ int CSkins::SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser)
 		return 0;
 	}
 
-	Part.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	Part.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, 1, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 	Part.m_BloodColor = vec3(1.0f, 1.0f, 1.0f);
 
 	const int Step = Info.GetPixelSize();
@@ -94,7 +94,7 @@ int CSkins::SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser)
 		pData[i * Step + 2] = Average;
 	}
 
-	Part.m_ColorTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	Part.m_ColorTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, 1, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 	mem_free(Info.m_pData);
 
 	// set skin part data
@@ -314,7 +314,7 @@ void CSkins::OnInit()
 			char aBuf[128];
 			str_format(aBuf, sizeof(aBuf), "loaded xmas hat '%s'", pFileName);
 			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "skins", aBuf);
-			m_XmasHatTexture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+			m_XmasHatTexture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, 1, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 			mem_free(Info.m_pData);
 		}
 	}
@@ -335,7 +335,7 @@ void CSkins::OnInit()
 			char aBuf[128];
 			str_format(aBuf, sizeof(aBuf), "loaded bot '%s'", pFileName);
 			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "skins", aBuf);
-			m_BotTexture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+			m_BotTexture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, 1, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 			mem_free(Info.m_pData);
 		}
 	}

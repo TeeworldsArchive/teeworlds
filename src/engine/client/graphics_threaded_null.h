@@ -44,7 +44,7 @@ public:
 	virtual void LinesDraw(const CLineItem *pArray, int Num) {};
 
 	virtual int UnloadTexture(IGraphics::CTextureHandle *Index) { return 0; };
-	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) { return CreateTextureHandle(0); };
+	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Layers, int Format, const void *pData, int StoreFormat, int Flags) { return CreateTextureHandle(0); };
 	virtual int LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData) { return 0; };
 
 	// simple uncompressed RGBA loaders

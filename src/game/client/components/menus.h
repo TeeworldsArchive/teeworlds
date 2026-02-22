@@ -182,10 +182,16 @@ private:
 		CGameIcon(const char *pName) : m_Name(pName) {}
 
 		string m_Name;
-		IGraphics::CTextureHandle m_IconTexture;
+		int m_IconIndex;
 	};
-	array<CGameIcon> m_lGameIcons;
-	IGraphics::CTextureHandle m_GameIconDefault;
+	enum
+	{
+		MAX_GAMEICONS = 96,
+	};
+	CGameIcon m_aGameIcons[MAX_GAMEICONS];
+	int m_NumGameIcon;
+	IGraphics::CTextureHandle m_GameIconTexture;
+	int m_GameIconDefaultIndex;
 	void DoGameIcon(const char *pName, const CUIRect *pRect);
 	static int GameIconScan(const char *pName, int IsDir, int DirType, void *pUser);
 

@@ -851,7 +851,7 @@ bool CEditor::PopupSelectImage(void *pContext, CUIRect View)
 		float Max = (float) (maximum(pEditor->m_Map.m_lImages[ShowImage]->m_Width, pEditor->m_Map.m_lImages[ShowImage]->m_Height));
 		ImageView.w *= pEditor->m_Map.m_lImages[ShowImage]->m_Width / Max;
 		ImageView.h *= pEditor->m_Map.m_lImages[ShowImage]->m_Height / Max;
-		pEditor->Graphics()->TextureSet(pEditor->m_Map.m_lImages[ShowImage]->m_Texture);
+		pEditor->Graphics()->TextureSet(pEditor->m_Map.m_lImages[ShowImage]->m_aTextures[0]);
 		pEditor->Graphics()->BlendNormal();
 		pEditor->Graphics()->WrapClamp();
 		pEditor->Graphics()->QuadsBegin();

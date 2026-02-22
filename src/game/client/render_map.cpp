@@ -320,6 +320,7 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 		a = aChannels[3];
 	}
 
+	Graphics()->WrapClamp();
 	Graphics()->QuadsBegin();
 	const float Alpha = Color.a * a;
 	Graphics()->SetColor(Color.r * r * Alpha, Color.g * g * Alpha, Color.b * b * Alpha, Alpha);
@@ -427,4 +428,5 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 		}
 
 	Graphics()->QuadsEnd();
+	Graphics()->WrapNormal();
 }

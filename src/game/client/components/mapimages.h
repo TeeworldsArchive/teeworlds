@@ -16,7 +16,11 @@ class CMapImages : public CComponent
 	};
 	struct
 	{
-		IGraphics::CTextureHandle m_aTextures[MAX_TEXTURES];
+		struct
+		{
+			IGraphics::CTextureHandle m_Quads;
+			IGraphics::CTextureHandle m_Tilemap;
+		} m_aTextures[MAX_TEXTURES];
 		int m_Count;
 	} m_Info[NUM_MAP_TYPES];
 
@@ -28,7 +32,7 @@ class CMapImages : public CComponent
 public:
 	CMapImages();
 
-	IGraphics::CTextureHandle Get(int Index) const;
+	IGraphics::CTextureHandle Get(int Index, bool IsQuads) const;
 	int Num() const;
 
 	virtual void OnMapLoad();

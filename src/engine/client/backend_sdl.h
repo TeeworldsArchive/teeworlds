@@ -92,15 +92,8 @@ class CCommandProcessorFragment_OpenGL
 	class CTexture
 	{
 	public:
-		enum
-		{
-			STATE_EMPTY = 0,
-			STATE_TEX2D = 1,
-			STATE_TEX2DARRAY = 2,
-		};
-		GLuint m_Tex2D;
-		GLuint m_Tex2DArray;
-		int m_State;
+		GLuint m_Texture;
+		bool m_Valid;
 		int m_Format;
 		int m_MemSize;
 		int m_BasicSamplerType;
@@ -112,7 +105,6 @@ class CCommandProcessorFragment_OpenGL
 	GLuint m_QuadDrawIndexBufferID;
 	int m_LastSrcBlendMode;
 
-	bool m_LastTexture3D;
 	bool m_LastAlphaOnly;
 	bool m_LastStainedOnly;
 	bool m_LastUseTexture;
@@ -137,7 +129,6 @@ class CCommandProcessorFragment_OpenGL
 		NUM_WRAP_SAMPLERS,
 	};
 	GLuint m_aSampler2D[NUM_BASIC_SAMPLERS][NUM_WRAP_SAMPLERS];
-	GLuint m_Sampler2DArray;
 public:
 	enum
 	{

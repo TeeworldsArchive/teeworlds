@@ -77,17 +77,13 @@ public:
 	/* Constants: Texture Loading Flags
 		TEXLOAD_NORESAMPLE - Prevents the texture from any resampling
 		TEXLOAD_NOMIPMAPS - Prevents the texture from generating mipmaps
-		TEXLOAD_ARRAY_256 - Texture will be loaded as 3D texture with 16*16 subtiles
-		TEXLOAD_MULTI_DIMENSION - Texture will be loaded as 2D and 3D texture
 	*/
 	enum
 	{
 		TEXLOAD_NORESAMPLE = 1,
 		TEXLOAD_NOMIPMAPS = 2,
-		TEXLOAD_ARRAY_256 = 4,
-		TEXLOAD_MULTI_DIMENSION = 8,
-		TEXLOAD_LINEARMIPMAPS = 16,
-		TEXLOAD_FONT = 32,
+		TEXLOAD_LINEARMIPMAPS = 4,
+		TEXLOAD_TILEMAP = 8,
 
 		NUMTILES_DIMENSION = 16, // number of tiles in each dimension within a texture
 	};
@@ -144,7 +140,7 @@ public:
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) = 0;
 
 	virtual int UnloadTexture(CTextureHandle *pIndex) = 0;
-	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
+	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Layers, int Format, const void *pData, int StoreFormat, int Flags) = 0;
 	virtual int LoadTextureRawSub(CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData) = 0;
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
 	virtual void TextureSet(CTextureHandle Texture) = 0;

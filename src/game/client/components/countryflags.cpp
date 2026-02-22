@@ -67,7 +67,7 @@ void CCountryFlags::LoadCountryflagsIndexfile()
 							Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "countryflags", aMsg);
 							continue;
 						}
-						CountryFlag.m_Texture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+						CountryFlag.m_Texture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, 1, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 						mem_free(Info.m_pData);
 					}
 					// blocked?

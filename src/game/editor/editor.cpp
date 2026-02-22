@@ -35,7 +35,8 @@ enum
 
 CEditorImage::~CEditorImage()
 {
-	m_pEditor->Graphics()->UnloadTexture(&m_Texture);
+	m_pEditor->Graphics()->UnloadTexture(&m_aTextures[0]);
+	m_pEditor->Graphics()->UnloadTexture(&m_aTextures[1]);
 	if(m_pData)
 	{
 		mem_free(m_pData);
@@ -581,14 +582,14 @@ void CEditor::CallbackOpenEntities(const char *pFileName, int StorageType, void 
 	if(!pEditor->Graphics()->LoadPNG(&ImgInfo, pFileName, StorageType))
 		return;
 
-	if(ImgInfo.m_Width % 16 || ImgInfo.m_Height % 16)
+	if(ImgInfo.m_Width % IGraphics::NUMTILES_DIMENSION || ImgInfo.m_Height % IGraphics::NUMTILES_DIMENSION)
 	{
 		pEditor->m_PopupEventType = POPEVENT_ENTITIES;
 		pEditor->m_PopupEventActivated = true;
 		return;
 	}
 
-	pEditor->m_EntitiesTexture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_MULTI_DIMENSION);
+	pEditor->m_EntitiesTexture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 0, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
 	pEditor->m_Map.m_pGameLayer->m_Texture = pEditor->m_EntitiesTexture;
 
 	pEditor->m_Dialog = DIALOG_NONE;
@@ -2118,7 +2119,7 @@ void CEditor::DoMapEditor(CUIRect View)
 		CLayerQuads *pLayer = (CLayerQuads *) GetSelectedLayer(0);
 		IGraphics::CTextureHandle Texture;
 		if(pLayer->m_Image >= 0 && pLayer->m_Image < m_Map.m_lImages.size())
-			Texture = m_Map.m_lImages[pLayer->m_Image]->m_Texture;
+			Texture = m_Map.m_lImages[pLayer->m_Image]->m_aTextures[0];
 
 		DoQuadEnvelopes(pLayer->m_lQuads, Texture);
 		m_ShowEnvelopePreview = SHOWENV_NONE;
@@ -2420,7 +2421,8 @@ void CEditor::ReplaceImage(const char *pFileName, int StorageType, void *pUser)
 
 	CEditorImage *pImg = pEditor->m_Map.m_lImages[pEditor->m_SelectedImage];
 	int External = pImg->m_External;
-	pEditor->Graphics()->UnloadTexture(&(pImg->m_Texture));
+	pEditor->Graphics()->UnloadTexture(&(pImg->m_aTextures[0]));
+	pEditor->Graphics()->UnloadTexture(&(pImg->m_aTextures[1]));
 	if(pImg->m_pData)
 	{
 		mem_free(pImg->m_pData);
@@ -2452,7 +2454,8 @@ void CEditor::ReplaceImage(const char *pFileName, int StorageType, void *pUser)
 	pImg->m_External = External;
 	pEditor->ExtractName(pFileName, pImg->m_aName, sizeof(pImg->m_aName));
 	pImg->LoadAutoMapper();
-	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_MULTI_DIMENSION);
+	pImg->m_aTextures[0] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	pImg->m_aTextures[1] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 0, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 	ImgInfo.m_pData = 0;
 	pEditor->SortImages();
 	for(int i = 0; i < pEditor->m_Map.m_lImages.size(); ++i)
@@ -2481,7 +2484,8 @@ void CEditor::AddImage(const char *pFileName, int StorageType, void *pUser)
 
 	CEditorImage *pImg = new CEditorImage(pEditor);
 	*pImg = ImgInfo;
-	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_MULTI_DIMENSION);
+	pImg->m_aTextures[0] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	pImg->m_aTextures[1] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 0, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 	ImgInfo.m_pData = 0;
 	pImg->m_External = 1; // external by default
 	str_copy(pImg->m_aName, aBuf, sizeof(pImg->m_aName));
@@ -2645,7 +2649,7 @@ void CEditor::RenderSelectedImage(CUIRect View)
 	float Max = (float) (maximum(m_Map.m_lImages[m_SelectedImage]->m_Width, m_Map.m_lImages[m_SelectedImage]->m_Height));
 	View.w *= m_Map.m_lImages[m_SelectedImage]->m_Width / Max;
 	View.h *= m_Map.m_lImages[m_SelectedImage]->m_Height / Max;
-	Graphics()->TextureSet(m_Map.m_lImages[m_SelectedImage]->m_Texture);
+	Graphics()->TextureSet(m_Map.m_lImages[m_SelectedImage]->m_aTextures[0]);
 	Graphics()->BlendNormal();
 	Graphics()->WrapClamp();
 	Graphics()->QuadsBegin();
@@ -2811,7 +2815,7 @@ void CEditor::RenderFileDialog()
 				if(Graphics()->LoadPNG(&m_FilePreviewImageInfo, aBuffer, m_FilteredFileList[m_FilesSelectedIndex]->m_StorageType))
 				{
 					Graphics()->UnloadTexture(&m_FilePreviewImage);
-					m_FilePreviewImage = Graphics()->LoadTextureRaw(m_FilePreviewImageInfo.m_Width, m_FilePreviewImageInfo.m_Height, m_FilePreviewImageInfo.m_Format, m_FilePreviewImageInfo.m_pData, m_FilePreviewImageInfo.m_Format, IGraphics::TEXLOAD_NORESAMPLE);
+					m_FilePreviewImage = Graphics()->LoadTextureRaw(m_FilePreviewImageInfo.m_Width, m_FilePreviewImageInfo.m_Height, 1, m_FilePreviewImageInfo.m_Format, m_FilePreviewImageInfo.m_pData, m_FilePreviewImageInfo.m_Format, IGraphics::TEXLOAD_NORESAMPLE);
 					mem_free(m_FilePreviewImageInfo.m_pData);
 					m_PreviewImageIsLoaded = true;
 				}
@@ -4159,7 +4163,7 @@ void CEditor::Init()
 	m_CheckerTexture = Graphics()->LoadTexture("editor/checker.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 	m_BackgroundTexture = Graphics()->LoadTexture("editor/background.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 	m_CursorTexture = Graphics()->LoadTexture("editor/cursor.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	m_EntitiesTexture = Graphics()->LoadTexture("editor/entities.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_MULTI_DIMENSION);
+	m_EntitiesTexture = Graphics()->LoadTexture("editor/entities.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 
 	m_TilesetPicker.m_pEditor = this;
 	m_TilesetPicker.MakePalette();
