@@ -74,7 +74,7 @@ void CPickup::Tick()
 					Picked = true;
 					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_GRENADE);
 					if(pChr->GetPlayer())
-						GameServer()->SendWeaponPickup(pChr->GetPlayer()->GetCID(), WEAPON_GRENADE);
+						GameServer()->SendWeaponPickup(pChr->GetCID(), WEAPON_GRENADE);
 				}
 				break;
 			case PICKUP_SHOTGUN:
@@ -83,7 +83,7 @@ void CPickup::Tick()
 					Picked = true;
 					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_SHOTGUN);
 					if(pChr->GetPlayer())
-						GameServer()->SendWeaponPickup(pChr->GetPlayer()->GetCID(), WEAPON_SHOTGUN);
+						GameServer()->SendWeaponPickup(pChr->GetCID(), WEAPON_SHOTGUN);
 				}
 				break;
 			case PICKUP_LASER:
@@ -92,7 +92,7 @@ void CPickup::Tick()
 					Picked = true;
 					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_SHOTGUN);
 					if(pChr->GetPlayer())
-						GameServer()->SendWeaponPickup(pChr->GetPlayer()->GetCID(), WEAPON_LASER);
+						GameServer()->SendWeaponPickup(pChr->GetCID(), WEAPON_LASER);
 				}
 				break;
 
@@ -122,7 +122,7 @@ void CPickup::Tick()
 		{
 			char aBuf[256];
 			str_format(aBuf, sizeof(aBuf), "pickup player='%d:%s' item=%d",
-				pChr->GetPlayer()->GetCID(), Server()->ClientName(pChr->GetPlayer()->GetCID()), m_Type);
+				pChr->GetCID(), Server()->ClientName(pChr->GetCID()), m_Type);
 			GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 			int RespawnTime = g_pData->m_aPickups[m_Type].m_Respawntime;
 			if(RespawnTime >= 0)

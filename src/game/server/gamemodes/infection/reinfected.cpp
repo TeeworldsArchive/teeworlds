@@ -1,4 +1,5 @@
 #include <base/color.h>
+#include <base/tl/inplace_array.h>
 #include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
 #include <game/server/entities/character.h>
@@ -7,6 +8,7 @@
 #include <generated/server_data.h>
 
 #include "reinfected.h"
+#include "riwall.h"
 
 class CReinfectedHelper
 {
@@ -88,9 +90,10 @@ public:
 			m_InfectedNum--;
 		else
 			m_HumanNum--;
+		m_pController->CheckCancelGame();
 	}
 
-	bool IsInfected(CCharacter *pCharacter) const { return IsInfected(pCharacter->GetPlayer()->GetCID()); }
+	bool IsInfected(CCharacter *pCharacter) const { return IsInfected(pCharacter->GetCID()); }
 	bool IsInfected(int ClientID) const { return m_aPlayerInfected[ClientID]; }
 };
 
@@ -159,24 +162,24 @@ void CGameControllerReinfected::StartRandomInfection()
 	InfectedNum -= Reinfected()->m_InfectedNum;
 	if(InfectedNum > 0)
 	{
-		int aPlayers[MAX_CLIENTS];
-		int ActivePlayerNum = 0;
+		inplace_array<int, MAX_CLIENTS> aPlayers;
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
-				aPlayers[ActivePlayerNum++] = i;
+				aPlayers.add(i);
 		}
 
 		char aBuf[128];
 		for(int i = 0; i < InfectedNum; i++)
 		{
-			int RandomInfected = random_int() % ActivePlayerNum;
+			int RandomInfected = random_int() % aPlayers.size();
 			if(Reinfected()->IsInfected(i))
 			{
 				i--;
 				continue;
 			}
 			Infect(aPlayers[RandomInfected]);
+			aPlayers.remove_index_fast(RandomInfected);
 
 			str_format(aBuf, sizeof(aBuf), "'%s' has been infected!", Server()->ClientName(aPlayers[RandomInfected]));
 			GameServer()->SendChat(-1, CHAT_ALL, -1, aBuf);
@@ -187,11 +190,19 @@ void CGameControllerReinfected::StartRandomInfection()
 void CGameControllerReinfected::Infect(int InfectedID)
 {
 	Reinfected()->Infect(InfectedID);
+	if(GameServer()->GetPlayerChar(InfectedID))
+	{
+		GameServer()->GetPlayerChar(InfectedID)->DisableWeapon(-1);
+		GameServer()->GetPlayerChar(InfectedID)->EnableWeapon(WEAPON_HAMMER);
+		GameServer()->GetPlayerChar(InfectedID)->SetWeapon(WEAPON_HAMMER);
+	}
 }
 
 void CGameControllerReinfected::Cure(int CureID)
 {
 	Reinfected()->Cure(CureID);
+	if(GameServer()->GetPlayerChar(CureID))
+		GameServer()->GetPlayerChar(CureID)->EnableWeapon(-1);
 }
 
 void CGameControllerReinfected::AddScoreForInfection(int InfectedID)
@@ -226,6 +237,18 @@ bool CGameControllerReinfected::IsFriendlyFire(int ClientID1, int ClientID2) con
 	return false;
 }
 
+bool CGameControllerReinfected::IsFriendlyTeamFire(int Team1, int Team2) const
+{
+	return Team1 == Team2;
+}
+
+int CGameControllerReinfected::GetPlayerCheckTeam(CPlayer *pPlayer) const
+{
+	if(!pPlayer)
+		return RITEAM_NONE;
+	return Reinfected()->IsInfected(pPlayer->GetCID()) ? RITEAM_INFECTED : RITEAM_HUMAN;
+}
+
 void CGameControllerReinfected::OnRoundStart()
 {
 	Reinfected()->ResetGame();
@@ -254,7 +277,7 @@ void CGameControllerReinfected::OnPlayerInfoChange(CPlayer *pPlayer)
 
 bool CGameControllerReinfected::CanCharacterPickup(CCharacter *pChr) const
 {
-	if(!pChr || !pChr->GetPlayer() || Reinfected()->IsInfected(pChr->GetPlayer()->GetCID()))
+	if(!pChr || !pChr->GetPlayer() || Reinfected()->IsInfected(pChr->GetCID()))
 		return false;
 
 	return IGameController::CanCharacterPickup(pChr);
@@ -263,7 +286,7 @@ bool CGameControllerReinfected::CanCharacterPickup(CCharacter *pChr) const
 int CGameControllerReinfected::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, int Weapon)
 {
 	if(IsInfectionStarted() && Weapon != WEAPON_GAME)
-		Infect(pVictim->GetPlayer()->GetCID());
+		Infect(pVictim->GetCID());
 
 	if(!pKiller || Weapon == WEAPON_GAME)
 		return 0;
@@ -298,16 +321,27 @@ int CGameControllerReinfected::OnCharacterDeath(CCharacter *pVictim, CPlayer *pK
 
 int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int Weapon)
 {
-	if(!pChr || !Reinfected()->IsInfected(pChr))
+	if(!pChr)
 		return IGameController::OnCharacterFireWeapon(pChr, Direction, Weapon);
 
-	// inefction hammer
 	if(Weapon == WEAPON_HAMMER)
 	{
-		int ClientID = pChr->GetPlayer()->GetCID();
+		int ClientID = pChr->GetCID();
 		vec2 ChrPos = pChr->GetPos();
 		vec2 ProjStartPos = ChrPos + Direction * pChr->GetProximityRadius() * 0.75f;
 
+		if(!Reinfected()->IsInfected(pChr))
+		{
+			for(CRIWall *pWall = static_cast<CRIWall *>(GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_RIWALL)); pWall; pWall = static_cast<CRIWall *>(pWall->TypeNext()))
+			{
+				if(pWall->GetOwner() == ClientID) pWall->Reset();
+			}
+			new CRIWall(&GameServer()->m_World, ChrPos, Direction, ClientID);
+			GameServer()->CreateSound(ChrPos, SOUND_LASER_BOUNCE);
+			return IGameController::OnCharacterFireWeapon(pChr, Direction, Weapon);
+		}
+
+		// infection hammer
 		int ReloadTimer = g_pData->m_Weapons.m_aId[WEAPON_HAMMER].m_Firedelay * Server()->TickSpeed() / 1000;
 
 		GameServer()->CreateSound(ChrPos, SOUND_HAMMER_FIRE);
@@ -338,7 +372,7 @@ int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Dire
 
 			if(!Reinfected()->IsInfected(pTarget))
 			{
-				Infect(pTarget->GetPlayer()->GetCID());
+				Infect(pTarget->GetCID());
 				AddScoreForInfection(ClientID);
 			}
 			else
@@ -359,17 +393,23 @@ int CGameControllerReinfected::OnCharacterFireWeapon(CCharacter *pChr, vec2 Dire
 	return IGameController::OnCharacterFireWeapon(pChr, Direction, Weapon);
 }
 
+void CGameControllerReinfected::OnCharacterSpawn(CCharacter *pChr)
+{
+	IGameController::OnCharacterSpawn(pChr);
+	if(Reinfected()->IsInfected(pChr))
+	{
+		pChr->DisableWeapon(-1);
+		pChr->EnableWeapon(WEAPON_HAMMER);
+		pChr->SetWeapon(WEAPON_HAMMER);
+	}
+}
+
 void CGameControllerReinfected::Tick()
 {
 	IGameController::Tick();
 
 	if(GameServer()->m_World.m_ResetRequested || GameServer()->m_World.m_Paused)
 		return;
-
-	if(GetRealPlayerNum() < Config()->m_RiPlayersMin && IsGameRunning())
-	{
-		SetGameState(IGameController::IGS_WARMUP_GAME, TIMER_INFINITE);
-	}
 
 	DoWincheckMatch();
 }
@@ -424,6 +464,14 @@ void CGameControllerReinfected::RefreshClientSkin(int ClientID, bool Sync)
 		return;
 	RefreshPlayerSkin(GameServer()->m_apPlayers[ClientID], Sync);
 	GameServer()->SendSkinChange(ClientID, -1);
+}
+
+void CGameControllerReinfected::CheckCancelGame()
+{
+	if(!(GetRealPlayerNum() < Config()->m_RiPlayersMin && IsGameRunning()))
+		return;
+	SetGameState(IGameController::IGS_WARMUP_GAME, TIMER_INFINITE);
+	GameServer()->SendChat(-1, CHAT_ALL, -1, "Game has been cancelled");
 }
 
 REGISTER_GAMEMODE("reinfected", CGameControllerReinfected);

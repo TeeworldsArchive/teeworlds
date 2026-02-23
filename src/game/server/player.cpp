@@ -86,7 +86,7 @@ void CPlayer::Tick()
 		if(!m_pCharacter && m_Team == TEAM_SPECTATORS && m_pSpecFlag)
 		{
 			if(m_pSpecFlag->GetCarrier())
-				m_SpectatorID = m_pSpecFlag->GetCarrier()->GetPlayer()->GetCID();
+				m_SpectatorID = m_pSpecFlag->GetCarrier()->GetCID();
 			else
 				m_SpectatorID = -1;
 		}
@@ -282,7 +282,7 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 					{
 						m_SpecMode = SPEC_PLAYER;
 						m_pSpecFlag = 0;
-						m_SpectatorID = pChar->GetPlayer()->GetCID();
+						m_SpectatorID = pChar->GetCID();
 					}
 				}
 			}
@@ -366,7 +366,7 @@ bool CPlayer::SetSpectatorID(int SpecMode, int SpectatorID)
 					{
 						m_pSpecFlag = pFlag;
 						if(pFlag->GetCarrier())
-							m_SpectatorID = pFlag->GetCarrier()->GetPlayer()->GetCID();
+							m_SpectatorID = pFlag->GetCarrier()->GetCID();
 						else
 							m_SpectatorID = -1;
 						break;

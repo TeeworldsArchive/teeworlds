@@ -134,7 +134,7 @@ void CGameControllerCTF::Snap(int SnappingClient)
 		if(m_apFlags[TEAM_RED]->IsAtStand())
 			pGameDataFlag->m_FlagCarrierRed = FLAG_ATSTAND;
 		else if(m_apFlags[TEAM_RED]->GetCarrier() && m_apFlags[TEAM_RED]->GetCarrier()->GetPlayer())
-			pGameDataFlag->m_FlagCarrierRed = m_apFlags[TEAM_RED]->GetCarrier()->GetPlayer()->GetCID();
+			pGameDataFlag->m_FlagCarrierRed = m_apFlags[TEAM_RED]->GetCarrier()->GetCID();
 		else
 		{
 			pGameDataFlag->m_FlagCarrierRed = FLAG_TAKEN;
@@ -149,7 +149,7 @@ void CGameControllerCTF::Snap(int SnappingClient)
 		if(m_apFlags[TEAM_BLUE]->IsAtStand())
 			pGameDataFlag->m_FlagCarrierBlue = FLAG_ATSTAND;
 		else if(m_apFlags[TEAM_BLUE]->GetCarrier() && m_apFlags[TEAM_BLUE]->GetCarrier()->GetPlayer())
-			pGameDataFlag->m_FlagCarrierBlue = m_apFlags[TEAM_BLUE]->GetCarrier()->GetPlayer()->GetCID();
+			pGameDataFlag->m_FlagCarrierBlue = m_apFlags[TEAM_BLUE]->GetCarrier()->GetCID();
 		else
 		{
 			pGameDataFlag->m_FlagCarrierBlue = FLAG_TAKEN;
@@ -188,13 +188,13 @@ void CGameControllerCTF::Tick()
 
 					char aBuf[64];
 					str_format(aBuf, sizeof(aBuf), "flag_capture player='%d:%s' team=%d time=%.2f",
-						F->GetCarrier()->GetPlayer()->GetCID(),
-						Server()->ClientName(F->GetCarrier()->GetPlayer()->GetCID()),
+						F->GetCarrier()->GetCID(),
+						Server()->ClientName(F->GetCarrier()->GetCID()),
 						F->GetCarrier()->GetPlayer()->GetTeam(),
 						Diff / (float) Server()->TickSpeed());
 					GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
-					GameServer()->SendGameMsg(GAMEMSG_CTF_CAPTURE, fi, F->GetCarrier()->GetPlayer()->GetCID(), Diff, -1);
+					GameServer()->SendGameMsg(GAMEMSG_CTF_CAPTURE, fi, F->GetCarrier()->GetCID(), Diff, -1);
 					for(int i = 0; i < 2; i++)
 						m_apFlags[i]->Reset();
 					// do a win check(capture could trigger win condition)
@@ -222,8 +222,8 @@ void CGameControllerCTF::Tick()
 
 						char aBuf[256];
 						str_format(aBuf, sizeof(aBuf), "flag_return player='%d:%s' team=%d",
-							pChr->GetPlayer()->GetCID(),
-							Server()->ClientName(pChr->GetPlayer()->GetCID()),
+							pChr->GetCID(),
+							Server()->ClientName(pChr->GetCID()),
 							pChr->GetPlayer()->GetTeam());
 						GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 						GameServer()->SendGameMsg(GAMEMSG_CTF_RETURN, -1);
@@ -242,8 +242,8 @@ void CGameControllerCTF::Tick()
 
 					char aBuf[256];
 					str_format(aBuf, sizeof(aBuf), "flag_grab player='%d:%s' team=%d",
-						F->GetCarrier()->GetPlayer()->GetCID(),
-						Server()->ClientName(F->GetCarrier()->GetPlayer()->GetCID()),
+						F->GetCarrier()->GetCID(),
+						Server()->ClientName(F->GetCarrier()->GetCID()),
 						F->GetCarrier()->GetPlayer()->GetTeam());
 					GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 					GameServer()->SendGameMsg(GAMEMSG_CTF_GRAB, fi, -1);

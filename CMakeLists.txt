@@ -1207,6 +1207,7 @@ set_src(BASE GLOB_RECURSE src/base
   tl/algorithm.h
   tl/allocator.h
   tl/array.h
+  tl/inplace_array.h
   tl/range.h
   tl/sorted_array.h
   tl/string.h
@@ -1543,6 +1544,8 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamecontroller.h
   gamemodes/infection/reinfected.cpp
   gamemodes/infection/reinfected.h
+  gamemodes/infection/riwall.cpp
+  gamemodes/infection/riwall.h
   gamemodes/mod.cpp
   gamemodes/mod.h
   gamemodes/vanilla/ctf.cpp

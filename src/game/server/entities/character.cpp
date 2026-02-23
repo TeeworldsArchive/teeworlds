@@ -78,6 +78,9 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	GameWorld()->InsertEntity(this);
 	m_Alive = true;
 
+	for(int i = 0; i < NUM_WEAPONS; i++)
+		m_aWeapons[i].m_Valid = true;
+
 	GameServer()->m_pController->OnCharacterSpawn(this);
 
 	return true;
@@ -217,7 +220,7 @@ void CCharacter::HandleWeaponSwitch()
 		while(Next) // Next Weapon selection
 		{
 			WantedWeapon = (WantedWeapon + 1) % NUM_WEAPONS;
-			if(m_aWeapons[WantedWeapon].m_Got)
+			if(m_aWeapons[WantedWeapon].m_Got && m_aWeapons[WantedWeapon].m_Valid)
 				Next--;
 		}
 	}
@@ -227,7 +230,7 @@ void CCharacter::HandleWeaponSwitch()
 		while(Prev) // Prev Weapon selection
 		{
 			WantedWeapon = (WantedWeapon - 1) < 0 ? NUM_WEAPONS - 1 : WantedWeapon - 1;
-			if(m_aWeapons[WantedWeapon].m_Got)
+			if(m_aWeapons[WantedWeapon].m_Got && m_aWeapons[WantedWeapon].m_Valid)
 				Prev--;
 		}
 	}
@@ -237,7 +240,7 @@ void CCharacter::HandleWeaponSwitch()
 		WantedWeapon = m_Input.m_WantedWeapon - 1;
 
 	// check for insane values
-	if(WantedWeapon >= 0 && WantedWeapon < NUM_WEAPONS && WantedWeapon != m_ActiveWeapon && m_aWeapons[WantedWeapon].m_Got)
+	if(WantedWeapon >= 0 && WantedWeapon < NUM_WEAPONS && WantedWeapon != m_ActiveWeapon && m_aWeapons[WantedWeapon].m_Got && m_aWeapons[WantedWeapon].m_Valid)
 		m_QueuedWeapon = WantedWeapon;
 
 	DoWeaponSwitch();
@@ -361,12 +364,45 @@ void CCharacter::SetEmote(int Emote, int Tick)
 	m_EmoteStop = Tick;
 }
 
+int CCharacter::GetCID()
+{
+	return m_pPlayer->GetCID();
+}
+
 void CCharacter::DoNinjaFire(vec2 Direction, int MoveTime)
 {
 	m_NumObjectsHit = 0;
 	m_Ninja.m_ActivationDir = Direction;
 	m_Ninja.m_CurrentMoveTime = MoveTime;
 	m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
+}
+
+void CCharacter::EnableWeapon(int WeaponID)
+{
+	if(WeaponID == -1)
+	{
+		for(int i = 0; i < NUM_WEAPONS; i++)
+		{
+			EnableWeapon(i);
+		}
+	}
+	if(WeaponID < 0 || WeaponID >= NUM_WEAPONS)
+		return;
+	m_aWeapons[WeaponID].m_Valid = true;
+}
+
+void CCharacter::DisableWeapon(int WeaponID)
+{
+	if(WeaponID == -1)
+	{
+		for(int i = 0; i < NUM_WEAPONS; i++)
+		{
+			DisableWeapon(i);
+		}
+	}
+	if(WeaponID < 0 || WeaponID >= NUM_WEAPONS)
+		return;
+	m_aWeapons[WeaponID].m_Valid = false;
 }
 
 void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)

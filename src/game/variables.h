@@ -146,7 +146,9 @@ MACRO_CONFIG_INT(SvAllowSpecVoting, sv_allow_spec_voting, 0, 0, 1, CFGFLAG_SAVE 
 
 MACRO_CONFIG_INT(RiPlayersMin, ri_players_min, 2, 0, MAX_CLIENTS, CFGFLAG_SAVE | CFGFLAG_SERVER, "Minimum number of players required to start reinfected game")
 MACRO_CONFIG_INT(RiInfectionStartTime, ri_infection_start_time, 10, 0, MAX_CLIENTS, CFGFLAG_SAVE | CFGFLAG_SERVER, "timer for reinfected game to start infection")
-
+MACRO_CONFIG_INT(RiWallLength, ri_walllength, 256, 128, 1024, CFGFLAG_SERVER, "Length of a reinfected wall")
+MACRO_CONFIG_INT(RiWallDelay, ri_walldelay, 1, 0, 10, CFGFLAG_SERVER, "Time before the reinfected wall is active (in seconds)")
+MACRO_CONFIG_INT(RiWallLife, ri_walllife, 30, 0, 60, CFGFLAG_SERVER, "Time the reinfected wall stays (in seconds)")
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly
 MACRO_CONFIG_INT(DbgDummies, dbg_dummies, 0, 0, MAX_CLIENTS, CFGFLAG_SERVER, "")

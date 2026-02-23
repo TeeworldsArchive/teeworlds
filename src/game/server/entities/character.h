@@ -61,10 +61,14 @@ public:
 
 	bool IsAlive() const { return m_Alive; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
+	int GetCID();
 
 	// need this hook for gamecontroller to call ninja fire
 	void DoNinjaFire(vec2 Direction, int MoveTime);
-
+	// need this hook for gamecontroller to enable weapons, -1 to enable all
+	void EnableWeapon(int WeaponID); 
+	// need this hook for gamecontroller to disable weapons, -1 to disable all, but remember to enable at least one weapon unless you want the server get stuck
+	void DisableWeapon(int WeaponID);
 private:
 	// player controlling this character
 	class CPlayer *m_pPlayer;
@@ -80,7 +84,7 @@ private:
 		int m_AmmoRegenStart;
 		int m_Ammo;
 		bool m_Got;
-
+		bool m_Valid;
 	} m_aWeapons[NUM_WEAPONS];
 
 	int m_ActiveWeapon;

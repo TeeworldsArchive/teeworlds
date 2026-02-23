@@ -25,6 +25,8 @@ public:
 	virtual ~CGameControllerReinfected();
 
 	virtual bool IsFriendlyFire(int ClientID1, int ClientID2) const;
+	virtual bool IsFriendlyTeamFire(int Team1, int Team2) const;
+	virtual int GetPlayerCheckTeam(class CPlayer *pPlayer) const;
 
 	virtual void OnRoundStart();
 
@@ -35,12 +37,22 @@ public:
 	virtual bool CanCharacterPickup(class CCharacter *pChr) const;
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon);
+	virtual void OnCharacterSpawn(class CCharacter *pChr);
 
 	virtual void Tick();
 	virtual bool DoWincheckMatch();
 	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg);
 
 	void RefreshClientSkin(int ClientID, bool Sync);
+	void CheckCancelGame();
+
+	enum
+	{
+		RITEAM_NONE = -1,
+		RITEAM_HUMAN = 0,
+		RITEAM_INFECTED,
+		NUM_RITEAMS,
+	};
 };
 
 #endif // GAME_SERVER_GAMEMODES_REINFECTED_H

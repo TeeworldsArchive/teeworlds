@@ -220,6 +220,13 @@ void IGameController::DoTeamBalance()
 // event
 int IGameController::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, int Weapon)
 {
+	// update spectator modes for dead players in survival
+	if(m_GameFlags & GAMEFLAG_SURVIVAL)
+	{
+		for(int i = 0; i < MAX_CLIENTS; ++i)
+			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->m_DeadSpecMode)
+				GameServer()->m_apPlayers[i]->UpdateDeadSpecMode();
+	}
 	// do scoreing
 	if(!pKiller || Weapon == WEAPON_GAME)
 		return 0;
@@ -234,14 +241,6 @@ int IGameController::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, int
 	}
 	if(Weapon == WEAPON_SELF)
 		pVictim->GetPlayer()->m_RespawnTick = Server()->Tick() + Server()->TickSpeed() * 3.0f;
-
-	// update spectator modes for dead players in survival
-	if(m_GameFlags & GAMEFLAG_SURVIVAL)
-	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
-			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->m_DeadSpecMode)
-				GameServer()->m_apPlayers[i]->UpdateDeadSpecMode();
-	}
 
 	return 0;
 }
@@ -900,6 +899,13 @@ bool IGameController::IsFriendlyTeamFire(int Team1, int Team2) const
 	return IsTeamplay() && !Config()->m_SvTeamdamage && Team1 == Team2;
 }
 
+int IGameController::GetPlayerCheckTeam(CPlayer *pPlayer) const
+{
+	if(!pPlayer)
+		return TEAM_RED;
+	return pPlayer->GetTeam();
+}
+
 bool IGameController::IsPlayerReadyMode() const
 {
 	return Config()->m_SvPlayerReadyMode != 0 && (m_GameStateTimer == TIMER_INFINITE && (m_GameState == IGS_WARMUP_USER || m_GameState == IGS_GAME_PAUSED));
@@ -1258,7 +1264,7 @@ int IGameController::OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int
 	if(!pChr)
 		return 0;
 
-	int ClientID = pChr->GetPlayer()->GetCID();
+	int ClientID = pChr->GetCID();
 	vec2 ChrPos = pChr->GetPos();
 	vec2 ProjStartPos = ChrPos + Direction * pChr->GetProximityRadius() * 0.75f;
 
