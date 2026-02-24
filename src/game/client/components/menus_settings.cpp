@@ -801,15 +801,15 @@ void CMenus::RenderThemeSelection(CUIRect MainView, bool Header)
 
 		char aName[128];
 		if(!Theme.m_Name[0])
-			str_copy(aName, "(none)", sizeof(aName));
+			str_copy(aName, Localize("(none)", "Theme"), sizeof(aName));
 		else if(str_comp(Theme.m_Name, "auto") == 0)
-			str_copy(aName, "(automatic)", sizeof(aName));
+			str_copy(aName, Localize("(automatic)", "Theme"), sizeof(aName));
 		else if(Theme.m_HasDay && Theme.m_HasNight)
 			str_format(aName, sizeof(aName), "%s", Theme.m_Name.cstr());
 		else if(Theme.m_HasDay && !Theme.m_HasNight)
-			str_format(aName, sizeof(aName), "%s (day)", Theme.m_Name.cstr());
+			str_format(aName, sizeof(aName), Localize("%s (day)", "Theme"), Theme.m_Name.cstr());
 		else if(!Theme.m_HasDay && Theme.m_HasNight)
-			str_format(aName, sizeof(aName), "%s (night)", Theme.m_Name.cstr());
+			str_format(aName, sizeof(aName), Localize("%s (night)", "Theme"), Theme.m_Name.cstr());
 		else // generic
 			str_format(aName, sizeof(aName), "%s", Theme.m_Name.cstr());
 
