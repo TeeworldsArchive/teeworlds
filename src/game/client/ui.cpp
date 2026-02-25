@@ -885,10 +885,11 @@ void CUI::RenderTooltip()
 	m_aTooltipText[0] = '\0';
 }
 
-void CUI::DoToast(const char *pText)
+void CUI::DoToast(const char *pText, int ToastType)
 {
 	str_copy(m_aToastText, pText, sizeof(m_aToastText));
 	m_ToastTime = time_get();
+	m_ToastType = ToastType;
 }
 
 void CUI::RenderToast()
@@ -914,6 +915,9 @@ void CUI::RenderToast()
 	const float Spacing = 4.0f;
 	const float Border = 1.0f;
 
+	const vec4 BackgroundColor = m_ToastType == TOAST_SUCCESS ? vec4(0.0f, 0.4f, 0.0f, 0.4f) : vec4(0.4f, 0.0f, 0.0f, 0.4f);
+	const vec4 ForegroundColor = m_ToastType == TOAST_SUCCESS ? vec4(0.5f, 0.7f, 0.5f, 0.8f) : vec4(0.7f, 0.5f, 0.5f, 0.8f);
+
 	CUIRect Toast = *Screen();
 	Toast.HSplitBottom(72.0f, 0, &Toast);
 	Toast.HSplitBottom(48.0f, &Toast, 0);
@@ -929,9 +933,9 @@ void CUI::RenderToast()
 	TextRender()->TextColor(OldTextColor);
 	Toast.x = Screen()->Center().x - s_Cursor.Width() / 2.0f - Rounding / 2.0f;
 	Toast.w = s_Cursor.Width() + Rounding * 2;
-	Toast.Draw(vec4(0.0f, 0.2f, 0.0f, 0.4f * AlphaFactor), Rounding);
+	Toast.Draw(BackgroundColor * vec4(1.0f, 1.0f, 1.0f, AlphaFactor), Rounding);
 	Toast.Margin(Border, &Toast);
-	Toast.Draw(vec4(0.5f, 0.7f, 0.5f, 0.8f * AlphaFactor), Rounding);
+	Toast.Draw(ForegroundColor * vec4(1.0f, 1.0f, 1.0f, AlphaFactor), Rounding);
 	Toast.Margin(Spacing, &Toast);
 	ApplyCursorAlign(&s_Cursor, &Toast, TEXTALIGN_ML);
 	TextRender()->DrawTextOutlined(&s_Cursor);

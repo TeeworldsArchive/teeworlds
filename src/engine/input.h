@@ -99,6 +99,7 @@ public:
 	// clipboard
 	virtual const char *GetClipboardText() = 0;
 	virtual void SetClipboardText(const char *pText) = 0;
+	virtual void SetClipboardImage(unsigned char *pData, int DataSize) = 0;
 
 	// text editing
 	virtual void StartTextInput() = 0;

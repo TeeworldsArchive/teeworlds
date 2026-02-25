@@ -51,6 +51,8 @@ public:
 	}
 };
 
+typedef void (*FScreenshotCallback)(void *pUser, const char *pPath);
+
 /*
 	Structure: CVideoMode
 */
@@ -194,7 +196,7 @@ public:
 	virtual void SetColor4(const vec4 &TopLeft, const vec4 &TopRight, const vec4 &BottomLeft, const vec4 &BottomRight) = 0;
 
 	virtual void ReadBackbuffer(unsigned char **ppPixels, int x, int y, int w, int h) = 0;
-	virtual void TakeScreenshot(const char *pFilename) = 0;
+	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, void *pUser) = 0;
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;
 
 	virtual void Swap() = 0;

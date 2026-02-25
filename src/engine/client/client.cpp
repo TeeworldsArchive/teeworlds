@@ -2253,7 +2253,7 @@ void CClient::AutoScreenshot_Start()
 {
 	if(Config()->m_ClAutoScreenshot)
 	{
-		Graphics()->TakeScreenshot("auto/autoscreen");
+		Graphics()->TakeScreenshot("auto/autoscreen", 0, 0);
 		m_AutoScreenshotRecycle = true;
 	}
 }
@@ -2262,7 +2262,7 @@ void CClient::AutoStatScreenshot_Start()
 {
 	if(Config()->m_ClAutoStatScreenshot)
 	{
-		Graphics()->TakeScreenshot("auto/stat");
+		Graphics()->TakeScreenshot("auto/stat", 0, 0);
 		m_AutoStatScreenshotRecycle = true;
 	}
 }
@@ -2289,12 +2289,6 @@ void CClient::AutoScreenshot_Cleanup()
 		}
 		m_AutoStatScreenshotRecycle = false;
 	}
-}
-
-void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
-{
-	CClient *pSelf = (CClient *) pUserData;
-	pSelf->Graphics()->TakeScreenshot(0);
 }
 
 void CClient::Con_Rcon(IConsole::IResult *pResult, void *pUserData)
@@ -2581,7 +2575,6 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("connect", "s[host|ip]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Connect, this, "Connect to the specified host/ip");
 	m_pConsole->Register("disconnect", "", CFGFLAG_CLIENT, Con_Disconnect, this, "Disconnect from the server");
 	m_pConsole->Register("ping", "", CFGFLAG_CLIENT, Con_Ping, this, "Ping the current server");
-	m_pConsole->Register("screenshot", "", CFGFLAG_CLIENT, Con_Screenshot, this, "Take a screenshot");
 	m_pConsole->Register("rcon", "r[command]", CFGFLAG_CLIENT, Con_Rcon, this, "Send specified command to rcon");
 	m_pConsole->Register("rcon_auth", "s[password]", CFGFLAG_CLIENT, Con_RconAuth, this, "Authenticate to rcon");
 	m_pConsole->Register("record", "?s[file]", CFGFLAG_CLIENT, Con_Record, this, "Record to the file");

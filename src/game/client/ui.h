@@ -162,6 +162,7 @@ class CUI
 
 	char m_aToastText[256];
 	int64 m_ToastTime;
+	int m_ToastType;
 
 	class
 	{
@@ -311,7 +312,12 @@ public:
 	void RenderTooltip();
 
 	// toast notification
-	void DoToast(const char *pText);
+	enum
+	{
+		TOAST_SUCCESS = 0,
+		TOAST_WARNING,
+	};
+	void DoToast(const char *pText, int ToastType = TOAST_SUCCESS);
 	void RenderToast();
 
 	// popup menu

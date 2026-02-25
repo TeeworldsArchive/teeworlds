@@ -308,6 +308,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("team", "i[team]", CFGFLAG_CLIENT, ConTeam, this, "Switch team");
 	Console()->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Respawn");
 	Console()->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange, this, "Change ready state");
+	Console()->Register("screenshot", "", CFGFLAG_CLIENT, ConScreenshot, this, "Take a screenshot");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
 	Console()->Chain("remove_friend", ConchainFriendUpdate, this);
@@ -563,6 +564,27 @@ void CGameClient::EvolveCharacter(CNetObj_Character *pCharacter, int Tick)
 	}
 
 	TempCore.Write(pCharacter);
+}
+
+void CGameClient::ScreenshotCallback(void *pUser, const char *pPath)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUser);
+	if(!pPath)
+	{
+		pClient->UI()->DoToast(Localize("Screenshot failed"), CUI::TOAST_WARNING);
+		return;
+	}
+
+	unsigned char *pFileData;
+	unsigned FileSize;
+	if(pClient->Storage()->ReadFile(pPath, IStorage::TYPE_SAVE, (void **) &pFileData, &FileSize))
+	{
+		pClient->Input()->SetClipboardImage(pFileData, FileSize);
+
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), Localize("Screenshot '%s' has been copied to clipboard!"), pPath);
+		pClient->UI()->DoToast(aBuf);
+	}
 }
 
 void CGameClient::StartRendering()
@@ -1956,6 +1978,12 @@ void CGameClient::ConReadyChange(IConsole::IResult *pResult, void *pUserData)
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
 	if(pClient->Client()->State() == IClient::STATE_ONLINE)
 		pClient->SendReadyChange();
+}
+
+void CGameClient::ConScreenshot(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	pClient->Graphics()->TakeScreenshot(0, ScreenshotCallback, pClient);
 }
 
 void CGameClient::ConchainSkinChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

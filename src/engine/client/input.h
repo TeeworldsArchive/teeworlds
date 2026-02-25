@@ -93,6 +93,14 @@ private:
 	void ClearKeyStates();
 	bool KeyState(int Key) const;
 
+	struct
+	{
+		unsigned char *m_pData;
+		int m_DataSize;
+	} m_ClipboardImage;
+
+	static const void *ClipboardImageCallback(void *pUser, const char *pType, size_t *pSize);
+	static void ClipboardCleanupCallback(void *pUser);
 public:
 	CInput();
 
@@ -114,6 +122,7 @@ public:
 
 	const char *GetClipboardText();
 	void SetClipboardText(const char *pText);
+	void SetClipboardImage(unsigned char *pData, int DataSize);
 
 	void StartTextInput();
 	void StopTextInput();

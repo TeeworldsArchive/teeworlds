@@ -589,7 +589,7 @@ void CEditor::CallbackOpenEntities(const char *pFileName, int StorageType, void 
 		return;
 	}
 
-	pEditor->m_EntitiesTexture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 0, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	pEditor->m_EntitiesTexture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 	pEditor->m_Map.m_pGameLayer->m_Texture = pEditor->m_EntitiesTexture;
 
 	pEditor->m_Dialog = DIALOG_NONE;
@@ -765,7 +765,7 @@ void CEditor::DoToolbar(CUIRect ToolBar)
 		TB_Top.VSplitLeft(5.0f, &Button, &TB_Top);
 		TB_Top.VSplitLeft(30.0f, &Button, &TB_Top);
 		static int s_CcwButton = 0;
-		if(DoButton_Ex(&s_CcwButton, "CCW", Enabled, &Button, 0, "[R] Rotates the brush counter-clockwise", CUIRect::CORNER_L) || Input()->KeyPress(KEY_R))
+		if(DoButton_Ex(&s_CcwButton, "\uEA3B", Enabled, &Button, 0, "[R] Rotates the brush counter-clockwise", CUIRect::CORNER_L) || Input()->KeyPress(KEY_R))
 		{
 			for(int i = 0; i < m_Brush.m_lLayers.size(); i++)
 				m_Brush.m_lLayers[i]->BrushRotate(-s_RotationAmount / 360.0f * pi * 2);
@@ -773,7 +773,7 @@ void CEditor::DoToolbar(CUIRect ToolBar)
 
 		TB_Top.VSplitLeft(30.0f, &Button, &TB_Top);
 		static int s_CwButton = 0;
-		if(DoButton_Ex(&s_CwButton, "CW", Enabled, &Button, 0, "[T] Rotates the brush clockwise", CUIRect::CORNER_R) || Input()->KeyPress(KEY_T))
+		if(DoButton_Ex(&s_CwButton, "\uEB94", Enabled, &Button, 0, "[T] Rotates the brush clockwise", CUIRect::CORNER_R) || Input()->KeyPress(KEY_T))
 		{
 			for(int i = 0; i < m_Brush.m_lLayers.size(); i++)
 				m_Brush.m_lLayers[i]->BrushRotate(s_RotationAmount / 360.0f * pi * 2);
@@ -871,9 +871,9 @@ void CEditor::DoToolbar(CUIRect ToolBar)
 	TB_Bottom.VSplitLeft(10.0f, 0, &TB_Bottom);
 
 	// pipette / color picking
-	TB_Bottom.VSplitLeft(50.0f, &Button, &TB_Bottom);
+	TB_Bottom.VSplitLeft(30.0f, &Button, &TB_Bottom);
 	static int s_ColorPickingButton = 0;
-	if(DoButton_Editor(&s_ColorPickingButton, "Pipette", m_MouseEdMode == MOUSE_PIPETTE, &Button, 0, "Pick color from view"))
+	if(DoButton_Editor(&s_ColorPickingButton, "\uF530", m_MouseEdMode == MOUSE_PIPETTE, &Button, 0, "Pick color from view"))
 	{
 		// toggle mouse mode
 		if(m_MouseEdMode == MOUSE_PIPETTE)
@@ -2324,7 +2324,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 		if(!s_ScrollRegion.IsRectClipped(Slot))
 		{
 			Slot.VSplitLeft(12.0f, &VisibleToggle, &Slot);
-			if(DoButton_Ex(&m_Map.m_lGroups[g]->m_Visible, m_Map.m_lGroups[g]->m_Visible ? "V" : "H", m_Map.m_lGroups[g]->m_Collapse ? 1 : 0, &VisibleToggle, 0, "Toggle group visibility", CUIRect::CORNER_L))
+			if(DoButton_Ex(&m_Map.m_lGroups[g]->m_Visible, m_Map.m_lGroups[g]->m_Visible ? "\uECB4" : "\uECB6", m_Map.m_lGroups[g]->m_Collapse ? 1 : 0, &VisibleToggle, 0, "Toggle group visibility", CUIRect::CORNER_L))
 				m_Map.m_lGroups[g]->m_Visible = !m_Map.m_lGroups[g]->m_Visible;
 
 			Slot.VSplitRight(12.0f, &Slot, &SaveCheck);
@@ -2365,7 +2365,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 			Slot.VSplitLeft(12.0f, 0, &Slot);
 			Slot.VSplitLeft(12.0f, &VisibleToggle, &Slot);
 
-			if(DoButton_Ex(&m_Map.m_lGroups[g]->m_lLayers[l]->m_Visible, m_Map.m_lGroups[g]->m_lLayers[l]->m_Visible ? "V" : "H", 0, &VisibleToggle, 0, "Toggle layer visibility", CUIRect::CORNER_L))
+			if(DoButton_Ex(&m_Map.m_lGroups[g]->m_lLayers[l]->m_Visible, m_Map.m_lGroups[g]->m_lLayers[l]->m_Visible ? "\uECB4" : "\uECB6", 0, &VisibleToggle, 0, "Toggle layer visibility", CUIRect::CORNER_L))
 				m_Map.m_lGroups[g]->m_lLayers[l]->m_Visible = !m_Map.m_lGroups[g]->m_lLayers[l]->m_Visible;
 
 			Slot.VSplitRight(12.0f, &Slot, &SaveCheck);
@@ -2455,7 +2455,7 @@ void CEditor::ReplaceImage(const char *pFileName, int StorageType, void *pUser)
 	pEditor->ExtractName(pFileName, pImg->m_aName, sizeof(pImg->m_aName));
 	pImg->LoadAutoMapper();
 	pImg->m_aTextures[0] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
-	pImg->m_aTextures[1] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 0, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
+	pImg->m_aTextures[1] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 	ImgInfo.m_pData = 0;
 	pEditor->SortImages();
 	for(int i = 0; i < pEditor->m_Map.m_lImages.size(); ++i)
@@ -2485,7 +2485,7 @@ void CEditor::AddImage(const char *pFileName, int StorageType, void *pUser)
 	CEditorImage *pImg = new CEditorImage(pEditor);
 	*pImg = ImgInfo;
 	pImg->m_aTextures[0] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
-	pImg->m_aTextures[1] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 0, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
+	pImg->m_aTextures[1] = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, 1, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_TILEMAP);
 	ImgInfo.m_pData = 0;
 	pImg->m_External = 1; // external by default
 	str_copy(pImg->m_aName, aBuf, sizeof(pImg->m_aName));
@@ -4375,7 +4375,7 @@ void CEditor::OnRender()
 
 	if(Input()->KeyPress(KEY_F10))
 	{
-		Graphics()->TakeScreenshot(0);
+		Graphics()->TakeScreenshot(0, 0, 0);
 		m_ShowMousePointer = true;
 	}
 

@@ -513,13 +513,18 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename)
 			png_set_data(&Png, Image.m_Width, Image.m_Height, 8, PNG_TRUECOLOR, (unsigned char *) Image.m_pData);
 			io_close(File);
 			str_format(aBuf, sizeof(aBuf), "saved screenshot to '%s'", aWholePath);
+			if(m_pfnScreenshot)
+				m_pfnScreenshot(m_pScreenshotUser, pFilename);
 		}
 		else
 		{
 			str_format(aBuf, sizeof(aBuf), "failed to open file '%s'", pFilename);
+			if(m_pfnScreenshot)
+				m_pfnScreenshot(m_pScreenshotUser, 0);
 		}
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client/screenshot", aBuf);
 		mem_free(Image.m_pData);
+		m_pfnScreenshot = 0;
 	}
 }
 
@@ -1002,13 +1007,15 @@ void CGraphics_Threaded::ReadBackbuffer(unsigned char **ppPixels, int x, int y, 
 	*ppPixels = (unsigned char *) Image.m_pData; // take ownership!
 }
 
-void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
+void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, void *pUser)
 {
 	// TODO: screenshot support
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
 	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
 	m_DoScreenshot = true;
+	m_pfnScreenshot = pfnCallback;
+	m_pScreenshotUser = pUser;
 }
 
 void CGraphics_Threaded::Swap()

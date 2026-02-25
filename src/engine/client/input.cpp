@@ -55,6 +55,9 @@ CInput::CInput()
 	m_CompositionSelectedLength = 0;
 	m_CandidateCount = 0;
 	m_CandidateSelectedIndex = -1;
+
+	m_ClipboardImage.m_pData = 0;
+	m_ClipboardImage.m_DataSize = 0;
 }
 
 void CInput::Init()
@@ -298,6 +301,36 @@ const char *CInput::GetClipboardText()
 void CInput::SetClipboardText(const char *pText)
 {
 	SDL_SetClipboardText(pText);
+}
+
+const void *CInput::ClipboardImageCallback(void *pUser, const char *pType, size_t *pSize)
+{
+	if(str_comp_nocase(pType, "image/png"))
+	{
+		*pSize = 0;
+		return 0;
+	}
+	CInput *pSelf = static_cast<CInput *>(pUser);
+	*pSize = pSelf->m_ClipboardImage.m_DataSize;
+	return pSelf->m_ClipboardImage.m_pData;
+}
+
+void CInput::ClipboardCleanupCallback(void *pUser)
+{
+	CInput *pSelf = static_cast<CInput *>(pUser);
+	if(pSelf->m_ClipboardImage.m_pData)
+	{
+		mem_free(pSelf->m_ClipboardImage.m_pData);
+		pSelf->m_ClipboardImage.m_pData = 0;
+	}
+}
+
+void CInput::SetClipboardImage(unsigned char *pData, int DataSize)
+{
+    static const char *apMimeTypes[] = {"image/png"};
+	SDL_SetClipboardData(ClipboardImageCallback, ClipboardCleanupCallback, this, apMimeTypes, 1);
+	m_ClipboardImage.m_pData = pData;
+	m_ClipboardImage.m_DataSize = DataSize;
 }
 
 void CInput::StartTextInput()

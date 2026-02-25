@@ -388,6 +388,8 @@ class CGraphics_Threaded : public IEngineGraphics
 	int m_Drawing;
 	bool m_DoScreenshot;
 	char m_aScreenshotName[128];
+	FScreenshotCallback m_pfnScreenshot;
+	void *m_pScreenshotUser;
 
 	CTextureHandle m_InvalidTexture;
 
@@ -476,7 +478,7 @@ public:
 	virtual void Shutdown();
 
 	virtual void ReadBackbuffer(unsigned char **ppPixels, int x, int y, int w, int h);
-	virtual void TakeScreenshot(const char *pFilename);
+	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, void *pUser);
 	virtual void Swap();
 	virtual bool SetVSync(bool State);
 
