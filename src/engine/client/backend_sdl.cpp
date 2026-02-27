@@ -943,7 +943,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 			dbg_msg("gfx", "failed to initialize GLAD");
 			return -1;
 		}
-		dbg_msg("gfx", "using %s", glGetString(GL_VERSION));
+		dbg_msg("gfx", "using %s (%s)", glGetString(GL_VERSION), glGetString(GL_VENDOR));
 	}
 	else
 	{
@@ -952,7 +952,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 			dbg_msg("gfx", "failed to initialize GLAD");
 			return -1;
 		}
-		dbg_msg("gfx", "using OpenGL %s", glGetString(GL_VERSION));
+		dbg_msg("gfx", "using OpenGL %s (%s)", glGetString(GL_VERSION), glGetString(GL_VENDOR));
 	}
 	SDL_GetWindowSizeInPixels(m_pWindow, pScreenWidth, pScreenHeight); // drawable size may differ in high dpi mode
 
