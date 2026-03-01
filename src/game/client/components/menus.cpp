@@ -670,9 +670,8 @@ void CMenus::RenderMenubar(CUIRect Rect)
 
 			Box.HSplitBottom(25.0f, 0, &Box);
 
-			// make the header look like an active tab
-			Box.Draw(vec4(1.0f, 1.0f, 1.0f, 0.75f));
-			UI()->DoLabelSelected(&Box, Localize("Demos"), true, Box.h * CUI::ms_FontmodHeight, TEXTALIGN_MC);
+			Box.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
+			UI()->DoLabel(&Box, Localize("Demos"), Box.h * CUI::ms_FontmodHeight, TEXTALIGN_MC);
 		}
 	}
 
