@@ -14,6 +14,7 @@ public:
 	virtual void Snap(int SnappingClient);
 
 	int GetOwner() { return m_Owner; }
+
 protected:
 	bool CheckHit(class CCharacter *pChr);
 	bool IsActive();

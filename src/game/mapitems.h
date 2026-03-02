@@ -10,6 +10,7 @@ enum
 	LAYERTYPE_GAME,
 	LAYERTYPE_TILES,
 	LAYERTYPE_QUADS,
+	LAYERTYPE_SOUNDS = 10,
 
 	MAPITEMTYPE_VERSION = 0,
 	MAPITEMTYPE_INFO,
@@ -18,6 +19,7 @@ enum
 	MAPITEMTYPE_GROUP,
 	MAPITEMTYPE_LAYER,
 	MAPITEMTYPE_ENVPOINTS,
+	MAPITEMTYPE_SOUND,
 
 	CURVETYPE_STEP = 0,
 	CURVETYPE_LINEAR,
@@ -253,6 +255,79 @@ struct CMapItemEnvelope : public CMapItemEnvelope_v2
 	{
 		CURRENT_VERSION = 3
 	};
+};
+
+class CSoundShape
+{
+public:
+	enum
+	{
+		SHAPE_RECTANGLE = 0,
+		SHAPE_CIRCLE,
+		NUM_SHAPES,
+	};
+
+	class CRectangle
+	{
+	public:
+		int m_Width, m_Height; // fxp 22.10
+	};
+
+	class CCircle
+	{
+	public:
+		int m_Radius;
+	};
+
+	int m_Type;
+
+	union
+	{
+		CRectangle m_Rectangle;
+		CCircle m_Circle;
+	};
+};
+
+class CSoundSource
+{
+public:
+	CPoint m_Position;
+	int m_Loop;
+	int m_Pan; // 0 - no panning, 1 - panning
+	int m_TimeDelay; // in s
+	int m_Falloff; // [0,255] // 0 - No falloff, 255 - full
+
+	int m_PosEnv;
+	int m_PosEnvOffset;
+	int m_SoundEnv;
+	int m_SoundEnvOffset;
+
+	CSoundShape m_Shape;
+};
+
+class CMapItemLayerSounds
+{
+public:
+	CMapItemLayer m_Layer;
+	int m_Version;
+
+	int m_NumSources;
+	int m_Data;
+	int m_Sound;
+
+	int m_aName[3];
+};
+
+class CMapItemSound
+{
+public:
+	int m_Version;
+
+	int m_External;
+
+	int m_SoundName;
+	int m_SoundData;
+	int m_Unused;
 };
 
 #endif

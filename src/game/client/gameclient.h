@@ -77,6 +77,7 @@ class CGameClient : public IGameClient
 	void LoadFonts();
 
 	static void ScreenshotCallback(void *pUser, const char *pPath);
+
 public:
 	IKernel *Kernel() { return IInterface::Kernel(); }
 	IEngine *Engine() const { return m_pEngine; }
@@ -347,6 +348,7 @@ public:
 	class CItems *m_pItems;
 	class CMapLayers *m_pMapLayersBackGround;
 	class CMapLayers *m_pMapLayersForeGround;
+	class CMapSounds *m_pMapSounds;
 };
 
 void FormatTime(char *pBuf, int Size, int Time, int Precision);

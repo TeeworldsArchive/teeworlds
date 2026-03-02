@@ -40,6 +40,7 @@
 #include "components/items.h"
 #include "components/mapimages.h"
 #include "components/maplayers.h"
+#include "components/mapsounds.h"
 #include "components/menus.h"
 #include "components/motd.h"
 #include "components/nameplates.h"
@@ -121,6 +122,8 @@ static CMapImages gs_MapImages;
 
 static CMapLayers gs_MapLayersBackGround(CMapLayers::TYPE_BACKGROUND);
 static CMapLayers gs_MapLayersForeGround(CMapLayers::TYPE_FOREGROUND);
+
+static CMapSounds gs_MapSounds;
 
 CGameClient::CStack::CStack() { m_Num = 0; }
 void CGameClient::CStack::Add(class CComponent *pComponent) { m_apComponents[m_Num++] = pComponent; }
@@ -253,6 +256,7 @@ void CGameClient::OnConsoleInit()
 	m_pItems = &::gs_Items;
 	m_pMapLayersBackGround = &::gs_MapLayersBackGround;
 	m_pMapLayersForeGround = &::gs_MapLayersForeGround;
+	m_pMapSounds = &::gs_MapSounds;
 	m_pStats = &::gs_Stats;
 
 	// make a list of all the systems, make sure to add them in the corrent render order
@@ -261,6 +265,7 @@ void CGameClient::OnConsoleInit()
 	m_All.Add(m_pMapimages);
 	m_All.Add(m_pEffects); // doesn't render anything, just updates effects
 	m_All.Add(m_pParticles); // doesn't render anything, just updates all the particles
+	m_All.Add(m_pMapSounds);
 	m_All.Add(m_pBinds);
 	m_All.Add(&m_pBinds->m_SpecialBinds);
 	m_All.Add(m_pControls);

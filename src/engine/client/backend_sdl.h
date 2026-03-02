@@ -129,6 +129,7 @@ class CCommandProcessorFragment_OpenGL
 		NUM_WRAP_SAMPLERS,
 	};
 	GLuint m_aSampler2D[NUM_BASIC_SAMPLERS][NUM_WRAP_SAMPLERS];
+
 public:
 	enum
 	{

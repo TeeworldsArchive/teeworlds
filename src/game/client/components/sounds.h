@@ -16,7 +16,7 @@ class CSounds : public CComponent
 	struct QueueEntry
 	{
 		int m_Channel;
-		int m_SetId;
+		ISound::CSampleHandle m_Sample;
 	} m_aQueue[QUEUE_SIZE];
 	int m_QueuePos;
 	int64 m_QueueWaitTime;
@@ -33,6 +33,7 @@ public:
 		CHN_MUSIC,
 		CHN_WORLD,
 		CHN_GLOBAL,
+		CHN_MAPSOUND,
 	};
 
 	virtual int GetInitAmount() const;
@@ -42,11 +43,20 @@ public:
 	virtual void OnRender();
 
 	void ClearQueue();
+	void EnqueueSample(int Channel, ISound::CSampleHandle Sample);
+	int PlaySample(int Channel, ISound::CSampleHandle Sample, float Vol, int Flags = 0);
+	int PlaySampleAt(int Channel, ISound::CSampleHandle Sample, float Vol, vec2 Pos, int Flags = 0);
+	void StopSample(ISound::CSampleHandle Sample);
+	bool IsPlayingSample(ISound::CSampleHandle Sample);
+
 	void Enqueue(int Channel, int SetId);
 	void Play(int Channel, int SetId, float Vol);
 	void PlayAt(int Channel, int SetId, float Vol, vec2 Pos);
 	void Stop(int SetId);
 	bool IsPlaying(int SetId);
+
+	ISound::CSampleHandle LoadSampleMemory(const char *pContext, const unsigned char *pData, int DataSize);
+	bool UnloadSample(ISound::CSampleHandle *pSample);
 };
 
 #endif

@@ -101,6 +101,7 @@ private:
 
 	static const void *ClipboardImageCallback(void *pUser, const char *pType, size_t *pSize);
 	static void ClipboardCleanupCallback(void *pUser);
+
 public:
 	CInput();
 

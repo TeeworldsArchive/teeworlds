@@ -20,8 +20,6 @@ class CMapLayers : public CComponent
 	int m_EggLayerWidth;
 	int m_EggLayerHeight;
 
-	static void EnvelopeEval(float TimeOffset, int Env, float *pChannels, void *pUser);
-
 	void LoadEnvPoints(const CLayers *pLayers, array<CEnvPoint> &lEnvPoints);
 	void LoadBackgroundMap();
 
@@ -49,6 +47,8 @@ public:
 	void BackgroundMapUpdate();
 
 	bool MenuMapLoaded() { return m_pMenuMap ? m_pMenuMap->IsLoaded() : false; }
+
+	static void EnvelopeEval(float TimeOffset, int Env, float *pChannels, void *pUser);
 };
 
 #endif

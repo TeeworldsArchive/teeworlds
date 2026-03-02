@@ -1398,6 +1398,8 @@ if(CLIENT)
     components/mapimages.h
     components/maplayers.cpp
     components/maplayers.h
+    components/mapsounds.cpp
+    components/mapsounds.h
     components/menus.cpp
     components/menus.h
     components/menus_browser.cpp

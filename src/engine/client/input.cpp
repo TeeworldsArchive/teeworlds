@@ -327,7 +327,7 @@ void CInput::ClipboardCleanupCallback(void *pUser)
 
 void CInput::SetClipboardImage(unsigned char *pData, int DataSize)
 {
-    static const char *apMimeTypes[] = {"image/png"};
+	static const char *apMimeTypes[] = {"image/png"};
 	SDL_SetClipboardData(ClipboardImageCallback, ClipboardCleanupCallback, this, apMimeTypes, 1);
 	m_ClipboardImage.m_pData = pData;
 	m_ClipboardImage.m_DataSize = DataSize;

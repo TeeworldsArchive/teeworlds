@@ -252,7 +252,6 @@ public:
 	range all() const { return range(list, list + num_elements); }
 
 protected:
-
 	T list[N];
 	int num_elements;
 };

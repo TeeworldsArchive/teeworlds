@@ -458,7 +458,6 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	}
 
-
 	// initialize shader uniforms with default values
 	m_RenderShader.m_UseTextureLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "useTexture");
 	m_RenderShader.m_IsAlphaOnlyLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "IsAlphaOnly");

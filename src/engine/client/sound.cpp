@@ -38,6 +38,7 @@ struct CSample
 struct CChannel
 {
 	int m_Vol; // 0 - 255
+	int m_Pan;
 };
 
 struct CVoice
@@ -48,6 +49,14 @@ struct CVoice
 	int m_Vol; // 0 - 255
 	int m_Flags;
 	int m_X, m_Y;
+	float m_Falloff; // [0.0, 1.0]
+
+	int m_Shape;
+	union
+	{
+		ISound::CVoiceShapeCircle m_Circle;
+		ISound::CVoiceShapeRectangle m_Rectangle;
+	};
 };
 
 static CSample m_aSamples[NUM_SAMPLES] = {{0}};
@@ -98,8 +107,8 @@ static void Mix(short *pFinalOut, unsigned Frames)
 
 			unsigned End = v->m_pSample->m_NumFrames - v->m_Tick;
 
-			int Rvol = v->m_pChannel->m_Vol;
-			int Lvol = v->m_pChannel->m_Vol;
+			int Rvol = v->m_pChannel->m_Vol * (v->m_Vol / 255.0f);
+			int Lvol = v->m_pChannel->m_Vol * (v->m_Vol / 255.0f);
 
 			// make sure that we don't go outside the sound data
 			if(Frames < End)
@@ -112,28 +121,63 @@ static void Mix(short *pFinalOut, unsigned Frames)
 			// volume calculation
 			if(v->m_Flags & ISound::FLAG_POS)
 			{
-				int dx = v->m_X - m_CenterX;
-				int dy = v->m_Y - m_CenterY;
-				float Dist = sqrtf((float) dx * dx + dy * dy);
-				if(Dist >= 0.0f && Dist < m_MaxDistance)
+				vec2 Delta = vec2(v->m_X - m_CenterX, v->m_Y - m_CenterY);
+				vec2 Falloff = vec2(0.0f, 0.0f);
+				float RangeX = 0.0f; // for panning
+				bool InVoiceField = false;
+				switch(v->m_Shape)
 				{
-					// linear falloff
-					float Falloff = 1.0f - Dist / m_MaxDistance;
+					case ISound::SHAPE_CIRCLE:
+					{
+						const float Radius = v->m_Circle.m_Radius;
+						RangeX = Radius;
 
-					// amplitude after falloff
-					float FalloffAmp = v->m_pChannel->m_Vol * Falloff;
+						const float Dist = length(Delta);
+						if(Dist < Radius)
+						{
+							InVoiceField = true;
 
-					// distribute volume to the channels depending on x difference
-					float Lpan = 0.5f - dx / m_MaxDistance / 2.0f;
-					float Rpan = 1.0f - Lpan;
+							// falloff
+							const float FalloffDistance = Radius * v->m_Falloff;
+							Falloff.x = Falloff.y = Dist > FalloffDistance ? (Radius - Dist) / (Radius - FalloffDistance) : 1.0f;
+						}
+					}
+					break;
+					case ISound::SHAPE_RECTANGLE:
+					{
+						const vec2 AbsoluteDelta = vec2(absolute(Delta.x), absolute(Delta.y));
+						const float w = v->m_Rectangle.m_Width / 2.0f;
+						const float h = v->m_Rectangle.m_Height / 2.0f;
+						RangeX = w;
 
-					// apply square root to preserve sound power after panning
-					float LampFactor = sqrt(Lpan);
-					float RampFactor = sqrt(Rpan);
+						if(AbsoluteDelta.x < w && AbsoluteDelta.y < h)
+						{
+							InVoiceField = true;
 
-					// volume of the channels
-					Lvol = FalloffAmp * LampFactor;
-					Rvol = FalloffAmp * RampFactor;
+							// falloff
+							const vec2 FalloffDistance = vec2(w, h) * v->m_Falloff;
+							Falloff.x = AbsoluteDelta.x > FalloffDistance.x ? (w - AbsoluteDelta.x) / (w - FalloffDistance.x) : 1.0f;
+							Falloff.y = AbsoluteDelta.y > FalloffDistance.y ? (h - AbsoluteDelta.y) / (h - FalloffDistance.y) : 1.0f;
+						}
+					}
+					break;
+				};
+
+				if(InVoiceField)
+				{
+					// panning
+					if(!(v->m_Flags & ISound::FLAG_NO_PANNING))
+					{
+						if(Delta.x > 0)
+							Lvol = ((RangeX - absolute(Delta.x)) * Lvol) / RangeX;
+						else
+							Rvol = ((RangeX - absolute(Delta.x)) * Rvol) / RangeX;
+					}
+
+					{
+						Lvol *= Falloff.x * Falloff.y;
+						Rvol *= Falloff.x * Falloff.y;
+					}
 				}
 				else
 				{
@@ -332,11 +376,10 @@ void CSound::RateConvert(int SampleID)
 	pSample->m_NumFrames = NumFrames;
 }
 
-ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
+ISound::CSampleHandle CSound::LoadOpusMemory(const char *pContext, const unsigned char *pData, int DataSize)
 {
 	CSample *pSample;
 	int SampleID = -1;
-
 	// don't waste memory on sound when we are stress testing
 #ifdef CONF_DEBUG
 	if(m_pConfig->m_DbgStress)
@@ -350,33 +393,25 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 	if(!m_pStorage)
 		return CSampleHandle();
 
-	lock_wait(m_SoundLock);
-	unsigned char *pFileData;
-	unsigned FileSize;
-	if(!m_pStorage->ReadFile(pFilename, IStorage::TYPE_ALL, (void **) &pFileData, &FileSize))
-	{
-		dbg_msg("sound/opus", "failed to open file. filename='%s'", pFilename);
-		lock_unlock(m_SoundLock);
+	if(!pContext || !pData || DataSize <= 0)
 		return CSampleHandle();
-	}
 
+	lock_wait(m_SoundLock);
 	int Error = 0;
-	OggOpusFile *pOpusFile = op_open_memory(pFileData, FileSize, &Error);
+	OggOpusFile *pOpusFile = op_open_memory(pData, DataSize, &Error);
 	if(!pOpusFile)
 	{
-		dbg_msg("sound/opus", "failed to open opus file '%s': error %d", pFilename, Error);
-		mem_free(pFileData);
+		dbg_msg("sound/opus", "failed to open opus '%s': error %d", pContext, Error);
 		lock_unlock(m_SoundLock);
 		return CSampleHandle();
 	}
 
 	int NumChannels = op_channel_count(pOpusFile, -1);
-	;
+
 	if(NumChannels < 0 || NumChannels > 2)
 	{
-		dbg_msg("sound/opus", "only mono/stereo supported. channels=%d, file='%s'", NumChannels, pFilename);
+		dbg_msg("sound/opus", "only mono/stereo supported. channels=%d, file='%s'", NumChannels, pContext);
 		op_free(pOpusFile);
-		mem_free(pFileData);
 		lock_unlock(m_SoundLock);
 		return CSampleHandle();
 	}
@@ -384,9 +419,8 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 	int TotalSamples = op_pcm_total(pOpusFile, -1);
 	if(TotalSamples < 0)
 	{
-		dbg_msg("sound/opus", "failed to get number of samples, error %d. file='%s'", TotalSamples, pFilename);
+		dbg_msg("sound/opus", "failed to get number of samples, error %d. file='%s'", TotalSamples, pContext);
 		op_free(pOpusFile);
-		mem_free(pFileData);
 		lock_unlock(m_SoundLock);
 		return CSampleHandle();
 	}
@@ -395,7 +429,6 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 	if(SampleID < 0)
 	{
 		op_free(pOpusFile);
-		mem_free(pFileData);
 		lock_unlock(m_SoundLock);
 		return CSampleHandle();
 	}
@@ -404,7 +437,6 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 	if(!pSample->m_pData)
 	{
 		op_free(pOpusFile);
-		mem_free(pFileData);
 		lock_unlock(m_SoundLock);
 		return CSampleHandle();
 	}
@@ -417,8 +449,7 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 		{
 			mem_free(pSample->m_pData);
 			op_free(pOpusFile);
-			mem_free(pFileData);
-			dbg_msg("sound/opus", "op_read error %d at %d. file='%s'", Read, Pos, pFilename);
+			dbg_msg("sound/opus", "op_read error %d at %d. file='%s'", Read, Pos, pContext);
 			return CSampleHandle();
 		}
 		else if(Read == 0) // EOF
@@ -428,7 +459,6 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 	}
 
 	op_free(pOpusFile);
-	mem_free(pFileData);
 
 	pSample->m_Channels = NumChannels;
 	pSample->m_Rate = 48000;
@@ -438,11 +468,65 @@ ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
 	pSample->m_PausedAt = 0;
 
 	if(m_pConfig->m_Debug)
-		dbg_msg("sound/opus", "loaded %s (%d samples, %d channels)", pFilename, TotalSamples, NumChannels);
+		dbg_msg("sound/opus", "loaded %s (%d samples, %d channels)", pContext, TotalSamples, NumChannels);
 
 	RateConvert(SampleID);
 	lock_unlock(m_SoundLock);
 	return CreateSampleHandle(SampleID);
+}
+
+ISound::CSampleHandle CSound::LoadOpus(const char *pFilename)
+{
+	// don't waste memory on sound when we are stress testing
+#ifdef CONF_DEBUG
+	if(m_pConfig->m_DbgStress)
+		return CSampleHandle();
+#endif
+
+	// no need to load sound when we are running with no sound
+	if(!m_SoundEnabled)
+		return CSampleHandle();
+
+	if(!m_pStorage)
+		return CSampleHandle();
+
+	unsigned char *pFileData;
+	unsigned FileSize;
+	if(!m_pStorage->ReadFile(pFilename, IStorage::TYPE_ALL, (void **) &pFileData, &FileSize))
+	{
+		dbg_msg("sound/opus", "failed to open file. filename='%s'", pFilename);
+		return CSampleHandle();
+	}
+
+	ISound::CSampleHandle Sample = LoadOpusMemory(pFilename, pFileData, FileSize);
+	mem_free(pFileData);
+	return Sample;
+}
+
+bool CSound::UnloadSample(CSampleHandle *pSampleID)
+{
+	if(!pSampleID)
+		return false;
+
+	lock_wait(m_SoundLock);
+	if(m_aSamples[pSampleID->Id()].m_pData)
+	{
+		// search for voice
+		for(int i = 0; i < NUM_VOICES; i++)
+		{
+			if(m_aVoices[i].m_pSample == &m_aSamples[pSampleID->Id()])
+			{
+				m_aVoices[i].m_pSample = nullptr;
+			}
+		}
+		mem_free(m_aSamples[pSampleID->Id()].m_pData);
+		m_aSamples[pSampleID->Id()].m_pData = 0;
+		pSampleID->Invalidate();
+		lock_unlock(m_SoundLock);
+		return true;
+	}
+	lock_unlock(m_SoundLock);
+	return false;
 }
 
 void CSound::SetListenerPos(float x, float y)
@@ -461,7 +545,12 @@ void CSound::SetChannelVolume(int ChannelID, float Vol)
 	m_aChannels[ChannelID].m_Vol = (int) (Vol * 255.0f);
 }
 
-int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, float y)
+void CSound::SetChannelPan(int ChannelID, float Pan)
+{
+	m_aChannels[ChannelID].m_Pan = (int) (Pan * 255.0f);
+}
+
+int CSound::Play(int ChannelID, CSampleHandle SampleID, float Volume, int Flags, float x, float y)
 {
 	if(!SampleID.IsValid())
 		return -1;
@@ -492,24 +581,27 @@ int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, floa
 			m_aVoices[VoiceID].m_Tick = m_aSamples[SampleID.Id()].m_PausedAt;
 		else
 			m_aVoices[VoiceID].m_Tick = 0;
-		m_aVoices[VoiceID].m_Vol = 255;
+		m_aVoices[VoiceID].m_Vol = (int) (clamp(Volume, 0.0f, 1.0f) * 255);
 		m_aVoices[VoiceID].m_Flags = Flags;
 		m_aVoices[VoiceID].m_X = (int) x;
 		m_aVoices[VoiceID].m_Y = (int) y;
+		m_aVoices[VoiceID].m_Falloff = 0.0f;
+		m_aVoices[VoiceID].m_Shape = ISound::SHAPE_CIRCLE;
+		m_aVoices[VoiceID].m_Circle.m_Radius = 1500;
 	}
 
 	lock_unlock(m_SoundLock);
 	return VoiceID;
 }
 
-int CSound::PlayAt(int ChannelID, CSampleHandle SampleID, int Flags, float x, float y)
+int CSound::PlayAt(int ChannelID, CSampleHandle SampleID, float Volume, int Flags, float x, float y)
 {
-	return Play(ChannelID, SampleID, Flags | ISound::FLAG_POS, x, y);
+	return Play(ChannelID, SampleID, Volume, Flags | ISound::FLAG_POS, x, y);
 }
 
-int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags)
+int CSound::Play(int ChannelID, CSampleHandle SampleID, float Volume, int Flags)
 {
-	return Play(ChannelID, SampleID, Flags, 0, 0);
+	return Play(ChannelID, SampleID, Volume, Flags, 0, 0);
 }
 
 void CSound::Stop(CSampleHandle SampleID)
@@ -569,6 +661,107 @@ bool CSound::IsPlaying(CSampleHandle SampleID)
 	}
 	lock_unlock(m_SoundLock);
 	return Ret;
+}
+
+void CSound::SetVoiceVolume(int VoiceID, float Volume)
+{
+	if(!m_aVoices[VoiceID].m_pSample)
+		return;
+	lock_wait(m_SoundLock);
+	m_aVoices[VoiceID].m_Vol = (int) (clamp(Volume, 0.0f, 1.0f) * 255);
+	lock_unlock(m_SoundLock);
+}
+
+void CSound::SetVoiceFalloff(int VoiceID, float Falloff)
+{
+	if(!m_aVoices[VoiceID].m_pSample)
+		return;
+	lock_wait(m_SoundLock);
+	m_aVoices[VoiceID].m_Falloff = clamp(Falloff, 0.0f, 1.0f);
+	lock_unlock(m_SoundLock);
+}
+
+void CSound::SetVoicePos(int VoiceID, float x, float y)
+{
+	if(!m_aVoices[VoiceID].m_pSample)
+		return;
+	lock_wait(m_SoundLock);
+	m_aVoices[VoiceID].m_X = (int) x;
+	m_aVoices[VoiceID].m_Y = (int) y;
+	lock_unlock(m_SoundLock);
+}
+
+void CSound::SetVoiceCircle(int VoiceID, float Radius)
+{
+	if(!m_aVoices[VoiceID].m_pSample)
+		return;
+	lock_wait(m_SoundLock);
+	m_aVoices[VoiceID].m_Shape = ISound::SHAPE_CIRCLE;
+	m_aVoices[VoiceID].m_Circle.m_Radius = maximum(0.0f, Radius);
+	lock_unlock(m_SoundLock);
+}
+
+void CSound::SetVoiceRectangle(int VoiceID, float Width, float Height)
+{
+	if(!m_aVoices[VoiceID].m_pSample)
+		return;
+	lock_wait(m_SoundLock);
+	m_aVoices[VoiceID].m_Shape = ISound::SHAPE_RECTANGLE;
+	m_aVoices[VoiceID].m_Rectangle.m_Width = maximum(0.0f, Width);
+	m_aVoices[VoiceID].m_Rectangle.m_Height = maximum(0.0f, Height);
+	lock_unlock(m_SoundLock);
+}
+
+void CSound::SetVoiceTimeOffset(int VoiceID, float Offset)
+{
+	if(!m_aVoices[VoiceID].m_pSample)
+		return;
+	lock_wait(m_SoundLock);
+	int Tick = 0;
+	bool IsLooping = m_aVoices[VoiceID].m_Flags & ISound::FLAG_LOOP;
+	int64 TickOffset = m_aVoices[VoiceID].m_pSample->m_Rate * Offset;
+	if(m_aVoices[VoiceID].m_pSample->m_NumFrames > 0 && IsLooping)
+	{
+		const int LoopStart = m_aVoices[VoiceID].m_pSample->m_LoopStart;
+		const int NumFrames = m_aVoices[VoiceID].m_pSample->m_NumFrames;
+		if(TickOffset < static_cast<int64>(NumFrames))
+		{
+			// Still in first playthrough
+			Tick = TickOffset;
+		}
+		else
+		{
+			// Past first playthrough, wrap within loop section only
+			const int LoopLength = NumFrames - LoopStart;
+			if(LoopLength > 0)
+				Tick = LoopStart + ((TickOffset - NumFrames) % LoopLength);
+			else
+				Tick = LoopStart;
+		}
+	}
+	else
+	{
+		Tick = clamp<int64>(TickOffset, 0LL, m_aVoices[VoiceID].m_pSample->m_NumFrames);
+	}
+	float Threshold = maximum(0.2f * m_aVoices[VoiceID].m_pSample->m_Rate, (float) m_MaxFrames);
+	if(absolute(m_aVoices[VoiceID].m_Tick - Tick) > Threshold)
+	{
+		// take care of looping (modulo!)
+		if(!(IsLooping && (minimum(m_aVoices[VoiceID].m_Tick, Tick) + m_aVoices[VoiceID].m_pSample->m_NumFrames - maximum(m_aVoices[VoiceID].m_Tick, Tick)) <= Threshold))
+		{
+			m_aVoices[VoiceID].m_Tick = Tick;
+		}
+	}
+	lock_unlock(m_SoundLock);
+}
+
+void CSound::StopVoice(int VoiceID)
+{
+	if(!m_aVoices[VoiceID].m_pSample)
+		return;
+	lock_wait(m_SoundLock);
+	m_aVoices[VoiceID].m_pSample = 0;
+	lock_unlock(m_SoundLock);
 }
 
 IEngineSound *CreateEngineSound() { return new CSound; }

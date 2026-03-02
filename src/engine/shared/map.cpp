@@ -13,6 +13,7 @@ class CMap : public IEngineMap
 public:
 	CMap() {}
 
+	virtual int GetDataSize(int Index) { return m_DataFile.GetDataSize(Index); }
 	virtual void *GetData(int Index) { return m_DataFile.GetData(Index); }
 	virtual void *GetDataSwapped(int Index) { return m_DataFile.GetDataSwapped(Index); }
 	virtual void UnloadData(int Index) { m_DataFile.UnloadData(Index); }
