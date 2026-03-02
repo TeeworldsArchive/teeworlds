@@ -739,7 +739,7 @@ void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
 		const int64 Now = time_get();
 		if(Now - m_aLastSoundPlayed[ChatType] >= time_freq() * 0.3f)
 		{
-			m_pClient->m_pSounds->Play(CSounds::CHN_GUI, GetChatSound(ChatType), 0);
+			m_pClient->m_pSounds->Play(CSounds::CHN_GUI, GetChatSound(ChatType), 1.0f);
 			m_aLastSoundPlayed[ChatType] = Now;
 		}
 	}

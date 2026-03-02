@@ -1206,7 +1206,7 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 			int TeeEmote = Distance < 20.0f ? EMOTE_HAPPY : EMOTE_NORMAL;
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, TeeEmote, TeeDirection, TeePosition);
 			if(Distance < 20.0f && UI()->MouseButtonClicked(0))
-				m_pClient->m_pSounds->Play(CSounds::CHN_GUI, SOUND_PLAYER_SPAWN, 0);
+				m_pClient->m_pSounds->Play(CSounds::CHN_GUI, SOUND_PLAYER_SPAWN, 1.0f);
 		}
 
 		// handle right (team skins)
