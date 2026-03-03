@@ -31,7 +31,7 @@ void CRIWall::Tick()
 		Reset();
 		return;
 	}
-	if(m_Owner > 0 && m_Owner < MAX_CLIENTS && !GameServer()->m_apPlayers[m_Owner])
+	if(m_Owner >= 0 && m_Owner < MAX_CLIENTS && !GameServer()->m_apPlayers[m_Owner])
 		m_Owner = -1;
 
 	if(IsActive())
