@@ -91,6 +91,21 @@ public:
 	}
 
 	/*
+		Function: move
+	*/
+	void move(array &other)
+	{
+		other.clear();
+		other.list = list;
+		other.list_size = list_size;
+		other.num_elements = num_elements;
+
+		list_size = 1;
+		list = ALLOCATOR::alloc_array(list_size);
+		num_elements = 0;
+	}
+
+	/*
 		Function: remove_index_fast
 
 		Remarks:

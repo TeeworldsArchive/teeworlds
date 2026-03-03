@@ -41,8 +41,13 @@ void CGameContext::Construct(int Resetting)
 	m_NumVoteOptions = 0;
 	m_LockTeams = 0;
 
+	m_pCurMapRotationEntry = 0;
+
 	if(Resetting == NO_RESET)
+	{
 		m_pVoteOptionHeap = new CHeap();
+		m_pMapRotationHeap = new CHeap();
+	}
 }
 
 CGameContext::CGameContext(int Resetting)
@@ -60,7 +65,10 @@ CGameContext::~CGameContext()
 	for(int i = 0; i < MAX_CLIENTS; i++)
 		delete m_apPlayers[i];
 	if(!m_Resetting)
+	{
 		delete m_pVoteOptionHeap;
+		delete m_pMapRotationHeap;
+	}
 }
 
 void CGameContext::Clear()
@@ -70,6 +78,11 @@ void CGameContext::Clear()
 	CVoteOptionServer *pVoteOptionLast = m_pVoteOptionLast;
 	int NumVoteOptions = m_NumVoteOptions;
 	CTuningParams Tuning = m_Tuning;
+
+	sorted_array<CMapRotationIndex> lMapRotations;
+	m_lMapRotations.move(lMapRotations);
+	CHeap *pMapRotationHeap = m_pMapRotationHeap;
+	CMapRotationGroup::CEntry *pEntry = m_pCurMapRotationEntry;
 
 	m_Resetting = true;
 	this->~CGameContext();
@@ -81,6 +94,10 @@ void CGameContext::Clear()
 	m_pVoteOptionLast = pVoteOptionLast;
 	m_NumVoteOptions = NumVoteOptions;
 	m_Tuning = Tuning;
+
+	lMapRotations.move(m_lMapRotations);
+	m_pMapRotationHeap = pMapRotationHeap;
+	m_pCurMapRotationEntry = pEntry;
 }
 
 class CCharacter *CGameContext::GetPlayerChar(int ClientID)
@@ -1519,6 +1536,103 @@ void CGameContext::ConVote(IConsole::IResult *pResult, void *pUserData)
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 }
 
+void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+
+	unsigned GroupHash = str_quickhash(pResult->GetString(0));
+
+	CMapRotationIndex GroupIndex;
+	GroupIndex.m_Hash = GroupHash;
+	sorted_array<CMapRotationIndex>::range r = ::find_binary(pSelf->m_lMapRotations.all(), GroupIndex);
+	if(r.empty())
+	{
+		GroupIndex.m_pGroup = static_cast<CMapRotationGroup *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup)));
+		GroupIndex.m_pGroup->m_pGroupName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(0));
+		GroupIndex.m_pGroup->m_pFirst = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry)));
+		GroupIndex.m_pGroup->m_pFirst->m_pGroup = GroupIndex.m_pGroup;
+		GroupIndex.m_pGroup->m_pFirst->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));
+		GroupIndex.m_pGroup->m_pFirst->m_pNext = 0;
+		pSelf->m_lMapRotations.add(GroupIndex);
+		return;
+	}
+	CMapRotationIndex &Index = r.front();
+	CMapRotationGroup::CEntry *pEntry = Index.m_pGroup->m_pFirst;
+	for(; pEntry->m_pNext; pEntry = pEntry->m_pNext);
+	pEntry->m_pNext = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry)));
+	pEntry->m_pNext->m_pGroup = Index.m_pGroup;
+	pEntry->m_pNext->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));
+	pEntry->m_pNext->m_pNext = 0;
+}
+
+void CGameContext::ConRemoveMapGroup(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	CMapRotationIndex GroupIndex;
+	GroupIndex.m_Hash = str_quickhash(pResult->GetString(0));
+	sorted_array<CMapRotationIndex>::range r = ::find_binary(pSelf->m_lMapRotations.all(), GroupIndex);
+	if(r.empty())
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map group doesn't exist");
+		return;
+	}
+	if(pSelf->m_pCurMapRotationEntry->m_pGroup == r.front().m_pGroup)
+		pSelf->m_pCurMapRotationEntry = 0;
+
+	pSelf->m_lMapRotations.remove(r.front());
+	if(pSelf->m_lMapRotations.size() == 0)
+	{
+		delete pSelf->m_pMapRotationHeap;
+		pSelf->m_pMapRotationHeap = new CHeap();
+	}
+}
+
+void CGameContext::ConListMaps(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+
+	CMapRotationIndex GroupIndex;
+	GroupIndex.m_Hash = str_quickhash(pResult->GetString(0));
+	sorted_array<CMapRotationIndex>::range r = ::find_binary(pSelf->m_lMapRotations.all(), GroupIndex);
+	if(r.empty())
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map group doesn't exist");
+		return;
+	}
+	for(CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", pEntry->m_pMapName);
+	}
+}
+
+void CGameContext::ConListMapGroups(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+
+	char aBuf[256];
+	int Index = 0;
+	for(sorted_array<CMapRotationIndex>::range r = pSelf->m_lMapRotations.all(); !r.empty(); r.pop_front())
+	{
+		str_format(aBuf, sizeof(aBuf), "[%02d] %s", Index, r.front().m_pGroup->m_pGroupName);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
+		Index++;
+	}
+}
+
+void CGameContext::ConUseMapGroup(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	CMapRotationIndex GroupIndex;
+	GroupIndex.m_Hash = str_quickhash(pResult->GetString(0));
+	sorted_array<CMapRotationIndex>::range r = ::find_binary(pSelf->m_lMapRotations.all(), GroupIndex);
+	if(r.empty())
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map group doesn't exist");
+		return;
+	}
+	pSelf->m_pCurMapRotationEntry = r.front().m_pGroup->m_pFirst;
+}
+
 void CGameContext::ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
 	pfnCallback(pResult, pCallbackUserData);
@@ -1576,6 +1690,12 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("remove_vote", "s[option]", CFGFLAG_SERVER, ConRemoveVote, this, "remove a voting option");
 	Console()->Register("clear_votes", "", CFGFLAG_SERVER, ConClearVotes, this, "Clears the voting options");
 	Console()->Register("vote", "r['yes'|'no']", CFGFLAG_SERVER, ConVote, this, "Force a vote to yes/no");
+
+	Console()->Register("add_map", "s[group] r[map]", CFGFLAG_SERVER, ConAddMap, this, "Add a map into map group (it will create the group if the group doesn't exist)");
+	Console()->Register("remove_map_group", "s[group]", CFGFLAG_SERVER, ConRemoveMapGroup, this, "remove the map group");
+	Console()->Register("list_maps", "s[group]", CFGFLAG_SERVER, ConListMaps, this, "list all the maps in the group");
+	Console()->Register("list_map_groups", "", CFGFLAG_SERVER, ConListMapGroups, this, "list all the map groups");
+	Console()->Register("use_map_group", "s[group]", CFGFLAG_SERVER, ConUseMapGroup, this, "use the map group");
 }
 
 void CGameContext::NewCommandHook(const CCommandManager::CCommand *pCommand, void *pContext)

@@ -38,7 +38,7 @@ IGameController::IGameController(CGameContext *pGameServer)
 	m_GameFlags = 0;
 	m_pGameType = "unknown";
 	m_GameInfo.m_MatchCurrent = m_MatchCount + 1;
-	m_GameInfo.m_MatchNum = (str_length(Config()->m_SvMaprotation) && Config()->m_SvMatchesPerMap) ? Config()->m_SvMatchesPerMap : 0;
+	m_GameInfo.m_MatchNum = (GameServer()->m_pCurMapRotationEntry && Config()->m_SvMatchesPerMap) ? Config()->m_SvMatchesPerMap : 0;
 	m_GameInfo.m_ScoreLimit = Config()->m_SvScorelimit;
 	m_GameInfo.m_TimeLimit = Config()->m_SvTimelimit;
 	m_MaxPlayerSlots = MAX_CLIENTS;
@@ -864,7 +864,7 @@ void IGameController::Tick()
 // info
 void IGameController::CheckGameInfo()
 {
-	int MatchNum = (str_length(Config()->m_SvMaprotation) && Config()->m_SvMatchesPerMap) ? Config()->m_SvMatchesPerMap : 0;
+	int MatchNum = (GameServer()->m_pCurMapRotationEntry && Config()->m_SvMatchesPerMap) ? Config()->m_SvMatchesPerMap : 0;
 	if(MatchNum == 0)
 		m_MatchCount = 0;
 	bool GameInfoChanged = (m_GameInfo.m_MatchCurrent != m_MatchCount + 1) || (m_GameInfo.m_MatchNum != MatchNum) ||
@@ -947,8 +947,6 @@ void IGameController::SendGameInfo(int ClientID)
 }
 
 // map
-static bool IsSeparator(char c) { return c == ';' || c == ' ' || c == ',' || c == '\t'; }
-
 void IGameController::ChangeMap(const char *pToMap)
 {
 	str_copy(m_aMapWish, pToMap, sizeof(m_aMapWish));
@@ -971,61 +969,17 @@ void IGameController::CycleMap()
 		m_MatchCount = 0;
 		return;
 	}
-	if(!str_length(Config()->m_SvMaprotation))
+
+	if(!GameServer()->m_pCurMapRotationEntry)
 		return;
-
-	// handle maprotation
-	const char *pMapRotation = Config()->m_SvMaprotation;
-	const char *pCurrentMap = Config()->m_SvMap;
-
-	int CurrentMapLen = str_length(pCurrentMap);
-	const char *pNextMap = pMapRotation;
-	while(*pNextMap)
-	{
-		int WordLen = 0;
-		while(pNextMap[WordLen] && !IsSeparator(pNextMap[WordLen]))
-			WordLen++;
-
-		if(WordLen == CurrentMapLen && str_comp_num(pNextMap, pCurrentMap, CurrentMapLen) == 0)
-		{
-			// map found
-			pNextMap += CurrentMapLen;
-			while(*pNextMap && IsSeparator(*pNextMap))
-				pNextMap++;
-
-			break;
-		}
-
-		pNextMap++;
-	}
-
-	// restart rotation
-	if(pNextMap[0] == 0)
-		pNextMap = pMapRotation;
-
-	// cut out the next map
-	char aBuf[512] = {0};
-	for(int i = 0; i < 511; i++)
-	{
-		aBuf[i] = pNextMap[i];
-		if(IsSeparator(pNextMap[i]) || pNextMap[i] == 0)
-		{
-			aBuf[i] = 0;
-			break;
-		}
-	}
-
-	// skip spaces
-	int i = 0;
-	while(IsSeparator(aBuf[i]))
-		i++;
 
 	m_MatchCount = 0;
 
 	char aBufMsg[256];
-	str_format(aBufMsg, sizeof(aBufMsg), "rotating map to %s", &aBuf[i]);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-	Server()->ChangeMap(&aBuf[i]);
+	str_format(aBufMsg, sizeof(aBufMsg), "rotating map to %s", GameServer()->m_pCurMapRotationEntry->m_pMapName);
+	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBufMsg);
+	Server()->ChangeMap(GameServer()->m_pCurMapRotationEntry->m_pMapName);
+	GameServer()->m_pCurMapRotationEntry->DoNext(&GameServer()->m_pCurMapRotationEntry);
 }
 
 // spawn

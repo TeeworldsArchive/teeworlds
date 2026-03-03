@@ -107,8 +107,8 @@ static void Mix(short *pFinalOut, unsigned Frames)
 
 			unsigned End = v->m_pSample->m_NumFrames - v->m_Tick;
 
-			int Rvol = v->m_pChannel->m_Vol * (v->m_Vol / 255.0f);
-			int Lvol = v->m_pChannel->m_Vol * (v->m_Vol / 255.0f);
+			int Rvol = (int) (v->m_pChannel->m_Vol * (v->m_Vol / 255.0f));
+			int Lvol = (int) (v->m_pChannel->m_Vol * (v->m_Vol / 255.0f));
 
 			// make sure that we don't go outside the sound data
 			if(Frames < End)
@@ -119,7 +119,7 @@ static void Mix(short *pFinalOut, unsigned Frames)
 				pInR = pInL;
 
 			// volume calculation
-			if(v->m_Flags & ISound::FLAG_POS)
+			if(v->m_Flags & ISound::FLAG_POS && v->m_pChannel->m_Pan)
 			{
 				vec2 Delta = vec2(v->m_X - m_CenterX, v->m_Y - m_CenterY);
 				vec2 Falloff = vec2(0.0f, 0.0f);
