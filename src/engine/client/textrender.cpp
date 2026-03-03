@@ -476,7 +476,6 @@ CGlyph *CGlyphMap::GetGlyph(int Chr, int FontSizeIndex, bool Render)
 			m_Glyphs.add(Index);
 			return Index.m_pGlyph;
 		}
-		delete Index.m_pGlyph;
 		return NULL;
 	}
 
