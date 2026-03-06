@@ -301,7 +301,8 @@ Objects = [
 
 	NetObjectEx("CustomSoundEntity:CustomObject", "custom-sound-entity@netobj.teeworlds.wiki", [
 		NetIntAny("m_Vol"),
-        NetIntAny("m_Offset"),
+        NetIntAny("m_Distance"),
+        NetTick("m_StartTick"),
 	]),
 
 	NetObjectEx("CharacterGameTexture", "character-game-texture@netobj.teeworlds.wiki", [

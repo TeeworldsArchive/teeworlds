@@ -21,11 +21,19 @@ class CClientResManager : public CComponent
         IOHANDLE m_DownloadTemp;
     };
 
+    struct CSoundEntity
+    {
+        int m_Voice;
+        int m_SnapshotID;
+        bool m_Active;
+    };
+    array<CSoundEntity> m_lSoundEntities;
     array<CClientResource> m_lResources;
     void RequestDownload(const Uuid *pRequest);
     bool LoadResource(CClientResource *pResource);
 
     void RenderImageEntity(const CNetObj_CustomImageEntity *pPrev, const CNetObj_CustomImageEntity *pCur);
+    void RenderSoundEntity(const CNetObj_CustomSoundEntity *pPrev, const CNetObj_CustomSoundEntity *pCur, int ItemID);
 public:
     CClientResManager();
     virtual void OnRender();

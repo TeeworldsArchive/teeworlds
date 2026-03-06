@@ -1,4 +1,5 @@
 #include <base/hash.h>
+#include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
 #include <generated/client_data.h>
 
@@ -70,8 +71,67 @@ void CClientResManager::RenderImageEntity(const CNetObj_CustomImageEntity *pPrev
 	Graphics()->QuadsEnd();
 }
 
+void CClientResManager::RenderSoundEntity(const CNetObj_CustomSoundEntity *pPrev, const CNetObj_CustomSoundEntity *pCur, int ItemID)
+{
+    Uuid SoundID;
+    mem_copy(&SoundID, pCur->m_Uuid, sizeof(Uuid));
+    ISound::CSampleHandle Sample = GetResourceSample(SoundID);
+    if(!Sample.IsValid())
+        return;
+    // search and mark the entity as active
+    CSoundEntity *pEntity = 0;
+    for(int i = 0; i < m_lSoundEntities.size(); i++)
+    {
+        if(ItemID == m_lSoundEntities[i].m_SnapshotID)
+        {
+            pEntity = &m_lSoundEntities[i];
+            pEntity->m_Active = true;
+            if(mem_comp(pPrev->m_Uuid, pCur->m_Uuid, sizeof(Uuid)) != 0)
+            {
+                Sound()->StopVoice(pEntity->m_Voice);
+                pEntity->m_Voice = Sound()->PlayAt(CSounds::CHN_WORLD, Sample, 1.0f, ISound::FLAG_LOOP, 0, 0);
+            }
+            break;
+        }
+    }
+
+    int Volume = mix(pPrev->m_Vol, pCur->m_Vol, Client()->IntraGameTick());
+	float Distance = mix(pPrev->m_Distance, pCur->m_Distance, Client()->IntraGameTick()) / 256.0f;
+    vec2 Pos = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCur->m_X, pCur->m_Y), Client()->IntraGameTick());
+    if(!pEntity)
+    {
+        CSoundEntity &NewEntity = m_lSoundEntities.emplace();
+        NewEntity.m_Active = true;
+        NewEntity.m_SnapshotID = ItemID;
+        NewEntity.m_Voice = Sound()->PlayAt(CSounds::CHN_WORLD, Sample, 1.0f, ISound::FLAG_LOOP, 0, 0);
+        pEntity = &NewEntity;
+    }
+
+    Sound()->SetVoiceVolume(pEntity->m_Voice, Volume / 256.0f);
+    Sound()->SetVoiceCircle(pEntity->m_Voice, Distance);
+    Sound()->SetVoicePos(pEntity->m_Voice, Pos.x, Pos.y);
+
+    static float s_Time = 0.0f;
+    if(m_pClient->m_Snap.m_pGameData)
+    {
+        s_Time = mix((Client()->PrevGameTick() - m_pClient->m_Snap.m_pGameData->m_GameStartTick) / (float) Client()->GameTickSpeed(),
+            (Client()->GameTick() - m_pClient->m_Snap.m_pGameData->m_GameStartTick) / (float) Client()->GameTickSpeed(),
+            Client()->IntraGameTick());
+    }
+    float Offset = maximum(s_Time - pCur->m_StartTick / (float) Client()->GameTickSpeed(),  0.0f);
+    Sound()->SetVoiceTimeOffset(pEntity->m_Voice, Offset);
+}
+
 void CClientResManager::OnRender()
 {
+	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		return;
+
+    for(int i = 0; i < m_lSoundEntities.size(); i++)
+    {
+        m_lSoundEntities[i].m_Active = false;
+    }
+
 	int Num = Client()->SnapNumItems(IClient::SNAP_CURRENT);
 	for(int i = 0; i < Num; i++)
 	{
@@ -84,7 +144,22 @@ void CClientResManager::OnRender()
 			if(pPrev)
 			    RenderImageEntity((const CNetObj_CustomImageEntity *) pPrev, (const CNetObj_CustomImageEntity *) pData);
 		}
+        else if(Config()->m_SndEnable && Item.m_Type == NETOBJTYPE_CUSTOMSOUNDENTITY)
+        {
+            const void *pPrev = Client()->SnapFindItem(IClient::SNAP_PREV, Item.m_Type, Item.m_ID);
+            if(pPrev)
+                RenderSoundEntity((const CNetObj_CustomSoundEntity *) pPrev, (const CNetObj_CustomSoundEntity *) pData, Item.m_ID);
+        }
 	}
+
+    for(int i = 0; i < m_lSoundEntities.size(); i++)
+    {
+        if(!m_lSoundEntities[i].m_Active)
+        {
+            Sound()->StopVoice(m_lSoundEntities[i].m_Voice);
+            m_lSoundEntities.remove_index_fast(i);
+        }
+    }
 }
 
 void CClientResManager::OnMessage(int MsgType, void *pRawMsg)
@@ -198,6 +273,13 @@ void CClientResManager::OnStateChange(int NewState, int OldState)
                 }
             }
             m_lResources.clear();
+
+            for(int i = 0; i < m_lSoundEntities.size(); i++)
+            {
+                if(m_lSoundEntities[i].m_Active)
+                    Sound()->StopVoice(m_lSoundEntities[i].m_Voice);
+            }
+            m_lSoundEntities.clear();
         }
     }
 }
