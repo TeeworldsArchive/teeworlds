@@ -179,9 +179,8 @@ void CGameControllerReinfected::StartRandomInfection()
 				continue;
 			}
 			Infect(aPlayers[RandomInfected]);
-			aPlayers.remove_index_fast(RandomInfected);
-
 			str_format(aBuf, sizeof(aBuf), "'%s' has been infected!", Server()->ClientName(aPlayers[RandomInfected]));
+			aPlayers.remove_index_fast(RandomInfected);
 			GameServer()->SendChat(-1, CHAT_ALL, -1, aBuf);
 		}
 	}
