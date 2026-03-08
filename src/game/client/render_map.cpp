@@ -248,6 +248,19 @@ void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlag
 			aTexCoords[k].x = fx2f(q->m_aTexcoords[k].x);
 			aTexCoords[k].y = fx2f(q->m_aTexcoords[k].y);
 		}
+		// Check if we want to repeat the texture
+		// Otherwise clamp to the edge to prevent texture bleeding
+		bool RepeatU = false, RepeatV = false;
+		for(int k = 0; k < 4; k++)
+		{
+			if(q->m_aTexcoords[k].x < 0 || q->m_aTexcoords[k].x > fxpscale)
+				RepeatU = true;
+			if(q->m_aTexcoords[k].y < 0 || q->m_aTexcoords[k].y > fxpscale)
+				RepeatV = true;
+		}
+		Graphics()->WrapMode(
+			RepeatU ? IGraphics::WRAP_REPEAT : IGraphics::WRAP_CLAMP,
+			RepeatV ? IGraphics::WRAP_REPEAT : IGraphics::WRAP_CLAMP);
 
 		Graphics()->QuadsSetSubsetFree(
 			aTexCoords[0].x, aTexCoords[0].y,
