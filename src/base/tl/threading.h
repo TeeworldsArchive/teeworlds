@@ -78,14 +78,11 @@ public:
 
 class lock
 {
-	friend class scope_lock;
-
 	LOCK var;
-
+public:
 	void take() { lock_wait(var); }
 	void release() { lock_unlock(var); }
 
-public:
 	lock()
 	{
 		var = lock_create();
