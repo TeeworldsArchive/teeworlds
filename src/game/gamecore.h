@@ -34,7 +34,7 @@ public:
 
 class CTuningParams
 {
-	static const char *s_apNames[];
+	static const char *ms_apNames[];
 
 public:
 	CTuningParams()
@@ -54,7 +54,7 @@ public:
 	bool Set(const char *pName, float Value);
 	bool Get(int Index, float *pValue) const;
 	bool Get(const char *pName, float *pValue) const;
-	const char *GetName(int Index) const { return s_apNames[Index]; }
+	const char *GetName(int Index) const { return ms_apNames[Index]; }
 	int PossibleTunings(const char *pStr, IConsole::FPossibleCallback pfnCallback = IConsole::EmptyPossibleCommandCallback, void *pUser = 0);
 };
 

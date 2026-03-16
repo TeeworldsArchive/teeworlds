@@ -9,7 +9,7 @@
 #include "backend_sdl.h"
 #include "graphics_threaded.h"
 
-static const char *s_VertexShaderSource = R"(
+static const char *s_pVertexShaderSource = R"(
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec3 aTexCoord;
 layout (location = 2) in vec4 aColor;
@@ -27,7 +27,7 @@ void main()
 }
 )";
 
-static const char *s_FragmentShaderSource = R"(
+static const char *s_pFragmentShaderSource = R"(
 out vec4 FragColor;
 
 in vec3 TexCoord;
@@ -73,13 +73,13 @@ void main()
 }
 )";
 
-static const char *s_ShaderVersionES = R"(
+static const char *s_pShaderVersionES = R"(
 #version 320 es
 precision highp float;
 precision highp int;
 #define PRECISION_TYPE highp
 )";
-static const char *s_ShaderVersion = R"(
+static const char *s_pShaderVersion = R"(
 #version 330 core
 #define PRECISION_TYPE
 )";
@@ -247,9 +247,9 @@ GLuint CCommandProcessorFragment_OpenGL::CompileShader(GLuint Type, const char *
 GLuint CCommandProcessorFragment_OpenGL::CreateShaderProgram()
 {
 	char aBuf[2048];
-	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, s_VertexShaderSource);
+	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_pShaderVersionES : s_pShaderVersion, s_pVertexShaderSource);
 	GLuint VertexShader = CompileShader(GL_VERTEX_SHADER, aBuf);
-	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_ShaderVersionES : s_ShaderVersion, s_FragmentShaderSource);
+	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_pShaderVersionES : s_pShaderVersion, s_pFragmentShaderSource);
 	GLuint FragmentShader = CompileShader(GL_FRAGMENT_SHADER, aBuf);
 
 	GLuint ShaderProgram = glCreateProgram();
@@ -390,14 +390,14 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 				break;
 			default: dbg_msg("render", "unknown wrapmode u %d", State.m_WrapModeU);
 		};
-		GLuint SamplerID = m_aSampler2D[m_aTextures[State.m_Texture].m_BasicSamplerType][WrapSamplerType];
+		GLuint SamplerID = m_aaSampler2D[m_aTextures[State.m_Texture].m_BasicSamplerType][WrapSamplerType];
 		if(m_LastSampler != SamplerID)
 			glBindSampler(0, SamplerID);
 		m_LastSampler = SamplerID;
 	}
 
 	// screen mapping - Set projection matrix uniform
-	float OrthoMatrix[16] = {
+	float aOrthoMatrix[16] = {
 		2.0f / (State.m_ScreenBR.x - State.m_ScreenTL.x), 0, 0, 0,
 		0, 2.0f / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 0,
 		0, 0, -1, 0,
@@ -405,7 +405,7 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		-(State.m_ScreenBR.y + State.m_ScreenTL.y) / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 1};
 
 	if(m_RenderShader.m_ProjectionLoc != -1)
-		glUniformMatrix4fv(m_RenderShader.m_ProjectionLoc, 1, GL_FALSE, OrthoMatrix);
+		glUniformMatrix4fv(m_RenderShader.m_ProjectionLoc, 1, GL_FALSE, aOrthoMatrix);
 	return true;
 }
 
@@ -427,35 +427,35 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	glActiveTexture(GL_TEXTURE0);
 
 	// generate 2D samplers
-	glGenSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aSampler2D);
+	glGenSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aaSampler2D);
 	for(int i = 0; i < NUM_WRAP_SAMPLERS; i++)
 	{
-		glSamplerParameteri(m_aSampler2D[SAMPLER2D_NOMIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glSamplerParameteri(m_aSampler2D[SAMPLER2D_NOMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glSamplerParameteri(m_aSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glSamplerParameteri(m_aSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glSamplerParameteri(m_aSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glSamplerParameteri(m_aSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_NOMIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_NOMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
 	for(int i = 0; i < NUM_BASIC_SAMPLERS; i++)
 	{
 		// u
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 
 		// v
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_T, GL_REPEAT);
 		// i
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glSamplerParameteri(m_aSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_REPEAT_REPEAT], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_REPEAT_CLAMP], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_CLAMP_CLAMP], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(m_aaSampler2D[i][SAMPLER2D_CLAMP_REPEAT], GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	}
 
 	// initialize shader uniforms with default values
@@ -521,7 +521,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const CGLShutdownCommand *pC
 	glDeleteBuffers(1, &m_QuadDrawIndexBufferID);
 	glDeleteVertexArrays(1, &m_PrimitiveDrawVertexID);
 	glDeleteShader(m_RenderShader.m_ShaderProgram);
-	glDeleteSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aSampler2D);
+	glDeleteSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aaSampler2D);
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::CTextureUpdateCommand *pCommand)

@@ -147,7 +147,7 @@ public:
 			CMapRotationGroup *m_pGroup;
 			const char *m_pMapName;
 			CEntry *m_pNext;
-		
+
 			void DoNext(CEntry **ppNext)
 			{
 				*ppNext = m_pGroup->m_pFirst;

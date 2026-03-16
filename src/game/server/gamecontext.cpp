@@ -1558,7 +1558,8 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	}
 	CMapRotationIndex &Index = r.front();
 	CMapRotationGroup::CEntry *pEntry = Index.m_pGroup->m_pFirst;
-	for(; pEntry->m_pNext; pEntry = pEntry->m_pNext);
+	for(; pEntry->m_pNext; pEntry = pEntry->m_pNext)
+		;
 	pEntry->m_pNext = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry)));
 	pEntry->m_pNext->m_pGroup = Index.m_pGroup;
 	pEntry->m_pNext->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));

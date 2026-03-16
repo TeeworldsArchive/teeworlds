@@ -79,6 +79,7 @@ public:
 class lock
 {
 	LOCK var;
+
 public:
 	void take() { lock_wait(var); }
 	void release() { lock_unlock(var); }

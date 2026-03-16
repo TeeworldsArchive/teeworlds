@@ -37,6 +37,7 @@ public:
 	int TestBoxAt(vec2 Pos, vec2 Size) const;
 	int TestBoxMoveAt(vec2 LastPos, vec2 NewPos, vec2 Size) const;
 
+	// hooks for gamecontroller
 	void SetFlagFor(float x, float y, int Flag);
 	void SetFlagFor(vec2 Pos, int Flag) { SetFlagFor(Pos.x, Pos.y, Flag); }
 };
