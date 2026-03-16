@@ -72,17 +72,13 @@ int uuid_comp(Uuid uuid1, Uuid uuid2)
 
 int parse_uuid(Uuid *uuid, const char *buffer)
 {
-	char copy[UUID_MAXSTRSIZE];
 	if(str_length(buffer) + 1 != UUID_MAXSTRSIZE)
-	{
 		return 2;
-	}
+	char copy[UUID_MAXSTRSIZE];
 	str_copy(copy, buffer, sizeof(copy));
 	// 01234567-9012-4567-9012-456789012345
 	if(copy[8] != '-' || copy[13] != '-' || copy[18] != '-' || copy[23] != '-')
-	{
 		return 1;
-	}
 	copy[8] = copy[13] = copy[18] = copy[23] = 0;
 	if(str_hex_decode(uuid->m_aData + 0, 4, copy + 0) ||
 		str_hex_decode(uuid->m_aData + 4, 2, copy + 9) ||

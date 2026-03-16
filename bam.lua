@@ -10,7 +10,7 @@ Import("bamfind/opusfile.lua")
 config = NewConfig()
 config:Add(OptCCompiler("compiler"))
 config:Add(OptTestCompileC("stackprotector", "int main(){return 0;}", "-fstack-protector -fstack-protector-all"))
-config:Add(OptTestCompileC("minmacosxsdk", "int main(){return 0;}", "-mmacosx-version-min=10.7 -isysroot /Developer/SDKs/MacOSX10.7.sdk"))
+config:Add(OptTestCompileC("minmacosxsdk", "int main(){return 0;}", "-mmacosx-version-min=10.15 -isysroot /Developer/SDKs/MacOSX10.15.sdk"))
 config:Add(OptTestCompileC("buildwithoutsseflag", "#include <immintrin.h>\nint main(){_mm_pause();return 0;}", ""))
 config:Add(OptLibrary("zlib", "zlib.h", false))
 config:Add(SDL.OptFind("sdl", true))
@@ -142,14 +142,14 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 	-- c++ stdlib needed
 	settings.cc.flags:Add("-stdlib=libc++")
 	settings.link.flags:Add("-stdlib=libc++")
-	-- this also needs the macOS min SDK version to be at least 10.7
+	-- this also needs the macOS min SDK version to be at least 10.15
 
-	settings.cc.flags:Add("-mmacosx-version-min=10.7")
-	settings.link.flags:Add("-mmacosx-version-min=10.7")
+	settings.cc.flags:Add("-mmacosx-version-min=10.15")
+	settings.link.flags:Add("-mmacosx-version-min=10.15")
 
 	if config.minmacosxsdk.value == 1 then
-		settings.cc.flags:Add("-isysroot /Developer/SDKs/MacOSX10.7.sdk")
-		settings.link.flags:Add("-isysroot /Developer/SDKs/MacOSX10.7.sdk")
+		settings.cc.flags:Add("-isysroot /Developer/SDKs/MacOSX10.15.sdk")
+		settings.link.flags:Add("-isysroot /Developer/SDKs/MacOSX10.15.sdk")
 	end
 
 	settings.link.frameworks:Add("Carbon")
@@ -204,7 +204,6 @@ function GenerateLinuxSettings(settings, conf, arch, compiler)
 		print("Unknown Architecture '" .. arch .. "'. Supported: x86, x86_64, armv7l, arm64")
 		os.exit(1)
 	end
-	settings.link.libs:Add("pthread")
 
 	GenerateCommonSettings(settings, conf, arch, compiler)
 
@@ -358,7 +357,11 @@ function SharedManifests(compiler)
 end
 
 function BuildEngineCommon(settings)
-	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/*.cpp", "src/base/*.c")))
+	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/*.cpp")))
+
+	local c11_settings = settings:Copy();
+	c11_settings.cc.flags:Add("-std=c11")
+	settings.link.extrafiles:Merge(Compile(c11_settings, CollectRecursive("src/base/*.c")))
 end
 
 function BuildGameCommon(settings)
