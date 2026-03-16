@@ -3,6 +3,8 @@
 #ifndef ENGINE_SHARED_FILECOLLECTION_H
 #define ENGINE_SHARED_FILECOLLECTION_H
 
+#include <base/tl/array.h>
+
 class CFileCollection
 {
 	enum
@@ -11,8 +13,15 @@ class CFileCollection
 		TIMESTAMP_LENGTH = 20, // _YYYY-MM-DD_HH-MM-SS
 	};
 
-	int64 m_aTimestamps[MAX_ENTRIES];
-	int m_NumTimestamps;
+	struct CEntry
+	{
+		int64 m_Timestamp;
+		char m_aFilename[IO_MAX_PATH_LENGTH];
+	
+		inline bool operator<(const CEntry &Other) const { return m_Timestamp < Other.m_Timestamp; }
+	};
+
+	array<CEntry> m_aEntries;
 	int m_MaxEntries;
 	char m_aFileDesc[128];
 	int m_FileDescLength;
@@ -21,13 +30,12 @@ class CFileCollection
 	char m_aPath[IO_MAX_PATH_LENGTH];
 	IStorage *m_pStorage;
 
-	bool IsFilenameValid(const char *pFilename);
+	bool IsFilenameValid(const char *pFilename, int64 *pTimestamp);
 	int64 ExtractTimestamp(const char *pTimestring);
 	void BuildTimestring(int64 Timestamp, char *pTimestring);
 
 public:
 	void Init(IStorage *pStorage, const char *pPath, const char *pFileDesc, const char *pFileExt, int MaxEntries);
-	void AddEntry(int64 Timestamp);
 
 	static int FilelistCallback(const char *pFilename, int IsDir, int StorageType, void *pUser);
 };
