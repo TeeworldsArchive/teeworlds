@@ -1897,10 +1897,7 @@ else()
           \"/lib/.*\"
         )
       elif(TARGET_OS STREQUAL \"linux\")
-        set(POST_EXCLUDE_REGEXES
-          \"/lib.*/.*\"
-          \"/usr/lib.*/.*\"
-        )
+        set(POST_EXCLUDE_REGEXES \"\") # do nothing as it's difficult to pack the library for linux.
       endif()
 
       file(GET_RUNTIME_DEPENDENCIES
