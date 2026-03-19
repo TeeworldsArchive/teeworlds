@@ -331,7 +331,7 @@ int CSnapshotDelta::UnpackDelta(const CSnapshot *pFrom, CSnapshot *pTo, const vo
 		return -1;
 	pData += pDelta->m_NumDeletedItems;
 	if(pData > pEnd)
-		return -1;
+		return -2;
 
 	// copy all non deleted stuff
 	for(int i = 0; i < pFrom->NumItems(); i++)
@@ -362,29 +362,29 @@ int CSnapshotDelta::UnpackDelta(const CSnapshot *pFrom, CSnapshot *pTo, const vo
 	for(int i = 0; i < pDelta->m_NumUpdateItems; i++)
 	{
 		if(pData + 2 > pEnd)
-			return -1;
+			return -3;
 
 		Type = *pData++;
 		if(Type < 0 || Type > CSnapshot::MAX_TYPE)
-			return -3;
+			return -4;
 
 		ID = *pData++;
 		if(ID < 0 || ID > CSnapshot::MAX_ID)
-			return -3;
+			return -5;
 
 		if(Type < MAX_NETOBJSIZES && m_aItemSizes[Type])
 			ItemSize = m_aItemSizes[Type];
 		else
 		{
 			if(pData + 1 > pEnd)
-				return -2;
+				return -6;
 			if(*pData < 0 || *pData > INT_MAX / 4)
-				return -3;
+				return -7;
 			ItemSize = (*pData++) * 4;
 		}
 
 		if(RangeCheck(pEnd, pData, ItemSize) || ItemSize < 0)
-			return -3;
+			return -8;
 
 		Key = (Type << 16) | (ID & 0xffff);
 
