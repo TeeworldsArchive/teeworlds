@@ -19,7 +19,7 @@ class inplace_array
 
 	void set_size(int new_size)
 	{
-		num_elements = new_size;
+		num_elements = new_size > N ? N : new_size;
 	}
 
 public:
