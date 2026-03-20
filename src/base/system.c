@@ -1,5 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#define _DEFAULT_SOURCE
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -22,7 +23,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <pthread.h>
+#include <strings.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
@@ -59,9 +60,13 @@
 #include <sys/filio.h>
 #endif
 
-#if defined(__cplusplus)
-extern "C" {
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#else
+#error NEED C11 TO COMPILE
 #endif
+
+#include <stdatomic.h>
+#include <base/c11/threads.h>
 
 IOHANDLE io_stdin() { return (IOHANDLE) stdin; }
 IOHANDLE io_stdout() { return (IOHANDLE) stdout; }
@@ -839,6 +844,11 @@ void aio_free(ASYNCIO *aio)
 	aio_handle_free_and_unlock(aio);
 }
 
+void sync_barrier()
+{
+	atomic_thread_fence(memory_order_seq_cst);
+}
+
 void aio_close(ASYNCIO *aio)
 {
 	lock_wait(aio->lock);
@@ -868,13 +878,7 @@ struct THREAD_RUN
 	void *u;
 };
 
-#if defined(CONF_FAMILY_UNIX)
-static void *thread_run(void *user)
-#elif defined(CONF_FAMILY_WINDOWS)
-static unsigned long __stdcall thread_run(void *user)
-#else
-#error not implemented
-#endif
+static int thread_run(void *user)
 {
 	struct THREAD_RUN *data = user;
 	void (*threadfunc)(void *) = data->threadfunc;
@@ -889,76 +893,36 @@ void *thread_init(void (*threadfunc)(void *), void *u)
 	struct THREAD_RUN *data = malloc(sizeof(*data));
 	data->threadfunc = threadfunc;
 	data->u = u;
-#if defined(CONF_FAMILY_UNIX)
+
+	thrd_t thread;
+	if(thrd_create(&thread, thread_run, data) != thrd_success)
 	{
-		pthread_t id;
-		pthread_attr_t attr;
-		pthread_attr_init(&attr);
-#if defined(CONF_PLATFORM_MACOS)
-		pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INTERACTIVE, 0);
-#endif
-		if(pthread_create(&id, &attr, thread_run, data) != 0)
-		{
-			return 0;
-		}
-		return (void *) id;
+		return 0;
 	}
-#elif defined(CONF_FAMILY_WINDOWS)
-	return CreateThread(NULL, 0, thread_run, data, 0, NULL);
-#else
-#error not implemented
-#endif
+	return (void *) thread;
 }
 
 void thread_wait(void *thread)
 {
-#if defined(CONF_FAMILY_UNIX)
-	pthread_join((pthread_t) thread, NULL);
-#elif defined(CONF_FAMILY_WINDOWS)
-	WaitForSingleObject((HANDLE) thread, INFINITE);
-#else
-#error not implemented
-#endif
-}
-
-void thread_destroy(void *thread)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	CloseHandle((HANDLE) thread);
-#endif
+	thrd_join((thrd_t) thread, NULL);
 }
 
 void thread_yield()
 {
-#if defined(CONF_FAMILY_UNIX)
-	sched_yield();
-#elif defined(CONF_FAMILY_WINDOWS)
-	Sleep(0);
-#else
-#error not implemented
-#endif
+	thrd_yield();
 }
 
 void thread_sleep(int milliseconds)
 {
-#if defined(CONF_FAMILY_UNIX)
-	usleep(milliseconds * 1000);
-#elif defined(CONF_FAMILY_WINDOWS)
-	Sleep(milliseconds);
-#else
-#error not implemented
-#endif
+	struct timespec ts;
+	ts.tv_sec = 0;
+	ts.tv_nsec = milliseconds * 1000000;
+	thrd_sleep(&ts, NULL);
 }
 
 void thread_detach(void *thread)
 {
-#if defined(CONF_FAMILY_UNIX)
-	pthread_detach((pthread_t) (thread));
-#elif defined(CONF_FAMILY_WINDOWS)
-	CloseHandle(thread);
-#else
-#error not implemented
-#endif
+	thrd_detach((thrd_t) thread);
 }
 
 void cpu_relax()
@@ -970,90 +934,42 @@ void cpu_relax()
 #endif
 }
 
-#if defined(CONF_FAMILY_UNIX)
-typedef pthread_mutex_t LOCKINTERNAL;
-#elif defined(CONF_FAMILY_WINDOWS)
-typedef CRITICAL_SECTION LOCKINTERNAL;
-#else
-#error not implemented on this platform
-#endif
+typedef mtx_t LOCKINTERNAL;
 
 LOCK lock_create()
 {
 	LOCKINTERNAL *lock = (LOCKINTERNAL *) mem_alloc(sizeof(LOCKINTERNAL));
-
-#if defined(CONF_FAMILY_UNIX)
-	pthread_mutex_init(lock, 0x0);
-#elif defined(CONF_FAMILY_WINDOWS)
-	InitializeCriticalSection((LPCRITICAL_SECTION) lock);
-#else
-#error not implemented on this platform
-#endif
+	mtx_init(lock, mtx_plain);
 	return (LOCK) lock;
 }
 
 void lock_destroy(LOCK lock)
 {
-#if defined(CONF_FAMILY_UNIX)
-	pthread_mutex_destroy((LOCKINTERNAL *) lock);
-#elif defined(CONF_FAMILY_WINDOWS)
-	DeleteCriticalSection((LPCRITICAL_SECTION) lock);
-#else
-#error not implemented on this platform
-#endif
+	mtx_destroy(lock);
 	mem_free(lock);
 }
 
 int lock_trylock(LOCK lock)
 {
-#if defined(CONF_FAMILY_UNIX)
-	return pthread_mutex_trylock((LOCKINTERNAL *) lock);
-#elif defined(CONF_FAMILY_WINDOWS)
-	return !TryEnterCriticalSection((LPCRITICAL_SECTION) lock);
-#else
-#error not implemented on this platform
-#endif
+	return mtx_trylock(lock);
 }
 
-void lock_wait(LOCK lock)
+int lock_wait(LOCK lock)
 {
-#if defined(CONF_FAMILY_UNIX)
-	pthread_mutex_lock((LOCKINTERNAL *) lock);
-#elif defined(CONF_FAMILY_WINDOWS)
-	EnterCriticalSection((LPCRITICAL_SECTION) lock);
-#else
-#error not implemented on this platform
-#endif
+	return mtx_lock(lock);
 }
 
-void lock_unlock(LOCK lock)
+int lock_unlock(LOCK lock)
 {
-#if defined(CONF_FAMILY_UNIX)
-	pthread_mutex_unlock((LOCKINTERNAL *) lock);
-#elif defined(CONF_FAMILY_WINDOWS)
-	LeaveCriticalSection((LPCRITICAL_SECTION) lock);
-#else
-#error not implemented on this platform
-#endif
+	return mtx_unlock(lock);
 }
 
-#if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_MACOS) // this should be CONF_POSIX_SEM but bam can't run C programs
-void sphore_init(SEMAPHORE *sem) { sem_init(sem, 0, 0); }
-void sphore_wait(SEMAPHORE *sem) { sem_wait(sem); }
-void sphore_signal(SEMAPHORE *sem) { sem_post(sem); }
-void sphore_destroy(SEMAPHORE *sem) { sem_destroy(sem); }
-#elif defined(CONF_FAMILY_WINDOWS)
-void sphore_init(SEMAPHORE *sem) { *sem = CreateSemaphore(0, 0, 10000, 0); }
-void sphore_wait(SEMAPHORE *sem) { WaitForSingleObject((HANDLE) *sem, INFINITE); }
-void sphore_signal(SEMAPHORE *sem) { ReleaseSemaphore((HANDLE) *sem, 1, NULL); }
-void sphore_destroy(SEMAPHORE *sem) { CloseHandle((HANDLE) *sem); }
-#else
 typedef struct SEMINTERNAL
 {
 	int count;
 	int waiters;
 	LOCK c_lock;
-	pthread_cond_t c_nzcond;
+	cnd_t c_nzcond;
 } SEMINTERNAL;
 
 void sphore_init(SEMAPHORE *sem)
@@ -1064,7 +980,7 @@ void sphore_init(SEMAPHORE *sem)
 	(*sem)->waiters = 0;
 
 	(*sem)->c_lock = lock_create();
-	pthread_cond_init(&(*sem)->c_nzcond, 0);
+	cnd_init(&(*sem)->c_nzcond);
 }
 
 void sphore_wait(SEMAPHORE *sem)
@@ -1073,7 +989,7 @@ void sphore_wait(SEMAPHORE *sem)
 	while((*sem)->count == 0)
 	{
 		(*sem)->waiters++;
-		pthread_cond_wait(&(*sem)->c_nzcond, (LOCKINTERNAL *) (*sem)->c_lock);
+		cnd_wait(&(*sem)->c_nzcond, (LOCKINTERNAL *) (*sem)->c_lock);
 		(*sem)->waiters--;
 	}
 	(*sem)->count--;
@@ -1085,7 +1001,7 @@ void sphore_signal(SEMAPHORE *sem)
 	lock_wait((*sem)->c_lock);
 
 	if((*sem)->waiters)
-		pthread_cond_signal(&(*sem)->c_nzcond);
+		cnd_signal(&(*sem)->c_nzcond);
 
 	(*sem)->count++;
 	lock_unlock((*sem)->c_lock);
@@ -1093,44 +1009,20 @@ void sphore_signal(SEMAPHORE *sem)
 
 void sphore_destroy(SEMAPHORE *sem)
 {
-	pthread_cond_destroy(&(*sem)->c_nzcond);
+	cnd_destroy(&(*sem)->c_nzcond);
 	lock_destroy((*sem)->c_lock);
 	mem_free(*sem);
 }
 
-#endif
-
 /* -----  time ----- */
 int64 time_get()
 {
-#if defined(CONF_FAMILY_UNIX)
-	struct timeval val;
-	gettimeofday(&val, NULL);
-	return (int64) val.tv_sec * (int64) 1000000 + (int64) val.tv_usec;
-#elif defined(CONF_FAMILY_WINDOWS)
-	static int64 last = 0;
-	int64 t;
-	QueryPerformanceCounter((PLARGE_INTEGER) &t);
-	if(t < last) /* for some reason, QPC can return values in the past */
-		return last;
-	last = t;
-	return t;
-#else
-#error not implemented
-#endif
-}
-
-int64 time_freq()
-{
-#if defined(CONF_FAMILY_UNIX)
-	return 1000000;
-#elif defined(CONF_FAMILY_WINDOWS)
-	int64 t;
-	QueryPerformanceFrequency((PLARGE_INTEGER) &t);
-	return t;
-#else
-#error not implemented
-#endif
+	struct timespec ts;
+	if(timespec_get(&ts, TIME_UTC) == 0)
+	{
+		return 0;
+	}
+	return (int64) ts.tv_sec * 1000000 + (int64) ts.tv_nsec / 1000;
 }
 
 /* -----  network ----- */
@@ -2505,29 +2397,15 @@ int time_iseasterday()
 
 void str_append(char *dst, const char *src, int dst_size)
 {
-	int s;
-	int i = 0;
 	dbg_assert(dst_size > 0, "dst_size invalid");
-	s = str_length(dst);
-	while(s < dst_size)
-	{
-		dst[s] = src[i];
-		if(!src[i]) /* check for null termination */
-			break;
-		s++;
-		i++;
-	}
-
-	dst[dst_size - 1] = 0; /* assure null termination */
+	strncat(dst, src, dst_size - str_length(dst) - 1);
 }
 
 void str_copy(char *dst, const char *src, int dst_size)
 {
-	int i;
 	dbg_assert(dst_size > 0, "dst_size invalid");
-	for(i = 0; (i < dst_size - 1) && (src[i] != '\0'); i++)
-		dst[i] = src[i];
-	dst[i] = '\0';
+	dst[0] = '\0';
+	strncat(dst, src, dst_size - 1);
 }
 
 void str_truncate(char *dst, int dst_size, const char *src, int truncation_len)
@@ -3509,7 +3387,3 @@ void uint_to_bytes_be(unsigned char *bytes, unsigned value)
 	bytes[2] = (value >> 8u) & 0xffu;
 	bytes[3] = value & 0xffu;
 }
-
-#if defined(__cplusplus)
-}
-#endif

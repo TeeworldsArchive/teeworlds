@@ -27,7 +27,6 @@ void CJobPool::Shutdown()
 	for(int i = 0; i < m_NumThreads; i++)
 	{
 		thread_wait(m_apThreads[i]);
-		thread_destroy(m_apThreads[i]);
 	}
 	lock_destroy(m_Lock);
 }

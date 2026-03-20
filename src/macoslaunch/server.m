@@ -58,7 +58,7 @@ void runServer()
 	NSOpenPanel* openDlg = [NSOpenPanel openPanel];
 	[openDlg setCanChooseFiles:YES];
 
-	if([openDlg runModal] != NSOKButton)
+	if([openDlg runModal] != NSModalResponseOK)
 		return;
 
 	NSArray* filenames = [openDlg URLs];
@@ -77,9 +77,9 @@ void runServer()
 
 	window = [[NSWindow alloc]
 		initWithContentRect: graphicsRect
-		styleMask: NSTitledWindowMask
-		| NSClosableWindowMask
-		| NSMiniaturizableWindowMask
+		styleMask: NSWindowStyleMaskTitled
+		| NSWindowStyleMaskClosable
+		| NSWindowStyleMaskMiniaturizable
 		backing: NSBackingStoreBuffered
 		defer: NO];
 

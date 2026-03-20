@@ -532,6 +532,13 @@ void aio_free(ASYNCIO *aio);
 /* Group: Threads */
 
 /*
+	Function: sync_barrier
+		Ensures memory operation ordering. Guarantees that all writes before
+		this point are visible to other threads before any subsequent writes occur.
+*/
+void sync_barrier();
+
+/*
 	Function: thread_sleep
 		Suspends the current thread for a given period.
 
@@ -559,19 +566,6 @@ void *thread_init(void (*threadfunc)(void *), void *user);
 		thread - Thread to wait for.
 */
 void thread_wait(void *thread);
-
-/*
-	Function: thread_destroy
-		Frees resources associated with a thread handle.
-
-	Parameters:
-		thread - Thread handle to destroy.
-
-	Remarks:
-		- The thread must have already terminated normally.
-		- Detached threads must not be destroyed with this function.
-*/
-void thread_destroy(void *thread);
 
 /*
 	Function: thread_yield
@@ -607,19 +601,11 @@ LOCK lock_create();
 void lock_destroy(LOCK lock);
 
 int lock_trylock(LOCK lock);
-void lock_wait(LOCK lock);
-void lock_unlock(LOCK lock);
+int lock_wait(LOCK lock);
+int lock_unlock(LOCK lock);
 
 /* Group: Semaphores */
-
-#if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_MACOS)
-#include <semaphore.h>
-typedef sem_t SEMAPHORE;
-#elif defined(CONF_FAMILY_WINDOWS)
-typedef void *SEMAPHORE;
-#else
 typedef struct SEMINTERNAL *SEMAPHORE;
-#endif
 
 void sphore_init(SEMAPHORE *sem);
 void sphore_wait(SEMAPHORE *sem);
@@ -654,7 +640,10 @@ int64 time_get();
 	Returns:
 		Returns the frequency of the high resolution timer.
 */
-int64 time_freq();
+inline int64 time_freq()
+{
+	return 1000000;
+}
 
 /*
 	Function: time_timestamp
