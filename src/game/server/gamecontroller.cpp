@@ -361,6 +361,12 @@ void IGameController::OnPlayerDisconnect(CPlayer *pPlayer)
 		m_UnbalancedTick = TBALANCE_CHECK;
 	}
 
+	if(!HasEnoughPlayers())
+	{
+		SetGameState(IGameController::IGS_WARMUP_GAME, TIMER_INFINITE);
+		GameServer()->SendGameMsg(GAMEMSG_GAME_CANCELLED, -1);
+	}
+
 	CheckReadyStates(ClientID);
 }
 

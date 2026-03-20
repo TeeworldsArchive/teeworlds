@@ -77,6 +77,8 @@ def write_languagefile(outputfilename, l10n_src, old_l10n_data):
 			result[JSON_KEY_TRANSL].append(t_entry)
 	result["authors"] = old_l10n_data["authors"]
 
+	result[JSON_KEY_TRANSL].sort(key=lambda entry: entry[JSON_KEY_OR])
+
 	json.dump(
 		result,
 		open(outputfilename, 'w', encoding='utf-8'),

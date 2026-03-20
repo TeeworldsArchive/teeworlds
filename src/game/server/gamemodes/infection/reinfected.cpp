@@ -90,7 +90,6 @@ public:
 			m_InfectedNum--;
 		else
 			m_HumanNum--;
-		m_pController->CheckCancelGame();
 	}
 
 	bool IsInfected(CCharacter *pCharacter) const { return IsInfected(pCharacter->GetCID()); }
@@ -211,6 +210,11 @@ void CGameControllerReinfected::AddScoreForInfection(int InfectedID)
 	GameServer()->m_apPlayers[InfectedID]->m_Score += 3;
 }
 
+bool CGameControllerReinfected::HasEnoughPlayers() const
+{
+	return GetRealPlayerNum() >= Config()->m_RiPlayersMin;
+}
+
 CGameControllerReinfected::CGameControllerReinfected(CGameContext *pGameServer) : IGameController(pGameServer)
 {
 	m_pGameType = "Reinfected";
@@ -255,23 +259,23 @@ void CGameControllerReinfected::OnRoundStart()
 
 void CGameControllerReinfected::OnPlayerConnect(CPlayer *pPlayer)
 {
-	IGameController::OnPlayerConnect(pPlayer);
 	if(IsInfectionStarted())
 		Infect(pPlayer->GetCID());
 	Reinfected()->AddPlayerToList(pPlayer->GetCID());
 	RefreshPlayerSkin(pPlayer, true);
+	IGameController::OnPlayerConnect(pPlayer);
 }
 
 void CGameControllerReinfected::OnPlayerDisconnect(CPlayer *pPlayer)
 {
-	IGameController::OnPlayerDisconnect(pPlayer);
 	Reinfected()->RemovePlayerFromList(pPlayer->GetCID());
+	IGameController::OnPlayerDisconnect(pPlayer);
 }
 
 void CGameControllerReinfected::OnPlayerInfoChange(CPlayer *pPlayer)
 {
-	IGameController::OnPlayerInfoChange(pPlayer);
 	RefreshPlayerSkin(pPlayer, true);
+	IGameController::OnPlayerInfoChange(pPlayer);
 }
 
 bool CGameControllerReinfected::CanCharacterPickup(CCharacter *pChr) const
@@ -403,16 +407,6 @@ void CGameControllerReinfected::OnCharacterSpawn(CCharacter *pChr)
 	}
 }
 
-void CGameControllerReinfected::Tick()
-{
-	IGameController::Tick();
-
-	if(GameServer()->m_World.m_ResetRequested || GameServer()->m_World.m_Paused)
-		return;
-
-	DoWincheckMatch();
-}
-
 bool CGameControllerReinfected::DoWincheckMatch()
 {
 	if(GetRealPlayerNum() < Config()->m_RiPlayersMin)
@@ -463,14 +457,6 @@ void CGameControllerReinfected::RefreshClientSkin(int ClientID, bool Sync)
 		return;
 	RefreshPlayerSkin(GameServer()->m_apPlayers[ClientID], Sync);
 	GameServer()->SendSkinChange(ClientID, -1);
-}
-
-void CGameControllerReinfected::CheckCancelGame()
-{
-	if(!(GetRealPlayerNum() < Config()->m_RiPlayersMin && IsGameRunning()))
-		return;
-	SetGameState(IGameController::IGS_WARMUP_GAME, TIMER_INFINITE);
-	GameServer()->SendChat(-1, CHAT_ALL, -1, "Game has been cancelled");
 }
 
 REGISTER_GAMEMODE("reinfected", CGameControllerReinfected);

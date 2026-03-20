@@ -214,6 +214,8 @@ static CGameMsg gs_GameMsgList[NUM_GAMEMSGS] = {
 	{/*GAMEMSG_CTF_CAPTURE*/ DO_SPECIAL, PARA_III, ""}, // special - play ctf capture sound + capture chat message
 
 	{/*GAMEMSG_GAME_PAUSED*/ DO_SPECIAL, PARA_I, ""}, // special - add player name
+
+	{/*GAMEMSG_GAME_CANCELLED*/ DO_CHAT, PARA_NONE, "The game has been cancelled"}, // Localize("The game has been cancelled")
 };
 
 void CGameClient::OnConsoleInit()

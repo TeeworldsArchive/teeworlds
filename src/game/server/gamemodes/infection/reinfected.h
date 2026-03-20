@@ -19,6 +19,7 @@ protected:
 	virtual void Infect(int InfectedID);
 	virtual void Cure(int CureID);
 	virtual void AddScoreForInfection(int InfectedID);
+	virtual bool HasEnoughPlayers() const;
 
 public:
 	CGameControllerReinfected(class CGameContext *pGameServer);
@@ -39,12 +40,10 @@ public:
 	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon);
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
 
-	virtual void Tick();
 	virtual bool DoWincheckMatch();
 	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg);
 
 	void RefreshClientSkin(int ClientID, bool Sync);
-	void CheckCancelGame();
 
 	enum
 	{

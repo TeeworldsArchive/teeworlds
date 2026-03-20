@@ -18,7 +18,9 @@ GameMsgIDs = Enum("GAMEMSG", ["TEAM_SWAP", "SPEC_INVALID_ID", "TEAM_SHUFFLE", "T
 
 							"CTF_CAPTURE",
 
-							"GAME_PAUSED"]) # todo 0.8: sort (1 para)
+							"GAME_PAUSED",
+                            
+							"GAME_CANCELLED"]) # todo 0.8: sort (1 para)
 
 GamePredictionFlags = Flags("GAMEPREDICTIONFLAG", ["EVENT", "INPUT"])
 

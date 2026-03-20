@@ -61,7 +61,7 @@ protected:
 
 	virtual bool DoWincheckMatch(); // returns true when the match is over
 	virtual void DoWincheckRound() {}
-	bool HasEnoughPlayers() const { return (IsTeamplay() && m_aTeamSize[TEAM_RED] > 0 && m_aTeamSize[TEAM_BLUE] > 0) || (!IsTeamplay() && m_aTeamSize[TEAM_RED] > 1); }
+	virtual bool HasEnoughPlayers() const { return (IsTeamplay() && m_aTeamSize[TEAM_RED] > 0 && m_aTeamSize[TEAM_BLUE] > 0) || (!IsTeamplay() && m_aTeamSize[TEAM_RED] > 1); }
 	void ResetGame();
 	void SetGameState(EGameState GameState, int Timer = 0);
 	void StartMatch();
@@ -179,7 +179,6 @@ public:
 	virtual void OnPlayerDisconnect(class CPlayer *pPlayer);
 	virtual void OnPlayerInfoChange(class CPlayer *pPlayer);
 	virtual void OnPlayerReadyChange(class CPlayer *pPlayer);
-	void OnPlayerCommand(class CPlayer *pPlayer, const char *pCommandName, const char *pCommandArgs);
 
 	void OnReset();
 
@@ -227,10 +226,6 @@ public:
 	// map
 	void ChangeMap(const char *pToMap);
 
-	// spawn
-	/*
-	bool CanSpawn(int Team, vec2 *pPos) const;
-	*/
 	virtual bool CanSpawn(int Team, vec2 *pPos) const;
 	bool GetStartRespawnState() const;
 
@@ -238,9 +233,6 @@ public:
 	bool CanJoinTeam(int Team, int NotThisID) const;
 	bool CanChangeTeam(CPlayer *pPplayer, int JoinTeam) const;
 
-	/*
-	void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg=true);
-	*/
 	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg = true);
 	void ForceTeamBalance()
 	{
