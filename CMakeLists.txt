@@ -1544,6 +1544,14 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamecontext.h
   gamecontroller.cpp
   gamecontroller.h
+  gamemodes/hunter/class.cpp
+  gamemodes/hunter/class.h
+  gamemodes/hunter/class/civic.h
+  gamemodes/hunter/class/hunter.h
+  gamemodes/hunter/hunter.cpp
+  gamemodes/hunter/hunter.h
+  gamemodes/hunter/hunterprojectile.cpp
+  gamemodes/hunter/hunterprojectile.h
   gamemodes/infection/reinfected.cpp
   gamemodes/infection/reinfected.h
   gamemodes/infection/riwall.cpp
