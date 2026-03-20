@@ -20,19 +20,18 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1, 1, 1, 1);
-	IGraphics::CQuadItem QuadItem(MainView.w / 2 - 140, 60, 280, 70);
+	IGraphics::CQuadItem QuadItem(MainView.w / 2 - 140, 60 * Graphics()->ScreenUIScale(), 280, 70);
 	Graphics()->SingleQuadDrawTL(&QuadItem);
 	Graphics()->QuadsEnd();
 
 	const float Rounding = 10.0f;
 
 	CUIRect TopMenu, BottomMenu;
+	MainView.HSplitTop(60 * Graphics()->ScreenUIScale(), 0, &MainView);
 	MainView.VMargin(MainView.w / 2 - 190.0f, &TopMenu);
 	TopMenu.HSplitTop(365.0f, &TopMenu, &BottomMenu);
 	// TopMenu.HSplitBottom(145.0f, &TopMenu, 0);
 	RenderBackgroundShadow(&TopMenu, false, Rounding);
-
-	TopMenu.HSplitTop(145.0f, 0, &TopMenu);
 
 	CUIRect Button;
 	int NewPage = -1;
