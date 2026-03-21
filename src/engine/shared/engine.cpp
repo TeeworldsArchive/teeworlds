@@ -63,7 +63,7 @@ public:
 		dbg_msg("engine", "unknown endian");
 #endif
 
-		m_JobPool.Init(1);
+		m_JobPool.Init(4);
 
 		m_DataLogSent = 0;
 		m_DataLogRecv = 0;
