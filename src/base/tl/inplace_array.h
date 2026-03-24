@@ -197,17 +197,6 @@ public:
 	}
 
 	/*
-		Function: emplace
-	*/
-	T &emplace()
-	{
-		if(size() + 1 >= N)
-			return -1;
-		set_size(size() + 1);
-		return list[num_elements - 1];
-	}
-
-	/*
 		Function: base_ptr
 	*/
 	T *base_ptr()
