@@ -272,7 +272,8 @@ void CMenus::SaveFilters()
 	if(!File)
 		return;
 
-	CJsonWriter Writer(File);
+	file_stream Stream(File, true);
+	CJsonWriter Writer(&Stream);
 
 	Writer.BeginObject(); // root
 

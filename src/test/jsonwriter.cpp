@@ -17,6 +17,7 @@ class JsonWriter : public ::testing::Test
 protected:
 	CTestInfo m_Info;
 	CJsonWriter *m_pJson;
+	stream *m_pStream;
 	char m_aOutputFilename[64];
 
 	JsonWriter() : m_pJson(0)
@@ -25,7 +26,8 @@ protected:
 			"-got.json");
 		IOHANDLE File = io_open(m_aOutputFilename, IOFLAG_WRITE);
 		EXPECT_TRUE(File);
-		m_pJson = new CJsonWriter(File);
+		m_pStream = new file_stream(File, true);
+		m_pJson = new CJsonWriter(m_pStream);
 	}
 
 	void Expect(const char *pExpected)
@@ -33,6 +35,8 @@ protected:
 		ASSERT_TRUE(m_pJson);
 		delete m_pJson;
 		m_pJson = 0;
+		delete m_pStream;
+		m_pStream = 0;
 
 		char *pOutput = fs_read_str(m_aOutputFilename);
 		ASSERT_TRUE(pOutput);

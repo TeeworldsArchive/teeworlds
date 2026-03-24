@@ -1212,6 +1212,7 @@ set_src(BASE GLOB_RECURSE src/base
   tl/inplace_array.h
   tl/range.h
   tl/sorted_array.h
+  tl/stream.h
   tl/string.h
   tl/threading.h
   uuid.c

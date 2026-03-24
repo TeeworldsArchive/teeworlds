@@ -18,17 +18,16 @@ static char EscapeJsonChar(char c)
 	}
 }
 
-CJsonWriter::CJsonWriter(IOHANDLE IO)
+CJsonWriter::CJsonWriter(stream *pStream)
 {
-	m_IO = IO;
+	m_pStream = pStream;
 	m_NumStates = 0; // no root created yet
 	m_Indentation = 0;
 }
 
 CJsonWriter::~CJsonWriter()
 {
-	io_write_newline(m_IO);
-	io_close(m_IO);
+	m_pStream->write_newline();
 }
 
 void CJsonWriter::BeginObject()
@@ -115,7 +114,7 @@ bool CJsonWriter::CanWriteDatatype()
 
 inline void CJsonWriter::WriteInternal(const char *pStr)
 {
-	io_write(m_IO, pStr, str_length(pStr));
+	m_pStream->write((const unsigned char *) pStr, str_length(pStr));
 }
 
 void CJsonWriter::WriteInternalEscaped(const char *pStr)
@@ -133,7 +132,7 @@ void CJsonWriter::WriteInternalEscaped(const char *pStr)
 		{
 			if(i - UnwrittenFrom > 0)
 			{
-				io_write(m_IO, pStr + UnwrittenFrom, i - UnwrittenFrom);
+				m_pStream->write((const unsigned char *) pStr + UnwrittenFrom, i - UnwrittenFrom);
 			}
 
 			if(SimpleEscape)
@@ -141,7 +140,7 @@ void CJsonWriter::WriteInternalEscaped(const char *pStr)
 				char aStr[2];
 				aStr[0] = '\\';
 				aStr[1] = SimpleEscape;
-				io_write(m_IO, aStr, sizeof(aStr));
+				m_pStream->write((const unsigned char *) aStr, sizeof(aStr));
 			}
 			else
 			{
@@ -154,7 +153,7 @@ void CJsonWriter::WriteInternalEscaped(const char *pStr)
 	}
 	if(Length - UnwrittenFrom > 0)
 	{
-		io_write(m_IO, pStr + UnwrittenFrom, Length - UnwrittenFrom);
+		m_pStream->write((const unsigned char *) pStr + UnwrittenFrom, Length - UnwrittenFrom);
 	}
 	WriteInternal("\"");
 }
@@ -167,7 +166,7 @@ void CJsonWriter::WriteIndent(bool EndElement)
 		WriteInternal(",");
 
 	if(NotRootOrAttribute || EndElement)
-		io_write_newline(m_IO);
+		m_pStream->write_newline();
 
 	if(NotRootOrAttribute)
 		for(int i = 0; i < m_Indentation; i++)

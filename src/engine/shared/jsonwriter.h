@@ -4,6 +4,7 @@
 #define ENGINE_SHARED_JSONWRITER_H
 
 #include <base/system.h>
+#include <base/tl/stream.h>
 
 class CJsonWriter
 {
@@ -30,7 +31,7 @@ class CJsonWriter
 		};
 	};
 
-	IOHANDLE m_IO;
+	stream *m_pStream;
 
 	CState m_aStates[MAX_DEPTH];
 	int m_NumStates;
@@ -48,7 +49,7 @@ class CJsonWriter
 public:
 	// Create a new writer object without writing anything to the file yet.
 	// The file will automatically be closed by the destructor.
-	CJsonWriter(IOHANDLE IO);
+	CJsonWriter(stream *pStream);
 	~CJsonWriter();
 
 	// The root is created by beginning the first datatype (object, array, value).
