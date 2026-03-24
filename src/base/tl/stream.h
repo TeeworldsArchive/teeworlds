@@ -70,11 +70,13 @@ public:
     }
 };
 
+template<class T>
 class memory_stream : public stream
 {
-    array<unsigned char> *mem_buffer;
+    static_assert(sizeof(T) == 1, "the size of buffer element should be 1 byte");
+    array<T> *mem_buffer;
 public:
-    memory_stream(array<unsigned char> *buffer)
+    memory_stream(array<T> *buffer)
     {
         mem_buffer = buffer;
         buffer->clear();
@@ -84,7 +86,7 @@ public:
     {
         unsigned start = mem_buffer->size();
         mem_buffer->hint_size(start + size);
-        inplace_memory_stream stream(mem_buffer->base_ptr() + start, size);
+        inplace_memory_stream stream((unsigned char *) mem_buffer->base_ptr() + start, size);
         return stream.write(buffer, size);
     }
 
