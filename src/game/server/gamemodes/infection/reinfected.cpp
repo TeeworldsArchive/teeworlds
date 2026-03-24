@@ -164,7 +164,7 @@ void CGameControllerReinfected::StartRandomInfection()
 		inplace_array<int, MAX_CLIENTS> aPlayers;
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
+			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS && !Reinfected()->IsInfected(i))
 				aPlayers.add(i);
 		}
 
@@ -172,11 +172,6 @@ void CGameControllerReinfected::StartRandomInfection()
 		for(int i = 0; i < InfectedNum; i++)
 		{
 			int RandomInfected = random_int() % aPlayers.size();
-			if(Reinfected()->IsInfected(i))
-			{
-				i--;
-				continue;
-			}
 			Infect(aPlayers[RandomInfected]);
 			str_format(aBuf, sizeof(aBuf), "'%s' has been infected!", Server()->ClientName(aPlayers[RandomInfected]));
 			aPlayers.remove_index_fast(RandomInfected);
