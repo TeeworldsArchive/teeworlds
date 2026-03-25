@@ -22,7 +22,7 @@ jobs:
             CFLAGS: -Werror
             CXXFLAGS: -Werror
         - os: windows-latest
-          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
+          cmake-args: -G Ninja
           build-target: package
           package-file: "*-win64.zip"
           archtitecture: "x86_64"

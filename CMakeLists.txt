@@ -294,6 +294,10 @@ if(NOT(Python3_FOUND))
   message(SEND_ERROR "You must install Python to compile Teeworlds")
 endif()
 
+if(NOT(CRYPTO_FOUND))
+  message(SEND_ERROR "You must install OpenSSL Crypto to compile Teeworlds")
+endif()
+
 if(CLIENT AND NOT(FREETYPE_FOUND))
   message(SEND_ERROR "You must install Freetype to compile the Teeworlds client")
 endif()
