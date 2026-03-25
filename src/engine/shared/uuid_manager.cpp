@@ -15,19 +15,19 @@ static CUuidManager CreateGlobalUuidManager()
 
 CUuidManager g_UuidManager = CreateGlobalUuidManager();
 
-static int GetIndex(int ID)
+inline int GetUuidIndex(int ID)
 {
 	return ID - OFFSET_UUID;
 }
 
-static int GetID(int Index)
+inline int GetUuidID(int Index)
 {
 	return Index + OFFSET_UUID;
 }
 
 void CUuidManager::RegisterName(int ID, const char *pName)
 {
-	int Index = GetIndex(ID);
+	int Index = GetUuidIndex(ID);
 	dbg_assert(Index == m_aNames.size(), "names must be registered with increasing ID");
 	CName Name;
 	Name.m_pName = pName;
@@ -39,12 +39,12 @@ void CUuidManager::RegisterName(int ID, const char *pName)
 
 Uuid CUuidManager::GetUuid(int ID) const
 {
-	return m_aNames[GetIndex(ID)].m_Uuid;
+	return m_aNames[GetUuidIndex(ID)].m_Uuid;
 }
 
 const char *CUuidManager::GetName(int ID) const
 {
-	return m_aNames[GetIndex(ID)].m_pName;
+	return m_aNames[GetUuidIndex(ID)].m_pName;
 }
 
 int CUuidManager::LookupUuid(Uuid Uuid) const
@@ -53,7 +53,7 @@ int CUuidManager::LookupUuid(Uuid Uuid) const
 	{
 		if(Uuid == m_aNames[i].m_Uuid)
 		{
-			return GetID(i);
+			return GetUuidID(i);
 		}
 	}
 	return UUID_UNKNOWN;
