@@ -925,6 +925,22 @@ void thread_detach(void *thread)
 	thrd_detach((thrd_t) thread);
 }
 
+unsigned get_hardware_concurrency()
+{
+#if defined(CONF_FAMILY_WINDOWS)
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    return (unsigned) sysinfo.dwNumberOfProcessors; 
+#elif defined(CONF_FAMILY_UNIX)
+    long nprocs = sysconf(_SC_NPROCESSORS_ONLN);
+	if(nprocs < 0)
+		return 0;
+    return (unsigned) nprocs;
+#else
+#error NOT IMPLEMENTED
+#endif
+}
+
 void cpu_relax()
 {
 #if defined(CONF_ARCH_IA32) || defined(CONF_ARCH_AMD64)

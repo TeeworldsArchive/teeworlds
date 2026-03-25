@@ -589,6 +589,13 @@ void thread_yield();
 void thread_detach(void *thread);
 
 /*
+	Function: get_hardware_concurrency
+        A implementation equivalent to std::thread::hardware_concurrency() (C++11).
+    	Returns a value that hints at the number of hardware thread contexts.
+*/
+unsigned get_hardware_concurrency();
+
+/*
 	Function: cpu_relax
 		Lets the cpu relax a bit.
 */

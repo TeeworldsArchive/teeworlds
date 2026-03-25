@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <stdlib.h> // srand
 
+#include <base/math.h>
 #include <base/system.h>
 
 #include <engine/console.h>
@@ -63,7 +64,8 @@ public:
 		dbg_msg("engine", "unknown endian");
 #endif
 
-		m_JobPool.Init(4);
+		m_JobPool.Init(maximum(4, (int) get_hardware_concurrency()) - 2);
+		dbg_msg("engine", "created %d threads in the thread pool", m_JobPool.NumThreads());
 
 		m_DataLogSent = 0;
 		m_DataLogRecv = 0;
