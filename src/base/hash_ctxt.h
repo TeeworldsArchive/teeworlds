@@ -6,29 +6,12 @@
 #include "hash.h"
 #include <stdint.h>
 
-#if defined(CONF_OPENSSL)
 #define OPENSSL_API_COMPAT 0x00908000L
 #include <openssl/md5.h>
 #include <openssl/sha.h>
-#else
-#include <engine/external/md5/md5.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#if defined(CONF_OPENSSL)
-// SHA256_CTX is defined in <openssl/sha.h>
-#else
-typedef struct
-{
-	uint64_t length;
-	uint32_t state[8];
-	uint32_t curlen;
-	unsigned char buf[64];
-} SHA256_CTX;
-typedef md5_state_t MD5_CTX;
 #endif
 
 void sha256_init(SHA256_CTX *ctxt);

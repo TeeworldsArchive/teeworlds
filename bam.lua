@@ -1,6 +1,7 @@
 CheckVersion("0.5")
 
 Import("configure.lua")
+Import("bamfind/crypto.lua")
 Import("bamfind/sdl.lua")
 Import("bamfind/freetype.lua")
 Import("bamfind/opus.lua")
@@ -13,6 +14,7 @@ config:Add(OptTestCompileC("stackprotector", "int main(){return 0;}", "-fstack-p
 config:Add(OptTestCompileC("minmacosxsdk", "int main(){return 0;}", "-mmacosx-version-min=10.15 -isysroot /Developer/SDKs/MacOSX10.15.sdk"))
 config:Add(OptTestCompileC("buildwithoutsseflag", "#include <immintrin.h>\nint main(){_mm_pause();return 0;}", ""))
 config:Add(OptLibrary("zlib", "zlib.h", false))
+config:Add(Crypto.OptFind("libcrypto", true))
 config:Add(SDL.OptFind("sdl", true))
 config:Add(FreeType.OptFind("freetype", true))
 config:Add(Opus.OptFind("opus", true))
@@ -109,13 +111,12 @@ function GenerateCommonSettings(settings, conf, arch, compiler)
 		end
 	end
 
-	local md5 = Compile(settings, Collect("src/engine/external/md5/*.c"))
 	local png = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
 	local json = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 	local glad = Compile(settings, Collect("src/engine/external/glad/gl.c"))
 
 	-- globally available libs
-	libs = {zlib=zlib, png=png, md5=md5, json=json, glad=glad}
+	libs = {zlib=zlib, png=png, json=json, glad=glad}
 end
 
 function GenerateMacOSSettings(settings, conf, arch, compiler)
@@ -357,6 +358,7 @@ function SharedManifests(compiler)
 end
 
 function BuildEngineCommon(settings)
+	config.libcrypto:Apply(settings)
 	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/*.cpp")))
 
 	local c11_settings = settings:Copy();
@@ -380,7 +382,7 @@ function BuildClient(settings, family, platform)
 	local game_client = Compile(settings, CollectRecursive("src/game/client/*.cpp"), SharedClientFiles())
 	local game_editor = Compile(settings, Collect("src/game/editor/*.cpp"))
 	
-	Link(settings, "teeworlds", libs["zlib"], libs["md5"], libs["png"], libs["json"], libs["glad"], client, game_client, game_editor)
+	Link(settings, "teeworlds", libs["zlib"], libs["png"], libs["json"], libs["glad"], client, game_client, game_editor)
 end
 
 function BuildServer(settings, family, platform)
@@ -388,24 +390,24 @@ function BuildServer(settings, family, platform)
 	
 	local game_server = Compile(settings, CollectRecursive("src/game/server/*.cpp"), SharedServerFiles())
 	
-	return Link(settings, "teeworlds_srv", libs["zlib"], libs["md5"], libs["json"], server, game_server)
+	return Link(settings, "teeworlds_srv", libs["zlib"], libs["json"], server, game_server)
 end
 
 function BuildTools(settings)
 	local tools = {}
 	for i,v in ipairs(Collect("src/tools/*.cpp", "src/tools/*.c")) do
 		local toolname = PathFilename(PathBase(v))
-		tools[i] = Link(settings, toolname, Compile(settings, v), libs["zlib"], libs["md5"], libs["png"], libs["json"])
+		tools[i] = Link(settings, toolname, Compile(settings, v), libs["zlib"], libs["png"], libs["json"])
 	end
 	PseudoTarget(settings.link.Output(settings, "pseudo_tools") .. settings.link.extension, tools)
 end
 
 function BuildMasterserver(settings)
-	return Link(settings, "mastersrv", Compile(settings, Collect("src/mastersrv/*.cpp")), libs["zlib"], libs["md5"], libs["json"])
+	return Link(settings, "mastersrv", Compile(settings, Collect("src/mastersrv/*.cpp")), libs["zlib"], libs["json"])
 end
 
 function BuildVersionserver(settings)
-	return Link(settings, "versionsrv", Compile(settings, Collect("src/versionsrv/*.cpp")), libs["zlib"], libs["md5"], libs["json"])
+	return Link(settings, "versionsrv", Compile(settings, Collect("src/versionsrv/*.cpp")), libs["zlib"], libs["json"])
 end
 
 function BuildContent(settings, arch, conf)
