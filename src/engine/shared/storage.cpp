@@ -360,7 +360,7 @@ public:
 		// open file
 		if(Flags & IOFLAG_WRITE)
 		{
-			return io_open(GetPath(TYPE_SAVE, pFilename, pBuffer, BufferSize), Flags);
+			return io_open(GetPath(Type == TYPE_ALL ? TYPE_SAVE : Type, pFilename, pBuffer, BufferSize), Flags);
 		}
 		else
 		{

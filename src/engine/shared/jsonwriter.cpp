@@ -91,6 +91,16 @@ void CJsonWriter::WriteIntValue(int Value)
 	CompleteDataType();
 }
 
+void CJsonWriter::WriteInt64Value(int64 Value)
+{
+	dbg_assert(CanWriteDatatype(), "Cannot write value at this position");
+	WriteIndent(false);
+	char aBuf[32];
+	str_format(aBuf, sizeof(aBuf), "%lld", Value);
+	WriteInternal(aBuf);
+	CompleteDataType();
+}
+
 void CJsonWriter::WriteBoolValue(bool Value)
 {
 	dbg_assert(CanWriteDatatype(), "Cannot write value at this position");

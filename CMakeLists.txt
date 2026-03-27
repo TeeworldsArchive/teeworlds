@@ -1625,6 +1625,7 @@ set_src(TOOLS GLOB src/tools
   fake_server.cpp
   map_resave.cpp
   map_version.cpp
+  map_version_legacy.cpp
   packetgen.cpp
 )
 foreach(ABS_T ${TOOLS})

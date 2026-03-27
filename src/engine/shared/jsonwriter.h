@@ -77,6 +77,7 @@ public:
 	// - As root value (only once)
 	void WriteStrValue(const char *pValue);
 	void WriteIntValue(int Value);
+	void WriteInt64Value(int64 Value);
 	void WriteBoolValue(bool Value);
 	void WriteNullValue();
 };
