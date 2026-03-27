@@ -17,8 +17,7 @@ public:
 
 	CTeeInfos m_aTeeInfos[MAX_CLIENTS];
 	CTeeInfos m_aInfectedInfos[MAX_CLIENTS];
-	bool m_aPlayerInfected[MAX_CLIENTS];
-	bool m_aPlayerInTheList[MAX_CLIENTS];
+	int64 m_InfectedMask;
 	int m_InfectedNum;
 	int m_HumanNum;
 
@@ -27,11 +26,7 @@ public:
 		m_pController = pController;
 		mem_zero(m_aTeeInfos, sizeof(m_aTeeInfos));
 		mem_zero(m_aInfectedInfos, sizeof(m_aInfectedInfos));
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			m_aPlayerInfected[i] = false;
-			m_aPlayerInTheList[i] = false;
-		}
+		m_InfectedMask = 0;
 		m_InfectedNum = 0;
 		m_HumanNum = 0;
 	}
@@ -42,7 +37,7 @@ public:
 			return;
 
 		RemovePlayerFromList(ClientID);
-		m_aPlayerInfected[ClientID] = true;
+		m_InfectedMask |= CmaskOne(ClientID);
 		AddPlayerToList(ClientID);
 
 		m_pController->RefreshClientSkin(ClientID, false);
@@ -54,7 +49,7 @@ public:
 			return;
 
 		RemovePlayerFromList(ClientID);
-		m_aPlayerInfected[ClientID] = false;
+		m_InfectedMask &= CmaskAllExceptOne(ClientID);
 		AddPlayerToList(ClientID);
 
 		m_pController->RefreshClientSkin(ClientID, false);
@@ -72,9 +67,6 @@ public:
 
 	void AddPlayerToList(int ClientID)
 	{
-		if(m_aPlayerInTheList[ClientID])
-			return;
-		m_aPlayerInTheList[ClientID] = true;
 		if(IsInfected(ClientID))
 			m_InfectedNum++;
 		else
@@ -83,9 +75,6 @@ public:
 
 	void RemovePlayerFromList(int ClientID)
 	{
-		if(!m_aPlayerInTheList[ClientID])
-			return;
-		m_aPlayerInTheList[ClientID] = false;
 		if(IsInfected(ClientID))
 			m_InfectedNum--;
 		else
@@ -93,7 +82,7 @@ public:
 	}
 
 	bool IsInfected(CCharacter *pCharacter) const { return IsInfected(pCharacter->GetCID()); }
-	bool IsInfected(int ClientID) const { return m_aPlayerInfected[ClientID]; }
+	bool IsInfected(int ClientID) const { return m_InfectedMask & CmaskOne(ClientID); }
 };
 
 inline int GetInfectedColor(int UseCustomColors, int PartColor, int Part)
@@ -256,14 +245,16 @@ void CGameControllerReinfected::OnPlayerConnect(CPlayer *pPlayer)
 {
 	if(IsInfectionStarted())
 		Infect(pPlayer->GetCID());
-	Reinfected()->AddPlayerToList(pPlayer->GetCID());
+	if(pPlayer->GetTeam() != TEAM_SPECTATORS)
+		Reinfected()->AddPlayerToList(pPlayer->GetCID());
 	RefreshPlayerSkin(pPlayer, true);
 	IGameController::OnPlayerConnect(pPlayer);
 }
 
 void CGameControllerReinfected::OnPlayerDisconnect(CPlayer *pPlayer)
 {
-	Reinfected()->RemovePlayerFromList(pPlayer->GetCID());
+	if(pPlayer->GetTeam() != TEAM_SPECTATORS)
+		Reinfected()->RemovePlayerFromList(pPlayer->GetCID());
 	IGameController::OnPlayerDisconnect(pPlayer);
 }
 
