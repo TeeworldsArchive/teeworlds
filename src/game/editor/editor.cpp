@@ -3768,7 +3768,7 @@ void CEditor::RenderMenubar(CUIRect MenuBar)
 	MenuBar.VSplitLeft(MenuBar.w * 0.75f, &MenuBar, &Info);
 
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "File: %s", m_aFileName);
+	str_format(aBuf, sizeof(aBuf), HasUnsavedData() ? "File: %s (unsaved)" : "File: %s", m_aFileName);
 	UI()->DoLabel(&MenuBar, aBuf, 10.0f, TEXTALIGN_LEFT);
 
 	str_format(aBuf, sizeof(aBuf), "Z: %i, A: %.1f, G: %i", m_ZoomLevel, m_AnimateSpeed, m_GridFactor);
