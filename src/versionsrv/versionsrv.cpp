@@ -17,7 +17,7 @@
 
 enum
 {
-	MAX_MAPS_PER_PACKET = 48,
+	MAX_MAPS_PER_PACKET = 24,
 	MAX_PACKETS = 16,
 	MAX_MAPS = MAX_MAPS_PER_PACKET * MAX_PACKETS,
 };
@@ -99,12 +99,12 @@ static void SendVersion(NETADDR *pAddr, TOKEN ResponseToken)
 	s_NetClient.Send(&Packet, ResponseToken);
 }
 
-static void SendMapversions(NETADDR *pAddr, TOKEN ResponseToken, unsigned ClientVersion)
+static int SendMapversions(NETADDR *pAddr, TOKEN ResponseToken, unsigned ClientVersion)
 {
 	CMapversionPacketData *pPacketData;
 	unsigned *pNumPackets;
 	if(!GetMapversionPackets(ClientVersion, &pPacketData, &pNumPackets))
-		return;
+		return -1;
 
 	CNetChunk Packet;
 	Packet.m_ClientID = -1;
@@ -117,6 +117,7 @@ static void SendMapversions(NETADDR *pAddr, TOKEN ResponseToken, unsigned Client
 		Packet.m_pData = &pPacketData[i].m_Data;
 		s_NetClient.Send(&Packet, ResponseToken);
 	}
+	return 0;
 }
 
 int main(int argc, const char **argv)
@@ -181,7 +182,9 @@ int main(int argc, const char **argv)
 				unsigned ClientVersion = 0x0700;
 				if(Packet.m_DataSize == sizeof(VERSIONSRV_GETMAPLIST) + sizeof(unsigned))
 					ClientVersion = bytes_be_to_uint((unsigned char *) Packet.m_pData + sizeof(VERSIONSRV_GETMAPLIST));
-				SendMapversions(&Packet.m_Address, ResponseToken, ClientVersion);
+				dbg_msg("versionsrv", "got request, sending map version list...");
+				if(SendMapversions(&Packet.m_Address, ResponseToken, ClientVersion) == -1)
+					dbg_msg("versionsrv", "failed to send map version list");
 			}
 		}
 
