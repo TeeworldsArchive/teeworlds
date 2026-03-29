@@ -172,21 +172,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	//
 	class CServerInfo m_CurrentServerInfo;
-
-	// version info
-	struct CVersionInfo
-	{
-		enum
-		{
-			STATE_INIT = 0,
-			STATE_START,
-			STATE_READY,
-			STATE_ERROR,
-		};
-
-		int m_State;
-		class CHostLookup m_VersionServeraddr;
-	} m_VersionInfo;
+	class CHttpRequest *m_pVersionRequest;
 
 	int64 TickStartTime(int Tick);
 

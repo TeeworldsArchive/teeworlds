@@ -2,6 +2,7 @@ CheckVersion("0.5")
 
 Import("configure.lua")
 Import("bamfind/crypto.lua")
+Import("bamfind/curl.lua")
 Import("bamfind/sdl.lua")
 Import("bamfind/freetype.lua")
 Import("bamfind/opus.lua")
@@ -15,6 +16,7 @@ config:Add(OptTestCompileC("minmacosxsdk", "int main(){return 0;}", "-mmacosx-ve
 config:Add(OptTestCompileC("buildwithoutsseflag", "#include <immintrin.h>\nint main(){_mm_pause();return 0;}", ""))
 config:Add(OptLibrary("zlib", "zlib.h", false))
 config:Add(Crypto.OptFind("libcrypto", true))
+config:Add(Curl.OptFind("libcurl", true))
 config:Add(SDL.OptFind("sdl", true))
 config:Add(FreeType.OptFind("freetype", true))
 config:Add(Opus.OptFind("opus", true))
@@ -359,6 +361,7 @@ end
 
 function BuildEngineCommon(settings)
 	config.libcrypto:Apply(settings)
+	config.libcurl:Apply(settings)
 	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/*.cpp")))
 
 	local c11_settings = settings:Copy();

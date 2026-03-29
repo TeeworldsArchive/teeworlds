@@ -85,7 +85,7 @@ public:
     virtual unsigned write(const unsigned char *buffer, unsigned size)
     {
         unsigned start = mem_buffer->size();
-        mem_buffer->hint_size(start + size);
+        mem_buffer->set_size(start + size);
         inplace_memory_stream stream((unsigned char *) mem_buffer->base_ptr() + start, size);
         return stream.write(buffer, size);
     }
