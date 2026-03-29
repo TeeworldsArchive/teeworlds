@@ -3,6 +3,7 @@
 #include <base/math.h>
 #include <base/system.h>
 
+#include <engine/external/json-parser/json.h>
 #include <engine/storage.h>
 
 #include <versionsrv/mapversions.h>
@@ -14,6 +15,51 @@ CMapChecker::CMapChecker()
 {
 	Init();
 	SetDefaults();
+}
+
+void CMapChecker::AddMaplist(const json_value *pMapList)
+{
+	if(!pMapList || pMapList->type != json_array)
+		return;
+	if(m_ClearListBeforeAdding)
+		Init();
+	const json_value &rStart = *pMapList;
+	for(unsigned i = 0; i < rStart.u.array.length; i++)
+	{
+		const json_value &rMap = rStart[i];
+
+		// read map name
+		if(rMap["maps"].type != json_string)
+			continue;
+		const char *pMapName = rMap["maps"];
+
+		// read map size
+		if(rMap["size"].type != json_integer)
+			continue;
+		int64 Size = (json_int_t) rMap["size"];
+
+		// read crc
+		if(rMap["crc"].type != json_integer)
+			continue;
+		int64 Crc = (json_int_t) rMap["crc"];
+
+		// read sha256
+		if(rMap["sha256"].type != json_string)
+			continue;
+		const char *pSha256 = rMap["sha256"];
+		SHA256_DIGEST Sha256;
+		if(sha256_from_str(&Sha256, pSha256) == -1)
+			continue;
+
+		CWhitelistEntry *pEntry = (CWhitelistEntry *) m_Whitelist.Allocate(sizeof(CWhitelistEntry));
+		pEntry->m_pNext = m_pFirst;
+		m_pFirst = pEntry;
+
+		str_copy(pEntry->m_aMapName, pMapName, sizeof(pEntry->m_aMapName));
+		pEntry->m_MapCrc = Crc;
+		pEntry->m_MapSize = Size;
+		pEntry->m_MapSha256 = Sha256;
+	}
 }
 
 void CMapChecker::Init()

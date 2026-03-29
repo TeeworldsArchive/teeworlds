@@ -228,6 +228,7 @@ if(NOT CMAKE_CROSSCOMPILING)
 endif()
 find_package(ZLIB)
 find_package(Crypto)
+find_package(Curl)
 find_package(Freetype)
 find_package(Git)
 find_package(GTest)
@@ -283,6 +284,7 @@ if(TARGET_OS AND TARGET_OS STREQUAL "mac")
   show_dependency_status("Hdiutil" HDIUTIL)
 endif()
 show_dependency_status("OpenSSL Crypto" CRYPTO)
+show_dependency_status("Curl" CURL)
 show_dependency_status("Pnglite" PNGLITE)
 show_dependency_status("Python3" Python3)
 show_dependency_status("SDL3" SDL3)
@@ -296,6 +298,10 @@ endif()
 
 if(NOT(CRYPTO_FOUND))
   message(SEND_ERROR "You must install OpenSSL Crypto to compile Teeworlds")
+endif()
+
+if(NOT(CURL_FOUND))
+  message(SEND_ERROR "You must install libcurl to compile Teeworlds")
 endif()
 
 if(CLIENT AND NOT(FREETYPE_FOUND))
@@ -1254,6 +1260,8 @@ set_src(ENGINE_SHARED GLOB src/engine/shared
   engine.cpp
   filecollection.cpp
   filecollection.h
+  http_request.cpp
+  http_request.h
   huffman.cpp
   huffman.h
   jobs.cpp
@@ -1319,7 +1327,7 @@ set(GAME_GENERATED_SHARED
 set(DEPS ${DEP_JSON} ${ZLIB_DEP})
 
 # Libraries
-set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${PLATFORM_LIBS})
+set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${CURL_LIBRARIES} ${PLATFORM_LIBS})
 
 # Targets
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_GENERATED_SHARED} ${BASE})
@@ -1915,7 +1923,7 @@ else()
 
   list(REMOVE_DUPLICATES _DEPS)
   set(DEP_WHITELIST_REGEX
-    \"(freetype|SDL3|libcrypto|libogg|libopus|libopusfile|libopusurl)\"
+    \"(freetype|SDL3|libcrypto|libcurl|libogg|libopus|libopusfile|libopusurl)\"
   )
 
   list(FILTER _DEPS INCLUDE REGEX \"\${DEP_WHITELIST_REGEX}\")

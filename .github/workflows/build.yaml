@@ -64,6 +64,7 @@ jobs:
           opus:p
           opusfile:p
           openssl:p
+          curl:p
 
     - name: Checkout SDL3
       if: contains(matrix.os, 'ubuntu')
@@ -104,7 +105,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update || true
-        brew install pkg-config sdl3 python3 ninja opus opusfile openssl || true
+        brew install pkg-config sdl3 python3 ninja opus opusfile openssl curl || true
         brew upgrade freetype
         sudo rm -rf /Library/Developer/CommandLineTools
 
@@ -225,6 +226,7 @@ jobs:
           opus:p
           opusfile:p
           openssl:p
+          curl:p
 
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
@@ -248,7 +250,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update
-        brew install sdl3 opus opusfile openssl || true
+        brew install sdl3 opus opusfile openssl curl || true
         cd bam
         ./make_unix.sh
 

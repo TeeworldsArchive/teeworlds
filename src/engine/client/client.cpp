@@ -28,6 +28,8 @@
 #include <engine/shared/datafile.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/filecollection.h>
+#include <engine/shared/http_request.h>
+#include <engine/shared/jsonparser.h>
 #include <engine/shared/mapchecker.h>
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
@@ -39,8 +41,6 @@
 #include <game/version.h>
 
 #include <mastersrv/mastersrv.h>
-#include <versionsrv/mapversions.h>
-#include <versionsrv/versionsrv.h>
 
 #include "contacts.h"
 #include "serverbrowser.h"
@@ -305,7 +305,7 @@ CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotD
 	m_SnapshotStorage.Init();
 	m_ReceivedSnapshots = 0;
 
-	m_VersionInfo.m_State = CVersionInfo::STATE_INIT;
+	m_pVersionRequest = 0;
 
 	m_pLocalServerProcess = 0;
 }
@@ -1017,55 +1017,6 @@ int CClient::UnpackServerInfoPlayer(CUnpacker *pUnpacker, CServerInfo *pInfo, in
 
 void CClient::ProcessConnlessPacket(CNetChunk *pPacket)
 {
-	// version server
-	if(m_VersionInfo.m_State == CVersionInfo::STATE_READY && net_addr_comp(&pPacket->m_Address, &m_VersionInfo.m_VersionServeraddr.m_Addr, true) == 0)
-	{
-		// version info
-		if(pPacket->m_DataSize == (int) (sizeof(VERSIONSRV_VERSION) + sizeof(GAME_RELEASE_VERSION)) &&
-			mem_comp(pPacket->m_pData, VERSIONSRV_VERSION, sizeof(VERSIONSRV_VERSION)) == 0)
-
-		{
-			char *pVersionData = (char *) pPacket->m_pData + sizeof(VERSIONSRV_VERSION);
-			int VersionMatch = !mem_comp(pVersionData, GAME_RELEASE_VERSION, sizeof(GAME_RELEASE_VERSION));
-
-			char aVersion[sizeof(GAME_RELEASE_VERSION)];
-			str_copy(aVersion, pVersionData, sizeof(aVersion));
-
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "version does %s (%s)",
-				VersionMatch ? "match" : "NOT match",
-				aVersion);
-			m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/version", aBuf);
-
-			// assume version is out of date when version-data doesn't match
-			if(!VersionMatch)
-			{
-				str_copy(m_aVersionStr, aVersion, sizeof(m_aVersionStr));
-			}
-
-			// request the map version list now
-			unsigned char aData[sizeof(VERSIONSRV_GETMAPLIST) + sizeof(unsigned)];
-			mem_copy(aData, VERSIONSRV_GETMAPLIST, sizeof(VERSIONSRV_GETMAPLIST));
-			uint_to_bytes_be(aData + sizeof(VERSIONSRV_GETMAPLIST), CLIENT_VERSION);
-			CNetChunk Packet;
-			Packet.m_ClientID = -1;
-			Packet.m_Address = m_VersionInfo.m_VersionServeraddr.m_Addr;
-			Packet.m_Flags = NETSENDFLAG_CONNLESS;
-			Packet.m_pData = aData;
-			Packet.m_DataSize = sizeof(aData);
-			m_ContactClient.Send(&Packet);
-		}
-
-		// map version list
-		if(pPacket->m_DataSize >= (int) sizeof(VERSIONSRV_MAPLIST) &&
-			mem_comp(pPacket->m_pData, VERSIONSRV_MAPLIST, sizeof(VERSIONSRV_MAPLIST)) == 0)
-		{
-			m_pMapChecker->AddMaplist(
-				(const CMapVersion *) ((char *) pPacket->m_pData + sizeof(VERSIONSRV_MAPLIST)),
-				unsigned(pPacket->m_DataSize - sizeof(VERSIONSRV_MAPLIST)) / sizeof(CMapVersion));
-		}
-	}
-
 	// server list from master server
 	if(pPacket->m_DataSize >= (int) sizeof(SERVERBROWSE_LIST) &&
 		mem_comp(pPacket->m_pData, SERVERBROWSE_LIST, sizeof(SERVERBROWSE_LIST)) == 0)
@@ -1788,35 +1739,46 @@ void CClient::Update()
 
 void CClient::VersionUpdate()
 {
-	if(m_VersionInfo.m_State == CVersionInfo::STATE_INIT)
+	if(!m_pVersionRequest)
 	{
-		Engine()->HostLookup(&m_VersionInfo.m_VersionServeraddr, Config()->m_ClVersionServer, m_ContactClient.NetType());
-		m_VersionInfo.m_State = CVersionInfo::STATE_START;
+		m_pVersionRequest = new CHttpRequest("GET", Config()->m_ClVersionUrl, 0L);
+		m_pVersionRequest->StartRun(Engine());
 	}
-	else if(m_VersionInfo.m_State == CVersionInfo::STATE_START)
+	else if(m_pVersionRequest->Status() == CJob::STATE_DONE && !m_pVersionRequest->IsChecked())
 	{
-		if(m_VersionInfo.m_VersionServeraddr.m_Job.Status() == CJob::STATE_DONE)
+		if(m_pVersionRequest->Result() == 0 && m_pVersionRequest->ResponseCode() == 200)
 		{
-			if(m_VersionInfo.m_VersionServeraddr.m_Job.Result() == 0)
+			CJsonParser Parser;
+			const json_value *pJsonData = Parser.ParseData(m_pVersionRequest->ReceivedData(), m_pVersionRequest->ReceivedDataSize());
+			if(pJsonData)
 			{
-				CNetChunk Packet;
+				if((*pJsonData)["version"].type == json_string)
+				{
+					const char *pVersion = (*pJsonData)["version"];
+					bool VersionMatch = str_comp(GAME_RELEASE_VERSION, pVersion) == 0;
 
-				mem_zero(&Packet, sizeof(Packet));
+					char aBuf[256]; 
+					str_format(aBuf, sizeof(aBuf), "version does %s (%s)",
+						VersionMatch ? "match" : "NOT match",
+						pVersion);
 
-				m_VersionInfo.m_VersionServeraddr.m_Addr.port = VERSIONSRV_PORT;
+					m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/version", aBuf);
 
-				Packet.m_ClientID = -1;
-				Packet.m_Address = m_VersionInfo.m_VersionServeraddr.m_Addr;
-				Packet.m_pData = VERSIONSRV_GETVERSION;
-				Packet.m_DataSize = sizeof(VERSIONSRV_GETVERSION);
-				Packet.m_Flags = NETSENDFLAG_CONNLESS;
-
-				m_ContactClient.Send(&Packet);
-				m_VersionInfo.m_State = CVersionInfo::STATE_READY;
+					// assume version is out of date when version-data doesn't match
+					if(!VersionMatch)
+						str_copy(m_aVersionStr, pVersion, sizeof(m_aVersionStr));
+				}
+				if((*pJsonData)["maps"].type == json_array)
+					m_pMapChecker->AddMaplist(&(*pJsonData)["maps"]);
 			}
 			else
-				m_VersionInfo.m_State = CVersionInfo::STATE_ERROR;
+			{
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "failed to load version.json, json error: %s", Parser.Error());
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/version", aBuf);
+			}
 		}
+		m_pVersionRequest->MarkAsChecked();
 	}
 }
 
@@ -2207,6 +2169,9 @@ void CClient::Run()
 	m_ServerBrowser.SaveServerlist();
 
 	CloseLocalServer();
+
+	if(m_pVersionRequest)
+		delete m_pVersionRequest;
 	// shutdown SDL
 	SDL_Quit();
 }
@@ -2662,6 +2627,10 @@ int main(int argc, const char **argv)
 		dbg_msg("secure", "could not initialize secure RNG");
 		return -1;
 	}
+
+	CCurlInit Curl;
+	if(Curl.IsFailed())
+		return -1;
 
 	signal(SIGINT, HandleSigIntTerm);
 	signal(SIGTERM, HandleSigIntTerm);
