@@ -14,7 +14,6 @@ jobs:
         include:
         - os: ubuntu-latest
           cmake-args: -G Ninja
-          build-target: package
           package-file: "*-linux_x86_64.tar.xz"
           archtitecture: "x86_64"
           shell: "bash"
@@ -23,8 +22,7 @@ jobs:
             CXXFLAGS: -Werror
         - os: windows-latest
           cmake-args: -G Ninja
-          build-target: package
-          package-file: "*-win64.zip"
+          package-file: "*-win64.7z"
           archtitecture: "x86_64"
           shell: "msys2"
           env:
@@ -33,7 +31,6 @@ jobs:
             LDFLAGS: -Werror
         - os: macOS-latest
           cmake-args: -G Ninja
-          build-target: package_dmg
           package-file: "*-macos.dmg"
           archtitecture: "arm64"
           shell: "bash"
@@ -61,6 +58,7 @@ jobs:
           ninja:p
           zlib:p
           sdl3:p
+          freetype:p
           opus:p
           opusfile:p
           openssl:p
@@ -81,26 +79,10 @@ jobs:
         sudo apt-get install pkg-config ninja-build libfreetype6-dev libopus-dev libopusfile-dev libcurl4-openssl-dev libgl1-mesa-dev -y
         sudo apt-get install build-essential git cmake libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev libudev-dev libinput-dev libts-dev libjpeg-dev libwebp-dev -y
         cd SDL
-        cmake . -DCMAKE_BUILD_TYPE=Release
+        cmake . -DCMAKE_BUILD_TYPE=Release -DSDL_TEST=OFF -DSDL_STATIC=OFF 
         sudo make install
+        sudo ldconfig
 
-    - name: Checkout Freetype
-      if: contains(matrix.os, 'windows')
-      uses: actions/checkout@v4
-      with:
-        repository: freetype/freetype
-        ref: VER-2-14-1
-        path: ./freetype
-
-    - name: Prepare Windows
-      if: contains(matrix.os, 'windows')
-      run: |
-        cd freetype
-        mkdir build
-        cd build
-        cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=/ucrt64 -D BUILD_SHARED_LIBS=true -D CMAKE_BUILD_TYPE=Release -D FT_DISABLE_ZLIB=TRUE -D FT_DISABLE_BZIP2=TRUE -D FT_DISABLE_PNG=TRUE -D FT_DISABLE_HARFBUZZ=TRUE -D FT_DISABLE_BROTLI=TRUE
-        ninja install
-  
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
       run: |
@@ -151,7 +133,9 @@ jobs:
     - name: Package
       run: |
         cd release
-        cmake --build . --config Release --target ${{ matrix.build-target }}
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Releas -DMACOS_DO_INSTALL=ON -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        cmake --build . --config Release --target everything
+        cpack -V
         mkdir artifacts
         mv ${{ matrix.package-file }} artifacts
 

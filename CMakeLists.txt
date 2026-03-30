@@ -64,6 +64,7 @@ option(DOWNLOAD_DEPENDENCIES "Download dependencies (only available on Windows)"
 option(DOWNLOAD_GTEST "Download and compile GTest if not found" ${AUTO_DEPENDENCIES_DEFAULT})
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
+option(MACOS_DO_INSTALL "MacOS option" OFF)
 
 set(OpenGL_GL_PREFERENCE GLVND)
 
@@ -227,8 +228,9 @@ if(NOT CMAKE_CROSSCOMPILING)
   find_package(PkgConfig)
 endif()
 find_package(ZLIB)
-find_package(Crypto)
-find_package(Curl)
+
+find_package(OpenSSL COMPONENTS Crypto)
+find_package(CURL)
 find_package(Freetype)
 find_package(Git)
 find_package(GTest)
@@ -283,7 +285,7 @@ show_dependency_status("Freetype" FREETYPE)
 if(TARGET_OS AND TARGET_OS STREQUAL "mac")
   show_dependency_status("Hdiutil" HDIUTIL)
 endif()
-show_dependency_status("OpenSSL Crypto" CRYPTO)
+show_dependency_status("OpenSSL Crypto" OPENSSL)
 show_dependency_status("Curl" CURL)
 show_dependency_status("Pnglite" PNGLITE)
 show_dependency_status("Python3" Python3)
@@ -296,7 +298,7 @@ if(NOT(Python3_FOUND))
   message(SEND_ERROR "You must install Python to compile Teeworlds")
 endif()
 
-if(NOT(CRYPTO_FOUND))
+if(NOT(OPENSSL_FOUND))
   message(SEND_ERROR "You must install OpenSSL Crypto to compile Teeworlds")
 endif()
 
@@ -1327,7 +1329,12 @@ set(GAME_GENERATED_SHARED
 set(DEPS ${DEP_JSON} ${ZLIB_DEP})
 
 # Libraries
-set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${CURL_LIBRARIES} ${PLATFORM_LIBS})
+set(LIBS ${CMAKE_THREAD_LIBS_INIT} OpenSSL::Crypto CURL::libcurl ${PLATFORM_LIBS})
+if(ZLIB_BUNDLED)
+  list(APPEND LIBS ${ZLIB_LIBRARIES})
+else()
+  list(APPEND LIBS ZLIB::ZLIB)
+endif()
 
 # Targets
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_GENERATED_SHARED} ${BASE})
@@ -1476,11 +1483,11 @@ if(CLIENT)
   # Libraries
   set(LIBS_CLIENT
     ${LIBS}
-    ${FREETYPE_LIBRARIES}
+    Freetype::Freetype
     ${PNGLITE_LIBRARIES}
-    ${SDL3_LIBRARIES}
-    ${OPUS_LIBRARIES}
-    ${OPUSFILE_LIBRARIES}
+    SDL3::SDL3
+    Opus::opus
+    Opusfile::opusfile
     ${PLATFORM_CLIENT_LIBS}
   )
 
@@ -1507,13 +1514,7 @@ if(CLIENT)
   )
   target_link_libraries(${TARGET_CLIENT} ${LIBS_CLIENT})
 
-  target_include_directories(${TARGET_CLIENT} PRIVATE
-    ${FREETYPE_INCLUDE_DIRS}
-    ${PNGLITE_INCLUDE_DIRS}
-    ${SDL3_INCLUDE_DIRS}
-    ${OPUS_INCLUDE_DIRS}
-    ${OPUSFILE_INCLUDE_DIRS}
-  )
+  target_include_directories(${TARGET_CLIENT} PRIVATE ${PNGLITE_INCLUDE_DIRS})
   list(APPEND TARGETS_OWN ${TARGET_CLIENT})
   list(APPEND TARGETS_LINK ${TARGET_CLIENT})
 endif()
@@ -1697,7 +1698,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
   add_custom_target(run_tests
     COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS}
     COMMENT Running tests
-    DEPENDS ${TARGET_TESTRUNER} ${copy_data}
+    DEPENDS ${TARGET_TESTRUNNER}
     USES_TERMINAL
   )
 endif()
@@ -1772,7 +1773,7 @@ set(CPACK_GENERATOR TGZ TXZ)
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_STRIP_FILES TRUE)
 set(CPACK_COMPONENTS_ALL portable)
-set(CPACK_SOURCE_GENERATOR ZIP TGZ TBZ2 TXZ)
+set(CPACK_SOURCE_GENERATOR 7Z_ZSTD TGZ TBZ2 TXZ)
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
@@ -1782,7 +1783,7 @@ set(CPACK_SYSTEM_NAME ${CMAKE_SYSTEM_NAME})
 if(TARGET_OS AND TARGET_BITS)
   if(TARGET_OS STREQUAL "windows")
     set(CPACK_SYSTEM_NAME "win${TARGET_BITS}")
-    set(CPACK_GENERATOR ZIP)
+    set(CPACK_GENERATOR 7Z_ZSTD)
   elseif(TARGET_OS STREQUAL "linux")
     # Assuming Intel here.
     if(TARGET_BITS EQUAL 32)
@@ -1792,7 +1793,7 @@ if(TARGET_OS AND TARGET_BITS)
     endif()
   elseif(TARGET_OS STREQUAL "mac")
     set(CPACK_SYSTEM_NAME "macos")
-    set(CPACK_GENERATOR DMG)
+    set(CPACK_GENERATOR DragNDrop)
   endif()
 endif()
 
@@ -1844,181 +1845,36 @@ endif()
 
 if(NOT DEV)
   install(DIRECTORY ${PROJECT_BINARY_DIR}/data DESTINATION share/${PROJECT_NAME} COMPONENT data)
-  install(TARGETS ${TARGET_CLIENT} DESTINATION bin COMPONENT client)
-  install(TARGETS ${TARGET_SERVER} DESTINATION bin COMPONENT server)
-endif()
 
-if(DEV)
-  # Don't generate CPack targets.
-else()
-  set(EXTRA_ARGS DESTINATION ${CPACK_PACKAGE_FILE_NAME} COMPONENT portable EXCLUDE_FROM_ALL)
+  set(EXTRA_ARGS DESTINATION . COMPONENT portable EXCLUDE_FROM_ALL)
   install(TARGETS ${CPACK_TARGETS} ${EXTRA_ARGS})
   install(DIRECTORY ${CPACK_DIRS} ${EXTRA_ARGS})
-  set(INSTALL_DEPS_SCRIPT "${CMAKE_BINARY_DIR}/.install_deps.cmake")
-
-  set(TARGET_FILE_LIST "")
-  foreach(_TARGET ${CPACK_TARGETS})
-    get_target_property(_ISIMPORTED ${_TARGET} IMPORTED)
-    if(NOT _ISIMPORTED)
-      list(APPEND TARGET_FILE_LIST "$<TARGET_FILE:${_TARGET}>")
-    endif()
-  endforeach()
-
-  if(TARGET_OS STREQUAL "windows")
-    if(DEFINED ENV{MSYSTEM_PREFIX})
-      file(TO_CMAKE_PATH "$ENV{MSYSTEM_PREFIX}" MSYS2_ROOT)
-      set(EXTRA_BIN_DIR "${MSYS2_ROOT}/bin")
-    else()
-      # fallback to default
-      set(EXTRA_BIN_DIR "C:/msys64/ucrt64/bin")
-    endif()
-  else()
-    set(EXTRA_BIN_DIR "/usr/bin")
-  endif()
-
-  file(GENERATE OUTPUT "${INSTALL_DEPS_SCRIPT}"
-      CONTENT "
-  set(_DEPS \"\")
-  set(UNRESOLVED_DEPS \"\")
-
-  message(STATUS \"Extra binary dir is ${EXTRA_BIN_DIR}\")
-
-  set(POST_EXCLUDE_REGEXES)
-  foreach(_FILE ${TARGET_FILE_LIST})
-    if(EXISTS \"\${_FILE}\")
-      if(TARGET_OS STREQUAL \"windows\")
-        set(POST_EXCLUDE_REGEXES
-          \".*api-ms-win.*\"
-          \".*ext-ms-win.*\"
-          \".*AzureAttest.*\"
-          \".*HvsiFileTrust.*\"
-          \".*PdmUtilities.*\"
-          \".*WTDSENSOR.*\"
-          \".*wpaxholder.*\"
-          \".*wtdccm.*\"
-        )
-      elif(TARGET_OS STREQUAL \"mac\")
-        set(POST_EXCLUDE_REGEXES
-          \"/usr/lib/.*\"
-          \"/System/Library/.*\"
-          \"/lib/.*\"
-        )
-      elif(TARGET_OS STREQUAL \"linux\")
-        set(POST_EXCLUDE_REGEXES \"\") # do nothing as it's difficult to pack the library for linux.
-      endif()
-
-      file(GET_RUNTIME_DEPENDENCIES
-        EXECUTABLES \"\${_FILE}\"
-        RESOLVED_DEPENDENCIES_VAR _RESOLVED
-        UNRESOLVED_DEPENDENCIES_VAR _UNRESOLVED
-        DIRECTORIES \"${EXTRA_BIN_DIR}\"
-        POST_EXCLUDE_REGEXES \${POST_EXCLUDE_REGEXES}
-      )
-      list(APPEND _DEPS \${_RESOLVED})
-      list(APPEND UNRESOLVED_DEPS \${_UNRESOLVED})
-      message(STATUS \"Collecting deps for: \${_FILE}\")
-    endif()
-  endforeach()
-  message(STATUS \"Original deps: \${_DEPS}\")
-
-  list(REMOVE_DUPLICATES _DEPS)
-  set(DEP_WHITELIST_REGEX
-    \"(freetype|SDL3|libcrypto|libcurl|libogg|libopus|libopusfile|libopusurl)\"
-  )
-
-  list(FILTER _DEPS INCLUDE REGEX \"\${DEP_WHITELIST_REGEX}\")
-
-  foreach(_LIB IN LISTS _DEPS)
-    file(INSTALL
-      DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CPACK_PACKAGE_FILE_NAME}\"
-      TYPE SHARED_LIBRARY
-      FILES \"\${_LIB}\"
-    )
-  endforeach()
-
-  if(UNRESOLVED_DEPS)
-    message(WARNING \"Unresolved runtime dependencies: \${UNRESOLVED_DEPS}\")
-  endif()
-  ")
-
-  install(SCRIPT "${INSTALL_DEPS_SCRIPT}" COMPONENT portable)
   install(FILES ${CPACK_FILES} ${EXTRA_ARGS})
-endif()
-
-if(CLIENT AND (DMGTOOLS_FOUND OR HDIUTIL))
-  file(MAKE_DIRECTORY bundle/client/)
-  file(MAKE_DIRECTORY bundle/server/)
-  configure_file(other/bundle/client/Info.plist.in bundle/client/Info.plist)
-  configure_file(other/bundle/server/Info.plist.in bundle/server/Info.plist)
-
-  if(HDIUTIL)
-    set(DMG_PARAMS --hdiutil ${HDIUTIL})
-  elseif(DMGTOOLS_FOUND)
-    set(DMG_PARAMS --dmgtools ${DMG} ${HFSPLUS} ${NEWFS_HFS})
+  if((DMGTOOLS_FOUND OR HDIUTIL) AND MACOS_DO_INSTALL)
+    configure_file(other/bundle/client/Info.plist.in ${PROJECT_BINARY_DIR}/bundle/client/Info.plist)
+    configure_file(other/bundle/server/Info.plist.in ${PROJECT_BINARY_DIR}/bundle/server/Info.plist)
+    set_target_properties(${TARGET_CLIENT} PROPERTIES
+      MACOSX_BUNDLE TRUE
+      MACOSX_BUNDLE_INFO_PLIST "${PROJECT_BINARY_DIR}/bundle/client/Info.plist"
+      MACOSX_BUNDLE_ICON_FILE "${PROJECT_SOURCE_DIR}/other/icons/${TARGET_CLIENT}.icns"
+    )
+    set_target_properties(${TARGET_SERVER} PROPERTIES
+      MACOSX_BUNDLE TRUE
+      MACOSX_BUNDLE_INFO_PLIST "${PROJECT_BINARY_DIR}/bundle/server/Info.plist"
+      MACOSX_BUNDLE_ICON_FILE "${PROJECT_SOURCE_DIR}/other/icons/${TARGET_SERVER}.icns"
+    )
+  else()
+    install(TARGETS ${TARGET_CLIENT} DESTINATION . COMPONENT Runtime)
+    install(TARGETS ${TARGET_SERVER} DESTINATION . COMPONENT Runtime)
   endif()
-  set(DMG_TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_dmg)
-  set(DMG_MKDIRS
-    ${TARGET_CLIENT}.app
-    ${TARGET_CLIENT}.app/Contents
-    ${TARGET_CLIENT}.app/Contents/Frameworks
-    ${TARGET_CLIENT}.app/Contents/MacOS
-    ${TARGET_CLIENT}.app/Contents/Resources
-    ${TARGET_SERVER}.app
-    ${TARGET_SERVER}.app/Contents
-    ${TARGET_SERVER}.app/Contents/MacOS
-    ${TARGET_SERVER}.app/Contents/Resources
-    ${TARGET_SERVER}.app/Contents/Resources/data
-    # Needed so the server recognizes the data directory.
-    ${TARGET_SERVER}.app/Contents/Resources/data/mapres
+
+  set(FIXUP_BUNDLE_SCRIPT "${CMAKE_BINARY_DIR}/.install_deps.cmake")
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/cmake/FixupBundleHelper.cmake.in"
+    "${FIXUP_BUNDLE_SCRIPT}"
+    @ONLY
   )
-  set(DMG_MKDIR_COMMANDS)
-  foreach(dir ${DMG_MKDIRS})
-    list(APPEND DMG_MKDIR_COMMANDS COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${dir})
-  endforeach()
-  add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.dmg
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${DMG_TMPDIR}
-    ${DMG_MKDIR_COMMANDS}
-
-    # CLIENT
-    COMMAND ${CMAKE_COMMAND} -E copy_directory data ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/Resources/data
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/other/icons/${TARGET_CLIENT}.icns ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/Resources/
-    COMMAND ${CMAKE_COMMAND} -E copy bundle/client/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/client/PkgInfo ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${TARGET_CLIENT}> ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/MacOS/
-    COMMAND ${CMAKE_COMMAND} -E copy ${SDL3_LIBRARY} ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/Frameworks/libSDL3.dylib
-    COMMAND ${CMAKE_COMMAND} -E copy ${FREETYPE_LIBRARY} ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/Frameworks/libfreetype.6.dylib
-    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_change_dylib.py change --tools ${CMAKE_INSTALL_NAME_TOOL} ${CMAKE_OTOOL} ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/MacOS/${TARGET_CLIENT} SDL3 @executable_path/../Frameworks/libSDL3-2.0.0.dylib
-    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_change_dylib.py change --tools ${CMAKE_INSTALL_NAME_TOOL} ${CMAKE_OTOOL} ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/MacOS/${TARGET_CLIENT} libfreetype @executable_path/../Frameworks/libfreetype.6.dylib
-
-    # SERVER
-    COMMAND ${CMAKE_COMMAND} -E copy_directory data/maps ${DMG_TMPDIR}/${TARGET_SERVER}.app/Contents/Resources/data/maps
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/other/icons/${TARGET_SERVER}.icns ${DMG_TMPDIR}/${TARGET_SERVER}.app/Contents/Resources/
-    COMMAND ${CMAKE_COMMAND} -E copy bundle/server/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/server/PkgInfo ${DMG_TMPDIR}/${TARGET_SERVER}.app/Contents/
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${TARGET_SERVER}> $<TARGET_FILE:${TARGET_SERVER_LAUNCHER}> ${DMG_TMPDIR}/${TARGET_SERVER}.app/Contents/MacOS/
-
-    # DMG
-    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/dmg.py create ${DMG_PARAMS} ${CPACK_PACKAGE_FILE_NAME}.dmg ${CPACK_PACKAGE_FILE_NAME} ${DMG_TMPDIR}
-
-    DEPENDS
-      ${TARGET_CLIENT}
-      ${TARGET_SERVER_LAUNCHER}
-      ${TARGET_SERVER}
-      ${PROJECT_BINARY_DIR}/bundle/client/Info.plist
-      ${PROJECT_BINARY_DIR}/bundle/server/Info.plist
-      other/bundle/client/PkgInfo
-      other/bundle/server/PkgInfo
-      other/icons/${TARGET_CLIENT}.icns
-      other/icons/${TARGET_SERVER}.icns
-      scripts/dmg.py
-  )
-  add_custom_target(package_dmg DEPENDS ${CPACK_PACKAGE_FILE_NAME}.dmg)
-  list(APPEND PACKAGE_TARGETS package_dmg)
-endif()
-
-set(PACKAGE_DEFAULT tar_xz)
-if(TARGET_OS STREQUAL "windows")
-  set(PACKAGE_DEFAULT zip)
-elseif(TARGET_OS STREQUAL "mac")
-  set(PACKAGE_DEFAULT dmg)
+  install(SCRIPT "${FIXUP_BUNDLE_SCRIPT}" COMPONENT portable)
 endif()
 
 # Unset these variables, they might do something in the future of CPack.
@@ -2113,9 +1969,10 @@ foreach(target ${TARGETS_OWN})
   target_include_directories(${target} PRIVATE ${PROJECT_BINARY_DIR}/src)
   target_include_directories(${target} PRIVATE src)
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
-  target_include_directories(${target} PRIVATE ${CURL_INCLUDE_DIRS})
-  target_include_directories(${target} PRIVATE ${ZLIB_INCLUDE_DIRS})
-  target_include_directories(${target} PRIVATE ${CRYPTO_INCLUDE_DIRS})
+  if(NOT ZLIB_BUNDLED)
+    target_include_directories(${target} PRIVATE ${ZLIB_INCLUDE_DIRS})
+  endif()
+  target_include_directories(${target} PRIVATE ${OPENSSL_INCLUDE_DIR})
   if(HEADLESS_CLIENT)
     target_compile_definitions(${target} PRIVATE CONF_HEADLESS_CLIENT)
   endif()
