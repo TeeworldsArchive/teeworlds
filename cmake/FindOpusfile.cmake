@@ -24,4 +24,10 @@ mark_as_advanced(OPUSFILE_LIBRARY OPUSFILE_INCLUDEDIR)
 if(OPUSFILE_FOUND)
   set(OPUSFILE_LIBRARIES ${OPUSFILE_LIBRARY})
   set(OPUSFILE_INCLUDE_DIRS ${OPUSFILE_INCLUDEDIR})
+
+  add_library(Opusfile::opusfile INTERFACE IMPORTED)
+  set_target_properties(Opusfile::opusfile PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${OPUSFILE_INCLUDE_DIRS}"
+  )
+  target_link_libraries(Opusfile::opusfile INTERFACE ${OPUSFILE_LIBRARIES})
 endif()

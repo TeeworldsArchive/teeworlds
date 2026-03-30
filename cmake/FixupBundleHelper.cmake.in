@@ -1,0 +1,30 @@
+include(BundleUtilities)
+
+message(STATUS "Running post-install script to fix up bundle...")
+
+set(PACKAGE_DIR "${CMAKE_INSTALL_PREFIX}")
+
+set(CLIENT_EXECUTABLE_PATH "${PACKAGE_DIR}/teeworlds@CMAKE_EXECUTABLE_SUFFIX@")
+set(SERVER_EXECUTABLE_PATH "${PACKAGE_DIR}/teeworlds_srv@CMAKE_EXECUTABLE_SUFFIX@")
+
+function(fixup_single_executable EXEC_PATH)
+    if(EXISTS "${EXEC_PATH}")
+        message(STATUS "Fixing up bundle for: ${EXEC_PATH}")
+
+        set(FIND_PATH "@CMAKE_PREFIX_PATH@")
+        if(TARGET_OS STREQUAL "linux")
+            set(FIND_PATH "${FIND_PATH};${PACKAGE_DIR}/lib")
+        elseif(TARGET_OS STREQUAL "mac")
+            set(FIND_PATH "${FIND_PATH};${PACKAGE_DIR}/Frameworks")
+        endif()
+        fixup_bundle("${EXEC_PATH}" "" "${FIND_PATH}")
+    else()
+        message(WARNING "Executable not found at: ${EXEC_PATH}")
+        message(WARNING "Please check if the file was actually installed.")
+    endif()
+endfunction()
+
+fixup_single_executable("${CLIENT_EXECUTABLE_PATH}")
+fixup_single_executable("${SERVER_EXECUTABLE_PATH}")
+
+message(STATUS "Post-install script completed.")
