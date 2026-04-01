@@ -26,7 +26,7 @@ public:
 	// general
 	virtual void Snap(int SnappingClient);
 	virtual void Tick();
-	virtual bool IsPureTuning() { return true; }
+	virtual bool IsPureTuning() const { return true; }
 };
 
 #endif

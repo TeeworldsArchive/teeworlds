@@ -1862,6 +1862,7 @@ const char *CGameContext::Version() const { return GAME_VERSION; }
 const char *CGameContext::NetVersion() const { return GAME_NETVERSION; }
 const char *CGameContext::NetVersionHashUsed() const { return GAME_NETVERSION_HASH_FORCED; }
 const char *CGameContext::NetVersionHashReal() const { return GAME_NETVERSION_HASH; }
+bool CGameContext::TimeScore() const { return m_pController && m_pController->TimeScore(); }
 int CGameContext::GetMaxPlayerSlots() { return minimum(Config()->m_SvPlayerSlots, m_pController->GetMaxPlayerSlots()); }
 
 IGameServer *CreateGameServer() { return new CGameContext; }

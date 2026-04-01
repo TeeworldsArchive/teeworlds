@@ -8,7 +8,7 @@ class CGameControllerDM : public IGameController
 {
 public:
 	CGameControllerDM(class CGameContext *pGameServer);
-	virtual bool IsPureTuning() { return true; }
+	virtual bool IsPureTuning() const { return true; }
 };
 
 #endif

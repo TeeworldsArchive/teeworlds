@@ -252,7 +252,8 @@ public:
 
 	// return: Reload timer
 	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon);
-	virtual bool IsPureTuning() { return false; }
+	virtual bool IsPureTuning() const { return false; }
+	virtual bool TimeScore() const { return false; }
 };
 
 typedef IGameController *(*FCreateGameController)(class CGameContext *pGameServer);

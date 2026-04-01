@@ -105,7 +105,7 @@ public:
 
 	virtual int GetMaxPlayerSlots() = 0;
 
-	virtual bool TimeScore() const { return false; }
+	virtual bool TimeScore() const = 0;
 };
 
 extern IGameServer *CreateGameServer();

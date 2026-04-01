@@ -13,7 +13,7 @@ public:
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
 	// game
 	virtual void DoWincheckRound();
-	virtual bool IsPureTuning() { return true; }
+	virtual bool IsPureTuning() const { return true; }
 };
 
 #endif

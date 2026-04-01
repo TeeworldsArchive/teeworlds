@@ -11,7 +11,7 @@ public:
 
 	// event
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
-	virtual bool IsPureTuning() { return true; }
+	virtual bool IsPureTuning() const { return true; }
 };
 
 #endif
