@@ -31,12 +31,13 @@ void EscapeUrl(char *pBuf, int Size, const char *pStr)
 	curl_free(pEsc);
 }
 
-CHttpRequest::CHttpRequest(const char *pRequest, const char *pUrl, long TimeoutSeconds)
+CHttpRequest::CHttpRequest(const char *pRequest, const char *pUrl, long TimeoutSeconds, int IPResolve)
 {
     str_copy(m_aRequest, pRequest, sizeof(m_aRequest));
 	str_copy(m_aUrl, pUrl, sizeof(m_aUrl));
 
     m_pHeaderList = 0;
+    m_IPResolve = IPResolve;
 
     m_IsChecked = false;
     m_TimeoutSeconds = TimeoutSeconds;
@@ -100,6 +101,13 @@ int CHttpRequest::Run(void *pUser)
     {
         curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDS, (const char*) pRequest->m_PostData.base_ptr()); 
         curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDSIZE, pRequest->m_PostData.size());
+    }
+    
+    switch(pRequest->m_IPResolve)
+    {
+        case HTTP_IPRESOLVE_IPV4ONLY: curl_easy_setopt(pRequest->m_pHandle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); break;
+        case HTTP_IPRESOLVE_IPV6ONLY: curl_easy_setopt(pRequest->m_pHandle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6); break;
+        default: curl_easy_setopt(pRequest->m_pHandle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_WHATEVER); break;
     }
 
     curl_easy_setopt(pRequest->m_pHandle, CURLOPT_USERAGENT, "TeeworldsArchive " GAME_VERSION " (" CONF_PLATFORM_STRING "; " CONF_ARCH_STRING ")");

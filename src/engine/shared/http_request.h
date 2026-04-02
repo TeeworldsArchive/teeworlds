@@ -10,11 +10,20 @@ extern "C"
     struct curl_slist;
 }
 
+enum
+{
+    HTTP_IPRESOLVE_BOTH = 0,
+    HTTP_IPRESOLVE_IPV4ONLY,
+    HTTP_IPRESOLVE_IPV6ONLY,
+};
+
 class CHttpRequest
 {
     char m_aRequest[16];
     char m_aUrl[256];
     long m_TimeoutSeconds;
+
+    int m_IPResolve;
 
     array<unsigned char> m_PostData;
     array<unsigned char> m_ReceivedData;
@@ -30,7 +39,7 @@ class CHttpRequest
     static size_t WriteCallback(char *pData, size_t Size, size_t Number, void *pUser);
     static int Run(void *pUser);
 public:
-    CHttpRequest(const char *pRequest, const char *pUrl, long TimeoutSeconds);
+    CHttpRequest(const char *pRequest, const char *pUrl, long TimeoutSeconds, int IPResolve = HTTP_IPRESOLVE_BOTH);
     void PostData(const unsigned char *pPost, int Size);
     void PostJson(const char *pJson);
     void AddHeader(const char *pHeader);
