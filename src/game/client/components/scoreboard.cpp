@@ -238,7 +238,7 @@ float CScoreboard::RenderScoreboard(float x, float y, float w, int Align)
 	{
 		FormatTime(aBuf, sizeof(aBuf), m_pClient->m_Snap.m_pGameDataRace->m_BestTime, m_pClient->RacePrecision());
 	}
-	else if(TeamPlay)
+	else
 	{
 		int Score = 0;
 		if(TeamPlay)
