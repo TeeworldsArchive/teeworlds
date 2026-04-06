@@ -4,8 +4,8 @@ message(STATUS "Running post-install script to fix up bundle...")
 
 set(PACKAGE_DIR "${CMAKE_INSTALL_PREFIX}")
 
-set(CLIENT_EXECUTABLE_PATH "${PACKAGE_DIR}/teeworlds@CMAKE_EXECUTABLE_SUFFIX@")
-set(SERVER_EXECUTABLE_PATH "${PACKAGE_DIR}/teeworlds_srv@CMAKE_EXECUTABLE_SUFFIX@")
+set(CLIENT_EXECUTABLE_PATH "${PACKAGE_DIR}/ArchiveClient@CMAKE_EXECUTABLE_SUFFIX@")
+set(SERVER_EXECUTABLE_PATH "${PACKAGE_DIR}/ArchiveServer@CMAKE_EXECUTABLE_SUFFIX@")
 
 function(fixup_single_executable EXEC_PATH)
     if(EXISTS "${EXEC_PATH}")

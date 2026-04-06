@@ -85,8 +85,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   src/game/version.h
 )
 
-set(SERVER_EXECUTABLE teeworlds_srv CACHE STRING "Name of the built server executable")
-set(CLIENT_EXECUTABLE teeworlds CACHE STRING "Name of the build client executable")
+set(SERVER_EXECUTABLE ArchiveServer CACHE STRING "Name of the built server executable")
+set(CLIENT_EXECUTABLE ArchiveClient CACHE STRING "Name of the build client executable")
 
 ########################################################################
 # Compiler flags
@@ -1492,7 +1492,7 @@ if(CLIENT)
   )
 
   if(TARGET_OS STREQUAL "windows")
-    set(CLIENT_ICON "other/icons/${CLIENT_EXECUTABLE}.rc")
+    set(CLIENT_ICON "other/icons/teeworlds.rc")
     if(NOT MINGW)
       set(CLIENT_MANIFEST "other/manifest/teeworlds.manifest")
     else()
@@ -1578,7 +1578,7 @@ set(GAME_GENERATED_SERVER
 )
 set(SERVER_SRC ${ENGINE_SERVER} ${GAME_SERVER} ${GAME_GENERATED_SERVER})
 if(TARGET_OS STREQUAL "windows")
-  set(SERVER_ICON "other/icons/${SERVER_EXECUTABLE}.rc")
+  set(SERVER_ICON "other/icons/teeworlds_srv.rc")
 else()
   set(SERVER_ICON)
 endif()

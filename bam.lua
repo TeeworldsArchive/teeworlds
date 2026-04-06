@@ -385,7 +385,7 @@ function BuildClient(settings, family, platform)
 	local game_client = Compile(settings, CollectRecursive("src/game/client/*.cpp"), SharedClientFiles())
 	local game_editor = Compile(settings, Collect("src/game/editor/*.cpp"))
 	
-	Link(settings, "teeworlds", libs["zlib"], libs["png"], libs["json"], libs["glad"], client, game_client, game_editor)
+	Link(settings, "ArchiveClient", libs["zlib"], libs["png"], libs["json"], libs["glad"], client, game_client, game_editor)
 end
 
 function BuildServer(settings, family, platform)
@@ -393,7 +393,7 @@ function BuildServer(settings, family, platform)
 	
 	local game_server = Compile(settings, CollectRecursive("src/game/server/*.cpp"), SharedServerFiles())
 	
-	return Link(settings, "teeworlds_srv", libs["zlib"], libs["json"], server, game_server)
+	return Link(settings, "ArchiveServer", libs["zlib"], libs["json"], server, game_server)
 end
 
 function BuildTools(settings)
@@ -539,7 +539,7 @@ else
 	headless = nil
 end
 
-targets = {client="teeworlds", server="teeworlds_srv",
+targets = {client="ArchiveClient", server="ArchiveServer",
            versionserver="versionsrv", masterserver="mastersrv",
            tools="pseudo_tools", content="content"}
 

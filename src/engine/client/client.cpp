@@ -2482,9 +2482,9 @@ void CClient::OpenURL(const char *pUrl)
 void CClient::OpenLocalServer()
 {
 #ifdef CONF_FAMILY_WINDOWS
-	static const char *pServer = "teeworlds_srv.exe";
+	static const char *pServer = "ArchiveServer.exe";
 #else
-	static const char *pServer = "teeworlds_srv";
+	static const char *pServer = "ArchiveServer";
 #endif
 	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_APP, pServer, aPath, sizeof(aPath));

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Teeworlds Archive
+GenericName=Online multi-player 2D platform shooter modification
+Type=Application
+Terminal=false
+Exec=ArchiveClient
+Icon=ArchiveClient
+Comment=Teeworlds Archive
+Categories=Game;ArcadeGame;

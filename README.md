@@ -66,8 +66,8 @@ Building
 
 On subsequent builds, you only have to repeat the `ninja` step.
 
-You can then run the client with `./teeworlds` and the server with
-`./teeworlds_srv`.
+You can then run the client with `./ArchiveClient` and the server with
+`./ArchiveServer`.
 
 
 Build options
@@ -108,7 +108,7 @@ Building
     bam
 ```
 
-The compiled game is located in a sub-folder of `build`. You can run the client from there with `./teeworlds` and the server with `./teeworlds_srv`.
+The compiled game is located in a sub-folder of `build`. You can run the client from there with `./ArchiveClient` and the server with `./ArchiveServer`.
 
 
 Build options

@@ -94,7 +94,7 @@ void runServer()
 	[window makeKeyAndOrderFront: nil];
 
 	[view listenTo: task];
-	[task setLaunchPath: [mainBundle pathForAuxiliaryExecutable: @"teeworlds_srv"]];
+	[task setLaunchPath: [mainBundle pathForAuxiliaryExecutable: @"ArchiveServer"]];
 	[task setArguments: arguments];
 	[task launch];
 	[NSApp run];

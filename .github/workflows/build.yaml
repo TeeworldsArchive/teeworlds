@@ -109,7 +109,7 @@ jobs:
       env: ${{ matrix.env }}
       run: |
         cd debug
-        ./teeworlds_srv shutdown
+        ./ArchiveServer shutdown
 
     - name: Build in release mode
       env: ${{ matrix.env }}
@@ -128,7 +128,7 @@ jobs:
       env: ${{ matrix.env }}
       run: |
         cd release
-        ./teeworlds_srv shutdown
+        ./ArchiveServer shutdown
 
     - name: Package
       run: |
@@ -241,10 +241,10 @@ jobs:
     - name: Build in debug mode
       run: ./bam/bam conf=debug all
     - name: Test debug
-      run: ./build/${{ matrix.archtitecture }}/debug/teeworlds_srv shutdown
+      run: ./build/${{ matrix.archtitecture }}/debug/ArchiveServer shutdown
 
     - name: Build in release mode
       run: ./bam/bam conf=release all
     - name: Test release
-      run: ./build/${{ matrix.archtitecture }}/release/teeworlds_srv shutdown
+      run: ./build/${{ matrix.archtitecture }}/release/ArchiveServer shutdown
 

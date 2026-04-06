@@ -25,12 +25,11 @@ map_resave*
 map_version*
 mastersrv*
 packetgen*
-teeworlds*
-!other/bash-completion/teeworlds
+ArchiveClient*
+!ArchiveClient.desktop
 !teeworlds.manifest
 !teeworlds.rc
-teeworlds_srv*
-!other/bash-completion/teeworlds_srv
+ArchiveServer*
 testrunner
 versionsrv*
 
