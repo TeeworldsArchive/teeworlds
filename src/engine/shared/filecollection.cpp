@@ -12,7 +12,7 @@ bool CFileCollection::IsFilenameValid(const char *pFilename, int64 *pTimestamp)
 {
 	if(!str_endswith(pFilename, m_aFileExt))
 		return false;
-	
+
 	if(m_aFileDesc[0] == '\0')
 	{
 		int FilenameLength = str_length(pFilename);
@@ -174,7 +174,7 @@ int CFileCollection::FilelistCallback(const char *pFilename, int IsDir, int Stor
 		return 0;
 
 	// add the entry
- 	CEntry &Entry = pThis->m_aEntries.emplace();
+	CEntry &Entry = pThis->m_aEntries.emplace();
 	Entry.m_Timestamp = Timestamp;
 	str_copy(Entry.m_aFilename, pFilename, sizeof(Entry.m_aFilename));
 

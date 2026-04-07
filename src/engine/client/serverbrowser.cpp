@@ -697,7 +697,7 @@ void CServerBrowser::SaveServerlist()
 	IOHANDLE File = Storage()->OpenFile(s_pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 		return;
-	
+
 	file_stream Stream(File, true);
 	CJsonWriter Writer(&Stream);
 	Writer.BeginObject(); // root

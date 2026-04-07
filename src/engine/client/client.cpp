@@ -1757,7 +1757,7 @@ void CClient::VersionUpdate()
 					const char *pVersion = (*pJsonData)["version"];
 					bool VersionMatch = str_comp(GAME_RELEASE_VERSION, pVersion) == 0;
 
-					char aBuf[256]; 
+					char aBuf[256];
 					str_format(aBuf, sizeof(aBuf), "version does %s (%s)",
 						VersionMatch ? "match" : "NOT match",
 						pVersion);

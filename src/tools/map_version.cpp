@@ -28,9 +28,9 @@ struct CMapVersion
 		return str_comp(m_aName, Other.m_aName) < 0;
 	}
 	bool operator==(const CMapVersion &Other) const { return (str_comp(m_aName, Other.m_aName) == 0) &&
-															(str_comp(m_aSha256, Other.m_aSha256) == 0) &&
-															m_Size == Other.m_Size &&
-															m_Crc == Other.m_Crc; }
+								 (str_comp(m_aSha256, Other.m_aSha256) == 0) &&
+								 m_Size == Other.m_Size &&
+								 m_Crc == Other.m_Crc; }
 };
 
 static IOHANDLE s_File = 0;
@@ -49,7 +49,7 @@ int MaplistCallback(const char *pName, int IsDir, int DirType, void *pUser)
 	str_format(aBuf, sizeof(aBuf), "maps/%s", pName);
 	if(!s_pEngineMap->Load(aBuf))
 		return 0;
-	
+
 	CMapVersion MapVersion;
 	MapVersion.m_Crc = s_pEngineMap->Crc();
 	sha256_str(s_pEngineMap->Sha256(), MapVersion.m_aSha256, sizeof(MapVersion.m_aSha256));

@@ -270,7 +270,7 @@ float CScoreboard::RenderScoreboard(float x, float y, float w, int Align)
 
 	MainView.HSplitBottom(LineHeight, &MainView, &Header);
 	Header.Draw(BackgroundColor);
-	
+
 	static CScrollRegion s_ScrollRegion;
 	vec2 ScrollOffset(0, 0);
 	CScrollRegionParams ScrollParams;

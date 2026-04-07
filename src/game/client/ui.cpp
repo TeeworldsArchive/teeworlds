@@ -376,7 +376,7 @@ void CUI::DoLabelColor(const CUIRect *pRect, const vec4 &TextColor, const char *
 {
 	vec4 OldColor = TextRender()->GetColor();
 	TextRender()->TextColor(TextColor);
-	
+
 	DoLabel(pRect, pText, FontSize, Align, LineWidth, MultiLine);
 
 	TextRender()->TextColor(OldColor);

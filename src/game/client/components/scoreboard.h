@@ -19,6 +19,7 @@ class CScoreboard : public CComponent
 	class CUIRect m_TotalRect;
 
 	void RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHeight, class CScrollRegion *pScrollRegion);
+
 public:
 	CScoreboard();
 	virtual void OnReset();

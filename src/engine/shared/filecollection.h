@@ -17,7 +17,7 @@ class CFileCollection
 	{
 		int64 m_Timestamp;
 		char m_aFilename[IO_MAX_PATH_LENGTH];
-	
+
 		inline bool operator<(const CEntry &Other) const { return m_Timestamp < Other.m_Timestamp; }
 	};
 
