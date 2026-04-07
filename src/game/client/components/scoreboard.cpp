@@ -305,6 +305,7 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 	const vec4 LocalHighlightColor(1.0f, 1.0f, 1.0f, 0.5f);
 	const vec4 TeamRectColor = Team == TEAM_RED ? vec4(1.0f, 0.0f, 0.0f, 0.25f) : vec4(0.0f, 0.0f, 1.0f, 0.25f);
 
+	const bool ReadyMode = m_pClient->m_Snap.m_pGameData && m_pClient->m_Snap.m_pGameData->m_GameStateEndTick == 0;
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		const CGameClient::CPlayerInfoItem *pInfo = &m_pClient->m_Snap.m_aInfoByScore[i];
@@ -387,11 +388,19 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 			UI()->DoLabel(&PlayerName, aBuf, LineFontSize, TEXTALIGN_ML, 100.0f, false);
 		}
 		Playerline.VSplitLeft(Spacing, 0, &Playerline);
+		// ready / watching
+		if(ReadyMode && pInfo->m_pPlayerInfo->m_PlayerFlags & PLAYERFLAG_READY)
+		{
+			CUIRect PlayerReady;
+			Playerline.VSplitLeft(20.0f, &PlayerReady, &Playerline);
+			UI()->DoLabelColor(&PlayerReady, vec4(0.1f, 1.0f, 0.1f, 1.0f), "\xE2\x9C\x93", LineFontSize, TEXTALIGN_ML, 20.0f, false);
+		}
+		Playerline.VSplitLeft(Spacing, 0, &Playerline);
 		{
 			CUIRect PlayerClan;
 			Playerline.VSplitLeft(80.0f, &PlayerClan, &Playerline);
 			str_copy(aBuf, pData->m_aClan, sizeof(aBuf));
-			UI()->DoLabelColor(&PlayerClan, GreyTextColor, aBuf, LineFontSize, TEXTALIGN_MC, 100.0f, false);
+			UI()->DoLabelColor(&PlayerClan, GreyTextColor, aBuf, LineFontSize, TEXTALIGN_MC, 80.0f, false);
 		}
 		Playerline.VSplitLeft(Spacing, 0, &Playerline);
 		{
