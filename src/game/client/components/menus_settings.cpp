@@ -1602,7 +1602,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	static const int s_GfxFsaaSamples = Config()->m_GfxFsaaSamples;
 	static const int s_GfxOpenGLES = Config()->m_GfxOpenGLES;
 	static const int s_GfxTextureQuality = Config()->m_GfxTextureQuality;
-	static const int s_GfxTextureCompression = Config()->m_GfxTextureCompression;
 
 	CUIRect Label, Button, ScreenLeft, ScreenRight, Texture, BottomView, Background;
 
@@ -1628,7 +1627,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	ScreenLeft.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
 	// render textures menu background
-	NumOptions = 4;
+	NumOptions = 2;
 	BackgroundHeight = (float) (NumOptions + 1) * ButtonHeight + (float) NumOptions * Spacing;
 
 	MainView.HSplitTop(10.0f, 0, &MainView);
@@ -1778,14 +1777,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 
 	Texture.HSplitTop(Spacing, 0, &Texture);
 	Texture.HSplitTop(ButtonHeight, &Button, &Texture);
-	if(DoButton_CheckBox(&Config()->m_GfxTextureCompression, Localize("Texture Compression"), Config()->m_GfxTextureCompression, &Button))
-	{
-		Config()->m_GfxTextureCompression ^= 1;
-		m_CheckVideoSettings = true;
-	}
-
-	Texture.HSplitTop(Spacing, 0, &Texture);
-	Texture.HSplitTop(ButtonHeight, &Button, &Texture);
 	if(DoButton_CheckBox(&Config()->m_GfxHighDetail, Localize("High Detail"), Config()->m_GfxHighDetail, &Button))
 		Config()->m_GfxHighDetail ^= 1;
 
@@ -1866,7 +1857,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			s_GfxFsaaSamples != Config()->m_GfxFsaaSamples ||
 			s_GfxOpenGLES != Config()->m_GfxOpenGLES ||
 			s_GfxTextureQuality != Config()->m_GfxTextureQuality ||
-			s_GfxTextureCompression != Config()->m_GfxTextureCompression ||
 			(CheckFullscreen && s_GfxFullscreen != Config()->m_GfxFullscreen);
 		m_CheckVideoSettings = false;
 	}
@@ -2064,7 +2054,6 @@ void CMenus::ResetSettingsGraphics()
 	Config()->m_GfxVsync = 1;
 	Config()->m_GfxFsaaSamples = 0;
 	Config()->m_GfxTextureQuality = 1;
-	Config()->m_GfxTextureCompression = 0;
 	Config()->m_GfxHighDetail = 1;
 	Config()->m_GfxOpenGLES = 0;
 

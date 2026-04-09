@@ -606,30 +606,6 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 	//
 	int Oglformat = TexFormatToOpenGLFormat(pCommand->m_Format);
 	int StoreOglformat = TexFormatToOpenGLFormat(pCommand->m_StoreFormat);
-
-	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_COMPRESSED)
-	{
-		if(m_IsOpenGLES)
-		{
-			switch(StoreOglformat)
-			{
-				case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB8_ETC2; break;
-				case GL_RED: StoreOglformat = GL_COMPRESSED_R11_EAC; break;
-				case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA8_ETC2_EAC; break;
-				default: StoreOglformat = GL_COMPRESSED_RGBA8_ETC2_EAC;
-			}
-		}
-		else
-		{
-			switch(StoreOglformat)
-			{
-				case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB; break;
-				case GL_RED: StoreOglformat = GL_COMPRESSED_RED; break;
-				case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA; break;
-				default: StoreOglformat = GL_COMPRESSED_RGBA;
-			}
-		}
-	}
 	m_aTextures[pCommand->m_Slot].m_BasicSamplerType = SAMPLER2D_NOMIPMAPS;
 	// 2D texture
 	bool Mipmaps = !(pCommand->m_Flags & CCommandBuffer::TEXFLAG_NOMIPMAPS);

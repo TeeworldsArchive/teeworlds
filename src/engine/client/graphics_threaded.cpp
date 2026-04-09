@@ -354,8 +354,6 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 	Cmd.m_Flags = 0;
 	if(Flags & IGraphics::TEXLOAD_NOMIPMAPS)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_NOMIPMAPS;
-	if(m_pConfig->m_GfxTextureCompression)
-		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_COMPRESSED;
 	if(m_pConfig->m_GfxTextureQuality || Flags & TEXLOAD_NORESAMPLE)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_QUALITY;
 	if(Flags & IGraphics::TEXLOAD_LINEARMIPMAPS)
