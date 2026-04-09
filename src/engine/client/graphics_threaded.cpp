@@ -216,6 +216,11 @@ void CGraphics_Threaded::StainedOnly(bool Flag)
 	m_State.m_IsStainedOnly = Flag;
 }
 
+float CGraphics_Threaded::ScreenUIScale() const
+{
+	return m_pConfig->m_GfxUIScale == -1 ? m_ScreenUIScale : m_pConfig->m_GfxUIScale / 5.0f + 1.0f;
+}
+
 void CGraphics_Threaded::MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY)
 {
 	m_State.m_ScreenTL.x = TopLeftX;

@@ -30,6 +30,8 @@ public:
 
 	virtual void StainedOnly(bool Flag) {};
 
+	virtual float ScreenUIScale() const { return 1.0f; };
+
 	virtual void MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY) {};
 	virtual void GetScreen(float *pTopLeftX, float *pTopLeftY, float *pBottomRightX, float *pBottomRightY)
 	{

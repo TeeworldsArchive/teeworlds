@@ -1736,6 +1736,34 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		}
 	}
 
+	// UI scale button
+	{
+		ScreenRight.HSplitTop(Spacing, 0, &ScreenRight);
+		ScreenRight.HSplitTop(ButtonHeight, &Button, &ScreenRight);
+		Button.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
+		CUIRect Text;
+		Button.VSplitLeft(ButtonHeight + 5.0f, 0, &Button);
+		Button.VSplitLeft(100.0f, &Text, &Button);
+
+		char aBuf[32];
+		str_format(aBuf, sizeof(aBuf), "%s:", Localize("UI scale"));
+		UI()->DoLabel(&Text, aBuf, Text.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
+
+		Button.VSplitLeft(70.0f, &Button, 0);
+		if(Config()->m_GfxUIScale == -1)
+			str_copy(aBuf, Localize("Auto", "UI scale"), sizeof(aBuf));
+		else
+			str_format(aBuf, sizeof(aBuf), "%d%%", Config()->m_GfxUIScale * 20 + 100);
+		static CButtonContainer s_ButtonGfxUIScale;
+		if(DoButton_Menu(&s_ButtonGfxUIScale, aBuf, 0, &Button))
+		{
+			if(Config()->m_GfxUIScale == 5)
+				Config()->m_GfxUIScale = -1;
+			else
+				Config()->m_GfxUIScale++;
+		}
+	}
+
 	// render texture menu
 	Texture.HSplitTop(ButtonHeight, &Label, &Texture);
 	UI()->DoLabel(&Label, Localize("Texture"), ButtonHeight * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
