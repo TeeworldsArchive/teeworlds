@@ -262,6 +262,13 @@ public:
 		// 4) check for all default locations
 		{
 			const char *aDirs[] = {
+				"/usr/share/teeworlds-archive/data",
+				"/usr/share/games/teeworlds-archive/data",
+				"/usr/local/share/teeworlds-archive/data",
+				"/usr/local/share/games/teeworlds-archive/data",
+				"/usr/pkg/share/teeworlds-archive/data",
+				"/usr/pkg/share/games/teeworlds-archive/data",
+				"/opt/teeworlds-archive/data",
 				"/usr/share/teeworlds/data",
 				"/usr/share/games/teeworlds/data",
 				"/usr/local/share/teeworlds/data",
