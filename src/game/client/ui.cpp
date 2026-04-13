@@ -390,6 +390,7 @@ void CUI::DoLabelHighlighted(const CUIRect *pRect, const char *pText, const char
 	s_Cursor.m_MaxWidth = pRect->w;
 	ApplyCursorAlign(&s_Cursor, pRect, Align);
 
+	vec4 OldColor = TextRender()->GetColor();
 	TextRender()->TextColor(TextColor);
 	const char *pMatch = pHighlighted && pHighlighted[0] ? str_find_nocase(pText, pHighlighted) : 0;
 	if(pMatch)
@@ -405,6 +406,7 @@ void CUI::DoLabelHighlighted(const CUIRect *pRect, const char *pText, const char
 		TextRender()->TextDeferred(&s_Cursor, pText, -1);
 
 	TextRender()->DrawTextOutlined(&s_Cursor);
+	TextRender()->TextColor(OldColor);
 }
 
 void CUI::DoLabelSelected(const CUIRect *pRect, const char *pText, bool Selected, float FontSize, int Align)

@@ -1965,6 +1965,7 @@ void CMenus::RenderDetailScoreboard(CUIRect View, const CServerInfo *pInfo, int 
 	const float RowWidth = (RowCount == 0) ? View.w : (View.w * 0.25f);
 	const float FontSize = Config()->m_UiWideview ? 8.0f : 7.0f;
 	const vec4 HighlightColor = vec4(TextHighlightColor.r, TextHighlightColor.g, TextHighlightColor.b, TextColor.a);
+	const vec4 GreyTextColor = vec4(TextColor.r, TextColor.g, TextColor.b, TextColor.a * 0.6f);
 	float LineHeight = 20.0f;
 
 	static CScrollRegion s_ScrollRegion;
@@ -2037,24 +2038,23 @@ void CMenus::RenderDetailScoreboard(CUIRect View, const CServerInfo *pInfo, int 
 			DoIcon(IMAGE_BROWSEICONS, SPRITE_BROWSE_HEART_A, &Icon);
 
 		Name.VSplitLeft(2.0f, 0, &Name);
-		Name.VSplitLeft(25.0f, &Score, &Name);
+		Name.VSplitLeft(40.0f, &Score, &Name);
 		Name.VSplitRight(2 * (Name.h - 8.0f), &Name, &Flag);
 		Name.HSplitTop(LineHeight * 0.5f, &Name, &Clan);
 
 		// score
 		if(!(pInfo->m_aClients[i].m_PlayerType & CServerInfo::CClient::PLAYERFLAG_SPEC))
 		{
-			Score.y += (Score.h - FontSize / CUI::ms_FontmodHeight) / 2.0f;
 			char aTemp[16];
 			FormatScore(aTemp, sizeof(aTemp), pInfo->m_Flags & IServerBrowser::FLAG_TIMESCORE, &pInfo->m_aClients[i]);
-			UI()->DoLabel(&Score, aTemp, FontSize, TEXTALIGN_LEFT);
+			UI()->DoLabel(&Score, aTemp, FontSize, TEXTALIGN_MC);
 		}
 
 		// name
 		UI()->DoLabelHighlighted(&Name, pInfo->m_aClients[i].m_aName, Config()->m_BrFilterString, FontSize, TextColor, HighlightColor);
 
 		// clan
-		UI()->DoLabelHighlighted(&Clan, pInfo->m_aClients[i].m_aClan, Config()->m_BrFilterString, FontSize, TextColor, HighlightColor);
+		UI()->DoLabelHighlighted(&Clan, pInfo->m_aClients[i].m_aClan, Config()->m_BrFilterString, FontSize, GreyTextColor, HighlightColor);
 
 		// flag
 		Flag.HMargin(4.0f, &Flag);
