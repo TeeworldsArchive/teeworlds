@@ -467,7 +467,7 @@ CGlyph *CGlyphMap::GetGlyph(int Chr, int FontSizeIndex, bool Render)
 	// couldn't find glyph, render a new one
 	if(r.empty())
 	{
-		Index.m_pGlyph = (CGlyph *) m_Heap.Allocate(sizeof(CGlyph));
+		Index.m_pGlyph = (CGlyph *) m_Heap.Allocate(sizeof(CGlyph), alignof(CGlyph));
 		Index.m_pGlyph->m_Rendered = false;
 		Index.m_pGlyph->m_ID = Chr;
 		Index.m_pGlyph->m_FontSizeIndex = FontSizeIndex;

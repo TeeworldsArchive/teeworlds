@@ -455,7 +455,7 @@ void CDemoPlayer::ScanFile()
 			if(ChunkType & CHUNKTICKFLAG_KEYFRAME)
 			{
 				// save the position
-				CKeyFrameSearch *pKey = (CKeyFrameSearch *) Heap.Allocate(sizeof(CKeyFrameSearch));
+				CKeyFrameSearch *pKey = (CKeyFrameSearch *) Heap.Allocate(sizeof(CKeyFrameSearch), alignof(CKeyFrameSearch));
 				pKey->m_Frame.m_Filepos = CurrentPos;
 				pKey->m_Frame.m_Tick = ChunkTick;
 				pKey->m_pNext = 0;

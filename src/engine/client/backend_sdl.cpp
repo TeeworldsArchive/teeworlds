@@ -292,7 +292,6 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	// texture handling
 	bool HasValidTexture = false;
 	int SrcBlendMode = GL_ONE;
-	bool IsAlphaOnly = m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA;
 	if(m_LastStainedOnly != State.m_IsStainedOnly)
 	{
 		glUniform1i(m_RenderShader.m_IsStainedOnlyLoc, State.m_IsStainedOnly ? 1 : 0);
@@ -301,6 +300,7 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 
 	if(State.m_Texture >= 0 && State.m_Texture < CCommandBuffer::MAX_TEXTURES)
 	{
+		bool IsAlphaOnly = m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA;
 		if(m_aTextures[State.m_Texture].m_Valid)
 		{
 			if(m_LastTextureID != m_aTextures[State.m_Texture].m_Texture)

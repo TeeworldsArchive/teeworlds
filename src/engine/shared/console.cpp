@@ -982,7 +982,7 @@ void CConsole::RegisterTemp(const char *pName, const char *pParams, int Flags, c
 	}
 	else
 	{
-		pCommand = new(m_TempCommands.Allocate(sizeof(CCommand))) CCommand(false);
+		pCommand = new(m_TempCommands.Allocate(sizeof(CCommand), alignof(CCommand))) CCommand(false);
 		char *pMem = static_cast<char *>(m_TempCommands.Allocate(TEMPCMD_NAME_LENGTH));
 		str_copy(pMem, pName, TEMPCMD_NAME_LENGTH);
 		pCommand->m_pName = pMem;

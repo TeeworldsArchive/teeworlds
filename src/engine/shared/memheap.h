@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef ENGINE_SHARED_MEMHEAP_H
 #define ENGINE_SHARED_MEMHEAP_H
+
 class CHeap
 {
 	struct CChunk
@@ -22,13 +23,19 @@ class CHeap
 
 	void Clear();
 	void NewChunk();
-	void *AllocateFromChunk(unsigned int Size);
+	void *AllocateFromChunk(unsigned int Size, unsigned int Alignment);
 
+	struct align_check
+	{
+		long long a;
+		long double b;
+		void (*func)();
+	};
 public:
 	CHeap();
 	~CHeap();
 	void Reset();
-	void *Allocate(unsigned int Size);
+	void *Allocate(unsigned int Size, unsigned int Alignment = alignof(align_check));
 	const char *StoreString(const char *pSrc);
 };
 #endif

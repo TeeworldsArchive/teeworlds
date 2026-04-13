@@ -1421,7 +1421,7 @@ void CGameContext::ConAddVote(IConsole::IResult *pResult, void *pUserData)
 	++pSelf->m_NumVoteOptions;
 	int Len = str_length(pCommand);
 
-	CVoteOptionServer *pOption = (CVoteOptionServer *) pSelf->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
+	CVoteOptionServer *pOption = (CVoteOptionServer *) pSelf->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len, alignof(CVoteOptionServer));
 	pOption->m_pNext = 0;
 	pOption->m_pPrev = pSelf->m_pVoteOptionLast;
 	if(pOption->m_pPrev)
@@ -1486,7 +1486,7 @@ void CGameContext::ConRemoveVote(IConsole::IResult *pResult, void *pUserData)
 
 		// copy option
 		int Len = str_length(pSrc->m_aCommand);
-		CVoteOptionServer *pDst = (CVoteOptionServer *) pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
+		CVoteOptionServer *pDst = (CVoteOptionServer *) pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len, alignof(CVoteOptionServer));
 		pDst->m_pNext = 0;
 		pDst->m_pPrev = pVoteOptionLast;
 		if(pDst->m_pPrev)
@@ -1547,9 +1547,9 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	sorted_array<CMapRotationIndex>::range r = ::find_binary(pSelf->m_lMapRotations.all(), GroupIndex);
 	if(r.empty())
 	{
-		GroupIndex.m_pGroup = static_cast<CMapRotationGroup *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup)));
+		GroupIndex.m_pGroup = static_cast<CMapRotationGroup *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup), alignof(CMapRotationGroup)));
 		GroupIndex.m_pGroup->m_pGroupName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(0));
-		GroupIndex.m_pGroup->m_pFirst = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry)));
+		GroupIndex.m_pGroup->m_pFirst = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry), alignof(CMapRotationGroup::CEntry)));
 		GroupIndex.m_pGroup->m_pFirst->m_pGroup = GroupIndex.m_pGroup;
 		GroupIndex.m_pGroup->m_pFirst->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));
 		GroupIndex.m_pGroup->m_pFirst->m_pNext = 0;
@@ -1560,7 +1560,7 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	CMapRotationGroup::CEntry *pEntry = Index.m_pGroup->m_pFirst;
 	for(; pEntry->m_pNext; pEntry = pEntry->m_pNext)
 		;
-	pEntry->m_pNext = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry)));
+	pEntry->m_pNext = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry), alignof(CMapRotationGroup::CEntry)));
 	pEntry->m_pNext->m_pGroup = Index.m_pGroup;
 	pEntry->m_pNext->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));
 	pEntry->m_pNext->m_pNext = 0;

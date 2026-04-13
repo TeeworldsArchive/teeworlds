@@ -51,7 +51,7 @@ void CMapChecker::AddMaplist(const json_value *pMapList)
 		if(sha256_from_str(&Sha256, pSha256) == -1)
 			continue;
 
-		CWhitelistEntry *pEntry = (CWhitelistEntry *) m_Whitelist.Allocate(sizeof(CWhitelistEntry));
+		CWhitelistEntry *pEntry = (CWhitelistEntry *) m_Whitelist.Allocate(sizeof(CWhitelistEntry), alignof(CWhitelistEntry));
 		pEntry->m_pNext = m_pFirst;
 		m_pFirst = pEntry;
 
@@ -82,7 +82,7 @@ void CMapChecker::AddMaplist(const CMapVersion *pMaplist, unsigned Num)
 
 	for(unsigned i = 0; i < Num; ++i)
 	{
-		CWhitelistEntry *pEntry = (CWhitelistEntry *) m_Whitelist.Allocate(sizeof(CWhitelistEntry));
+		CWhitelistEntry *pEntry = (CWhitelistEntry *) m_Whitelist.Allocate(sizeof(CWhitelistEntry), alignof(CWhitelistEntry));
 		pEntry->m_pNext = m_pFirst;
 		m_pFirst = pEntry;
 

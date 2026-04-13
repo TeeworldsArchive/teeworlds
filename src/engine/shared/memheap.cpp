@@ -23,15 +23,19 @@ void CHeap::NewChunk()
 }
 
 //****************
-void *CHeap::AllocateFromChunk(unsigned int Size)
+void *CHeap::AllocateFromChunk(unsigned int Size, unsigned int Alignment)
 {
+	unsigned int Offset = ((unsigned long long int) m_pCurrent->m_pCurrent) % Alignment;
+	if(Offset)
+		Offset = Alignment - Offset;
+
 	// check if we need can fit the allocation
-	if(m_pCurrent->m_pCurrent + Size > m_pCurrent->m_pEnd)
+	if(m_pCurrent->m_pCurrent + Size + Offset > m_pCurrent->m_pEnd)
 		return (void *) 0x0;
 
 	// get memory and move the pointer forward
-	char *pMem = m_pCurrent->m_pCurrent;
-	m_pCurrent->m_pCurrent += Size;
+	char *pMem = m_pCurrent->m_pCurrent + Offset;
+	m_pCurrent->m_pCurrent += Size + Offset;
 	return pMem;
 }
 
@@ -69,17 +73,17 @@ void CHeap::Clear()
 }
 
 //
-void *CHeap::Allocate(unsigned int Size)
+void *CHeap::Allocate(unsigned int Size, unsigned int Alignment)
 {
 	// try to allocate from current chunk
-	char *pMem = (char *) AllocateFromChunk(Size);
+	char *pMem = (char *) AllocateFromChunk(Size, Alignment);
 	if(!pMem)
 	{
 		// allocate new chunk and add it to the heap
 		NewChunk();
 
 		// try to allocate again
-		pMem = (char *) AllocateFromChunk(Size);
+		pMem = (char *) AllocateFromChunk(Size, Alignment);
 	}
 
 	return pMem;
@@ -88,7 +92,7 @@ void *CHeap::Allocate(unsigned int Size)
 const char *CHeap::StoreString(const char *pSrc)
 {
 	const int Size = str_length(pSrc) + 1;
-	char *pMem = static_cast<char *>(Allocate(Size));
+	char *pMem = static_cast<char *>(Allocate(Size, alignof(char)));
 	str_copy(pMem, pSrc, Size);
 	return pMem;
 }

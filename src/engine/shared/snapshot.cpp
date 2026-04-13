@@ -75,7 +75,7 @@ int CSnapshot::Serialize(char *pDstData) const
 
 int CSnapshot::Crc() const
 {
-	int Crc = 0;
+	unsigned int Crc = 0;
 
 	for(int i = 0; i < m_NumItems; i++)
 	{
@@ -85,7 +85,7 @@ int CSnapshot::Crc() const
 		for(int b = 0; b < Size / 4; b++)
 			Crc += pItem->Data()[b];
 	}
-	return Crc;
+	return (int) Crc;
 }
 
 void CSnapshot::DebugDump() const

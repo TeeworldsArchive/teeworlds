@@ -471,7 +471,7 @@ const char *CServerBrowser::GetFavoritePassword(const char *pAddress)
 CServerEntry *CServerBrowser::Add(int ServerlistType, const NETADDR &Addr)
 {
 	// create new pEntry
-	CServerEntry *pEntry = (CServerEntry *) m_aServerlist[ServerlistType].m_ServerlistHeap.Allocate(sizeof(CServerEntry));
+	CServerEntry *pEntry = (CServerEntry *) m_aServerlist[ServerlistType].m_ServerlistHeap.Allocate(sizeof(CServerEntry), alignof(CServerEntry));
 	mem_zero(pEntry, sizeof(CServerEntry));
 
 	// set the info
