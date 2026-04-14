@@ -52,7 +52,7 @@ void CHttpRequest::PostData(const unsigned char *pPost, int Size)
 
 void CHttpRequest::PostJson(const char *pJson)
 {
-	PostData((const unsigned char *) pJson, str_length(pJson) + 1);
+	PostData((const unsigned char *) pJson, str_length(pJson));
 	AddHeader("Content-Type: application/json");
 }
 
