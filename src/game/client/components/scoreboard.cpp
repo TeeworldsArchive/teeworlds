@@ -377,7 +377,7 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 
 		{
 			CUIRect PlayerName;
-			Playerline.VSplitLeft(100.0f, &PlayerName, &Playerline);
+			Playerline.VSplitLeft(120.0f, &PlayerName, &Playerline);
 			if(Config()->m_ClShowUserId)
 			{
 				const vec4 IdTextColor = vec4(0.1f, 0.1f, 0.1f, 1.0f);
