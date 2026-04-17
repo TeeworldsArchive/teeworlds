@@ -88,8 +88,13 @@ int CHttpRequest::Run(void *pUser)
 		return -1;
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_URL, pRequest->m_aUrl);
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_CUSTOMREQUEST, pRequest->m_aRequest);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_PROTOCOLS_STR, "https");
 
+
+#if LIBCURL_VERSION_NUM >= 0x075500
+	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_PROTOCOLS_STR, "https");
+#else
+	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+#endif
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_MAXREDIRS, 5L);
 

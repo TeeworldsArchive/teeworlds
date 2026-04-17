@@ -289,7 +289,7 @@ int CSound::Init()
 	m_MaxFrames = m_pConfig->m_SndBufferSize * 2;
 	m_pMixBuffer = (int *) mem_alloc(m_MaxFrames * 2 * sizeof(int));
 
-	SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(pStream));
+	SDL_ResumeAudioStreamDevice(pStream);
 
 	m_SoundEnabled = 1;
 	Update(); // update the volume

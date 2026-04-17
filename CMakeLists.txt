@@ -233,7 +233,7 @@ if(NOT CMAKE_CROSSCOMPILING)
 endif()
 find_package(ZLIB)
 
-find_package(OpenSSL COMPONENTS Crypto)
+find_package(OpenSSL)
 find_package(CURL)
 find_package(Freetype)
 find_package(Git)
