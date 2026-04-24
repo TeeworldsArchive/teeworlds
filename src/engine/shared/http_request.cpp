@@ -89,7 +89,6 @@ int CHttpRequest::Run(void *pUser)
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_URL, pRequest->m_aUrl);
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_CUSTOMREQUEST, pRequest->m_aRequest);
 
-
 #if LIBCURL_VERSION_NUM >= 0x075500
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_PROTOCOLS_STR, "https");
 #else

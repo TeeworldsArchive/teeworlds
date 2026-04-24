@@ -77,6 +77,10 @@ static int m_NextVoice = 0;
 static int *m_pMixBuffer = 0; // buffer only used by the thread callback function
 static unsigned m_MaxFrames = 0;
 
+static int m_NumAudioDevices = 0;
+static SDL_AudioDeviceID *m_pAudioDeviceIDs = 0;
+static SDL_AudioStream *m_pStream = 0;
+
 static short Int2Short(int i)
 {
 	return clamp(i, SHRT_MIN, SHRT_MAX);
@@ -269,16 +273,32 @@ int CSound::Init()
 
 	m_MixingRate = m_pConfig->m_SndRate;
 
-	m_MixingRate = m_pConfig->m_SndRate;
+	m_pAudioDeviceIDs = SDL_GetAudioPlaybackDevices(&m_NumAudioDevices);
+
+	if(InitAudioDevice(false) != 0)
+		return -1;
+
+	m_SoundEnabled = 1;
+	Update(); // update the volume
+	return 0;
+}
+
+int CSound::InitAudioDevice(bool Reset)
+{
+	if(Reset && m_pStream)
+	{
+		SDL_CloseAudioDevice(SDL_GetAudioStreamDevice(m_pStream));
+		m_pStream = 0;
+	}
 
 	SDL_AudioSpec Format;
 	Format.freq = m_pConfig->m_SndRate;
 	Format.format = SDL_AUDIO_S16;
 	Format.channels = 2;
 
-	SDL_AudioStream *pStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &Format, SDLNewCallback, nullptr);
+	m_pStream = SDL_OpenAudioDeviceStream(m_pConfig->m_SndDevice == -1 ? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK : m_pAudioDeviceIDs[clamp(m_pConfig->m_SndDevice, 0, m_NumAudioDevices - 1)], &Format, SDLNewCallback, nullptr);
 	// Open the audio device and start playing sound!
-	if(!pStream)
+	if(!m_pStream)
 	{
 		dbg_msg("client/sound", "unable to open audio: %s", SDL_GetError());
 		return -1;
@@ -289,10 +309,8 @@ int CSound::Init()
 	m_MaxFrames = m_pConfig->m_SndBufferSize * 2;
 	m_pMixBuffer = (int *) mem_alloc(m_MaxFrames * 2 * sizeof(int));
 
-	SDL_ResumeAudioStreamDevice(pStream);
+	SDL_ResumeAudioStreamDevice(m_pStream);
 
-	m_SoundEnabled = 1;
-	Update(); // update the volume
 	return 0;
 }
 
@@ -316,6 +334,7 @@ int CSound::Update()
 
 int CSound::Shutdown()
 {
+	SDL_free(m_pAudioDeviceIDs);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	lock_destroy(m_SoundLock);
 	if(m_pMixBuffer)
@@ -762,6 +781,27 @@ void CSound::StopVoice(int VoiceID)
 	lock_wait(m_SoundLock);
 	m_aVoices[VoiceID].m_pSample = 0;
 	lock_unlock(m_SoundLock);
+}
+
+void CSound::SwitchAudioDevice(int NewDeviceIndex)
+{
+	int OldIndex = m_pConfig->m_SndDevice;
+	m_pConfig->m_SndDevice = NewDeviceIndex;
+	if(InitAudioDevice(true) != 0)
+	{
+		m_pConfig->m_SndDevice = OldIndex;
+		InitAudioDevice(true);
+	}
+}
+
+int CSound::GetAudioDevices(CAudioDevice *pDevices, int MaxDevices)
+{
+	for(int i = 0; i < m_NumAudioDevices; i++)
+	{
+		pDevices[i].m_DeviceID = i;
+		str_copy(pDevices[i].m_aName, SDL_GetAudioDeviceName(m_pAudioDeviceIDs[i]), sizeof(pDevices[i].m_aName));
+	}
+	return m_NumAudioDevices;
 }
 
 IEngineSound *CreateEngineSound() { return new CSound; }

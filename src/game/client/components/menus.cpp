@@ -919,6 +919,19 @@ void CMenus::UpdateVideoModeSettings()
 	UpdatedFilteredVideoModes();
 }
 
+void CMenus::UpdateAudioDevicesSettings()
+{
+	m_NumDevices = Sound()->GetAudioDevices(m_aAudioDevices, MAX_AUDIODEVICES);
+	// add default
+	CAudioDevice &Default = m_lAudioDevices.emplace();
+	Default.m_DeviceID = -1;
+	Default.m_aName[0] = '\0';
+	for(int i = 0; i < m_NumDevices; i++)
+	{
+		m_lAudioDevices.add(m_aAudioDevices[i]);
+	}
+}
+
 int CMenus::GetInitAmount() const
 {
 	const int NumMenuImages = 5;
@@ -928,6 +941,7 @@ int CMenus::GetInitAmount() const
 void CMenus::OnInit()
 {
 	UpdateVideoModeSettings();
+	UpdateAudioDevicesSettings();
 	RenderLoading(3);
 
 	m_MousePos.x = Graphics()->ScreenWidth() / 2;

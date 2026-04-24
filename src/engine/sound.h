@@ -5,6 +5,12 @@
 
 #include "kernel.h"
 
+struct CAudioDevice
+{
+	int m_DeviceID;
+	char m_aName[64];
+};
+
 class ISound : public IInterface
 {
 	MACRO_INTERFACE("sound", 0)
@@ -73,6 +79,9 @@ public:
 	virtual void SetVoiceRectangle(int VoiceID, float Width, float Height) = 0;
 	virtual void SetVoiceTimeOffset(int VoiceID, float Offset) = 0;
 	virtual void StopVoice(int VoiceID) = 0;
+
+	virtual void SwitchAudioDevice(int NewDeviceIndex) = 0;
+	virtual int GetAudioDevices(CAudioDevice *pDevices, int MaxDevices) = 0;
 
 protected:
 	inline CSampleHandle CreateSampleHandle(int Index)

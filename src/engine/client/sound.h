@@ -15,6 +15,7 @@ public:
 	IStorage *m_pStorage;
 
 	virtual int Init();
+	int InitAudioDevice(bool Reset);
 
 	int Update();
 	int Shutdown();
@@ -47,6 +48,9 @@ public:
 	virtual void SetVoiceRectangle(int VoiceID, float Width, float Height);
 	virtual void SetVoiceTimeOffset(int VoiceID, float Offset);
 	virtual void StopVoice(int VoiceID);
+
+	virtual void SwitchAudioDevice(int NewDeviceIndex);
+	virtual int GetAudioDevices(CAudioDevice *pDevices, int MaxDevices);
 };
 
 #endif

@@ -12,6 +12,7 @@
 #include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/serverbrowser.h>
+#include <engine/sound.h>
 
 #include <game/client/component.h>
 #include <game/client/localization.h>
@@ -507,6 +508,15 @@ private:
 	void UpdatedFilteredVideoModes();
 	void UpdateVideoModeSettings();
 
+	enum
+	{
+		MAX_AUDIODEVICES = 64,
+	};
+	int m_NumDevices;
+	CAudioDevice m_aAudioDevices[MAX_AUDIODEVICES];
+	array<CAudioDevice> m_lAudioDevices;
+	void UpdateAudioDevicesSettings();
+
 	// found in menus.cpp
 	void RenderMenu(CUIRect Screen);
 	void RenderMenubar(CUIRect r);
@@ -585,6 +595,8 @@ private:
 	bool DoResolutionList(CUIRect *pRect, CListBox *pListBox,
 		const sorted_array<CVideoMode> &lModes);
 
+	int DoAudioDevicesList(CUIRect *pRect, CListBox *pListBox,
+		const array<CAudioDevice> &lDevices);
 	// found in menus_callback.cpp
 	float RenderSettingsControlsMouse(CUIRect View);
 	float RenderSettingsControlsJoystick(CUIRect View);

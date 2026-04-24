@@ -1589,6 +1589,36 @@ bool CMenus::DoResolutionList(CUIRect *pRect, CListBox *pListBox,
 	return false;
 }
 
+int CMenus::DoAudioDevicesList(CUIRect *pRect, CListBox *pListBox, const array<CAudioDevice> &lDevices)
+{
+	int OldSelected = -1;
+	char aBuf[64];
+
+	pListBox->DoStart(20.0f, lDevices.size(), 1, 3, OldSelected, pRect);
+
+	for(int i = 0; i < lDevices.size(); ++i)
+	{
+		if(Config()->m_SndDevice == lDevices[i].m_DeviceID)
+		{
+			OldSelected = i;
+		}
+
+		CListboxItem Item = pListBox->DoNextItem(&lDevices[i], OldSelected == i);
+		if(Item.m_Visible)
+		{
+			str_format(aBuf, sizeof(aBuf), "(%d) %s", i, lDevices[i].m_DeviceID == -1 ? Localize("Default Playback Device", "Audio") : lDevices[i].m_aName);
+			UI()->DoLabelSelected(&Item.m_Rect, aBuf, Item.m_Selected, Item.m_Rect.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
+		}
+	}
+
+	const int NewSelected = pListBox->DoEnd();
+	if(OldSelected != NewSelected)
+	{
+		return lDevices[NewSelected].m_DeviceID;
+	}
+	return -2;
+}
+
 void CMenus::RenderSettingsGraphics(CUIRect MainView)
 {
 	bool CheckFullscreen = false;
@@ -1871,11 +1901,8 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	float ButtonHeight = 20.0f;
 	float Spacing = 2.0f;
 	float BackgroundHeight = (float) (NumOptions + 1) * ButtonHeight + (float) NumOptions * Spacing;
-	float TotalHeight = BackgroundHeight;
-	if(Config()->m_SndEnable)
-		TotalHeight += 10.0f + 2.0f * ButtonHeight + Spacing;
 
-	MainView.HSplitBottom(MainView.h - TotalHeight - 20.0f, &MainView, &BottomView);
+	MainView.HSplitBottom(80.0f, &MainView, &BottomView);
 	if(this->Client()->State() == IClient::STATE_ONLINE)
 		Background = MainView;
 	else
@@ -1966,6 +1993,18 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 
 		Right.HSplitTop(ButtonHeight, &Button, &Right);
 		UI()->DoScrollbarOption(&Config()->m_SndVolume, &Config()->m_SndVolume, &Button, Localize("Volume"), 0, 100);
+
+		CUIRect Header;
+		MainView.HSplitTop(ButtonHeight, 0, &MainView);
+		MainView.HSplitTop(ButtonHeight, &Header, &MainView);
+		Header.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
+		UI()->DoLabel(&Header, Localize("Devices", "Audio"), Header.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
+		static CListBox s_DevicesListBox;
+		int AudioDevice = DoAudioDevicesList(&MainView, &s_DevicesListBox, m_lAudioDevices);
+		if(AudioDevice != -2)
+		{
+			m_pClient->Sound()->SwitchAudioDevice(AudioDevice);
+		}
 	}
 	else
 	{

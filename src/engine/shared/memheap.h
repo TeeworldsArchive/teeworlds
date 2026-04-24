@@ -31,6 +31,7 @@ class CHeap
 		long double b;
 		void (*func)();
 	};
+
 public:
 	CHeap();
 	~CHeap();
