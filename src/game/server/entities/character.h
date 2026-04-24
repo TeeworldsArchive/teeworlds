@@ -19,6 +19,7 @@ public:
 	enum
 	{
 		MIN_KILLMESSAGE_CLIENTVERSION = 0x0704, // todo 0.8: remove me
+		MIN_CORRECTTUNING_CLIENTVERSION = 0x0706, // todo 0.8: remove me
 	};
 
 	CCharacter(CGameWorld *pWorld);
