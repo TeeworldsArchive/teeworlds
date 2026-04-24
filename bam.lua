@@ -207,6 +207,7 @@ function GenerateLinuxSettings(settings, conf, arch, compiler)
 		print("Unknown Architecture '" .. arch .. "'. Supported: x86, x86_64, armv7l, arm64")
 		os.exit(1)
 	end
+	settings.link.libs:Add("pthread")
 
 	GenerateCommonSettings(settings, conf, arch, compiler)
 
