@@ -1559,6 +1559,18 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamemodes/infection/reinfected.h
   gamemodes/infection/riwall.cpp
   gamemodes/infection/riwall.h
+  gamemodes/instagib/core.cpp
+  gamemodes/instagib/core.h
+  gamemodes/instagib/ctf.cpp
+  gamemodes/instagib/ctf.h
+  gamemodes/instagib/dm.cpp
+  gamemodes/instagib/dm.h
+  gamemodes/instagib/lms.cpp
+  gamemodes/instagib/lms.h
+  gamemodes/instagib/lts.cpp
+  gamemodes/instagib/lts.h
+  gamemodes/instagib/tdm.cpp
+  gamemodes/instagib/tdm.h
   gamemodes/mod.cpp
   gamemodes/mod.h
   gamemodes/vanilla/ctf.cpp

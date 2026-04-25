@@ -405,6 +405,11 @@ void CCharacter::DisableWeapon(int WeaponID)
 	m_aWeapons[WeaponID].m_Valid = false;
 }
 
+void CCharacter::RemoveWeapon(int WeaponID)
+{
+	m_aWeapons[WeaponID].m_Got = false;
+}
+
 void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 {
 	// check for changes
@@ -657,7 +662,7 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 
 	if(From >= 0)
 	{
-		if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From))
+		if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From, Dmg))
 			return false;
 	}
 	else
@@ -665,7 +670,7 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 		int Team = TEAM_RED;
 		if(From == PLAYER_TEAM_BLUE)
 			Team = TEAM_BLUE;
-		if(GameServer()->m_pController->IsFriendlyTeamFire(m_pPlayer->GetTeam(), Team))
+		if(GameServer()->m_pController->IsFriendlyTeamFire(m_pPlayer->GetTeam(), Team, Dmg))
 			return false;
 	}
 

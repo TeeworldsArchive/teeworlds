@@ -70,6 +70,8 @@ public:
 	void EnableWeapon(int WeaponID);
 	// need this hook for gamecontroller to disable weapons, -1 to disable all, but remember to enable at least one weapon unless you want the server get stuck
 	void DisableWeapon(int WeaponID);
+	// need this hook for gamecontroller to remove weapon, it's different from the function DisableWeapon.
+	void RemoveWeapon(int WeaponID);
 
 private:
 	// player controlling this character

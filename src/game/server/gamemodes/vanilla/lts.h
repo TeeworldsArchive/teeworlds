@@ -14,6 +14,7 @@ public:
 	// game
 	virtual void DoWincheckRound();
 	virtual bool IsPureTuning() const { return true; }
+	virtual bool NoEntitiesInMap() const { return true; }
 };
 
 #endif

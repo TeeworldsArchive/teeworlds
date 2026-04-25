@@ -38,7 +38,7 @@ void CRIWall::Tick()
 	{
 		for(CCharacter *pChr = static_cast<CCharacter *>(GameWorld()->FindFirst(CGameWorld::ENTTYPE_CHARACTER)); pChr; pChr = static_cast<CCharacter *>(pChr->TypeNext()))
 		{
-			if(GameServer()->m_pController->IsFriendlyTeamFire(GameServer()->m_pController->GetPlayerCheckTeam(pChr->GetPlayer()), m_Team)) continue;
+			if(GameServer()->m_pController->IsFriendlyTeamFire(GameServer()->m_pController->GetPlayerCheckTeam(pChr->GetPlayer()), m_Team, 100)) continue;
 			if(CheckHit(pChr)) pChr->Die(m_Owner, WEAPON_HAMMER);
 		}
 	}

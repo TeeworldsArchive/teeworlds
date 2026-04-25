@@ -25,8 +25,8 @@ public:
 	CGameControllerReinfected(class CGameContext *pGameServer);
 	virtual ~CGameControllerReinfected();
 
-	virtual bool IsFriendlyFire(int ClientID1, int ClientID2) const;
-	virtual bool IsFriendlyTeamFire(int Team1, int Team2) const;
+	virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const;
+	virtual bool IsFriendlyTeamFire(int Team1, int Team2, int Damage) const;
 	virtual int GetPlayerCheckTeam(class CPlayer *pPlayer) const;
 
 	virtual void OnRoundStart();

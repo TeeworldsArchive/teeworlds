@@ -6,8 +6,9 @@
 #include "character.h"
 #include "laser.h"
 
-CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEnergy, int Owner) : CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER, Pos)
+CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEnergy, int Owner, int Damage) : CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER, Pos)
 {
+	m_Damage = Damage;
 	m_Owner = Owner;
 	m_Energy = StartEnergy;
 	m_Dir = Direction;
@@ -28,7 +29,7 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 	m_From = From;
 	m_Pos = At;
 	m_Energy = -1;
-	pHit->TakeDamage(vec2(0.f, 0.f), normalize(To - From), g_pData->m_Weapons.m_aId[WEAPON_LASER].m_Damage, m_Owner, WEAPON_LASER);
+	pHit->TakeDamage(vec2(0.f, 0.f), normalize(To - From), m_Damage, m_Owner, WEAPON_LASER);
 	return true;
 }
 

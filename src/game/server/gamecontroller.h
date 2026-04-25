@@ -209,8 +209,8 @@ public:
 
 	// info
 	void CheckGameInfo();
-	virtual bool IsFriendlyFire(int ClientID1, int ClientID2) const;
-	virtual bool IsFriendlyTeamFire(int Team1, int Team2) const;
+	virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const;
+	virtual bool IsFriendlyTeamFire(int Team1, int Team2, int Damage) const;
 	virtual int GetPlayerCheckTeam(class CPlayer *pPlayer) const;
 	bool IsGamePaused() const { return m_GameState == IGS_GAME_PAUSED || m_GameState == IGS_START_COUNTDOWN; }
 	bool IsGameRunning() const { return m_GameState == IGS_GAME_RUNNING; }
@@ -254,6 +254,7 @@ public:
 	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon);
 	virtual bool IsPureTuning() const { return false; }
 	virtual bool TimeScore() const { return false; }
+	virtual bool NoEntitiesInMap() const { return false; }
 };
 
 typedef IGameController *(*FCreateGameController)(class CGameContext *pGameServer);
@@ -276,5 +277,8 @@ public:
 #define REGISTER_GAMEMODE(GameType, GamemodeClass) \
 	static IGameController *GamemodeClass##Constructor(class CGameContext *pGameServer) { return new GamemodeClass(pGameServer); } \
 	static CGamemodeAutoRegister gs_##GamemodeClass##Register(GameType, GamemodeClass##Constructor)
+
+#define REGISTER_GAMEMODE_ALIAS(AliasSuffix, GameType, GamemodeClass) \
+	static CGamemodeAutoRegister gs_##GamemodeClass##Register##AliasSuffix(GameType, GamemodeClass##Constructor)
 
 #endif

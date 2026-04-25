@@ -262,7 +262,7 @@ void IGameController::OnFlagReturn(CFlag *pFlag)
 bool IGameController::OnEntity(int Index, vec2 Pos)
 {
 	// don't add pickups in survival
-	if(m_GameFlags & GAMEFLAG_SURVIVAL)
+	if(NoEntitiesInMap())
 	{
 		if(Index < ENTITY_SPAWN || Index > ENTITY_SPAWN_BLUE)
 			return false;
@@ -883,7 +883,7 @@ void IGameController::CheckGameInfo()
 		SendGameInfo(-1);
 }
 
-bool IGameController::IsFriendlyFire(int ClientID1, int ClientID2) const
+bool IGameController::IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const
 {
 	if(ClientID1 == ClientID2)
 		return false;
@@ -900,7 +900,7 @@ bool IGameController::IsFriendlyFire(int ClientID1, int ClientID2) const
 	return false;
 }
 
-bool IGameController::IsFriendlyTeamFire(int Team1, int Team2) const
+bool IGameController::IsFriendlyTeamFire(int Team1, int Team2, int Damage) const
 {
 	return IsTeamplay() && !Config()->m_SvTeamdamage && Team1 == Team2;
 }
@@ -1321,7 +1321,7 @@ int IGameController::OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int
 
 		case WEAPON_LASER:
 		{
-			new CLaser(&GameServer()->m_World, ChrPos, Direction, GameServer()->Tuning()->m_LaserReach, ClientID);
+			new CLaser(&GameServer()->m_World, ChrPos, Direction, GameServer()->Tuning()->m_LaserReach, ClientID, g_pData->m_Weapons.m_aId[WEAPON_LASER].m_Damage);
 			GameServer()->CreateSound(ChrPos, SOUND_LASER_FIRE);
 		}
 		break;
