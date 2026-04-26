@@ -247,13 +247,13 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 {
 	const float NormalFontSize = 36.0f;
 	float KillerFontSize = pInfoMsg->m_Player3ID >= 0 ? 20.0f : NormalFontSize;
-	float AssisterNameW = pInfoMsg->m_Player3NameCursor.Width() + UI()->GetClientIDRectWidth(KillerFontSize);
-	float KillerNameW = pInfoMsg->m_Player2NameCursor.Width() + UI()->GetClientIDRectWidth(KillerFontSize);
-	float VictimNameW = pInfoMsg->m_Player1NameCursor.Width() + UI()->GetClientIDRectWidth(NormalFontSize);
+	float AssisterNameW = pInfoMsg->m_Player3NameCursor.Width() + UI()->GetClientIDRectWidth(KillerFontSize, m_pClient->GetRealClientID(pInfoMsg->m_Player3ID));
+	float KillerNameW = pInfoMsg->m_Player2NameCursor.Width() + UI()->GetClientIDRectWidth(KillerFontSize, m_pClient->GetRealClientID(pInfoMsg->m_Player2ID));
+	float VictimNameW = pInfoMsg->m_Player1NameCursor.Width() + UI()->GetClientIDRectWidth(NormalFontSize, m_pClient->GetRealClientID(pInfoMsg->m_Player1ID));
 
 	// render victim name
 	x -= VictimNameW;
-	float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player1NameCursor.m_FontSize, vec2(x, y), pInfoMsg->m_Player1ID);
+	float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player1NameCursor.m_FontSize, vec2(x, y), m_pClient->GetRealClientID(pInfoMsg->m_Player1ID));
 	pInfoMsg->m_Player1NameCursor.MoveTo(x + AdvanceID, y);
 	TextRender()->DrawTextOutlined(&pInfoMsg->m_Player1NameCursor);
 
@@ -334,7 +334,7 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 			y -= pInfoMsg->m_Player3NameCursor.Height() / 2.0f - 12.0f;
 			// render assister name
 			float x0 = x - AssisterNameW;
-			float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player3NameCursor.m_FontSize, vec2(x0, y), pInfoMsg->m_Player3ID);
+			float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player3NameCursor.m_FontSize, vec2(x0, y), m_pClient->GetRealClientID(pInfoMsg->m_Player3ID));
 			pInfoMsg->m_Player3NameCursor.MoveTo(x0 + AdvanceID, y);
 			TextRender()->DrawTextOutlined(&pInfoMsg->m_Player3NameCursor, 0.75f);
 			y += pInfoMsg->m_Player3NameCursor.Height() - 4.0f;
@@ -344,7 +344,7 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 		{
 			// render killer name
 			float x0 = x - KillerNameW;
-			float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player2NameCursor.m_FontSize, vec2(x0, y), pInfoMsg->m_Player2ID);
+			float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player2NameCursor.m_FontSize, vec2(x0, y), m_pClient->GetRealClientID(pInfoMsg->m_Player2ID));
 			pInfoMsg->m_Player2NameCursor.MoveTo(x0 + AdvanceID, y);
 			TextRender()->DrawTextOutlined(&pInfoMsg->m_Player2NameCursor);
 		}
@@ -354,7 +354,7 @@ void CInfoMessages::RenderKillMsg(CInfoMsg *pInfoMsg, float x, float y) const
 void CInfoMessages::RenderFinishMsg(CInfoMsg *pInfoMsg, float x, float y) const
 {
 	float FontSize = 36.0f;
-	float PlayerNameW = pInfoMsg->m_Player1NameCursor.Width() + UI()->GetClientIDRectWidth(FontSize);
+	float PlayerNameW = pInfoMsg->m_Player1NameCursor.Width() + UI()->GetClientIDRectWidth(FontSize, m_pClient->GetRealClientID(pInfoMsg->m_Player1ID));
 
 	// render diff
 	if(pInfoMsg->m_Diff != 0)
@@ -388,7 +388,7 @@ void CInfoMessages::RenderFinishMsg(CInfoMsg *pInfoMsg, float x, float y) const
 	// render player name
 	x -= PlayerNameW;
 
-	float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player1NameCursor.m_FontSize, vec2(x, y), pInfoMsg->m_Player1ID);
+	float AdvanceID = UI()->DrawClientID(pInfoMsg->m_Player1NameCursor.m_FontSize, vec2(x, y), m_pClient->GetRealClientID(pInfoMsg->m_Player1ID));
 	pInfoMsg->m_Player1NameCursor.MoveTo(x + AdvanceID, y);
 	TextRender()->DrawTextOutlined(&pInfoMsg->m_Player1NameCursor);
 

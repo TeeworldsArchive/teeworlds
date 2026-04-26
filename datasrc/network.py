@@ -24,6 +24,9 @@ GameMsgIDs = Enum("GAMEMSG", ["TEAM_SWAP", "SPEC_INVALID_ID", "TEAM_SHUFFLE", "T
 
 GamePredictionFlags = Flags("GAMEPREDICTIONFLAG", ["EVENT", "INPUT"])
 
+# todo 0.8: merge into PlayerFlags
+PlayerFlagsExtra = Flags("PLAYERFLAGEXTRA", ["HIDDEN_IN_BOARD"])
+
 RawHeader = '''
 
 #include <engine/message.h>
@@ -86,6 +89,7 @@ Flags = [
 	CoreEventFlags,
 	RaceFlags,
     GamePredictionFlags,
+    PlayerFlagsExtra,
 ]
 
 Objects = [
@@ -276,7 +280,13 @@ Objects = [
     
 	NetObjectEx("GameDataPrediction", "game-data-prediction@netobj.teeworlds.wiki", [
         NetFlag("m_PredictionFlags", GamePredictionFlags),
-	])
+	]),
+
+	# todo 0.8: move into PlayerInfo
+	NetObjectEx("PlayerInfoExtra", "player-info-extra@netobj.teeworlds.wiki", [
+		NetIntRange("m_RealClientID", 0, 'max_int'),
+        NetIntAny("m_PlayerFlagsExtra"),
+	]),
 ]
 
 Messages = [

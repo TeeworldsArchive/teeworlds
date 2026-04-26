@@ -706,7 +706,7 @@ void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
 
 		char aBuf[1024];
 		if(NameCID >= 0)
-			str_format(aBuf, sizeof(aBuf), "%d: ", NameCID);
+			str_format(aBuf, sizeof(aBuf), "%d: ", m_pClient->GetRealClientID(NameCID));
 		else
 			aBuf[0] = '\0';
 		if(pCurLine->m_aName[0])
@@ -834,7 +834,7 @@ void CChat::OnRender()
 		}
 		else if(ChatMode == CHAT_WHISPER)
 		{
-			CategoryWidth += UI()->GetClientIDRectWidth(CategoryFontSize);
+			CategoryWidth += UI()->GetClientIDRectWidth(CategoryFontSize, m_pClient->GetRealClientID(m_WhisperTarget));
 			TextRender()->TextDeferred(&s_CategoryCursor, m_pClient->m_aClients[m_WhisperTarget].m_aName, -1);
 		}
 		else
@@ -891,7 +891,7 @@ void CChat::OnRender()
 		TextRender()->TextColor(1, 1, 1, Blend);
 		float ClientIDWidth = 0;
 		if(ChatMode == CHAT_WHISPER)
-			ClientIDWidth = UI()->DrawClientID(CategoryFontSize, vec2(x0 + IconOffsetX, y), m_WhisperTarget);
+			ClientIDWidth = UI()->DrawClientID(CategoryFontSize, vec2(x0 + IconOffsetX, y), m_pClient->GetRealClientID(m_WhisperTarget));
 		s_CategoryCursor.MoveTo(x0 + IconOffsetX + ClientIDWidth, y);
 		TextRender()->DrawTextOutlined(&s_CategoryCursor);
 
@@ -1084,7 +1084,10 @@ void CChat::OnRender()
 
 			if(pLine->m_ClientID >= 0)
 			{
-				float ClientIDWidth = UI()->GetClientIDRectWidth(FontSize);
+				int NameCID = pLine->m_ClientID;
+				if(pLine->m_Mode == CHAT_WHISPER && pLine->m_ClientID == m_pClient->m_LocalClientID && pLine->m_TargetID >= 0)
+					NameCID = pLine->m_TargetID;
+				float ClientIDWidth = UI()->GetClientIDRectWidth(FontSize, m_pClient->GetRealClientID(NameCID));
 				TextRender()->TextAdvance(&s_ChatCursor, ClientIDWidth);
 				if(Config()->m_ClShowSkinChat)
 					TextRender()->TextAdvance(&s_ChatCursor, FontSize + 1.0f);
@@ -1328,7 +1331,7 @@ void CChat::OnRender()
 			vec4 IdTextColor = vec4(0.1f, 0.1f, 0.1f, 1.0f) * Blend;
 			vec4 BgIdColor = TextColorName;
 			BgIdColor.a = 0.5f * Blend;
-			float ClientIDWidth = UI()->DrawClientID(FontSize, s_ChatCursor.AdvancePosition(), NameCID, BgIdColor, IdTextColor);
+			float ClientIDWidth = UI()->DrawClientID(FontSize, s_ChatCursor.AdvancePosition(), m_pClient->GetRealClientID(NameCID), BgIdColor, IdTextColor);
 			TextRender()->TextAdvance(&s_ChatCursor, ClientIDWidth);
 			TextRender()->TextColor(TextColorName);
 			TextRender()->TextSecondaryColor(ShadowColor);

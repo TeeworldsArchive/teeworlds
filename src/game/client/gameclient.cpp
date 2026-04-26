@@ -1306,6 +1306,16 @@ void CGameClient::OnNewSnapshot()
 					m_Snap.m_apPlayerInfosRace[ClientID] = pInfo;
 				}
 			}
+			else if(Item.m_Type == NETOBJTYPE_PLAYERINFOEXTRA)
+			{
+				const CNetObj_PlayerInfoExtra *pInfo = (const CNetObj_PlayerInfoExtra *) pData;
+				int ClientID = Item.m_ID;
+				if(ClientID < MAX_CLIENTS && m_aClients[ClientID].m_Active)
+				{
+					m_Snap.m_apPlayerInfosExtra[ClientID] = pInfo;
+					m_Snap.m_aInfoByScore[ClientID].m_pPlayerInfoExtra = pInfo;
+				}
+			}
 			else if(Item.m_Type == NETOBJTYPE_CHARACTER)
 			{
 				if(Item.m_ID < MAX_CLIENTS)
@@ -1955,6 +1965,11 @@ int CGameClient::GetClientID(const char *pName)
 	}
 
 	return -1;
+}
+
+int CGameClient::GetRealClientID(int SnapClientID)
+{
+	return m_Snap.m_apPlayerInfosExtra[SnapClientID] ? m_Snap.m_apPlayerInfosExtra[SnapClientID]->m_RealClientID : SnapClientID;
 }
 
 void CGameClient::ConTeam(IConsole::IResult *pResult, void *pUserData)

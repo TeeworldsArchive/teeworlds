@@ -146,6 +146,7 @@ public:
 	struct CPlayerInfoItem
 	{
 		const CNetObj_PlayerInfo *m_pPlayerInfo;
+		const CNetObj_PlayerInfoExtra *m_pPlayerInfoExtra;
 		int m_ClientID;
 	};
 
@@ -170,6 +171,7 @@ public:
 
 		const CNetObj_PlayerInfo *m_apPlayerInfos[MAX_CLIENTS];
 		const CNetObj_PlayerInfoRace *m_apPlayerInfosRace[MAX_CLIENTS];
+		const CNetObj_PlayerInfoExtra *m_apPlayerInfosExtra[MAX_CLIENTS];
 		CPlayerInfoItem m_aInfoByScore[MAX_CLIENTS];
 
 		// spectate data
@@ -312,6 +314,7 @@ public:
 	void DoTeamChangeMessage(const char *pName, int ClientID, int Team);
 
 	int GetClientID(const char *pName);
+	int GetRealClientID(int SnapClientID);
 
 	// ----- gamedata prediction helper -----
 	bool GameDataPredictInput() { return !m_Snap.m_pGameDataPrediction || m_Snap.m_pGameDataPrediction->m_PredictionFlags & GAMEPREDICTIONFLAG_INPUT; }

@@ -278,6 +278,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		{
 			if(i == m_pClient->m_LocalClientID || !m_pClient->m_aClients[i].m_Active || m_pClient->m_aClients[i].m_Team != Teams[Team])
 				continue;
+			if(m_pClient->m_Snap.m_apPlayerInfosExtra[i] && m_pClient->m_Snap.m_apPlayerInfosExtra[i]->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+				continue;
 
 			MainView.HSplitTop(ButtonHeight, &Row, &MainView);
 			s_ScrollRegion.AddRect(Row);
@@ -301,7 +303,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 			Label.y += 2.0f;
 			if(Config()->m_ClShowUserId)
 			{
-				UI()->DrawClientID(ButtonHeight * CUI::ms_FontmodHeight * 0.8f, vec2(Label.x, Label.y), i);
+				UI()->DrawClientID(ButtonHeight * CUI::ms_FontmodHeight * 0.8f, vec2(Label.x, Label.y), m_pClient->GetRealClientID(i));
 				Label.VSplitLeft(ButtonHeight, 0, &Label);
 			}
 			char aBuf[64];
@@ -554,6 +556,8 @@ void CMenus::RenderServerControlKick(CUIRect MainView, bool FilterSpectators)
 				(FilterSpectators && m_pClient->m_aClients[i].m_Team == TEAM_SPECTATORS) ||
 				(!FilterSpectators && m_pClient->m_Snap.m_apPlayerInfos[i] && (m_pClient->m_Snap.m_apPlayerInfos[i]->m_PlayerFlags & PLAYERFLAG_ADMIN)))
 				continue;
+			if(m_pClient->m_Snap.m_apPlayerInfosExtra[i] && m_pClient->m_Snap.m_apPlayerInfosExtra[i]->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+				continue;
 			if(m_CallvoteSelectedPlayer == i)
 				Selected = NumOptions;
 			s_aPlayerIDs[NumOptions++] = i;
@@ -589,7 +593,7 @@ void CMenus::RenderServerControlKick(CUIRect MainView, bool FilterSpectators)
 			{
 				Row.VSplitLeft(Row.h, &Label, &Row);
 				Label.y += 2.0f;
-				UI()->DrawClientID(Label.h * CUI::ms_FontmodHeight * 0.8f, vec2(Label.x, Label.y), s_aPlayerIDs[i]);
+				UI()->DrawClientID(Label.h * CUI::ms_FontmodHeight * 0.8f, vec2(Label.x, Label.y), m_pClient->GetRealClientID(i));
 			}
 
 			Row.VSplitLeft(Spacing, 0, &Row);

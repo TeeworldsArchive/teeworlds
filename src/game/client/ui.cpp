@@ -808,7 +808,7 @@ float CUI::DrawClientID(float FontSize, vec2 CursorPosition, int ID, const vec4 
 	TextRender()->TextColor(OldColor);
 
 	const float LinebaseY = CursorPosition.y + s_Cursor.BaseLineY();
-	const float Width = 1.4f * FontSize;
+	const float Width = (ID >= 100 ? 2.0f : 1.4f) * FontSize;
 
 	CUIRect Rect;
 	Rect.x = CursorPosition.x;
@@ -1004,11 +1004,11 @@ void CUI::RenderPopupMenus()
 	s_MousePressed = MousePressed;
 }
 
-float CUI::GetClientIDRectWidth(float FontSize)
+float CUI::GetClientIDRectWidth(float FontSize, int ID)
 {
 	if(!m_pConfig->m_ClShowUserId)
 		return 0;
-	return 1.4f * FontSize + 0.2f * FontSize;
+	return (ID >= 100 ? 2.0f : 1.4f) * FontSize + 0.2f * FontSize;
 }
 
 float CUI::GetListHeaderHeight() const

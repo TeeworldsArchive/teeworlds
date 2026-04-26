@@ -276,6 +276,8 @@ void CSpectator::OnRender()
 	{
 		if(!SpecModePossible(SPEC_PLAYER, i))
 			continue;
+		if(m_pClient->m_Snap.m_apPlayerInfosExtra[i] && m_pClient->m_Snap.m_apPlayerInfosExtra[i]->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+			continue;
 
 		if(Count != 0 && Count % ColumnSize == 0)
 		{
@@ -321,7 +323,7 @@ void CSpectator::OnRender()
 		PosX += PlayerRect.h / 2.0f;
 
 		// client ID and name
-		PosX += UI()->DrawClientID(FontSize, vec2(PosX, PlayerRect.y + PlayerRect.h / 2.0f - FontSize * 0.6f), i);
+		PosX += UI()->DrawClientID(FontSize, vec2(PosX, PlayerRect.y + PlayerRect.h / 2.0f - FontSize * 0.6f), m_pClient->GetRealClientID(i));
 		if(Config()->m_ClShowsocial)
 		{
 			static CTextCursor s_PlayerNameCursor;

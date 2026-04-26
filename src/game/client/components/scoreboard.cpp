@@ -118,7 +118,6 @@ float CScoreboard::RenderSpectators(float x, float y, float w)
 	float TextStartX = x + 10.0f;
 	float TextStartY = y + 30.0f;
 	float FontSize = 12.0f;
-	float ClientIDWidth = UI()->GetClientIDRectWidth(FontSize);
 
 	// render all the text without drawing
 	static CTextCursor s_SpectatorCursors[MAX_CLIENTS];
@@ -134,6 +133,8 @@ float CScoreboard::RenderSpectators(float x, float y, float w)
 		const CNetObj_PlayerInfo *pInfo = m_pClient->m_Snap.m_apPlayerInfos[0];
 		if(!pInfo || m_pClient->m_aClients[i].m_Team != TEAM_SPECTATORS || Lines > MaxLines)
 			continue;
+		if(m_pClient->m_Snap.m_apPlayerInfosExtra[i] && m_pClient->m_Snap.m_apPlayerInfosExtra[i]->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+			continue;
 
 		if(pLastCursor)
 		{
@@ -141,6 +142,7 @@ float CScoreboard::RenderSpectators(float x, float y, float w)
 			CursorPosition.x = pLastCursor->BoundingBox().Right();
 		}
 
+		float ClientIDWidth = UI()->GetClientIDRectWidth(FontSize, m_pClient->GetRealClientID(i));
 		CursorPosition.x += ClientIDWidth;
 
 		if(m_pClient->m_aClients[i].m_aClan[0])
@@ -189,8 +191,9 @@ float CScoreboard::RenderSpectators(float x, float y, float w)
 		if(s_SpectatorCursors[i].Rendered())
 		{
 			vec2 ClientIDPos = s_SpectatorCursors[i].CursorPosition();
+			float ClientIDWidth = UI()->GetClientIDRectWidth(FontSize, m_pClient->GetRealClientID(i));
 			ClientIDPos.x -= ClientIDWidth;
-			UI()->DrawClientID(FontSize, ClientIDPos, i);
+			UI()->DrawClientID(FontSize, ClientIDPos, m_pClient->GetRealClientID(i));
 			TextRender()->DrawTextOutlined(&s_SpectatorCursors[i]);
 		}
 	}
@@ -312,6 +315,8 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 		const CGameClient::CClientData *pData = &m_pClient->m_aClients[pInfo->m_ClientID];
 		if(!pInfo->m_pPlayerInfo || pData->m_Team == TEAM_SPECTATORS)
 			continue;
+		if(pInfo->m_pPlayerInfoExtra && pInfo->m_pPlayerInfoExtra->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+			continue;
 		if(Team != -1) // -1 means render all players
 		{
 			if(pData->m_Team != Team)
@@ -381,7 +386,7 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 			if(Config()->m_ClShowUserId)
 			{
 				const vec4 IdTextColor = vec4(0.1f, 0.1f, 0.1f, 1.0f);
-				float ClientIDWidth = UI()->DrawClientID(LineFontSize, vec2(PlayerName.x, PlayerName.y + (LineHeight - LineFontSize) / 2.0f - 0.15f * LineFontSize), pInfo->m_ClientID, LocalHighlightColor, IdTextColor);
+				float ClientIDWidth = UI()->DrawClientID(LineFontSize, vec2(PlayerName.x, PlayerName.y + (LineHeight - LineFontSize) / 2.0f - 0.15f * LineFontSize), m_pClient->GetRealClientID(pInfo->m_ClientID), LocalHighlightColor, IdTextColor);
 				PlayerName.VSplitLeft(ClientIDWidth, 0, &PlayerName);
 			}
 			str_copy(aBuf, pData->m_aName, sizeof(aBuf));

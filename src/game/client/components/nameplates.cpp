@@ -54,12 +54,12 @@ void CNamePlates::RenderNameplate(
 	s_Cursor.Reset();
 	TextRender()->TextDeferred(&s_Cursor, aName, -1);
 
-	float tw = s_Cursor.Width() + UI()->GetClientIDRectWidth(FontSize);
+	float tw = s_Cursor.Width() + UI()->GetClientIDRectWidth(FontSize, m_pClient->GetRealClientID(ClientID));
 
 	if(a > 0.001f)
 	{
 		vec2 CursorPosition = vec2(Position.x - tw / 2.0f, Position.y - FontSize - 38.0f);
-		CursorPosition.x += UI()->DrawClientID(s_Cursor.m_FontSize, CursorPosition, ClientID, BgIdColor, IdTextColor);
+		CursorPosition.x += UI()->DrawClientID(s_Cursor.m_FontSize, CursorPosition, m_pClient->GetRealClientID(ClientID), BgIdColor, IdTextColor);
 		s_Cursor.MoveTo(CursorPosition.x, CursorPosition.y);
 		TextRender()->DrawTextOutlined(&s_Cursor, a);
 	}

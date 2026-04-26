@@ -297,11 +297,11 @@ void CHud::RenderScoreHud()
 
 						TextRender()->TextDeferred(&s_CarrierCursor, aName, -1);
 
-						float w = s_CarrierCursor.Width() + UI()->GetClientIDRectWidth(8.0f);
+						float w = s_CarrierCursor.Width() + UI()->GetClientIDRectWidth(8.0f, m_pClient->GetRealClientID(ID));
 						float x = minimum(Whole - w - 1.0f, Whole - ScoreWidthMax - ImageSize - 2 * Split);
 						float y = StartY + (t + 1) * TeamOffset - 3.0f;
 
-						float AdvanceID = UI()->DrawClientID(s_CarrierCursor.m_FontSize, vec2(x, y), ID);
+						float AdvanceID = UI()->DrawClientID(s_CarrierCursor.m_FontSize, vec2(x, y), m_pClient->GetRealClientID(ID));
 						s_CarrierCursor.MoveTo(x + AdvanceID, y);
 						TextRender()->DrawTextOutlined(&s_CarrierCursor);
 
@@ -417,11 +417,11 @@ void CHud::RenderScoreHud()
 
 					TextRender()->TextDeferred(&s_NameCursor, aName, -1);
 
-					float w = s_NameCursor.Width() + UI()->GetClientIDRectWidth(8.0f);
+					float w = s_NameCursor.Width() + UI()->GetClientIDRectWidth(8.0f, m_pClient->GetRealClientID(ID));
 					float x = minimum(Whole - w - 1.0f, Whole - ScoreWidthMax - ImageSize - 2 * Split - PosSize);
 					float y = StartY + (t + 1) * TeamOffset - 3.0f;
 
-					float AdvanceID = UI()->DrawClientID(s_NameCursor.m_FontSize, vec2(x, y), ID);
+					float AdvanceID = UI()->DrawClientID(s_NameCursor.m_FontSize, vec2(x, y), m_pClient->GetRealClientID(ID));
 					s_NameCursor.MoveTo(x + AdvanceID, y);
 					TextRender()->DrawTextOutlined(&s_NameCursor);
 
@@ -814,7 +814,7 @@ void CHud::RenderSpectatorHud()
 
 	vec2 NamePosition = vec2(s_SpectateLabelCursor.BoundingBox().Right() + 3.0f, m_Height - 13.0f);
 	if(SpecMode == SPEC_PLAYER || SpecID != -1)
-		NamePosition.x += UI()->DrawClientID(s_SpectateTargetCursor.m_FontSize, NamePosition, SpecID);
+		NamePosition.x += UI()->DrawClientID(s_SpectateTargetCursor.m_FontSize, NamePosition, m_pClient->GetRealClientID(SpecID));
 
 	s_SpectateTargetCursor.MoveTo(NamePosition.x, NamePosition.y);
 	TextRender()->TextOutlined(&s_SpectateTargetCursor, aBuf, -1);
