@@ -1,3 +1,4 @@
+#include <base/math.h>
 #include <base/system.h>
 #include <engine/engine.h>
 #include <game/version.h>
@@ -101,11 +102,8 @@ int CHttpRequest::Run(void *pUser)
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_CONNECTTIMEOUT, 5L);
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_TIMEOUT, pRequest->m_TimeoutSeconds);
 
-	if(pRequest->m_PostData.size() > 0)
-	{
-		curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDS, (const char *) pRequest->m_PostData.base_ptr());
-		curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDSIZE, pRequest->m_PostData.size());
-	}
+	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDS, (const char *) pRequest->m_PostData.base_ptr());
+	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDSIZE, maximum(0, pRequest->m_PostData.size()));
 
 	switch(pRequest->m_IPResolve)
 	{
