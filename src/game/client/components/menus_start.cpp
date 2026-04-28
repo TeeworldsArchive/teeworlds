@@ -98,10 +98,6 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	ExtButtons.HSplitBottom(30.0f, &ExtButtons, 0);
 	ExtButtons.VSplitLeft(80.0f, &ExtButtons, 0);
 	ExtButtons.HSplitBottom(20.0f, &ExtButtons, &Button);
-	// github button
-	static CButtonContainer s_GithubButton;
-	if(DoButton_Menu(&s_GithubButton, "\uEDCAGithub", 0, &Button, 0, CUIRect::CORNER_ALL, Rounding))
-		Client()->OpenURL("https://github.com/TeeworldsArchive/teeworlds");
 
 	// render version
 	CUIRect Version;
@@ -109,10 +105,10 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Version.VMargin(50.0f, &Version);
 	UI()->DoLabel(&Version, "Archive " GAME_VERSION, 14.0f, TEXTALIGN_TR);
 
-	if(str_comp(Client()->LatestVersion(), "0") != 0)
+	if(str_comp(Client()->LatestVersion(), "0") > 0)
 	{
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), Localize("Teeworlds Archive %s is out! Download it at our github!"), Client()->LatestVersion());
+		str_format(aBuf, sizeof(aBuf), Localize("Teeworlds Archive %s is out!"), Client()->LatestVersion());
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 		TextRender()->TextSecondaryColor(0.0f, 0.0f, 0.0f, 0.5f);
 		UI()->DoLabel(&TopMenu, aBuf, 14.0f, TEXTALIGN_MC, TopMenu.w * 0.9f, true);
