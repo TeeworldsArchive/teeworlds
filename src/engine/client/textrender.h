@@ -3,7 +3,7 @@
 #ifndef ENGINE_CLIENT_TEXTRENDER_H
 #define ENGINE_CLIENT_TEXTRENDER_H
 
-#include <base/tl/sorted_array.h>
+#include <base/tl/hashtable.h>
 #include <base/vmath.h>
 #include <engine/textrender.h>
 
@@ -18,6 +18,7 @@ enum
 {
 	MAX_FACES = 16,
 	MAX_CHARACTERS = 64,
+	MAX_KERNING_CACHE = 1024,
 	TEXTURE_SIZE = 2048,
 	NUM_PAGES_PER_DIM = 4, // 16 pages total
 
@@ -50,21 +51,30 @@ struct CGlyphIndex
 {
 	int m_FontSizeIndex;
 	int m_ID;
-	CGlyph *m_pGlyph;
 
 	friend bool operator==(const CGlyphIndex &l, const CGlyphIndex &r)
 	{
 		return l.m_ID == r.m_ID && l.m_FontSizeIndex == r.m_FontSizeIndex;
 	};
-	friend bool operator<(const CGlyphIndex &l, const CGlyphIndex &r)
+};
+
+struct CGlyphKerning
+{
+	int m_PixelSize;
+	int m_LeftID;
+	int m_RightID;
+
+	friend bool operator==(const CGlyphKerning &l, const CGlyphKerning &r)
 	{
-		if(l.m_FontSizeIndex == r.m_FontSizeIndex)
-			return l.m_ID < r.m_ID;
-		return l.m_FontSizeIndex < r.m_FontSizeIndex;
+		return l.m_PixelSize == r.m_PixelSize && l.m_LeftID == r.m_LeftID && l.m_RightID == r.m_RightID;
 	};
-	friend bool operator>(const CGlyphIndex &l, const CGlyphIndex &r) { return r < l; }
-	friend bool operator<=(const CGlyphIndex &l, const CGlyphIndex &r) { return !(l > r); }
-	friend bool operator>=(const CGlyphIndex &l, const CGlyphIndex &r) { return !(l < r); }
+};
+
+class CGlyphSearchFunction : public basic_table_function
+{
+public:
+	static unsigned hash(CGlyphIndex key) { return (key.m_FontSizeIndex << 16) + key.m_ID; }
+	static unsigned hash(CGlyphKerning key) { return (key.m_PixelSize << 24) + (key.m_LeftID << 10) + key.m_RightID; }
 };
 
 class CGlyphMap
@@ -99,7 +109,8 @@ class CGlyphMap
 	IGraphics::CTextureHandle m_Texture;
 	CAtlas m_aAtlasPages[NUM_PAGES_PER_DIM * NUM_PAGES_PER_DIM];
 	int m_ActiveAtlasIndex;
-	sorted_array<CGlyphIndex> m_Glyphs;
+	hash_table<CGlyphIndex, CGlyph *, 64, CGlyphSearchFunction> m_Glyphs;
+	hash_table<CGlyphKerning, vec2, 64, CGlyphSearchFunction> m_Kernings;
 
 	int m_NumTotalPages;
 
@@ -180,7 +191,7 @@ class CTextRender : public IEngineTextRender
 		return Chr >= 0x0020 && Chr <= 0x218F;
 	}
 
-	CWordWidthHint MakeWord(CTextCursor *pCursor, const char *pText, const char *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale);
+	CWordWidthHint MakeWord(CTextCursor *pCursor, const int *pText, const int *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale);
 	void TextRefreshGlyphs(CTextCursor *pCursor);
 
 	void DrawText(CTextCursor *pCursor, vec2 Offset, int Texture, bool IsSecondary, float Alpha, int StartGlyph, int NumGlyphs);

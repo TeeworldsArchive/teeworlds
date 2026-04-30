@@ -139,6 +139,11 @@ int CGlyphMap::AdjustOutlineThicknessToFontSize(int OutlineThickness, int FontSi
 	return OutlineThickness;
 }
 
+static void InvalidateGlyphs(CGlyph *&pGlyph, void *pUser)
+{
+	pGlyph->m_Rendered = false;
+}
+
 void CGlyphMap::InitTexture(int Width, int Height)
 {
 	for(int y = 0; y < NUM_PAGES_PER_DIM; ++y)
@@ -151,8 +156,7 @@ void CGlyphMap::InitTexture(int Width, int Height)
 	m_ActiveAtlasIndex = 0;
 
 	// invalidate all glyphs
-	for(int i = 0; i < m_Glyphs.size(); ++i)
-		m_Glyphs[i].m_pGlyph->m_Rendered = false;
+	m_Glyphs.for_each(InvalidateGlyphs, 0);
 
 	int TextureSize = Width * Height * 2;
 
@@ -462,42 +466,57 @@ CGlyph *CGlyphMap::GetGlyph(int Chr, int FontSizeIndex, bool Render)
 	Index.m_FontSizeIndex = FontSizeIndex;
 	Index.m_ID = Chr;
 
-	sorted_array<CGlyphIndex>::range r = ::find_binary(m_Glyphs.all(), Index);
-
+	CGlyph **ppMatch = m_Glyphs[Index];
 	// couldn't find glyph, render a new one
-	if(r.empty())
+	if(!ppMatch)
 	{
-		Index.m_pGlyph = (CGlyph *) m_Heap.Allocate(sizeof(CGlyph), alignof(CGlyph));
-		Index.m_pGlyph->m_Rendered = false;
-		Index.m_pGlyph->m_ID = Chr;
-		Index.m_pGlyph->m_FontSizeIndex = FontSizeIndex;
-		if(RenderGlyph(Index.m_pGlyph, Render))
+		CGlyph *pGlyph = (CGlyph *) m_Heap.Allocate(sizeof(CGlyph), alignof(CGlyph));
+		pGlyph->m_Rendered = false;
+		pGlyph->m_ID = Chr;
+		pGlyph->m_FontSizeIndex = FontSizeIndex;
+		if(RenderGlyph(pGlyph, Render))
 		{
-			m_Glyphs.add(Index);
-			return Index.m_pGlyph;
+			m_Glyphs.set(Index, pGlyph);
+			return pGlyph;
 		}
 		return NULL;
 	}
 
-	CGlyph *pMatch = r.front().m_pGlyph;
 	if(Render)
-		RenderGlyph(pMatch, true);
-	return pMatch;
+		RenderGlyph(*ppMatch, true);
+	return *ppMatch;
 }
 
 vec2 CGlyphMap::Kerning(CGlyph *pLeft, CGlyph *pRight, int PixelSize)
 {
 	FT_Vector Kerning = {0, 0};
 
+	vec2 Vec(0, 0);
 	if(pLeft && pRight && pLeft->m_Face == pRight->m_Face)
 	{
-		FT_Set_Pixel_Sizes(pLeft->m_Face, 0, PixelSize);
-		FT_Get_Kerning(pLeft->m_Face, pLeft->m_ID, pRight->m_ID, FT_KERNING_DEFAULT, &Kerning);
+		CGlyphKerning CacheSearch;
+		CacheSearch.m_PixelSize = PixelSize;
+		CacheSearch.m_LeftID = pLeft->m_ID;
+		CacheSearch.m_RightID = pRight->m_ID;
+		if(m_Kernings.size() > MAX_KERNING_CACHE)
+			m_Kernings.clear_size();
+
+		vec2 *pMatch = m_Kernings[CacheSearch];
+		if(!pMatch)
+		{
+			FT_Set_Pixel_Sizes(pLeft->m_Face, 0, PixelSize);
+			FT_Get_Kerning(pLeft->m_Face, pLeft->m_ID, pRight->m_ID, FT_KERNING_DEFAULT, &Kerning);
+
+			Vec.x = (float) (Kerning.x >> 6);
+			Vec.y = (float) (Kerning.y >> 6);
+			m_Kernings.set(CacheSearch, Vec);
+		}
+		else
+		{
+			Vec = *pMatch;
+		}
 	}
 
-	vec2 Vec;
-	Vec.x = (float) (Kerning.x >> 6);
-	Vec.y = (float) (Kerning.y >> 6);
 	return Vec;
 }
 
@@ -526,14 +545,15 @@ void CGlyphMap::PagesAccessReset()
 	}
 }
 
-CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, const char *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale)
+CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const int *pText, const int *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale)
 {
 	bool Render = !(pCursor->m_Flags & TEXTFLAG_NO_RENDER);
 	bool BreakWord = !(pCursor->m_Flags & TEXTFLAG_WORD_WRAP);
 	bool AllowNewline = pCursor->m_Flags & TEXTFLAG_ALLOW_NEWLINE;
 	CWordWidthHint Hint;
-	const char *pCur = pText;
-	int NextChr = str_utf8_decode(&pCur);
+	const int *pCur = pText;
+	int NextChr = *pCur;
+	pCur++;
 	CGlyph *pNextGlyph = NULL;
 	if(NextChr > 0)
 	{
@@ -582,7 +602,8 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 			return Hint;
 		}
 
-		NextChr = str_utf8_decode(&pCur);
+		NextChr = *pCur;
+		pCur++;
 		pNextGlyph = NULL;
 		if(NextChr > 0)
 		{
@@ -606,7 +627,7 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 
 		if(Render)
 		{
-			CScaledGlyph Scaled;
+			CScaledGlyph &Scaled = pCursor->m_Glyphs.emplace();
 			Scaled.m_pGlyph = pGlyph;
 			Scaled.m_Advance = pCursor->m_Advance;
 			Scaled.m_Size = Size;
@@ -614,7 +635,6 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 			Scaled.m_TextColor = m_TextColor;
 			Scaled.m_SecondaryColor = m_TextSecondaryColor;
 			Scaled.m_NumChars = NumChars;
-			pCursor->m_Glyphs.add(Scaled);
 		}
 
 		pCursor->m_Advance.x += AdvanceX;
@@ -628,7 +648,7 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 				// remove redundant space
 				Hint.m_GlyphCount--;
 				if(Render)
-					pCursor->m_Glyphs.remove_index(pCursor->m_Glyphs.size() - 1);
+					pCursor->m_Glyphs.remove_index_fast(pCursor->m_Glyphs.size() - 1);
 			}
 			break;
 		}
@@ -875,8 +895,20 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 	if(Length < 0)
 		Length = str_length(pText);
 
-	const char *pCur = (char *) pText;
-	const char *pEnd = (char *) pText + Length;
+	static array<int> lText;
+	lText.clear_size();
+	lText.hint_size(Length);
+	{
+		const char *pCur = pText;
+		int NewChar;
+		while((NewChar = str_utf8_decode(&pCur)) > 0)
+		{
+			lText.add(NewChar);
+		}
+	}
+
+	const int *pCur = lText.base_ptr();
+	const int *pEnd = lText.base_ptr() + lText.size();
 
 	float NextAdvanceY = pCursor->m_Advance.y + pCursor->m_FontSize;
 	NextAdvanceY = (int) (NextAdvanceY * ScreenScale.y) / ScreenScale.y;
@@ -898,7 +930,7 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 			if(WordWidth.m_GlyphCount == 1 && (*pCur == ' ' || *pCur == '\n' || *pCur == '\t'))
 			{
 				if(Render)
-					pCursor->m_Glyphs.remove_index(NumGlyphs - 1);
+					pCursor->m_Glyphs.remove_index_fast(NumGlyphs - 1);
 				pCursor->m_Advance.x = WordStartAdvanceX;
 			}
 			else
@@ -961,12 +993,13 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 	}
 
 	pCursor->m_Height = pCursor->m_NextLineAdvanceY + 0.35f * Size;
-	pCursor->m_CharCount = pCur - pText;
+	pCursor->m_CharCount = pCur - lText.base_ptr();
 
 	// insert ellipsis at the end
 	if(pCursor->m_Truncated && pCursor->m_Flags & TEXTFLAG_ELLIPSIS)
 	{
-		const char aEllipsis[] = "…";
+		const char *pEllipsis = "…";
+		const int aEllipsis[] = {str_utf8_decode(&pEllipsis)};
 		if(pCursor->m_Glyphs.size() > 0)
 		{
 			CScaledGlyph *pLastGlyph = &pCursor->m_Glyphs[pCursor->m_Glyphs.size() - 1];
@@ -976,7 +1009,7 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 
 		int OldMaxWidth = pCursor->m_MaxWidth;
 		pCursor->m_MaxWidth = -1;
-		CWordWidthHint WordWidth = MakeWord(pCursor, aEllipsis, aEllipsis + sizeof(aEllipsis), FontSizeIndex, Size, PixelSize, ScreenScale);
+		CWordWidthHint WordWidth = MakeWord(pCursor, aEllipsis, aEllipsis + 1, FontSizeIndex, Size, PixelSize, ScreenScale);
 		pCursor->m_MaxWidth = OldMaxWidth;
 		if(WordWidth.m_EffectiveAdvanceX > MaxWidth)
 		{
@@ -990,7 +1023,7 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 				{
 					BackAdvanceX = pCursor->m_Advance.x - pScaled->m_Advance.x;
 					pCursor->m_CharCount -= pScaled->m_NumChars;
-					pCursor->m_Glyphs.remove_index(i);
+					pCursor->m_Glyphs.remove_index_fast(i);
 				}
 				else
 					break;

@@ -45,8 +45,7 @@ void CLocalizationDatabase::AddString(const char *pOrgStr, const char *pNewStr, 
 	CString s;
 	s.m_Hash = str_quickhash(pOrgStr);
 	s.m_ContextHash = str_quickhash(pContext);
-	s.m_pReplacement = m_StringsHeap.StoreString(*pNewStr ? pNewStr : pOrgStr);
-	m_Strings.add(s);
+	m_Strings.set(s, m_StringsHeap.StoreString(*pNewStr ? pNewStr : pOrgStr));
 }
 
 bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, IConsole *pConsole)
@@ -114,26 +113,21 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 
 const char *CLocalizationDatabase::FindString(unsigned Hash, unsigned ContextHash) const
 {
+	static unsigned DefaultHash = str_quickhash("");
+
 	CString String;
 	String.m_Hash = Hash;
 	String.m_ContextHash = ContextHash;
-	String.m_pReplacement = 0x0;
-	sorted_array<CString>::range r = ::find_binary(m_Strings.all(), String);
-	if(r.empty())
-		return 0;
 
-	unsigned DefaultHash = str_quickhash("");
-	unsigned DefaultIndex = 0;
-	for(unsigned i = 0; i < r.size() && r.index(i).m_Hash == Hash; ++i)
+	const char *const *ppReplacement = m_Strings[String];
+	if(!ppReplacement)
 	{
-		const CString &rStr = r.index(i);
-		if(rStr.m_ContextHash == ContextHash)
-			return rStr.m_pReplacement;
-		else if(rStr.m_ContextHash == DefaultHash)
-			DefaultIndex = i;
+		String.m_ContextHash = DefaultHash;
+		if((ppReplacement = m_Strings[String]))
+			return *ppReplacement;
+		return 0;
 	}
-
-	return r.index(DefaultIndex).m_pReplacement;
+	return *ppReplacement;
 }
 
 CLocalizationDatabase g_Localization;

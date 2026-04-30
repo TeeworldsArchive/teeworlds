@@ -3,7 +3,7 @@
 #ifndef GAME_CLIENT_LOCALIZATION_H
 #define GAME_CLIENT_LOCALIZATION_H
 
-#include <base/tl/sorted_array.h>
+#include <base/tl/hashtable.h>
 
 #include <engine/shared/memheap.h>
 
@@ -14,14 +14,20 @@ class CLocalizationDatabase
 	public:
 		unsigned m_Hash;
 		unsigned m_ContextHash;
-		const char *m_pReplacement;
 
 		bool operator<(const CString &Other) const { return m_Hash < Other.m_Hash || (m_Hash == Other.m_Hash && m_ContextHash < Other.m_ContextHash); }
 		bool operator<=(const CString &Other) const { return m_Hash < Other.m_Hash || (m_Hash == Other.m_Hash && m_ContextHash <= Other.m_ContextHash); }
 		bool operator==(const CString &Other) const { return m_Hash == Other.m_Hash && m_ContextHash == Other.m_ContextHash; }
 	};
 
-	sorted_array<CString> m_Strings;
+	class CStringHashFunction : public CString
+	{
+	public:
+		static unsigned hash(CString Key) { return Key.m_Hash; }
+		static bool equal(CString Key1, CString Key2) { return Key1 == Key2; }
+	};
+
+	hash_table<CString, const char *, 64, CStringHashFunction> m_Strings;
 	CHeap m_StringsHeap;
 	int m_VersionCounter;
 	int m_CurrentVersion;
