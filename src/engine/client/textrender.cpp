@@ -900,8 +900,9 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 	lText.hint_size(Length);
 	{
 		const char *pCur = pText;
+		const char *pEnd = pText + Length;
 		int NewChar;
-		while((NewChar = str_utf8_decode(&pCur)) > 0)
+		while(pCur < pEnd && (NewChar = str_utf8_decode(&pCur)) > 0)
 		{
 			lText.add(NewChar);
 		}
