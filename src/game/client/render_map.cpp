@@ -243,16 +243,13 @@ void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlag
 		}
 
 		vec2 aTexCoords[4];
+		bool RepeatU = false, RepeatV = false;
 		for(int k = 0; k < 4; k++)
 		{
 			aTexCoords[k].x = fx2f(q->m_aTexcoords[k].x);
 			aTexCoords[k].y = fx2f(q->m_aTexcoords[k].y);
-		}
-		// Check if we want to repeat the texture
-		// Otherwise clamp to the edge to prevent texture bleeding
-		bool RepeatU = false, RepeatV = false;
-		for(int k = 0; k < 4; k++)
-		{
+			// Check if we want to repeat the texture
+			// Otherwise clamp to the edge to prevent texture bleeding
 			if(q->m_aTexcoords[k].x < 0 || q->m_aTexcoords[k].x > fxpscale)
 				RepeatU = true;
 			if(q->m_aTexcoords[k].y < 0 || q->m_aTexcoords[k].y > fxpscale)
@@ -291,9 +288,9 @@ void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlag
 
 		const CPoint *pPoints = q->m_aPoints;
 
+		CPoint aRotated[4];
 		if(Rot != 0)
 		{
-			static CPoint aRotated[4];
 			aRotated[0] = q->m_aPoints[0];
 			aRotated[1] = q->m_aPoints[1];
 			aRotated[2] = q->m_aPoints[2];
@@ -336,6 +333,7 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 	Graphics()->WrapClamp();
 	Graphics()->QuadsBegin();
 	const float Alpha = Color.a * a;
+	const bool ColorOpaque = Color.a * a > 254.0f / 255.0f;
 	Graphics()->SetColor(Color.r * r * Alpha, Color.g * g * Alpha, Color.b * b * Alpha, Alpha);
 
 	int StartY = (int) (ScreenY0 / Scale) - 1;
@@ -346,31 +344,11 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 	for(int y = StartY; y < EndY; y++)
 		for(int x = StartX; x < EndX; x++)
 		{
-			int mx = x;
-			int my = y;
+			int mx = clamp(x, 0, w - 1);
+			int my = clamp(y, 0, h - 1);
 
-			if(RenderFlags & TILERENDERFLAG_EXTEND)
-			{
-				if(mx < 0)
-					mx = 0;
-				if(mx >= w)
-					mx = w - 1;
-				if(my < 0)
-					my = 0;
-				if(my >= h)
-					my = h - 1;
-			}
-			else
-			{
-				if(mx < 0)
-					continue; // mx = 0;
-				if(mx >= w)
-					continue; // mx = w-1;
-				if(my < 0)
-					continue; // my = 0;
-				if(my >= h)
-					continue; // my = h-1;
-			}
+			if(!(RenderFlags & TILERENDERFLAG_EXTEND) && (mx != x || my != y))
+				continue;
 
 			int c = mx + my * w;
 
@@ -380,7 +358,7 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 				unsigned char Flags = pTiles[c].m_Flags;
 
 				bool Render = false;
-				if(Flags & TILEFLAG_OPAQUE && Color.a * a > 254.0f / 255.0f)
+				if(Flags & TILEFLAG_OPAQUE && ColorOpaque)
 				{
 					if(RenderFlags & LAYERRENDERFLAG_OPAQUE)
 						Render = true;
