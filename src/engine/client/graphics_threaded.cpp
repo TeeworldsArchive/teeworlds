@@ -772,7 +772,7 @@ int CGraphics_Threaded::IssueInit()
 	if(m_pConfig->m_GfxOpenGLES)
 		Flags |= IGraphicsBackend::INITFLAG_OPENGLES;
 
-	return m_pBackend->Init("Teeworlds", &m_pConfig->m_GfxScreen, &m_pConfig->m_GfxScreenWidth,
+	return m_pBackend->Init("Teeworlds: Archive", &m_pConfig->m_GfxScreen, &m_pConfig->m_GfxScreenWidth,
 		&m_pConfig->m_GfxScreenHeight, &m_ScreenWidth, &m_ScreenHeight, m_pConfig->m_GfxFsaaSamples,
 		Flags, &m_DesktopScreenWidth, &m_DesktopScreenHeight);
 }
