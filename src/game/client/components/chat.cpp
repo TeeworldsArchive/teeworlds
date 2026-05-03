@@ -15,7 +15,7 @@
 
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
-#include <game/client/localization.h>
+#include <game/localization.h>
 
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/sounds.h>

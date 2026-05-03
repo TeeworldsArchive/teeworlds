@@ -35,7 +35,7 @@ class CLocalizationDatabase
 public:
 	CLocalizationDatabase();
 
-	bool Load(const char *pFilename, class IStorage *pStorage, class IConsole *pConsole);
+	bool Load(const char *pFilename, class IStorage *pStorage, class IConsole *pConsole, bool Server);
 
 	int Version() const { return m_CurrentVersion; }
 
@@ -64,4 +64,5 @@ public:
 		return m_pCurrentStr;
 	}
 };
+
 #endif

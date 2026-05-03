@@ -15,10 +15,10 @@
 #include <engine/sound.h>
 
 #include <game/client/component.h>
-#include <game/client/localization.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
+#include <game/localization.h>
 #include <game/voting.h>
 
 #include "skins.h"

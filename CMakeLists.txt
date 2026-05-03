@@ -1319,6 +1319,8 @@ set_src(GAME_SHARED GLOB src/game
   gamecore.h
   layers.cpp
   layers.h
+  localization.cpp
+  localization.h
   mapitems.h
   tuning.h
   variables.h
@@ -1452,8 +1454,6 @@ if(CLIENT)
     gameclient.h
     lineinput.cpp
     lineinput.h
-    localization.cpp
-    localization.h
     render.cpp
     render.h
     render_map.cpp

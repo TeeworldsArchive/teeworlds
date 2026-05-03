@@ -60,7 +60,8 @@ MACRO_CONFIG_INT(ClShowEasterEggs, cl_show_easter_eggs, 1, 0, 2, CFGFLAG_CLIENT 
 
 MACRO_CONFIG_STR(ClVersionUrl, cl_version_url, 100, "https://archive.teeworlds.wiki/version.json", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Url to use to check for new versions")
 
-MACRO_CONFIG_STR(ClLanguagefile, cl_languagefile, 255, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "What language file to use")
+MACRO_CONFIG_STR(ClLanguagefile, cl_languagefile, 255, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "What language file to use (on client)")
+MACRO_CONFIG_STR(SvLanguagefile, sv_languagefile, 255, "", CFGFLAG_SERVER | CFGFLAG_SAVE, "What language file to use (on server)")
 
 MACRO_CONFIG_INT(PlayerColorBody, player_color_body, 0x1B6F74, 0, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Player body color")
 MACRO_CONFIG_INT(PlayerColorMarking, player_color_marking, 0xFF0000FF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Player marking color")

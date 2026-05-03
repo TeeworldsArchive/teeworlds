@@ -9,8 +9,8 @@
 #include <generated/protocol.h>
 
 #include <game/client/animstate.h>
-#include <game/client/localization.h>
 #include <game/client/render.h>
+#include <game/localization.h>
 
 #include "spectator.h"
 

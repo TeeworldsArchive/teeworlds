@@ -16,9 +16,9 @@
 #include <generated/client_data.h>
 #include <generated/protocol.h>
 
+#include <game/localization.h>
 #include <game/version.h>
 #include "lineinput.h"
-#include "localization.h"
 #include "render.h"
 
 #include "gameclient.h"
@@ -390,7 +390,7 @@ void CGameClient::OnInit()
 	m_pMenus->RenderLoading(1);
 
 	// set the language
-	g_Localization.Load(Config()->m_ClLanguagefile, Storage(), Console());
+	g_Localization.Load(Config()->m_ClLanguagefile, Storage(), Console(), false);
 	m_pMenus->RenderLoading(1);
 
 	// init all components

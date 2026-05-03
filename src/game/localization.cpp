@@ -11,29 +11,6 @@
 
 #include "localization.h"
 
-const char *Localize(const char *pStr, const char *pContext)
-{
-	const char *pNewStr = g_Localization.FindString(str_quickhash(pStr), str_quickhash(pContext));
-	return pNewStr ? pNewStr : pStr;
-}
-
-CLocConstString::CLocConstString(const char *pStr, const char *pContext)
-{
-	m_pDefaultStr = pStr;
-	m_Hash = str_quickhash(m_pDefaultStr);
-	m_ContextHash = str_quickhash(pContext);
-	m_Version = -1;
-}
-
-void CLocConstString::Reload()
-{
-	m_Version = g_Localization.Version();
-	const char *pNewStr = g_Localization.FindString(m_Hash, m_ContextHash);
-	m_pCurrentStr = pNewStr;
-	if(!m_pCurrentStr)
-		m_pCurrentStr = m_pDefaultStr;
-}
-
 CLocalizationDatabase::CLocalizationDatabase()
 {
 	m_VersionCounter = 0;
@@ -48,7 +25,7 @@ void CLocalizationDatabase::AddString(const char *pOrgStr, const char *pNewStr, 
 	m_Strings.set(s, m_StringsHeap.StoreString(*pNewStr ? pNewStr : pOrgStr));
 }
 
-bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, IConsole *pConsole)
+bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, IConsole *pConsole, bool Server)
 {
 	// empty string means unload
 	if(pFilename[0] == 0)
@@ -74,7 +51,7 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 	m_StringsHeap.Reset();
 
 	// extract data
-	const json_value &rStart = (*pJsonData)["translated strings"];
+	const json_value &rStart = (*pJsonData)[Server ? "server strings" : "client strings"];
 	if(rStart.type == json_array)
 	{
 		for(unsigned i = 0; i < rStart.u.array.length; ++i)
@@ -128,6 +105,29 @@ const char *CLocalizationDatabase::FindString(unsigned Hash, unsigned ContextHas
 		return 0;
 	}
 	return *ppReplacement;
+}
+
+const char *Localize(const char *pStr, const char *pContext)
+{
+	const char *pNewStr = g_Localization.FindString(str_quickhash(pStr), str_quickhash(pContext));
+	return pNewStr ? pNewStr : pStr;
+}
+
+CLocConstString::CLocConstString(const char *pStr, const char *pContext)
+{
+	m_pDefaultStr = pStr;
+	m_Hash = str_quickhash(m_pDefaultStr);
+	m_ContextHash = str_quickhash(pContext);
+	m_Version = -1;
+}
+
+void CLocConstString::Reload()
+{
+	m_Version = g_Localization.Version();
+	const char *pNewStr = g_Localization.FindString(m_Hash, m_ContextHash);
+	m_pCurrentStr = pNewStr;
+	if(!m_pCurrentStr)
+		m_pCurrentStr = m_pDefaultStr;
 }
 
 CLocalizationDatabase g_Localization;

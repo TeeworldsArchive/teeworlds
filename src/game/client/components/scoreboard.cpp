@@ -15,9 +15,9 @@
 #include <game/client/components/motd.h>
 #include <game/client/components/stats.h>
 #include <game/client/gameclient.h>
-#include <game/client/localization.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
+#include <game/localization.h>
 
 #include "menus.h"
 #include "scoreboard.h"

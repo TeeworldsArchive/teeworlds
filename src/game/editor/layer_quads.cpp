@@ -6,8 +6,8 @@
 #include <engine/console.h>
 #include <engine/graphics.h>
 
-#include <game/client/localization.h>
 #include <game/client/render.h>
+#include <game/localization.h>
 #include <generated/client_data.h>
 #include "editor.h"
 

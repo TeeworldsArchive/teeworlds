@@ -2,6 +2,7 @@
 #include <base/tl/inplace_array.h>
 #include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
+#include <game/localization.h>
 #include <game/server/entities/character.h>
 #include <game/server/gamecontext.h>
 #include <game/server/player.h>
@@ -162,7 +163,7 @@ void CGameControllerReinfected::StartRandomInfection()
 		{
 			int RandomInfected = random_int() % aPlayers.size();
 			Infect(aPlayers[RandomInfected]);
-			str_format(aBuf, sizeof(aBuf), "'%s' has been infected!", Server()->ClientName(aPlayers[RandomInfected]));
+			str_format(aBuf, sizeof(aBuf), Localize("'%s' has been infected!", "Reinfected"), Server()->ClientName(aPlayers[RandomInfected]));
 			aPlayers.remove_index_fast(RandomInfected);
 			GameServer()->SendChat(-1, CHAT_ALL, -1, aBuf);
 		}
@@ -401,13 +402,13 @@ bool CGameControllerReinfected::DoWincheckMatch()
 	if(Reinfected()->m_InfectedNum > 0 && Reinfected()->m_HumanNum == 0)
 	{
 		EndMatch();
-		GameServer()->SendChat(-1, CHAT_ALL, -1, "It's zombie time!");
+		GameServer()->SendChat(-1, CHAT_ALL, -1, Localize("It's zombie time!", "Reinfected"));
 		return true;
 	}
 	else if(m_GameInfo.m_TimeLimit > 0 && (Server()->Tick() - m_GameStartTick) >= m_GameInfo.m_TimeLimit * Server()->TickSpeed() * 60)
 	{
 		EndMatch();
-		GameServer()->SendChat(-1, CHAT_ALL, -1, "Don't be panic!");
+		GameServer()->SendChat(-1, CHAT_ALL, -1, Localize("Don't be panic!", "Reinfected"));
 		return true;
 	}
 

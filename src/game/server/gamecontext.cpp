@@ -9,6 +9,7 @@
 
 #include <game/collision.h>
 #include <game/gamecore.h>
+#include <game/localization.h>
 #include <game/version.h>
 #include <generated/server_data.h>
 
@@ -1665,6 +1666,16 @@ void CGameContext::ConchainGameinfoUpdate(IConsole::IResult *pResult, void *pUse
 	}
 }
 
+void CGameContext::ConchainLanguageUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	pfnCallback(pResult, pCallbackUserData);
+	if(pResult->NumArguments())
+	{
+		CGameContext *pSelf = (CGameContext *) pUserData;
+		g_Localization.Load(pSelf->Config()->m_SvLanguagefile, pSelf->Storage(), pSelf->Console(), true);
+	}
+}
+
 void CGameContext::OnConsoleInit()
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
@@ -1731,6 +1742,8 @@ void CGameContext::OnInit()
 	m_Layers.Init(Kernel());
 	m_Collision.Init(&m_Layers);
 
+	g_Localization.Load(Config()->m_SvLanguagefile, Storage(), Console(), true);
+
 	m_pController = nullptr;
 	// select gametype
 	for(int i = 0; i < NumGamemodes(); i++)
@@ -1783,6 +1796,7 @@ void CGameContext::OnInit()
 	Console()->Chain("sv_scorelimit", ConchainGameinfoUpdate, this);
 	Console()->Chain("sv_timelimit", ConchainGameinfoUpdate, this);
 	Console()->Chain("sv_matches_per_map", ConchainGameinfoUpdate, this);
+	Console()->Chain("sv_languagefile", ConchainLanguageUpdate, this);
 
 	// clamp sv_player_slots to 0..MaxClients
 	if(Config()->m_SvMaxClients < Config()->m_SvPlayerSlots)
