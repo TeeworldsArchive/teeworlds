@@ -857,7 +857,9 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 
 	if(Flags & IGraphicsBackend::INITFLAG_X11XRANDR)
 		SDL_SetHint(SDL_HINT_VIDEO_X11_XRANDR, "1");
-
+#ifdef CONF_PLATFORM_LINUX
+    SDL_SetHint(SDL_HINT_APP_ID, "Teeworlds Archive");
+#endif
 	// set gl attributes for OpenGL 3.3 Core Profile
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
