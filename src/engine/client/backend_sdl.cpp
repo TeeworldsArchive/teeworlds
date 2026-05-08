@@ -523,6 +523,11 @@ void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const CGLShutdownCommand *pC
 	glDeleteSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aaSampler2D);
 }
 
+void CCommandProcessorFragment_OpenGL::Cmd_SetViewport(const CCommandBuffer::CWindowResizedCommand *pCommand)
+{
+	glViewport(0, 0, pCommand->m_Width, pCommand->m_Height);
+}
+
 void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::CTextureUpdateCommand *pCommand)
 {
 	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA)
@@ -722,6 +727,7 @@ bool CCommandProcessorFragment_OpenGL::RunCommand(const CCommandBuffer::CCommand
 	{
 		case CMD_INIT: Cmd_Init(static_cast<const CInitCommand *>(pBaseCommand)); break;
 		case CMD_GL_SHUTDOWN: Cmd_Shutdown(static_cast<const CGLShutdownCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_WINDOWRESIZED: Cmd_SetViewport(static_cast<const CCommandBuffer::CWindowResizedCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_TEXTURE_CREATE: Cmd_Texture_Create(static_cast<const CCommandBuffer::CTextureCreateCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_TEXTURE_DESTROY: Cmd_Texture_Destroy(static_cast<const CCommandBuffer::CTextureDestroyCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_TEXTURE_UPDATE: Cmd_Texture_Update(static_cast<const CCommandBuffer::CTextureUpdateCommand *>(pBaseCommand)); break;
@@ -845,7 +851,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	}
 
 	// set flags
-	int SdlFlags = SDL_WINDOW_OPENGL;
+	int SdlFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 	if(Flags & IGraphicsBackend::INITFLAG_HIGHDPI)
 		SdlFlags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	if(Flags & IGraphicsBackend::INITFLAG_RESIZABLE)
@@ -858,7 +864,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	if(Flags & IGraphicsBackend::INITFLAG_X11XRANDR)
 		SDL_SetHint(SDL_HINT_VIDEO_X11_XRANDR, "1");
 #ifdef CONF_PLATFORM_LINUX
-    SDL_SetHint(SDL_HINT_APP_ID, "Teeworlds Archive");
+	SDL_SetHint(SDL_HINT_APP_ID, "Teeworlds Archive");
 #endif
 	// set gl attributes for OpenGL 3.3 Core Profile
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -1094,6 +1100,11 @@ bool CGraphicsBackend_SDL_OpenGL::WindowActive()
 bool CGraphicsBackend_SDL_OpenGL::WindowOpen()
 {
 	return !(SDL_GetWindowFlags(m_pWindow) & SDL_WINDOW_HIDDEN);
+}
+
+bool CGraphicsBackend_SDL_OpenGL::ResizeWindow(int Width, int Height)
+{
+	return SDL_SetWindowSize(m_pWindow, Width, Height);
 }
 
 void *CGraphicsBackend_SDL_OpenGL::GetWindowHandle()

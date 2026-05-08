@@ -94,6 +94,7 @@ public:
 		CMD_VSYNC,
 		CMD_SCREENSHOT,
 
+		CMD_WINDOWRESIZED,
 	};
 
 	enum
@@ -262,6 +263,13 @@ public:
 		int m_Slot;
 	};
 
+	struct CWindowResizedCommand : public CCommand
+	{
+		CWindowResizedCommand() : CCommand(CMD_WINDOWRESIZED) {}
+		int m_Width;
+		int m_Height;
+	};
+
 	//
 	CCommandBuffer(unsigned CmdBufferSize, unsigned DataBufferSize) :
 		m_CmdBuffer(CmdBufferSize), m_DataBuffer(DataBufferSize), m_pCmdBufferHead(0), m_pCmdBufferTail(0)
@@ -348,6 +356,7 @@ public:
 	virtual bool IsIdle() const = 0;
 	virtual void WaitForIdle() = 0;
 
+	virtual bool ResizeWindow(int Width, int Height) = 0;
 	virtual void *GetWindowHandle() = 0;
 };
 
@@ -490,6 +499,9 @@ public:
 	virtual bool IsIdle() const;
 	virtual void WaitForIdle();
 
+	virtual bool ResizeWindow(int Width, int Height);
+	virtual void OnWindowResized(int Width, int Height);
+	virtual void OnWindowPixelResized(int ScreenWidth, int ScreenHeight);
 	virtual void *GetWindowHandle();
 };
 

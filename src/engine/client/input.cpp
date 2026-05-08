@@ -637,6 +637,14 @@ int CInput::Update()
 				Scancode = Key;
 				break;
 
+			case SDL_EVENT_WINDOW_RESIZED:
+				Graphics()->OnWindowResized(Event.window.data1, Event.window.data2);
+				break;
+
+			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+				Graphics()->OnWindowPixelResized(Event.window.data1, Event.window.data2);
+				break;
+
 			// other messages
 			case SDL_EVENT_QUIT:
 				return 1;

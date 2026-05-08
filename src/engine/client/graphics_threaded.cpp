@@ -1044,6 +1044,38 @@ void CGraphics_Threaded::WaitForIdle()
 	m_pBackend->WaitForIdle();
 }
 
+bool CGraphics_Threaded::ResizeWindow(int Width, int Height)
+{
+	// jumped from fullscreen
+	if(m_pConfig->m_GfxFullscreen)
+	{
+		m_pConfig->m_GfxFullscreen = false;
+		Fullscreen(false);
+	}
+
+	return m_pBackend->ResizeWindow(Width, Height);
+}
+
+void CGraphics_Threaded::OnWindowResized(int Width, int Height)
+{
+	m_pConfig->m_GfxScreenWidth = Width;
+	m_pConfig->m_GfxScreenHeight = Height;
+	m_ScreenUIScale = (m_pConfig->m_GfxScreenHeight < 900.0f) ? 1.0f : (m_pConfig->m_GfxScreenHeight / 900.0f);
+
+	// add window resize command
+	CCommandBuffer::CWindowResizedCommand Cmd;
+	Cmd.m_Width = Width;
+	Cmd.m_Height = Height;
+	m_pCommandBuffer->AddCommand(Cmd);
+}
+
+void CGraphics_Threaded::OnWindowPixelResized(int ScreenWidth, int ScreenHeight)
+{
+	m_ScreenWidth = ScreenWidth;
+	m_ScreenHeight = ScreenHeight;
+	m_ScreenHiDPIScale = m_ScreenWidth / (float) m_pConfig->m_GfxScreenWidth;
+}
+
 void *CGraphics_Threaded::GetWindowHandle()
 {
 	return m_pBackend->GetWindowHandle();

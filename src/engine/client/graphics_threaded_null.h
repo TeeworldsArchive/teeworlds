@@ -101,6 +101,9 @@ public:
 	virtual bool IsIdle() const { return false; };
 	virtual void WaitForIdle() {};
 
+	virtual bool ResizeWindow(int Width, int Height) { return false; };
+	virtual void OnWindowResized(int Width, int Height) {};
+	virtual void OnWindowPixelResized(int ScreenWidth, int ScreenHeight) {};
 	virtual void *GetWindowHandle() { return 0; };
 };
 

@@ -163,6 +163,7 @@ private:
 
 	void Cmd_Init(const CInitCommand *pCommand);
 	void Cmd_Shutdown(const CGLShutdownCommand *pCommand);
+	void Cmd_SetViewport(const CCommandBuffer::CWindowResizedCommand *pCommand);
 	void Cmd_Texture_Update(const CCommandBuffer::CTextureUpdateCommand *pCommand);
 	void Cmd_Texture_Destroy(const CCommandBuffer::CTextureDestroyCommand *pCommand);
 	void Cmd_Texture_Create(const CCommandBuffer::CTextureCreateCommand *pCommand);
@@ -253,6 +254,7 @@ public:
 	virtual bool WindowActive();
 	virtual bool WindowOpen();
 
+	virtual bool ResizeWindow(int Width, int Height);
 	virtual void *GetWindowHandle();
 };
 

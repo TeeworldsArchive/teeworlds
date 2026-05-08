@@ -202,6 +202,7 @@ public:
 	virtual void Swap() = 0;
 	virtual int GetNumScreens() const = 0;
 
+	virtual bool ResizeWindow(int Width, int Height) = 0;
 	// syncronization
 	virtual void InsertSignal(class semaphore *pSemaphore) = 0;
 	virtual bool IsIdle() const = 0;
@@ -235,6 +236,8 @@ public:
 	virtual bool WindowActive() = 0;
 	virtual bool WindowOpen() = 0;
 
+	virtual void OnWindowResized(int Width, int Height) = 0;
+	virtual void OnWindowPixelResized(int ScreenWidth, int ScreenHeight) = 0;
 	virtual void *GetWindowHandle() = 0;
 };
 

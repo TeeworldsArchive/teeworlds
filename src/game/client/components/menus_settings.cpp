@@ -1621,17 +1621,12 @@ int CMenus::DoAudioDevicesList(CUIRect *pRect, CListBox *pListBox, const array<C
 
 void CMenus::RenderSettingsGraphics(CUIRect MainView)
 {
-	bool CheckFullscreen = false;
-#ifdef CONF_PLATFORM_MACOS
-	CheckFullscreen = true;
-#endif
-
-	static const int s_GfxFullscreen = Config()->m_GfxFullscreen;
-	static const int s_GfxScreenWidth = Config()->m_GfxScreenWidth;
-	static const int s_GfxScreenHeight = Config()->m_GfxScreenHeight;
 	static const int s_GfxFsaaSamples = Config()->m_GfxFsaaSamples;
 	static const int s_GfxOpenGLES = Config()->m_GfxOpenGLES;
 	static const int s_GfxTextureQuality = Config()->m_GfxTextureQuality;
+	static int s_GfxScreenWidth = Config()->m_GfxScreenWidth;
+	static int s_GfxScreenHeight = Config()->m_GfxScreenHeight;
+	static bool s_WindowResizeFailed = false;
 
 	CUIRect Label, Button, ScreenLeft, ScreenRight, Texture, BottomView, Background;
 
@@ -1858,8 +1853,12 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		}
 		static CListBox s_RecListBox;
 		static CListBox s_OthListBox;
-		m_CheckVideoSettings |= DoResolutionList(&ListRec, &s_RecListBox, m_lRecommendedVideoModes);
-		m_CheckVideoSettings |= DoResolutionList(&ListOth, &s_OthListBox, m_lOtherVideoModes);
+		bool NewSelected = DoResolutionList(&ListRec, &s_RecListBox, m_lRecommendedVideoModes) || DoResolutionList(&ListOth, &s_OthListBox, m_lOtherVideoModes);
+		m_CheckVideoSettings |= NewSelected;
+		if(NewSelected)
+		{
+			s_WindowResizeFailed = !Graphics()->ResizeWindow(Config()->m_GfxScreenWidth, Config()->m_GfxScreenHeight);
+		}
 	}
 
 	// reset button
@@ -1882,12 +1881,10 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	if(m_CheckVideoSettings)
 	{
 		m_NeedRestartGraphics =
-			s_GfxScreenWidth != Config()->m_GfxScreenWidth ||
-			s_GfxScreenHeight != Config()->m_GfxScreenHeight ||
+			s_WindowResizeFailed ||
 			s_GfxFsaaSamples != Config()->m_GfxFsaaSamples ||
 			s_GfxOpenGLES != Config()->m_GfxOpenGLES ||
-			s_GfxTextureQuality != Config()->m_GfxTextureQuality ||
-			(CheckFullscreen && s_GfxFullscreen != Config()->m_GfxFullscreen);
+			s_GfxTextureQuality != Config()->m_GfxTextureQuality;
 		m_CheckVideoSettings = false;
 	}
 }
