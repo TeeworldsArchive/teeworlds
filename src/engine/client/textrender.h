@@ -191,7 +191,7 @@ class CTextRender : public IEngineTextRender
 		return Chr >= 0x0020 && Chr <= 0x218F;
 	}
 
-	CWordWidthHint MakeWord(CTextCursor *pCursor, const int *pText, const int *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale);
+	CWordWidthHint MakeWord(CTextCursor *pCursor, const char *pText, const char *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale);
 	void TextRefreshGlyphs(CTextCursor *pCursor);
 
 	void DrawText(CTextCursor *pCursor, vec2 Offset, int Texture, bool IsSecondary, float Alpha, int StartGlyph, int NumGlyphs);

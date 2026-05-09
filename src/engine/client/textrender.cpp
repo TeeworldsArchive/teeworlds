@@ -545,15 +545,14 @@ void CGlyphMap::PagesAccessReset()
 	}
 }
 
-CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const int *pText, const int *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale)
+CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, const char *pEnd, int FontSizeIndex, float Size, int PixelSize, vec2 ScreenScale)
 {
 	bool Render = !(pCursor->m_Flags & TEXTFLAG_NO_RENDER);
 	bool BreakWord = !(pCursor->m_Flags & TEXTFLAG_WORD_WRAP);
 	bool AllowNewline = pCursor->m_Flags & TEXTFLAG_ALLOW_NEWLINE;
 	CWordWidthHint Hint;
-	const int *pCur = pText;
-	int NextChr = *pCur;
-	pCur++;
+	const char *pCur = pText;
+	int NextChr = str_utf8_decode(&pCur);
 	CGlyph *pNextGlyph = NULL;
 	if(NextChr > 0)
 	{
@@ -602,8 +601,7 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const int *pText, con
 			return Hint;
 		}
 
-		NextChr = *pCur;
-		pCur++;
+		NextChr = str_utf8_decode(&pCur);
 		pNextGlyph = NULL;
 		if(NextChr > 0)
 		{
@@ -895,21 +893,8 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 	if(Length < 0)
 		Length = str_length(pText);
 
-	static array<int> lText;
-	lText.clear_size();
-	lText.hint_size(Length);
-	{
-		const char *pCur = pText;
-		const char *pEnd = pText + Length;
-		int NewChar;
-		while(pCur < pEnd && (NewChar = str_utf8_decode(&pCur)) > 0)
-		{
-			lText.add(NewChar);
-		}
-	}
-
-	const int *pCur = lText.base_ptr();
-	const int *pEnd = lText.base_ptr() + lText.size();
+	const char *pCur = (char *) pText;
+	const char *pEnd = (char *) pText + Length;
 
 	float NextAdvanceY = pCursor->m_Advance.y + pCursor->m_FontSize;
 	NextAdvanceY = (int) (NextAdvanceY * ScreenScale.y) / ScreenScale.y;
@@ -994,13 +979,12 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 	}
 
 	pCursor->m_Height = pCursor->m_NextLineAdvanceY + 0.35f * Size;
-	pCursor->m_CharCount = pCur - lText.base_ptr();
+	pCursor->m_CharCount = pCur - pText;
 
 	// insert ellipsis at the end
 	if(pCursor->m_Truncated && pCursor->m_Flags & TEXTFLAG_ELLIPSIS)
 	{
-		const char *pEllipsis = "…";
-		const int aEllipsis[] = {str_utf8_decode(&pEllipsis)};
+		const char aEllipsis[] = "…";
 		if(pCursor->m_Glyphs.size() > 0)
 		{
 			CScaledGlyph *pLastGlyph = &pCursor->m_Glyphs[pCursor->m_Glyphs.size() - 1];
@@ -1010,7 +994,7 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 
 		int OldMaxWidth = pCursor->m_MaxWidth;
 		pCursor->m_MaxWidth = -1;
-		CWordWidthHint WordWidth = MakeWord(pCursor, aEllipsis, aEllipsis + 1, FontSizeIndex, Size, PixelSize, ScreenScale);
+		CWordWidthHint WordWidth = MakeWord(pCursor, aEllipsis, aEllipsis + sizeof(aEllipsis), FontSizeIndex, Size, PixelSize, ScreenScale);
 		pCursor->m_MaxWidth = OldMaxWidth;
 		if(WordWidth.m_EffectiveAdvanceX > MaxWidth)
 		{
