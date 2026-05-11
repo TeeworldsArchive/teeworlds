@@ -1058,13 +1058,17 @@ set(EXPECTED_DATA
   ui/debug_font.png
   ui/demo_buttons.png
   ui/file_icons.png
+  ui/gametypes/alias.json
+  ui/gametypes/block.png
   ui/gametypes/ctf.png
+  ui/gametypes/ddracenetwork.png
   ui/gametypes/dm.png
+  ui/gametypes/fng.png
+  ui/gametypes/infection.png
   ui/gametypes/lms.png
   ui/gametypes/lts.png
   ui/gametypes/mod.png
   ui/gametypes/race.png
-  ui/gametypes/reinfected.png
   ui/gametypes/tdm.png
   ui/gui_buttons.png
   ui/gui_cursor.png

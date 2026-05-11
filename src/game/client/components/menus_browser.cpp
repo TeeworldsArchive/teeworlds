@@ -2119,8 +2119,35 @@ void CMenus::RenderServerbrowserBottomBox(CUIRect MainView)
 	}
 }
 
+void CMenus::InitGametypeAlias()
+{
+	CJsonParser JsonParser;
+	const json_value *pJsonData = JsonParser.ParseFile("ui/gametypes/alias.json", Storage());
+	if(pJsonData == 0)
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", JsonParser.Error());
+		return;
+	}
+
+	const json_value &rJsonData = (*pJsonData);
+	if(rJsonData.type != json_object)
+	{
+		return;
+	}
+	for(unsigned i = 0; i < rJsonData.u.object.length; i++)
+	{
+		if(rJsonData.u.object.values[i].value->type != json_string) continue;
+		m_GametypesAlias.set(rJsonData.u.object.values[i].name, rJsonData.u.object.values[i].value->u.string.ptr);
+		dbg_msg("yee", "%s", rJsonData.u.object.values[i].name);
+	}
+}
+
 void CMenus::DoGameIcon(const char *pName, const CUIRect *pRect)
 {
+	// find source
+	if(m_GametypesAlias.get(pName))
+		pName = m_GametypesAlias.get(pName)->cstr();
+
 	char aNameBuf[128];
 	str_copy(aNameBuf, pName, sizeof(aNameBuf));
 	str_sanitize_filename(aNameBuf);

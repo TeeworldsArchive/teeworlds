@@ -958,6 +958,7 @@ void CMenus::OnInit()
 	RenderLoading(1);
 
 	// load game type icons
+	InitGametypeAlias();
 	Storage()->ListDirectory(IStorage::TYPE_ALL, "ui/gametypes", GameIconScan, this);
 	RenderLoading(1);
 

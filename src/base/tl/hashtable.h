@@ -15,6 +15,13 @@ public:
 	{ return key1 == key2; }
 };
 
+class string_nocase_function
+{
+public:
+	static unsigned hash(const char *key) { return str_quickhash(key); }
+	static bool equal(const char *key1, const char *key2) { return str_comp_nocase(key1, key2) == 0; }
+};
+
 template<class KEY, class T, int TABLESIZE, class FUNCTION = basic_table_function>
 class hash_table
 {

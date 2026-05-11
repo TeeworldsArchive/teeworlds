@@ -1,0 +1,43 @@
+{
+    "ctf+": "ctf",
+    "dm+": "dm",
+    "tdm+": "tdm",
+    "lms+": "lms",
+    "lts+": "lts",
+
+    "ictf": "ctf",
+    "gctf": "ctf",
+    "idm": "dm",
+    "gdm": "dm",
+    "itdm": "tdm",
+    "gtdm": "tdm",
+    "ilms": "lms",
+    "glms": "lms",
+    "ilts": "lts",
+    "glts": "lts",
+
+    "ictf+": "ctf",
+    "gctf+": "ctf",
+    "idm+": "dm",
+    "gdm+": "dm",
+    "itdm+": "tdm",
+    "gtdm+": "tdm",
+    "ilms+": "lms",
+    "glms+": "lms",
+    "ilts+": "lts",
+    "glts+": "lts",
+
+    "gores": "ddracenetwork",
+    "race(silly)+": "race",
+
+    "reinfected": "infection",
+    "infclassr": "infection",
+
+    "fng2+": "fng",
+    "solofng": "fng",
+    "solofng2+": "fng",
+    "trainfng": "fng",
+
+    "ddnet++": "block",
+    "F-DDrace": "block"
+}

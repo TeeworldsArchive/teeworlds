@@ -31,7 +31,7 @@ Note: All audio files have been converted from WavePack (.wv) to Opus format.
 This constitutes a modification under the terms of the CC-BY-SA 3.0 license.
 The resulting Opus files are therefore licensed under the same terms (CC-BY-SA 3.0).
 
-Teeworlds Archive Project: Bamcane
+Teeworlds Archive Project Resources Authors: Bamcane, Pointer31
 
 ------------------------------------------------------------------------
 
