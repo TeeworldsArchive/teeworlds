@@ -654,6 +654,7 @@ public:
 	virtual void OnStateChange(int NewState, int OldState);
 	virtual void OnReset();
 	virtual void OnRender();
+	virtual void OnSoundLoaded() { UpdateMusicState(); }
 	virtual bool OnInput(IInput::CEvent Event);
 	virtual bool OnCursorMove(float x, float y, int CursorType);
 

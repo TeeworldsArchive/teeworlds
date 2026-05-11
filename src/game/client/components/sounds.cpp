@@ -119,7 +119,10 @@ void CSounds::OnRender()
 	if(m_WaitForSoundJob)
 	{
 		if(m_SoundJob.Status() == CJob::STATE_DONE)
+		{
 			m_WaitForSoundJob = false;
+			m_pClient->OnSoundLoaded();
+		}
 		else
 			return;
 	}

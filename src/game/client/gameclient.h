@@ -271,6 +271,7 @@ public:
 	CRenderTools m_RenderTools;
 
 	void OnReset();
+	void OnSoundLoaded();
 
 	// hooks
 	virtual void OnConnected();

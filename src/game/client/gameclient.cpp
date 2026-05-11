@@ -506,6 +506,14 @@ void CGameClient::OnReset()
 	}
 }
 
+void CGameClient::OnSoundLoaded()
+{
+	for(int i = 0; i < m_All.m_Num; i++)
+	{
+		m_All.m_apComponents[i]->OnSoundLoaded();
+	}
+}
+
 void CGameClient::UpdatePositions()
 {
 	// `m_LocalCharacterPos` is used for many things besides rendering the
