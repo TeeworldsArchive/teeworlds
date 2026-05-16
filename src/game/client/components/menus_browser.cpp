@@ -2138,7 +2138,6 @@ void CMenus::InitGametypeAlias()
 	{
 		if(rJsonData.u.object.values[i].value->type != json_string) continue;
 		m_GametypesAlias.set(rJsonData.u.object.values[i].name, rJsonData.u.object.values[i].value->u.string.ptr);
-		dbg_msg("yee", "%s", rJsonData.u.object.values[i].name);
 	}
 }
 
