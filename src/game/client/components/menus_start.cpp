@@ -81,7 +81,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 			Client()->CloseLocalServer();
 		char aLanguage[192];
 		str_format(aLanguage, sizeof(aLanguage), "sv_languagefile \"%s\"", Config()->m_ClLanguagefile);
-		Client()->OpenLocalServer(3, "sv_gametype \"tutorial\"", "sv_map \"tutorial\"", "sv_port 16606");
+		Client()->OpenLocalServer(4, "sv_gametype \"tutorial\"", "sv_map \"tutorial\"", aLanguage, "sv_port 16606");
 		Client()->Connect("127.0.0.1:16606");
 	}
 	static CButtonContainer s_LocalServerButton;
