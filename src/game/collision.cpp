@@ -11,10 +11,10 @@
 #include <game/collision.h>
 #include <game/layers.h>
 #include <game/mapitems.h>
+#include "collision.h"
 
 CCollision::CCollision()
 {
-	m_pTiles = 0;
 	m_Width = 0;
 	m_Height = 0;
 	m_pLayers = 0;
@@ -25,28 +25,29 @@ void CCollision::Init(class CLayers *pLayers)
 	m_pLayers = pLayers;
 	m_Width = m_pLayers->GameLayer()->m_Width;
 	m_Height = m_pLayers->GameLayer()->m_Height;
-	m_pTiles = static_cast<CTile *>(m_pLayers->Map()->GetData(m_pLayers->GameLayer()->m_Data));
+	CTile *pTiles = static_cast<CTile *>(m_pLayers->Map()->GetData(m_pLayers->GameLayer()->m_Data));
+	m_lTiles.set_size(m_Width * m_Height);
 
 	for(int i = 0; i < m_Width * m_Height; i++)
 	{
-		int Index = m_pTiles[i].m_Index;
+		int Index = pTiles[i].m_Index;
 
-		if(Index > 128)
-			continue;
+		// if(Index > 128)
+		//	continue;
 
 		switch(Index)
 		{
 			case TILE_DEATH:
-				m_pTiles[i].m_Index = COLFLAG_DEATH;
+				m_lTiles[i] = COLFLAG_DEATH;
 				break;
 			case TILE_HOOKABLE:
-				m_pTiles[i].m_Index = COLFLAG_SOLID;
+				m_lTiles[i] = COLFLAG_SOLID;
 				break;
 			case TILE_UNHOOKABLE:
-				m_pTiles[i].m_Index = COLFLAG_SOLID | COLFLAG_UNHOOKABLE;
+				m_lTiles[i] = COLFLAG_SOLID | COLFLAG_UNHOOKABLE;
 				break;
 			default:
-				m_pTiles[i].m_Index = 0;
+				m_lTiles[i] = 0;
 		}
 	}
 }
@@ -56,7 +57,7 @@ int CCollision::GetTile(int x, int y) const
 	int Nx = clamp(x / 32, 0, m_Width - 1);
 	int Ny = clamp(y / 32, 0, m_Height - 1);
 
-	return m_pTiles[Ny * m_Width + Nx].m_Index > 128 ? 0 : m_pTiles[Ny * m_Width + Nx].m_Index;
+	return m_lTiles[Ny * m_Width + Nx];
 }
 
 bool CCollision::IsTile(int x, int y, int Flag) const
@@ -174,7 +175,7 @@ void CCollision::SetFlagFor(float x, float y, int Flag)
 	int Nx = clamp(round_to_int(x) / 32, 0, m_Width - 1);
 	int Ny = clamp(round_to_int(y) / 32, 0, m_Height - 1);
 
-	m_pTiles[Ny * m_Width + Nx].m_Index = Flag;
+	m_lTiles[Ny * m_Width + Nx] = Flag;
 }
 
 void CCollision::MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity, bool *pDeath) const

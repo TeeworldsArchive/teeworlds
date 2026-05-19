@@ -3,11 +3,12 @@
 #ifndef GAME_COLLISION_H
 #define GAME_COLLISION_H
 
+#include <base/tl/array.h>
 #include <base/vmath.h>
 
 class CCollision
 {
-	struct CTile *m_pTiles;
+	array<int> m_lTiles;
 	int m_Width;
 	int m_Height;
 	class CLayers *m_pLayers;

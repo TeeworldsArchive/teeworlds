@@ -983,12 +983,8 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 	CUIRect ClientLeft, ClientRight;
 	Client.HSplitTop(Spacing, 0, &Client);
 	Client.HSplitTop(ButtonHeight, &ClientLeft, &Client);
-	ClientLeft.VSplitMid(&ClientLeft, &ClientRight, Spacing);
 	if(DoButton_CheckBox(&Config()->m_ClSkipStartMenu, Localize("Skip the main menu"), Config()->m_ClSkipStartMenu, &ClientLeft))
 		Config()->m_ClSkipStartMenu ^= 1;
-
-	if(DoButton_CheckBox(&Config()->m_UiWideview, Localize("Wide menu"), Config()->m_UiWideview, &ClientRight))
-		Config()->m_UiWideview ^= 1;
 
 	Client.HSplitTop(Spacing, 0, &Client);
 	Client.HSplitTop(ButtonHeight, &Button, &Client);
@@ -1891,7 +1887,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 
 void CMenus::RenderSettingsSound(CUIRect MainView)
 {
-	CUIRect Label, Button, Sound, Detail, BottomView, Background;
+	CUIRect Label, Button, Sound, Detail, Devices, BottomView, Background;
 
 	// render sound menu background
 	int NumOptions = Config()->m_SndEnable ? 3 : 2;
@@ -1909,13 +1905,14 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	MainView.HSplitTop(BackgroundHeight, &Sound, &MainView);
 	Sound.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
-	// render detail menu background
+	// render detail and devices menu background
 	if(Config()->m_SndEnable)
 	{
-		BackgroundHeight = 2.0f * ButtonHeight + Spacing;
+		BackgroundHeight = 7.0f * ButtonHeight + 6.0f * Spacing;
 
-		MainView.HSplitTop(10.0f, 0, &MainView);
-		MainView.HSplitTop(BackgroundHeight, &Detail, &MainView);
+		MainView.HSplitTop(10.0f, 0, &Detail);
+		Detail.VSplitMid(&Detail, &Devices, Spacing);
+		Detail.HSplitTop(BackgroundHeight, &Detail, 0);
 		Detail.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 	}
 
@@ -1951,53 +1948,38 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		Detail.HSplitTop(ButtonHeight, &Label, &Detail);
 		UI()->DoLabel(&Label, Localize("Detail"), ButtonHeight * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
 
-		// split menu
-		CUIRect Left, Right;
+		// sound
 		Detail.HSplitTop(Spacing, 0, &Detail);
-		Detail.VSplitMid(&Left, &Right, 3.0f);
-
-		// sample rate thingy
-		{
-			Left.HSplitTop(ButtonHeight, &Button, &Left);
-
-			Button.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
-			CUIRect Text, Value, Unit;
-			Button.VSplitLeft(Button.w / 3.0f, &Text, &Button);
-			Button.VSplitMid(&Value, &Unit);
-
-			char aBuf[32];
-			str_format(aBuf, sizeof(aBuf), "%s:", Localize("Sample rate"));
-			UI()->DoLabel(&Text, aBuf, Text.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
-			UI()->DoLabel(&Unit, "kHz", Unit.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
-
-			if(Config()->m_SndRate != 48000 && Config()->m_SndRate != 44100)
-				Config()->m_SndRate = 48000;
-			if(Config()->m_SndRate == 48000)
-				str_copy(aBuf, "48.0", sizeof(aBuf));
-			else
-				str_copy(aBuf, "44.1", sizeof(aBuf));
-			static CButtonContainer s_SampleRateButton;
-			if(DoButton_Menu(&s_SampleRateButton, aBuf, 0, &Value))
-			{
-				if(Config()->m_SndRate == 48000)
-					Config()->m_SndRate = 44100;
-				else
-					Config()->m_SndRate = 48000;
-			}
-
-			m_NeedRestartSound = Config()->m_SndInit && (!s_SndInit || s_SndRate != Config()->m_SndRate);
-		}
-
-		Right.HSplitTop(ButtonHeight, &Button, &Right);
+		Detail.HSplitTop(ButtonHeight, &Button, &Detail);
 		UI()->DoScrollbarOption(&Config()->m_SndVolume, &Config()->m_SndVolume, &Button, Localize("Volume"), 0, 100);
 
+		Detail.HSplitTop(Spacing, 0, &Detail);
+		Detail.HSplitTop(ButtonHeight, &Button, &Detail);
+		UI()->DoScrollbarOption(&Config()->m_SndGUIVolume, &Config()->m_SndGUIVolume, &Button, Localize("GUI Volume"), 0, 100);
+
+		Detail.HSplitTop(Spacing, 0, &Detail);
+		Detail.HSplitTop(ButtonHeight, &Button, &Detail);
+		UI()->DoScrollbarOption(&Config()->m_SndMusicVolume, &Config()->m_SndMusicVolume, &Button, Localize("Music Volume"), 0, 100);
+
+		Detail.HSplitTop(Spacing, 0, &Detail);
+		Detail.HSplitTop(ButtonHeight, &Button, &Detail);
+		UI()->DoScrollbarOption(&Config()->m_SndWorldVolume, &Config()->m_SndWorldVolume, &Button, Localize("World Volume"), 0, 100);
+
+		Detail.HSplitTop(Spacing, 0, &Detail);
+		Detail.HSplitTop(ButtonHeight, &Button, &Detail);
+		UI()->DoScrollbarOption(&Config()->m_SndGlobalVolume, &Config()->m_SndGlobalVolume, &Button, Localize("Global Volume"), 0, 100);
+
+		Detail.HSplitTop(Spacing, 0, &Detail);
+		Detail.HSplitTop(ButtonHeight, &Button, &Detail);
+		UI()->DoScrollbarOption(&Config()->m_SndMapVolume, &Config()->m_SndMapVolume, &Button, Localize("Map Volume"), 0, 100);
+
+		// devices
 		CUIRect Header;
-		MainView.HSplitTop(ButtonHeight, 0, &MainView);
-		MainView.HSplitTop(ButtonHeight, &Header, &MainView);
-		Header.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
+		Devices.HSplitTop(ButtonHeight, &Header, &Devices);
+		Header.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f), 5.0f, CUIRect::CORNER_T);
 		UI()->DoLabel(&Header, Localize("Devices", "Audio"), Header.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
 		static CListBox s_DevicesListBox;
-		int AudioDevice = DoAudioDevicesList(&MainView, &s_DevicesListBox, m_lAudioDevices);
+		int AudioDevice = DoAudioDevicesList(&Devices, &s_DevicesListBox, m_lAudioDevices);
 		if(AudioDevice != -2)
 		{
 			m_pClient->Sound()->SwitchAudioDevice(AudioDevice);
@@ -2150,7 +2132,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		// background
 		CUIRect RestartWarning;
 		MainView.HSplitTop(25.0f, &RestartWarning, 0);
-		RestartWarning.VMargin(Config()->m_UiWideview ? 210.0f : 140.0f, &RestartWarning);
+		RestartWarning.VMargin(210.0f, &RestartWarning);
 		RestartWarning.Draw(vec4(1.0f, 1.0f, 1.0f, 0.25f));
 
 		// text

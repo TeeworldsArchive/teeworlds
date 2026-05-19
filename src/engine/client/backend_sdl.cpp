@@ -197,34 +197,6 @@ int CCommandProcessorFragment_OpenGL::GetPixelSize(int TexFormat)
 	}
 }
 
-unsigned char CCommandProcessorFragment_OpenGL::Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp)
-{
-	int Sum = 0;
-	for(int x = 0; x < ScaleW; x++)
-		for(int y = 0; y < ScaleH; y++)
-			Sum += pData[((v + y) * w + (u + x)) * Bpp + Offset];
-	return Sum / (ScaleW * ScaleH);
-}
-
-void *CCommandProcessorFragment_OpenGL::Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData)
-{
-	int ScaleW = Width / NewWidth;
-	int ScaleH = Height / NewHeight;
-
-	int Bpp = 3;
-	if(Format == CCommandBuffer::TEXFORMAT_RGBA)
-		Bpp = 4;
-
-	unsigned char *pTmpData = (unsigned char *) mem_alloc(NewWidth * NewHeight * Bpp);
-
-	for(int y = 0; y < NewHeight; y++)
-		for(int x = 0; x < NewWidth; x++)
-			for(int b = 0; b < Bpp; b++)
-				pTmpData[(NewWidth * y + x) * Bpp + b] = Sample(Width, Height, pData, x * ScaleW, y * ScaleH, b, ScaleW, ScaleH, Bpp);
-
-	return pTmpData;
-}
-
 GLuint CCommandProcessorFragment_OpenGL::CompileShader(GLuint Type, const char *pSource)
 {
 	GLuint Shader = glCreateShader(Type);
@@ -577,7 +549,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 				Height >>= 1;
 			} while(Width > m_MaxTexSize || Height > m_MaxTexSize);
 
-			void *pTmpData = Rescale(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
+			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
 			if(pTexData != pCommand->m_pData)
 				mem_free(pTexData);
 			pTexData = pTmpData;
@@ -587,7 +559,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 			Width >>= 1;
 			Height >>= 1;
 
-			void *pTmpData = Rescale(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
+			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
 			if(pTexData != pCommand->m_pData)
 				mem_free(pTexData);
 			pTexData = pTmpData;

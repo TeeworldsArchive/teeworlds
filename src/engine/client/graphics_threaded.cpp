@@ -484,7 +484,7 @@ void CGraphics_Threaded::KickCommandBuffer()
 	m_pCommandBuffer->Reset();
 }
 
-void CGraphics_Threaded::ScreenshotDirect(const char *pFilename)
+void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pThumbnail)
 {
 	// add swap command
 	CImageInfo Image;
@@ -526,6 +526,24 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename)
 				m_pfnScreenshot(m_pScreenshotUser, 0);
 		}
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client/screenshot", aBuf);
+
+		// thumbnail
+		File = m_pStorage->OpenFile(pThumbnail, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath));
+		if(File)
+		{
+			int G = gcd(Image.m_Width, Image.m_Height);
+			int NewWidth = Image.m_Width / G * 20;
+			int NewHeight = Image.m_Height / G * 20;
+			void *pTmpData = RescaleImage(Image.m_Width, Image.m_Height, NewWidth, NewHeight, ImageFormatToTexFormat(Image.m_Format), static_cast<const unsigned char *>(Image.m_pData));
+			if(pTmpData != Image.m_pData)
+				mem_free(Image.m_pData);
+			Image.m_pData = pTmpData;
+			// save png
+			png_t Png;
+			png_open_write(&Png, 0, File);
+			png_set_data(&Png, NewWidth, NewHeight, 8, Image.m_Format == CImageInfo::FORMAT_RGB ? PNG_TRUECOLOR : PNG_TRUECOLOR_ALPHA, (unsigned char *) Image.m_pData);
+			io_close(File);
+		}
 		mem_free(Image.m_pData);
 		m_pfnScreenshot = 0;
 	}
@@ -987,6 +1005,7 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallba
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
 	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
+	str_format(m_aThumbnailName, sizeof(m_aThumbnailName), "screenshots/%s_%s_thumbnail.png", pFilename ? pFilename : "screenshot", aDate);
 	m_DoScreenshot = true;
 	m_pfnScreenshot = pfnCallback;
 	m_pScreenshotUser = pUser;
@@ -998,7 +1017,7 @@ void CGraphics_Threaded::Swap()
 	if(m_DoScreenshot)
 	{
 		if(WindowActive())
-			ScreenshotDirect(m_aScreenshotName);
+			ScreenshotDirect(m_aScreenshotName, m_aThumbnailName);
 		m_DoScreenshot = false;
 	}
 

@@ -153,8 +153,6 @@ public:
 private:
 	static int TexFormatToOpenGLFormat(int TexFormat);
 	static int GetPixelSize(int TexFormat);
-	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
-	static void *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 
 	bool SetState(const CCommandBuffer::CState &State);
 

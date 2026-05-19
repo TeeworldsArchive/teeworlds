@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_SOUNDS_H
 #define GAME_CLIENT_COMPONENTS_SOUNDS_H
 
+#include <engine/console.h>
 #include <engine/shared/jobs.h>
 #include <engine/sound.h>
 #include <game/client/component.h>
@@ -24,6 +25,8 @@ class CSounds : public CComponent
 	bool m_WaitForSoundJob;
 
 	ISound::CSampleHandle GetSampleId(int SetId);
+
+	void UpdateChannelVolume();
 
 public:
 	// sound channels

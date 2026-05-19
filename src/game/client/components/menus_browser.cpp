@@ -34,10 +34,10 @@ CMenus::CColumn CMenus::ms_aBrowserCols[] = {
 	{COL_BROWSER_PING, IServerBrowser::SORT_PING, "Ping", 1, 40.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
 };
 
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterStandard = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_PURE | IServerBrowser::FILTER_PURE_MAP, 999, -1, 0, {{0}}, {0}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_COMPAT_VERSION, 999, -1, 0, {{"Race"}}, {false}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterFavorites = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_FAVORITE, 999, -1, 0, {{0}}, {0}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterAll = {IServerBrowser::FILTER_COMPAT_VERSION, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterStandard = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_PURE | IServerBrowser::FILTER_PURE_MAP | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{"Race"}}, {false}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterFavorites = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_FAVORITE | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterAll = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{0}}, {0}, {0}};
 
 static CLocConstString s_aDifficultyLabels[] = {
 	"Casual",
@@ -471,6 +471,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 	const float FontSize = 12.0f;
 	const float TextAlpha = (pEntry->m_NumClients == pEntry->m_MaxClients) ? 0.5f : 1.0f;
 	vec4 TextBaseColor = vec4(1.0f, 1.0f, 1.0f, TextAlpha);
+	vec4 TextUnrecommendedColor = vec4(1.0f, 0.4f, 0.4f, TextAlpha);
 	vec4 TextBaseOutlineColor = vec4(0.0, 0.0, 0.0, 0.3f);
 	vec4 ServerInfoTextBaseColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	vec4 HighlightColor = vec4(TextHighlightColor.r, TextHighlightColor.g, TextHighlightColor.b, TextAlpha);
@@ -542,7 +543,9 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			TextRender()->TextColor(TextBaseColor);
 			TextRender()->TextSecondaryColor(TextBaseOutlineColor);
 			Button.y += (Button.h - FontSize / CUI::ms_FontmodHeight) / 2.0f;
-			UI()->DoLabelHighlighted(&Button, pEntry->m_aName, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME) ? Config()->m_BrFilterString : 0, FontSize, TextBaseColor, HighlightColor);
+			UI()->DoLabelHighlighted(&Button, pEntry->m_aName, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME) ? Config()->m_BrFilterString : 0, FontSize, (!Selected && !Highlighted && pEntry->m_Unrecommended) ? TextUnrecommendedColor : TextBaseColor, HighlightColor);
+			if(pEntry->m_Unrecommended)
+				UI()->DoTooltip(&pEntry->m_aName, &Button, Localize("This server is unrecommended because its gametype only offers a better experience on the dedicated client."));
 		}
 		else if(ID == COL_BROWSER_MAP)
 		{
@@ -658,7 +661,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 		CUIRect Info, Scoreboard;
 		View.VSplitLeft(160.0f, &Info, &Scoreboard);
 		RenderDetailInfo(Info, pEntry, ServerInfoTextBaseColor, TextBaseOutlineColor);
-		RenderDetailScoreboard(Scoreboard, pEntry, 4, ServerInfoTextBaseColor, TextBaseOutlineColor);
+		RenderDetailScoreboard(Scoreboard, pEntry, 6, ServerInfoTextBaseColor, TextBaseOutlineColor);
 	}
 
 	TextRender()->TextColor(CUI::ms_DefaultTextColor);
@@ -1051,7 +1054,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View)
 				}
 
 				const bool ShowServerInfo = !m_SidebarActive && m_ShowServerDetails && IsSelected;
-				const float ItemHeight = HeaderHeight * (ShowServerInfo ? 6.0f : 1.0f);
+				const float ItemHeight = HeaderHeight * (ShowServerInfo ? 8.0f : 1.0f);
 
 				CUIRect Row;
 				View.HSplitTop(ItemHeight, &Row, &View);
@@ -1548,17 +1551,18 @@ void CMenus::RenderServerbrowserFilterTab(CUIRect View)
 
 	// new filter
 	ServerFilter.HSplitBottom(LineSize, &ServerFilter, &Button);
-	Button.VSplitLeft(60.0f, &Icon, &Button);
+	Button.VSplitLeft(70.0f, &Icon, &Button);
 	static CLineInputBuffered<32> s_FilterInput;
 	UI()->DoEditBox(&s_FilterInput, &Icon, FontSize, CUIRect::CORNER_L);
 	Button.Draw(vec4(1.0f, 1.0f, 1.0f, 0.25f), 5.0f, CUIRect::CORNER_R);
 	Button.VSplitLeft(Button.h, &Icon, &Label);
-	UI()->DoLabel(&Label, Localize("New filter"), FontSize, TEXTALIGN_ML);
-	if(s_FilterInput.GetLength())
+	Label.x -= Button.h / 2.0f;
+	UI()->DoLabel(&Label, Localize("New filter"), FontSize, TEXTALIGN_MC);
+	// if(s_FilterInput.GetLength())
 	{
 		DoIcon(IMAGE_FRIENDICONS, UI()->MouseHovered(&Button) ? SPRITE_FRIEND_PLUS_A : SPRITE_FRIEND_PLUS_B, &Icon);
 		static CButtonContainer s_AddFilter;
-		if(UI()->DoButtonLogic(&s_AddFilter, &Button))
+		if(UI()->DoButtonLogic(&s_AddFilter, &Button) && s_FilterInput.GetLength())
 		{
 			CBrowserFilter *pSelectedFilter = GetSelectedBrowserFilter();
 			if(pSelectedFilter)
@@ -1629,6 +1633,11 @@ void CMenus::RenderServerbrowserFilterTab(CUIRect View)
 	static int s_BrFilterPureMap = 0;
 	if(DoButton_CheckBox(&s_BrFilterPureMap, Localize("Standard map"), FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE_MAP, &Button))
 		NewSortHash ^= IServerBrowser::FILTER_PURE_MAP;
+
+	ServerFilter.HSplitTop(LineSize, &Button, &ServerFilter);
+	static int s_BrFilterSortingUnrecommended = 0;
+	if(DoButton_CheckBox(&s_BrFilterSortingUnrecommended, Localize("Sorting unrecommended"), FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_UNRECOMMENDED, &Button))
+		NewSortHash ^= IServerBrowser::FILTER_SORTING_UNRECOMMENDED;
 
 	bool UpdateFilter = false;
 	if(FilterInfo.m_SortHash != NewSortHash)
@@ -1860,7 +1869,7 @@ void CMenus::RenderServerbrowserFilterTab(CUIRect View)
 	// reset filter
 	ServerFilter.HSplitBottom(LineSize, &ServerFilter, 0);
 	ServerFilter.HSplitBottom(LineSize, &ServerFilter, &Button);
-	Button.VMargin((Button.w - 80.0f) / 2, &Button);
+	Button.VMargin((Button.w - 100.0f) / 2, &Button);
 	static CButtonContainer s_ResetButton;
 	if(DoButton_Menu(&s_ResetButton, Localize("Reset filter"), 0, &Button))
 	{
@@ -1903,6 +1912,7 @@ void CMenus::RenderDetailInfo(CUIRect View, const CServerInfo *pInfo, const vec4
 	CUIRect Row;
 	// Localize("Map:"); Localize("Game type:"); Localize("Version:"); Localize("Difficulty:"); Localize("Casual", "Server difficulty"); Localize("Normal", "Server difficulty"); Localize("Competitive", "Server difficulty");
 	static CLocConstString s_aLabels[] = {
+		"This server is unrecommended because its gametype only offers a better experience on the dedicated client.",
 		"Map:",
 		"Game type:",
 		"Version:",
@@ -1910,9 +1920,14 @@ void CMenus::RenderDetailInfo(CUIRect View, const CServerInfo *pInfo, const vec4
 
 	CUIRect LeftColumn, RightColumn;
 	View.VMargin(2.0f, &View);
+	if(pInfo->m_Unrecommended)
+	{
+		View.HSplitTop(3.0f * RowHeight, &Row, &View);
+		UI()->DoLabel(&Row, s_aLabels[0], FontSize, TEXTALIGN_LEFT, Row.w);
+	}
 	View.VSplitLeft(70.0f, &LeftColumn, &RightColumn);
 
-	for(unsigned int i = 0; i < sizeof(s_aLabels) / sizeof(s_aLabels[0]); i++)
+	for(unsigned int i = 1; i < sizeof(s_aLabels) / sizeof(s_aLabels[0]); i++)
 	{
 		LeftColumn.HSplitTop(RowHeight, &Row, &LeftColumn);
 		UI()->DoLabel(&Row, s_aLabels[i], FontSize, TEXTALIGN_LEFT, Row.w, false);
@@ -1963,7 +1978,7 @@ void CMenus::RenderDetailScoreboard(CUIRect View, const CServerInfo *pInfo, int 
 	s_pLastInfo = pInfo;
 
 	const float RowWidth = (RowCount == 0) ? View.w : (View.w * 0.25f);
-	const float FontSize = Config()->m_UiWideview ? 8.0f : 7.0f;
+	const float FontSize = 8.0f;
 	const vec4 HighlightColor = vec4(TextHighlightColor.r, TextHighlightColor.g, TextHighlightColor.b, TextColor.a);
 	const vec4 GreyTextColor = vec4(TextColor.r, TextColor.g, TextColor.b, TextColor.a * 0.6f);
 	float LineHeight = 20.0f;
@@ -1993,7 +2008,7 @@ void CMenus::RenderDetailScoreboard(CUIRect View, const CServerInfo *pInfo, int 
 			Scroll.VMargin(5.0f, &Scroll);
 			s_ScrollValue = UI()->DoScrollbarH(&s_ScrollValue, &Scroll, s_ScrollValue);
 			View.x += (View.w - Width) * s_ScrollValue;
-			LineHeight = 0.25f * View.h;
+			// LineHeight = 0.25f * View.h;
 		}
 	}
 
@@ -2071,7 +2086,7 @@ void CMenus::RenderServerbrowserServerDetail(CUIRect View, const CServerInfo *pI
 	CUIRect ServerHeader, ServerDetails, ServerScoreboard;
 
 	// split off a piece to use for scoreboard
-	View.HSplitTop(80.0f, &ServerDetails, &ServerScoreboard);
+	View.HSplitTop(pInfo->m_Unrecommended ? 125.0f : 80.0f, &ServerDetails, &ServerScoreboard);
 
 	// server details
 	RenderDetailInfo(ServerDetails, pInfo, CUI::ms_DefaultTextColor, CUI::ms_DefaultTextOutlineColor);

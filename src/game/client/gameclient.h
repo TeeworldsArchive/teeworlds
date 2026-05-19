@@ -329,6 +329,7 @@ public:
 	void SendReadyChange();
 	void SendSkinChange();
 
+	void CopyScreenshot(const char *pPath);
 	// pointers to all systems
 	class CGameConsole *m_pGameConsole;
 	class CBinds *m_pBinds;

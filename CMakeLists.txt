@@ -928,6 +928,7 @@ set(EXPECTED_DATA
   maps/license.txt
   maps/lms1.map
   maps/readme.txt
+  maps/tutorial.map
   particles.png
   race_flag.png
   skins/beaver.json
@@ -1578,6 +1579,8 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gamemodes/instagib/tdm.h
   gamemodes/mod.cpp
   gamemodes/mod.h
+  gamemodes/tutorial.cpp
+  gamemodes/tutorial.h
   gamemodes/vanilla/ctf.cpp
   gamemodes/vanilla/ctf.h
   gamemodes/vanilla/dm.cpp

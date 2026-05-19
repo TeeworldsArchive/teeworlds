@@ -315,8 +315,9 @@ public:
 	void ToggleWindowVSync();
 
 	virtual void OpenURL(const char *pUrl);
-	virtual void OpenLocalServer();
+	virtual void OpenLocalServer(int NumParams, ...);
 	virtual void CloseLocalServer();
 	virtual bool IsLocalServerRunning();
+	void CheckLocalServer();
 };
 #endif

@@ -72,6 +72,8 @@ public:
 	void DisableWeapon(int WeaponID);
 	// need this hook for gamecontroller to remove weapon, it's different from the function DisableWeapon.
 	void RemoveWeapon(int WeaponID);
+	// need this hook for gamecontroller
+	void TeleTo(vec2 Pos, bool KeepSpeed);
 
 private:
 	// player controlling this character

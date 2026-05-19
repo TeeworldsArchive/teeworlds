@@ -620,6 +620,12 @@ void CServerBrowser::RequestImpl(const NETADDR &Addr, CServerEntry *pEntry)
 	}
 }
 
+static bool IsGametypeUnrecommended(const char *pGametype)
+{
+	return str_find_nocase(pGametype, "ddrace") || str_comp(pGametype, "DDNet++") == 0 ||
+	       str_comp(pGametype, "F-DDrace") == 0 || str_find_nocase(pGametype, "Gores"); // these are ddnet-like or ddnet-mods, which haven't given enough support for vanilla on freeze or something else.
+}
+
 void CServerBrowser::SetInfo(int ServerlistType, CServerEntry *pEntry, const CServerInfo &Info)
 {
 	bool Fav = pEntry->m_Info.m_Favorite;
@@ -631,6 +637,8 @@ void CServerBrowser::SetInfo(int ServerlistType, CServerEntry *pEntry, const CSe
 
 	if(m_pMapChecker->IsStandardMap(pEntry->m_Info.m_aMap))
 		pEntry->m_Info.m_Flags |= FLAG_PUREMAP;
+
+	pEntry->m_Info.m_Unrecommended = IsGametypeUnrecommended(pEntry->m_Info.m_aGameType);
 	pEntry->m_Info.m_Favorite = Fav;
 	pEntry->m_Info.m_NetAddr = pEntry->m_Addr;
 

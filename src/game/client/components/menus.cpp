@@ -962,6 +962,8 @@ void CMenus::OnInit()
 	Storage()->ListDirectory(IStorage::TYPE_ALL, "ui/gametypes", GameIconScan, this);
 	RenderLoading(1);
 
+	Storage()->ListDirectory(IStorage::TYPE_SAVE, "screenshots", ScreenshotScan, this);
+
 	// initial launch preparations
 	if(Config()->m_ClShowWelcome)
 		m_Popup = POPUP_LANGUAGE;
@@ -1067,9 +1069,7 @@ void CMenus::RenderMenu(CUIRect Screen)
 				BarHeight += 3.0f + 25.0f;
 			else if(Client()->State() == IClient::STATE_ONLINE && m_GamePage >= PAGE_INTERNET && m_GamePage <= PAGE_LAN)
 				BarHeight += 3.0f + 25.0f;
-			float VMargin = Screen.w / 2 - 365.0f;
-			if(Config()->m_UiWideview)
-				VMargin = minimum(VMargin, 60.0f);
+			float VMargin = minimum(Screen.w / 2 - 365.0f, 60.0f);
 
 			CUIRect TabBar, MainView;
 			Screen.VMargin(VMargin, &MainView);
@@ -1207,10 +1207,23 @@ void CMenus::RenderMenu(CUIRect Screen)
 		const float SpacingH = 2.0f;
 		const float SpacingW = 3.0f;
 		CUIRect Box = Screen;
-		Box.VMargin(Box.w / 2.0f - (365.0f), &Box);
-		const float ButtonWidth = (Box.w / 6.0f) - (SpacingW * 5.0) / 6.0f;
-		Box.VMargin(ButtonWidth + SpacingW, &Box);
-		Box.HMargin(Box.h / 2.0f - ((int) (NumOptions + 1) * ButtonHeight + (int) (NumOptions) *SpacingH) / 2.0f - 10.0f, &Box);
+		// Box.VMargin(Box.w / 2.0f - (365.0f), &Box);
+		float ButtonWidth = 0.0f;
+		// Box.VMargin(ButtonWidth + SpacingW, &Box);
+		// Box.HMargin(Box.h / 2.0f - ((int) (NumOptions + 1) * ButtonHeight + (int) (NumOptions) *SpacingH) / 2.0f - 10.0f, &Box);
+		if(m_Popup == POPUP_SCREENSHOT)
+		{
+			pTitle = m_Screenshot.m_Name;
+			Box.VMargin(50.0f, &Box);
+			Box.HMargin(50.0f, &Box);
+		}
+		else
+		{
+			Box.VMargin(Box.w / 2.0f - (365.0f), &Box);
+			float ButtonWidth = (Box.w / 6.0f) - (SpacingW * 5.0) / 6.0f;
+			Box.VMargin(ButtonWidth + SpacingW, &Box);
+			Box.HMargin(Box.h / 2.0f - ((NumOptions + 1) * ButtonHeight + NumOptions * SpacingH) / 2.0f - 10.0f, &Box);
+		}
 
 		// render the box
 		Box.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
@@ -1228,7 +1241,57 @@ void CMenus::RenderMenu(CUIRect Screen)
 		BottomBar.HSplitTop(SpacingH, 0, &BottomBar);
 		Box.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
-		if(m_Popup == POPUP_QUIT)
+		if(m_Popup == POPUP_SCREENSHOT)
+		{
+			static float s_Scale = 1.0f;
+			static vec2 s_LastMousePos;
+			static vec2 s_Offset(0.0f, 0.0f);
+			UI()->ClipEnable(&Box);
+			const float FinalHeight = 360.0f * s_Scale;
+			const float FinalWidth = m_Screenshot.m_Width / (m_Screenshot.m_Height / FinalHeight);
+			s_Offset.x = clamp(s_Offset.x, -FinalWidth / 2.0f, FinalWidth / 2.0f);
+			s_Offset.y = clamp(s_Offset.y, -FinalHeight / 2.0f, FinalHeight / 2.0f);
+			{
+				Graphics()->TextureSet(m_Screenshot.m_Texture);
+				Graphics()->WrapClamp();
+				Graphics()->QuadsBegin();
+				IGraphics::CQuadItem QuadItem(Box.Center().x - FinalWidth / 2.0f + s_Offset.x, Box.Center().y - FinalHeight / 2.0f + s_Offset.y, FinalWidth, FinalHeight);
+				Graphics()->SingleQuadDrawTL(&QuadItem);
+				Graphics()->QuadsEnd();
+				Graphics()->WrapNormal();
+			}
+			UI()->ClipDisable();
+			if(UI()->MouseInside(&Box))
+			{
+				if(UI()->KeyPress(KEY_MOUSE_WHEEL_UP))
+					s_Scale += 0.1f;
+				else if(UI()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
+					s_Scale -= 0.1f;
+				s_Scale = clamp(s_Scale, 0.75f, 5.0f);
+			}
+			// mouse 3
+			if(UI()->MouseButton(2))
+			{
+				vec2 CurrentPos(UI()->MouseX(), UI()->MouseY());
+				if(UI()->MouseButtonClicked(2))
+					s_LastMousePos = CurrentPos;
+				s_Offset += CurrentPos - s_LastMousePos;
+				s_LastMousePos = CurrentPos;
+			}
+
+			// buttons
+			CUIRect Copy, Abort;
+			BottomBar.VSplitMid(&Copy, &Abort, SpacingW);
+
+			static CButtonContainer s_ButtonCopy;
+			if(DoButton_Menu(&s_ButtonCopy, Localize("Copy"), 0, &Copy) || UI()->ConsumeHotkey(CUI::HOTKEY_ENTER))
+				m_pClient->CopyScreenshot(m_Screenshot.m_Name);
+
+			static CButtonContainer s_ButtonTryAbort;
+			if(DoButton_Menu(&s_ButtonTryAbort, Localize("Abort"), 0, &Abort) || UI()->ConsumeHotkey(CUI::HOTKEY_ESCAPE))
+				m_Popup = POPUP_NONE;
+		}
+		else if(m_Popup == POPUP_QUIT)
 		{
 			// additional info
 			CUIRect Label;
@@ -1400,7 +1463,7 @@ void CMenus::RenderMenu(CUIRect Screen)
 			// selected filter
 			static CListBox s_ListBox;
 			int OldSelected = -1;
-			s_ListBox.DoStart(40.0f, m_pClient->m_pCountryFlags->Num(), 12, 1, OldSelected, &Box, false);
+			s_ListBox.DoStart(40.0f, m_pClient->m_pCountryFlags->Num(), 12, 2, OldSelected, &Box, false);
 
 			for(int i = 0; i < m_pClient->m_pCountryFlags->Num(); ++i)
 			{

@@ -60,6 +60,7 @@ public:
 	int m_Flags;
 	int m_ServerLevel;
 	bool m_Favorite;
+	bool m_Unrecommended;
 	int m_Latency; // in ms
 	char m_aGameType[16];
 	char m_aName[64];
@@ -153,6 +154,7 @@ public:
 		FILTER_PURE = 4096,
 		FILTER_PURE_MAP = 8192,
 		FILTER_COUNTRY = 16384,
+		FILTER_SORTING_UNRECOMMENDED = 32768,
 	};
 
 	virtual int GetType() = 0;

@@ -410,6 +410,14 @@ void CCharacter::RemoveWeapon(int WeaponID)
 	m_aWeapons[WeaponID].m_Got = false;
 }
 
+void CCharacter::TeleTo(vec2 Pos, bool KeepSpeed)
+{
+	if(!KeepSpeed)
+		m_Core.m_Vel = vec2(0.0f, 0.0f);
+	m_Pos = Pos;
+	m_Core.m_Pos = Pos;
+}
+
 void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 {
 	// check for changes

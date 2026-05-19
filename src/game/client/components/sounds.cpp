@@ -56,6 +56,15 @@ ISound::CSampleHandle CSounds::GetSampleId(int SetId)
 	return pSet->m_aSounds[Id].m_Id;
 }
 
+void CSounds::UpdateChannelVolume()
+{
+	Sound()->SetChannelVolume(CSounds::CHN_GUI, Config()->m_SndGUIVolume / 100.0f);
+	Sound()->SetChannelVolume(CSounds::CHN_MUSIC, Config()->m_SndMusicVolume / 100.0f);
+	Sound()->SetChannelVolume(CSounds::CHN_WORLD, Config()->m_SndWorldVolume / 100.0f);
+	Sound()->SetChannelVolume(CSounds::CHN_GLOBAL, Config()->m_SndGlobalVolume / 100.0f);
+	Sound()->SetChannelVolume(CSounds::CHN_MAPSOUND, Config()->m_SndMapVolume / 100.0f);
+}
+
 int CSounds::GetInitAmount() const
 {
 	if(Config()->m_SndAsyncLoading)
@@ -66,11 +75,7 @@ int CSounds::GetInitAmount() const
 void CSounds::OnInit()
 {
 	// setup sound channels
-	Sound()->SetChannelVolume(CSounds::CHN_GUI, 1.0f);
-	Sound()->SetChannelVolume(CSounds::CHN_MUSIC, 1.0f);
-	Sound()->SetChannelVolume(CSounds::CHN_WORLD, 0.9f);
-	Sound()->SetChannelVolume(CSounds::CHN_GLOBAL, 1.0f);
-	Sound()->SetChannelVolume(CSounds::CHN_MAPSOUND, 0.7f);
+	UpdateChannelVolume();
 	Sound()->SetChannelPan(CSounds::CHN_GUI, 0.0f);
 	Sound()->SetChannelPan(CSounds::CHN_MUSIC, 1.0f);
 	Sound()->SetChannelPan(CSounds::CHN_WORLD, 1.0f);
@@ -130,6 +135,7 @@ void CSounds::OnRender()
 	// set listener pos
 	vec2 Pos = *m_pClient->m_pCamera->GetCenter();
 	Sound()->SetListenerPos(Pos.x, Pos.y);
+	UpdateChannelVolume();
 
 	// play sound from queue
 	if(m_QueuePos > 0)

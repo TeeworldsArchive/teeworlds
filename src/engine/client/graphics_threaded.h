@@ -396,6 +396,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	int m_Drawing;
 	bool m_DoScreenshot;
 	char m_aScreenshotName[128];
+	char m_aThumbnailName[128];
 	FScreenshotCallback m_pfnScreenshot;
 	void *m_pScreenshotUser;
 
@@ -448,7 +449,7 @@ public:
 	virtual IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType);
 
-	void ScreenshotDirect(const char *pFilename);
+	void ScreenshotDirect(const char *pFilename, const char *pThumbnail);
 
 	virtual void TextureSet(CTextureHandle TextureID);
 
@@ -504,6 +505,36 @@ public:
 	virtual void OnWindowPixelResized(int ScreenWidth, int ScreenHeight);
 	virtual void *GetWindowHandle();
 };
+
+static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp)
+{
+	int Sum = 0;
+	for(int x = 0; x < ScaleW; x++)
+		for(int y = 0; y < ScaleH; y++)
+			Sum += pData[((v + y) * w + (u + x)) * Bpp + Offset];
+	return Sum / (ScaleW * ScaleH);
+}
+
+static void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData)
+{
+	int ScaleW = Width / NewWidth;
+	int ScaleH = Height / NewHeight;
+
+	if(ScaleW == 1 && ScaleH == 1)
+		return (void *) pData;
+	int Bpp = 3;
+	if(Format == CCommandBuffer::TEXFORMAT_RGBA)
+		Bpp = 4;
+
+	unsigned char *pTmpData = (unsigned char *) mem_alloc(NewWidth * NewHeight * Bpp);
+
+	for(int y = 0; y < NewHeight; y++)
+		for(int x = 0; x < NewWidth; x++)
+			for(int b = 0; b < Bpp; b++)
+				pTmpData[(NewWidth * y + x) * Bpp + b] = Sample(Width, Height, pData, x * ScaleW, y * ScaleH, b, ScaleW, ScaleH, Bpp);
+
+	return pTmpData;
+}
 
 extern IGraphicsBackend *CreateGraphicsBackend();
 

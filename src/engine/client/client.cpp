@@ -7,6 +7,7 @@
 
 #include <base/math.h>
 #include <base/system.h>
+#include <base/tl/inplace_array.h>
 
 #include <engine/client.h>
 #include <engine/config.h>
@@ -1993,6 +1994,8 @@ void CClient::Run()
 		//
 		VersionUpdate();
 
+		CheckLocalServer();
+
 		// handle pending connects
 		if(m_aCmdConnect[0])
 		{
@@ -2479,7 +2482,7 @@ void CClient::OpenURL(const char *pUrl)
 	SDL_OpenURL(pUrl);
 }
 
-void CClient::OpenLocalServer()
+void CClient::OpenLocalServer(int NumParams, ...)
 {
 #ifdef CONF_FAMILY_WINDOWS
 	static const char *pServer = "ArchiveServer.exe";
@@ -2488,11 +2491,21 @@ void CClient::OpenLocalServer()
 #endif
 	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_APP, pServer, aPath, sizeof(aPath));
-	const char *apArgs[2] = {aPath, 0};
+	inplace_array<const char *, 16> lpArgs;
+	lpArgs.add(aPath);
+	va_list List;
+	va_start(List, NumParams);
+	for(int i = 0; i < NumParams; i++)
+	{
+		lpArgs.add(va_arg(List, const char *));
+	}
+
+	va_end(List);
+	lpArgs.add(0);
 
 	if(!m_pLocalServerProcess)
 	{
-		m_pLocalServerProcess = SDL_CreateProcess(apArgs, false);
+		m_pLocalServerProcess = SDL_CreateProcess(lpArgs.base_ptr(), false);
 		if(!m_pLocalServerProcess)
 		{
 			char aBuf[512];
@@ -2506,12 +2519,8 @@ void CClient::CloseLocalServer()
 {
 	if(m_pLocalServerProcess)
 	{
-		if(!SDL_KillProcess(static_cast<SDL_Process *>(m_pLocalServerProcess), false))
-		{
-			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "waiting for local server shutdown...");
-			SDL_WaitProcess(static_cast<SDL_Process *>(m_pLocalServerProcess), true, 0);
-		}
-		SDL_DestroyProcess(static_cast<SDL_Process *>(m_pLocalServerProcess));
+		SDL_KillProcess(static_cast<SDL_Process *>(m_pLocalServerProcess), false);
+		CheckLocalServer();
 		m_pLocalServerProcess = 0;
 	}
 }
@@ -2519,6 +2528,15 @@ void CClient::CloseLocalServer()
 bool CClient::IsLocalServerRunning()
 {
 	return m_pLocalServerProcess;
+}
+
+void CClient::CheckLocalServer()
+{
+	if(SDL_WaitProcess(static_cast<SDL_Process *>(m_pLocalServerProcess), false, 0))
+	{
+		SDL_DestroyProcess(static_cast<SDL_Process *>(m_pLocalServerProcess));
+		m_pLocalServerProcess = 0;
+	}
 }
 
 void CClient::ConchainWindowVSync(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

@@ -72,6 +72,7 @@ private:
 		POPUP_SAVE_SKIN,
 		POPUP_PASSWORD,
 		POPUP_QUIT,
+		POPUP_SCREENSHOT,
 	};
 
 	enum
@@ -198,6 +199,21 @@ private:
 	int m_GameIconDefaultIndex;
 	void DoGameIcon(const char *pName, const CUIRect *pRect);
 	static int GameIconScan(const char *pName, int IsDir, int DirType, void *pUser);
+
+	// for start menus
+	class CScreenshot
+	{
+	public:
+		string m_Name;
+		int m_Width;
+		int m_Height;
+		IGraphics::CTextureHandle m_Texture;
+		bool operator<(const CScreenshot &Other) const { return m_Name < Other.m_Name; }
+	};
+	sorted_array<CScreenshot> m_lScreenshots;
+	CScreenshot m_Screenshot;
+	bool LoadScreenshot(const char *pName);
+	static int ScreenshotScan(const char *pName, int IsDir, int DirType, void *pUser);
 
 	int64 m_LastInput;
 

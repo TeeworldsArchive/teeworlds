@@ -591,16 +591,7 @@ void CGameClient::ScreenshotCallback(void *pUser, const char *pPath)
 		return;
 	}
 
-	unsigned char *pFileData;
-	unsigned FileSize;
-	if(pClient->Storage()->ReadFile(pPath, IStorage::TYPE_SAVE, (void **) &pFileData, &FileSize))
-	{
-		pClient->Input()->SetClipboardImage(pFileData, FileSize);
-
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), Localize("Screenshot '%s' has been copied to clipboard!"), pPath);
-		pClient->UI()->DoToast(aBuf);
-	}
+	pClient->CopyScreenshot(pPath);
 }
 
 void CGameClient::StartRendering()
@@ -1959,6 +1950,20 @@ void CGameClient::SendSkinChange()
 	}
 	Client()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD | MSGFLAG_FLUSH);
 	m_LastSkinChangeTime = Client()->LocalTime();
+}
+
+void CGameClient::CopyScreenshot(const char *pPath)
+{
+	unsigned char *pFileData;
+	unsigned FileSize;
+	if(Storage()->ReadFile(pPath, IStorage::TYPE_SAVE, (void **) &pFileData, &FileSize))
+	{
+		Input()->SetClipboardImage(pFileData, FileSize);
+
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), Localize("Screenshot '%s' has been copied to clipboard!"), pPath);
+		UI()->DoToast(aBuf);
+	}
 }
 
 int CGameClient::GetClientID(const char *pName)

@@ -38,6 +38,7 @@ public:
 		void Sort();
 
 		// sorting criterions
+		int SortCompareRecommended(int Index1, int Index2) const;
 		bool SortCompareName(int Index1, int Index2) const;
 		bool SortCompareMap(int Index1, int Index2) const;
 		bool SortComparePing(int Index1, int Index2) const;
@@ -67,6 +68,7 @@ public:
 	int GetNumSortedPlayers(int FilterIndex) const { return m_lFilters[FilterIndex].m_NumSortedPlayers; }
 
 private:
+	friend class SortWrap;
 	class CConfig *m_pConfig;
 	class IFriends *m_pFriends;
 	char m_aNetVersion[128];

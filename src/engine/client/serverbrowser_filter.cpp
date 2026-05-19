@@ -13,13 +13,21 @@
 
 class SortWrap
 {
+	typedef int (CServerBrowserFilter::CServerFilter::*ExtraSortFunc)(int, int) const;
 	typedef bool (CServerBrowserFilter::CServerFilter::*SortFunc)(int, int) const;
+	ExtraSortFunc m_pfnExtraSort;
 	SortFunc m_pfnSort;
 	CServerBrowserFilter::CServerFilter *m_pThis;
 
 public:
-	SortWrap(CServerBrowserFilter::CServerFilter *t, SortFunc f) : m_pfnSort(f), m_pThis(t) {}
-	bool operator()(int a, int b) { return (m_pThis->Config()->m_BrSortOrder ? (m_pThis->*m_pfnSort)(b, a) : (m_pThis->*m_pfnSort)(a, b)); }
+	SortWrap(CServerBrowserFilter::CServerFilter *t, SortFunc f, ExtraSortFunc e) : m_pfnExtraSort(e), m_pfnSort(f), m_pThis(t) {}
+	bool operator()(int a, int b)
+	{
+		int ExtraResult;
+		if((ExtraResult = (m_pThis->*m_pfnExtraSort)(a, b)))
+			return ExtraResult > 0;
+		return (m_pThis->Config()->m_BrSortOrder ? (m_pThis->*m_pfnSort)(b, a) : (m_pThis->*m_pfnSort)(a, b));
+	}
 };
 
 //	CServerFilter
@@ -241,6 +249,8 @@ int CServerBrowserFilter::CServerFilter::GetSortHash() const
 		i |= 1 << 13;
 	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_COUNTRY)
 		i |= 1 << 14;
+	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_UNRECOMMENDED)
+		i |= 1 << 15;
 	return i;
 }
 
@@ -253,25 +263,38 @@ void CServerBrowserFilter::CServerFilter::Sort()
 	switch(Config()->m_BrSort)
 	{
 		case IServerBrowser::SORT_NAME:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareName));
+			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareName, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_PING:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortComparePing));
+			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortComparePing, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_MAP:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareMap));
+			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareMap, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_NUMPLAYERS:
 			if(!(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_BOTS))
-				std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumClients));
+				std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumClients, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			else
-				std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumRealPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumRealClients));
+				std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumRealPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumRealClients, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_GAMETYPE:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareGametype));
+			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareGametype, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 	}
 
 	m_FilterInfo.m_SortHash = GetSortHash();
+}
+
+int CServerBrowserFilter::CServerFilter::SortCompareRecommended(int Index1, int Index2) const
+{
+	if(!(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_UNRECOMMENDED))
+		return 0;
+	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
+	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
+	if(!a->m_Info.m_Unrecommended && b->m_Info.m_Unrecommended)
+		return 1;
+	if(a->m_Info.m_Unrecommended && !b->m_Info.m_Unrecommended)
+		return -1;
+	return 0;
 }
 
 bool CServerBrowserFilter::CServerFilter::SortCompareName(int Index1, int Index2) const
