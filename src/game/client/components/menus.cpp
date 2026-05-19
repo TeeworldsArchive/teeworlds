@@ -1220,7 +1220,7 @@ void CMenus::RenderMenu(CUIRect Screen)
 		else
 		{
 			Box.VMargin(Box.w / 2.0f - (365.0f), &Box);
-			float ButtonWidth = (Box.w / 6.0f) - (SpacingW * 5.0) / 6.0f;
+			ButtonWidth = (Box.w / 6.0f) - (SpacingW * 5.0) / 6.0f;
 			Box.VMargin(ButtonWidth + SpacingW, &Box);
 			Box.HMargin(Box.h / 2.0f - ((NumOptions + 1) * ButtonHeight + NumOptions * SpacingH) / 2.0f - 10.0f, &Box);
 		}
