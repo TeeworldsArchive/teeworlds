@@ -1502,16 +1502,22 @@ void CChat::HandleCommands(float x, float y, float w)
 				TextRender()->TextDeferred(&s_CommandCursor, " ", -1);
 
 				TextRender()->TextColor(0.0f, 0.5f, 0.5f, 1.0f);
+				bool Skip = false;
 				for(const char *pArg = pCommand->m_aArgsFormat; *pArg; pArg++)
 				{
-					if(*pArg == 'i') // Integer argument
-						TextRender()->TextDeferred(&s_CommandCursor, "<number> ", -1);
-					else if(*pArg == 'p') // Player name argument
-						TextRender()->TextDeferred(&s_CommandCursor, "<playername> ", -1);
-					else if(*pArg == 's') // String argument
-						TextRender()->TextDeferred(&s_CommandCursor, "<text> ", -1);
-					else if(*pArg == 'c') // Subcommand argument
-						TextRender()->TextDeferred(&s_CommandCursor, "<subcommand> ", -1);
+					if(*pArg == '[')
+						Skip = true;
+					else if(*pArg == ']')
+						Skip = false;
+					else if(!Skip)
+					{
+						if(*pArg == 'i' || *pArg == 'f') // Integer argument
+							TextRender()->TextDeferred(&s_CommandCursor, "<number> ", -1);
+						else if(*pArg == 'r' || *pArg == 's') // String argument
+							TextRender()->TextDeferred(&s_CommandCursor, "<text> ", -1);
+						else if(*pArg == '?') // Integer argument
+							TextRender()->TextDeferred(&s_CommandCursor, "<number> ", -1);
+					}
 				}
 				TextRender()->TextColor(0.5f, 0.5f, 0.5f, 1.0f);
 				TextRender()->TextDeferred(&s_CommandCursor, pCommand->m_aHelpText, -1);

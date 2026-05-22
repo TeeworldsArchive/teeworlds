@@ -305,6 +305,8 @@ void CInput::SetClipboardText(const char *pText)
 
 const void *CInput::ClipboardImageCallback(void *pUser, const char *pType, size_t *pSize)
 {
+	if(!pUser || !pType || !pSize)
+		return 0;
 	if(str_comp_nocase(pType, "image/png"))
 	{
 		*pSize = 0;
@@ -318,7 +320,7 @@ const void *CInput::ClipboardImageCallback(void *pUser, const char *pType, size_
 void CInput::ClipboardCleanupCallback(void *pUser)
 {
 	CInput *pSelf = static_cast<CInput *>(pUser);
-	if(pSelf->m_ClipboardImage.m_pData)
+	if(pSelf && pSelf->m_ClipboardImage.m_pData)
 	{
 		mem_free(pSelf->m_ClipboardImage.m_pData);
 		pSelf->m_ClipboardImage.m_pData = 0;
@@ -327,6 +329,7 @@ void CInput::ClipboardCleanupCallback(void *pUser)
 
 void CInput::SetClipboardImage(unsigned char *pData, int DataSize)
 {
+	ClipboardCleanupCallback(this);
 	static const char *apMimeTypes[] = {"image/png"};
 	SDL_SetClipboardData(ClipboardImageCallback, ClipboardCleanupCallback, this, apMimeTypes, 1);
 	m_ClipboardImage.m_pData = pData;
