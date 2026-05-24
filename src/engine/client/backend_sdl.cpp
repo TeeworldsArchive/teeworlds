@@ -796,6 +796,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	{
 		*pScreen = clamp(*pScreen, 0, m_NumScreens - 1);
 		DisplayID = pDisplayIds[*pScreen];
+		SDL_free(pDisplayIds);
 		if(!SDL_GetDisplayBounds(DisplayID, &ScreenPos))
 		{
 			dbg_msg("gfx", "unable to retrieve screen information: %s", SDL_GetError());
@@ -804,6 +805,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	}
 	else
 	{
+		SDL_free(pDisplayIds);
 		dbg_msg("gfx", "unable to retrieve number of screens: %s", SDL_GetError());
 		return -1;
 	}
@@ -1050,6 +1052,7 @@ int CGraphicsBackend_SDL_OpenGL::GetVideoModes(CVideoMode *pModes, int MaxModes,
 		pModes[ModesCount].m_Height = ppModes[i]->h;
 		ModesCount++;
 	}
+	SDL_free(ppModes);
 	return ModesCount;
 }
 

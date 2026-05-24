@@ -88,14 +88,14 @@ void CInput::InitJoysticks()
 	}
 
 	int NumJoysticks;
-	SDL_GetJoysticks(&NumJoysticks);
+	SDL_JoystickID *pJoystickIDs = SDL_GetJoysticks(&NumJoysticks);
 	if(NumJoysticks > 0)
 	{
 		dbg_msg("joystick", "%d joystick(s) found", NumJoysticks);
 		int ActualIndex = 0;
 		for(int i = 0; i < NumJoysticks; i++)
 		{
-			SDL_Joystick *pJoystick = SDL_OpenJoystick(i);
+			SDL_Joystick *pJoystick = SDL_OpenJoystick(pJoystickIDs[i]);
 			if(!pJoystick)
 			{
 				dbg_msg("joystick", "Could not open joystick %d: '%s'", i, SDL_GetError());
@@ -117,6 +117,7 @@ void CInput::InitJoysticks()
 	{
 		dbg_msg("joystick", "No joysticks found");
 	}
+	SDL_free(pJoystickIDs);
 }
 
 void CInput::UpdateActiveJoystick()
