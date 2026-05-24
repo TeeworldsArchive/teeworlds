@@ -513,7 +513,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 			// save png
 			png_t Png;
 			png_open_write(&Png, 0, File);
-			png_set_data(&Png, Image.m_Width, Image.m_Height, 8, Image.m_Format == CImageInfo::FORMAT_RGB ? PNG_TRUECOLOR : PNG_TRUECOLOR_ALPHA, (unsigned char *) Image.m_pData);
+			png_set_data(&Png, Image.m_Width, Image.m_Height, 8, Image.m_Format == CImageInfo::FORMAT_RGB ? PNG_TRUECOLOR : PNG_TRUECOLOR_ALPHA, static_cast<unsigned char *>(Image.m_pData));
 			io_close(File);
 			str_format(aBuf, sizeof(aBuf), "saved screenshot to '%s'", aWholePath);
 			if(m_pfnScreenshot)
@@ -528,12 +528,11 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client/screenshot", aBuf);
 
 		// thumbnail
-		File = m_pStorage->OpenFile(pThumbnail, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath));
+		File = m_pStorage->OpenFile(pThumbnail, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 		if(File)
 		{
-			int G = gcd(Image.m_Width, Image.m_Height);
-			int NewWidth = Image.m_Width / G * 20;
-			int NewHeight = Image.m_Height / G * 20;
+			int NewWidth = Image.m_Width / 4;
+			int NewHeight = Image.m_Height / 4;
 			void *pTmpData = RescaleImage(Image.m_Width, Image.m_Height, NewWidth, NewHeight, ImageFormatToTexFormat(Image.m_Format), static_cast<const unsigned char *>(Image.m_pData));
 			if(pTmpData != Image.m_pData)
 				mem_free(Image.m_pData);
@@ -541,7 +540,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 			// save png
 			png_t Png;
 			png_open_write(&Png, 0, File);
-			png_set_data(&Png, NewWidth, NewHeight, 8, Image.m_Format == CImageInfo::FORMAT_RGB ? PNG_TRUECOLOR : PNG_TRUECOLOR_ALPHA, (unsigned char *) Image.m_pData);
+			png_set_data(&Png, NewWidth, NewHeight, 8, Image.m_Format == CImageInfo::FORMAT_RGB ? PNG_TRUECOLOR : PNG_TRUECOLOR_ALPHA, static_cast<unsigned char *>(Image.m_pData));
 			io_close(File);
 		}
 		mem_free(Image.m_pData);

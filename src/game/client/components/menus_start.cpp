@@ -271,7 +271,7 @@ int CMenus::ScreenshotScan(const char *pName, int IsDir, int DirType, void *pUse
 	// load thumbnail
 	char aBuf[IO_MAX_PATH_LENGTH];
 	str_format(aBuf, sizeof(aBuf), "screenshots/%s", pName);
-	if(!pSelf->Graphics()->LoadPNG(&Image, aBuf, IStorage::TYPE_SAVE))
+	if(!pSelf->Graphics()->LoadPNG(&Image, aBuf, DirType))
 	{
 		str_format(aBuf, sizeof(aBuf), "failed to load thumbnail '%s'", pName);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", aBuf);

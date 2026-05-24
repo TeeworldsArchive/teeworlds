@@ -55,9 +55,6 @@ CInput::CInput()
 	m_CompositionSelectedLength = 0;
 	m_CandidateCount = 0;
 	m_CandidateSelectedIndex = -1;
-
-	m_ClipboardImage.m_pData = 0;
-	m_ClipboardImage.m_DataSize = 0;
 }
 
 void CInput::Init()
@@ -303,37 +300,48 @@ void CInput::SetClipboardText(const char *pText)
 	SDL_SetClipboardText(pText);
 }
 
+struct CClipboardImage
+{
+	unsigned char *m_pData;
+	int m_DataSize;
+};
+
 const void *CInput::ClipboardImageCallback(void *pUser, const char *pType, size_t *pSize)
 {
-	if(!pUser || !pType || !pSize)
-		return 0;
-	if(str_comp_nocase(pType, "image/png"))
+	if(!pUser || str_comp_nocase(pType, "image/png"))
 	{
 		*pSize = 0;
 		return 0;
 	}
-	CInput *pSelf = static_cast<CInput *>(pUser);
-	*pSize = pSelf->m_ClipboardImage.m_DataSize;
-	return pSelf->m_ClipboardImage.m_pData;
+	CClipboardImage *pSelf = static_cast<CClipboardImage *>(pUser);
+	*pSize = pSelf->m_DataSize;
+	return pSelf->m_pData;
 }
 
 void CInput::ClipboardCleanupCallback(void *pUser)
 {
-	CInput *pSelf = static_cast<CInput *>(pUser);
-	if(pSelf && pSelf->m_ClipboardImage.m_pData)
+	CClipboardImage *pSelf = static_cast<CClipboardImage *>(pUser);
+	if(pSelf)
 	{
-		mem_free(pSelf->m_ClipboardImage.m_pData);
-		pSelf->m_ClipboardImage.m_pData = 0;
+		if(pSelf->m_pData)
+			mem_free(pSelf->m_pData);
+		delete pSelf;	
 	}
 }
 
 void CInput::SetClipboardImage(unsigned char *pData, int DataSize)
 {
-	ClipboardCleanupCallback(this);
 	static const char *apMimeTypes[] = {"image/png"};
-	SDL_SetClipboardData(ClipboardImageCallback, ClipboardCleanupCallback, this, apMimeTypes, 1);
-	m_ClipboardImage.m_pData = pData;
-	m_ClipboardImage.m_DataSize = DataSize;
+	CClipboardImage *pImg = new CClipboardImage();
+	pImg->m_pData = pData;
+	pImg->m_DataSize = DataSize;
+	if(!SDL_SetClipboardData(ClipboardImageCallback, ClipboardCleanupCallback, pImg, apMimeTypes, 1))
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "unable to set the clipboard data: SDL Error (%s)", SDL_GetError());
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "input", "unable to switch relative mouse mode");
+		ClipboardCleanupCallback(pImg);
+	}
 }
 
 void CInput::StartTextInput()
