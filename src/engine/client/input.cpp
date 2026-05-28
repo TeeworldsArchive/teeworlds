@@ -326,7 +326,7 @@ void CInput::ClipboardCleanupCallback(void *pUser)
 	{
 		if(pSelf->m_pData)
 			mem_free(pSelf->m_pData);
-		delete pSelf;	
+		delete pSelf;
 	}
 }
 

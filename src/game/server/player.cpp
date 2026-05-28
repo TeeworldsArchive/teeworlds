@@ -351,13 +351,13 @@ bool CPlayer::SetSpectatorID(int SpecMode, int SpectatorID)
 	{
 		return false;
 	}
-	
+
 	if(m_Team == TEAM_SPECTATORS)
 	{
 		// check for freeview or if wanted player is playing
 		if(SpecMode != SPEC_PLAYER ||
 			(SpectatorID >= 0 && SpectatorID < MAX_CLIENTS && SpecMode == SPEC_PLAYER &&
-			GameServer()->m_apPlayers[SpectatorID] && GameServer()->m_apPlayers[SpectatorID]->GetTeam() != TEAM_SPECTATORS))
+				GameServer()->m_apPlayers[SpectatorID] && GameServer()->m_apPlayers[SpectatorID]->GetTeam() != TEAM_SPECTATORS))
 		{
 			if(SpecMode == SPEC_FLAGRED || SpecMode == SPEC_FLAGBLUE)
 			{
