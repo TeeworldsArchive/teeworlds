@@ -302,10 +302,6 @@ if(NOT(Python3_FOUND))
   message(SEND_ERROR "You must install Python to compile Teeworlds")
 endif()
 
-if(NOT(OPENSSL_FOUND))
-  message(SEND_ERROR "You must install OpenSSL Crypto to compile Teeworlds")
-endif()
-
 if(NOT(CURL_FOUND))
   message(SEND_ERROR "You must install libcurl to compile Teeworlds")
 endif()
@@ -421,12 +417,19 @@ endif()
 set_src(DEP_JSON_SRC GLOB src/engine/external/json-parser json.c json.h)
 add_library(json EXCLUDE_FROM_ALL OBJECT ${DEP_JSON_SRC})
 
+set_src(DEP_MD5_SRC GLOB src/engine/external/md5 md5.c md5.h)
+add_library(md5 EXCLUDE_FROM_ALL OBJECT ${DEP_MD5_SRC})
+
 set_src(DEP_GLAD_SRC GLOB src/engine/external/glad/ gl.c gl.h khrplatform.h)
 add_library(glad EXCLUDE_FROM_ALL OBJECT ${DEP_GLAD_SRC})
 
-list(APPEND TARGETS_DEP json glad)
+list(APPEND TARGETS_DEP json md5 glad)
 set(DEP_JSON $<TARGET_OBJECTS:json>)
+set(DEP_MD5)
 set(DEP_GLAD)
+if(NOT OPENSSL_FOUND)
+  set(DEP_MD5 $<TARGET_OBJECTS:md5>)
+endif()
 if(CLIENT)
   set(DEP_GLAD $<TARGET_OBJECTS:glad>)
 endif()
@@ -1213,7 +1216,9 @@ set_src(BASE GLOB_RECURSE src/base
   detect.h
   hash.c
   hash.h
+  hash_bundled.c
   hash_ctxt.h
+  hash_libtomcrypt.c
   hash_openssl.c
   math.h
   system.c
@@ -1338,7 +1343,7 @@ set(GAME_GENERATED_SHARED
   src/generated/protocol.h
 )
 
-set(DEPS ${DEP_JSON} ${ZLIB_DEP})
+set(DEPS ${DEP_JSON} ${DEP_MD5} ${ZLIB_DEP})
 
 # Libraries
 set(LIBS ${CMAKE_THREAD_LIBS_INIT} OpenSSL::Crypto CURL::libcurl ${PLATFORM_LIBS})
@@ -1993,10 +1998,12 @@ foreach(target ${TARGETS_OWN})
   target_include_directories(${target} PRIVATE ${PROJECT_BINARY_DIR}/src)
   target_include_directories(${target} PRIVATE src)
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
-  if(NOT ZLIB_BUNDLED)
-    target_include_directories(${target} PRIVATE ${ZLIB_INCLUDE_DIRS})
+  target_include_directories(${target} PRIVATE ${CURL_INCLUDE_DIRS})
+  target_include_directories(${target} PRIVATE ${ZLIB_INCLUDE_DIRS})
+  if(OPENSSL_FOUND)
+    target_compile_definitions(${target} PRIVATE CONF_OPENSSL)
+    target_include_directories(${target} PRIVATE ${OPENSSL_INCLUDE_DIR})
   endif()
-  target_include_directories(${target} PRIVATE ${OPENSSL_INCLUDE_DIR})
   if(HEADLESS_CLIENT)
     target_compile_definitions(${target} PRIVATE CONF_HEADLESS_CLIENT)
   endif()
