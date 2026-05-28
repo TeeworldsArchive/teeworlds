@@ -46,6 +46,26 @@ inline bool operator!=(const Uuid &that, const Uuid &other)
 {
 	return !(that == other);
 }
+
+class uuid_table_function
+{
+public:
+	static unsigned hash(const Uuid &Uuid)
+	{
+		// FNV-1a
+		unsigned hash = 0x811C9DC5;
+		const unsigned prime = 0x01000193;
+
+		for(int i = 0; i < 16; ++i)
+		{
+			hash ^= Uuid.m_aData[i];
+			hash *= prime;
+		}
+		return hash;
+	}
+
+	static bool equal(const Uuid &uuid1, const Uuid &uuid2) { return uuid1 == uuid2; }
+};
 #endif
 
 #endif // BASE_UUID_H
