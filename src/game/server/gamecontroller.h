@@ -255,6 +255,7 @@ public:
 	virtual bool IsPureTuning() const { return false; }
 	virtual bool TimeScore() const { return false; }
 	virtual bool NoEntitiesInMap() const { return false; }
+	virtual bool IsCharacterSnapable(int SnappingClient, int ClientID) const { return true; }
 };
 
 typedef IGameController *(*FCreateGameController)(class CGameContext *pGameServer);
