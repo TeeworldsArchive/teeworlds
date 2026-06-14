@@ -45,7 +45,7 @@ MACRO_CONFIG_INT(SndRate, snd_rate, 48000, 0, 0, CFGFLAG_SAVE | CFGFLAG_CLIENT, 
 MACRO_CONFIG_INT(SndEnable, snd_enable, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Enable sounds")
 MACRO_CONFIG_INT(SndInit, snd_init, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Initialize sound systems")
 MACRO_CONFIG_INT(SndMusic, snd_enable_music, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Play background music")
-MACRO_CONFIG_INT(SndVolume, snd_volume, 100, 0, 100, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sound volume")
+MACRO_CONFIG_INT(SndVolume, snd_volume, 40, 0, 100, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sound volume")
 MACRO_CONFIG_INT(SndGUIVolume, snd_gui_volume, 100, 0, 100, CFGFLAG_SAVE | CFGFLAG_CLIENT, "GUI sound volume")
 MACRO_CONFIG_INT(SndMusicVolume, snd_music_volume, 100, 0, 100, CFGFLAG_SAVE | CFGFLAG_CLIENT, "music volume")
 MACRO_CONFIG_INT(SndWorldVolume, snd_world_volume, 90, 0, 100, CFGFLAG_SAVE | CFGFLAG_CLIENT, "world sound volume")
