@@ -238,7 +238,7 @@ find_package(CURL)
 find_package(Freetype)
 find_package(Git)
 find_package(GTest)
-find_package(Pnglite)
+find_package(SPNG)
 find_package(SDL3)
 find_package(Threads)
 find_package(Opus)
@@ -291,7 +291,7 @@ if(TARGET_OS AND TARGET_OS STREQUAL "mac")
 endif()
 show_dependency_status("OpenSSL Crypto" OPENSSL)
 show_dependency_status("Curl" CURL)
-show_dependency_status("Pnglite" PNGLITE)
+show_dependency_status("spng" spng)
 show_dependency_status("Python3" Python3)
 show_dependency_status("SDL3" SDL3)
 show_dependency_status("Opus" OPUS)
@@ -304,6 +304,10 @@ endif()
 
 if(NOT(CURL_FOUND))
   message(SEND_ERROR "You must install libcurl to compile Teeworlds")
+endif()
+
+if(CLIENT AND NOT(spng_FOUND))
+  message(SEND_ERROR "You must install libspng to compile Teeworlds client")
 endif()
 
 if(CLIENT AND NOT(FREETYPE_FOUND))
@@ -1493,13 +1497,13 @@ if(CLIENT)
   )
   set(CLIENT_SRC ${PLATFORM_CLIENT} ${ENGINE_CLIENT} ${GAME_CLIENT} ${GAME_EDITOR} ${GAME_GENERATED_CLIENT})
 
-  set(DEPS_CLIENT ${DEPS} ${PNGLITE_DEP} ${DEP_GLAD})
+  set(DEPS_CLIENT ${DEPS} ${DEP_GLAD})
 
   # Libraries
   set(LIBS_CLIENT
     ${LIBS}
     Freetype::Freetype
-    ${PNGLITE_LIBRARIES}
+    spng::spng
     SDL3::SDL3
     Opus::opus
     Opusfile::opusfile
@@ -1529,7 +1533,6 @@ if(CLIENT)
   )
   target_link_libraries(${TARGET_CLIENT} ${LIBS_CLIENT})
 
-  target_include_directories(${TARGET_CLIENT} PRIVATE ${PNGLITE_INCLUDE_DIRS})
   list(APPEND TARGETS_OWN ${TARGET_CLIENT})
   list(APPEND TARGETS_LINK ${TARGET_CLIENT})
 endif()

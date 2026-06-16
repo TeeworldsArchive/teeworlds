@@ -139,6 +139,7 @@ public:
 
 	virtual void StainedOnly(bool Flag) = 0;
 
+	virtual int LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData, int Size, const char *pContext = "raw data") = 0;
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) = 0;
 
 	virtual int UnloadTexture(CTextureHandle *pIndex) = 0;

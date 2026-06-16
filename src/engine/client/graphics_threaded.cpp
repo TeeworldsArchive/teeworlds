@@ -7,7 +7,7 @@
 
 #include <base/system.h>
 
-#include <pnglite.h>
+#include <spng.h>
 
 #include <engine/console.h>
 #include <engine/graphics.h>
@@ -425,6 +425,60 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename,
 	return m_InvalidTexture;
 }
 
+int CGraphics_Threaded::LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData, int Size, const char *pContext)
+{
+	spng_ctx *pPng = spng_ctx_new(SPNG_CTX_IGNORE_ADLER32);
+	int Error = spng_set_png_buffer(pPng, pData, Size);
+	if(Error)
+	{
+		dbg_msg("game/png", "failed to read data. context='%s', error='%s'", pContext, spng_strerror(Error));
+		return 0;
+	}
+
+    spng_ihdr Info;
+    Error = spng_get_ihdr(pPng, &Info);
+	if(Error || Info.bit_depth != 8 || Info.width > (2 << 12) || Info.height > (2 << 12))
+	{
+		dbg_msg("game/png", "invalid format. context='%s', error='%s'", pContext, spng_strerror(Error));
+		spng_ctx_free(pPng);
+		return 0;
+	}
+
+	if(Info.color_type == SPNG_COLOR_TYPE_TRUECOLOR)
+		pImg->m_Format = CImageInfo::FORMAT_RGB;
+	else if(Info.color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
+		pImg->m_Format = CImageInfo::FORMAT_RGBA;
+	else
+	{
+		dbg_msg("game/png", "invalid format. context='%s', error='%s'", pContext, spng_strerror(Error));
+		spng_ctx_free(pPng);
+		return 0;
+	}
+
+    size_t ImageSize;
+	spng_format Format = Info.color_type == SPNG_COLOR_TYPE_TRUECOLOR ? SPNG_FMT_RGB8 : SPNG_FMT_RGBA8;
+    Error = spng_decoded_image_size(pPng, Format, &ImageSize);
+	if(Error)
+	{
+		dbg_msg("game/png", "invalid size. context='%s', error='%s'", pContext, spng_strerror(Error));
+		spng_ctx_free(pPng);
+		return 0;
+	}
+	unsigned char *pBuffer = (unsigned char *) mem_alloc(ImageSize);
+	Error = spng_decode_image(pPng, pBuffer, ImageSize, Format, 0);
+	spng_ctx_free(pPng);
+	if(Error)
+	{
+		dbg_msg("game/png", "failed to decode image. context='%s', error='%s'", pContext, spng_strerror(Error));
+		return 0;
+	}
+
+	pImg->m_Width = Info.width;
+	pImg->m_Height = Info.height;
+	pImg->m_pData = pBuffer;
+	return 1;
+}
+
 int CGraphics_Threaded::LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType)
 {
 	// open file for reading
@@ -435,43 +489,14 @@ int CGraphics_Threaded::LoadPNG(CImageInfo *pImg, const char *pFilename, int Sto
 		dbg_msg("game/png", "failed to open file. filename='%s'", pFilename);
 		return 0;
 	}
+	unsigned char *pData;
+	unsigned DataSize;
+	io_read_all(File, (void **) &pData, &DataSize);
 
-	png_init(0, 0);
-	png_t Png;
-	int Error = png_open_read(&Png, 0, File);
-	if(Error != PNG_NO_ERROR)
-	{
-		dbg_msg("game/png", "failed to read file. filename='%s'", aCompleteFilename);
-		io_close(File);
-		return 0;
-	}
-
-	if(Png.depth != 8 || Png.width > (2 << 12) || Png.height > (2 << 12))
-	{
-		dbg_msg("game/png", "invalid format. filename='%s'", aCompleteFilename);
-		io_close(File);
-		return 0;
-	}
-
-	if(Png.color_type == PNG_TRUECOLOR)
-		pImg->m_Format = CImageInfo::FORMAT_RGB;
-	else if(Png.color_type == PNG_TRUECOLOR_ALPHA)
-		pImg->m_Format = CImageInfo::FORMAT_RGBA;
-	else
-	{
-		dbg_msg("game/png", "invalid format. filename='%s'", aCompleteFilename);
-		io_close(File);
-		return 0;
-	}
-
-	unsigned char *pBuffer = (unsigned char *) mem_alloc(Png.width * Png.height * Png.bpp);
-	png_get_data(&Png, pBuffer);
+	int Result = LoadPNGRaw(pImg, pData, DataSize, aCompleteFilename);
+	mem_free(pData);
 	io_close(File);
-
-	pImg->m_Width = Png.width;
-	pImg->m_Height = Png.height;
-	pImg->m_pData = pBuffer;
-	return 1;
+	return Result;
 }
 
 void CGraphics_Threaded::KickCommandBuffer()
@@ -508,20 +533,45 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 		char aWholePath[IO_MAX_PATH_LENGTH];
 		char aBuf[IO_MAX_PATH_LENGTH + 32];
 		IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath));
+		int Error = 0;
 		if(File)
 		{
-			// save png
-			png_t Png;
-			png_open_write(&Png, 0, File);
-			png_set_data(&Png, Image.m_Width, Image.m_Height, 8, Image.m_Format == CImageInfo::FORMAT_RGB ? PNG_TRUECOLOR : PNG_TRUECOLOR_ALPHA, static_cast<unsigned char *>(Image.m_pData));
-			io_close(File);
-			str_format(aBuf, sizeof(aBuf), "saved screenshot to '%s'", aWholePath);
-			if(m_pfnScreenshot)
-				m_pfnScreenshot(m_pScreenshotUser, pFilename);
+			spng_ctx *pPng = spng_ctx_new(SPNG_CTX_ENCODER);
+			Error = !pPng;
+			if(!Error)
+			{
+				// save png
+				spng_ihdr Info = {
+					.width = (unsigned) Image.m_Width,
+					.height = (unsigned) Image.m_Height,
+					.bit_depth = 8,
+					.color_type = Image.m_Format == CImageInfo::FORMAT_RGB ? SPNG_COLOR_TYPE_TRUECOLOR : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA,
+					.compression_method = 0,
+					.filter_method = 0,
+					.interlace_method = 0
+				};
+				if(!(Error = spng_set_ihdr(pPng, &Info)))
+				{
+					spng_set_png_file(pPng, (FILE *) File);
+					Error = spng_encode_image(pPng, Image.m_pData, Image.m_Height * Image.m_Width * CImageInfo::GetPixelSize(Image.m_Format), SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
+					if(!Error)
+					{
+						str_format(aBuf, sizeof(aBuf), "saved screenshot to '%s'", aWholePath);
+						io_close(File);
+						File = 0;
+						if(m_pfnScreenshot)
+							m_pfnScreenshot(m_pScreenshotUser, pFilename);
+					}
+				}
+				spng_ctx_free(pPng);
+			}
+			if(File)
+				io_close(File);
 		}
-		else
+
+		if(Error)
 		{
-			str_format(aBuf, sizeof(aBuf), "failed to open file '%s'", pFilename);
+			str_format(aBuf, sizeof(aBuf), "failed to encode file '%s'", pFilename);
 			if(m_pfnScreenshot)
 				m_pfnScreenshot(m_pScreenshotUser, 0);
 		}
@@ -538,10 +588,31 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 				mem_free(Image.m_pData);
 			Image.m_pData = pTmpData;
 			// save png
-			png_t Png;
-			png_open_write(&Png, 0, File);
-			png_set_data(&Png, NewWidth, NewHeight, 8, Image.m_Format == CImageInfo::FORMAT_RGB ? PNG_TRUECOLOR : PNG_TRUECOLOR_ALPHA, static_cast<unsigned char *>(Image.m_pData));
-			io_close(File);
+			spng_ctx *pPng = spng_ctx_new(SPNG_CTX_ENCODER);
+			Error = !pPng;
+			if(!Error)
+			{
+				// save png
+				spng_ihdr Info = {
+					.width = (unsigned) NewWidth,
+					.height = (unsigned) NewHeight,
+					.bit_depth = 8,
+					.color_type = Image.m_Format == CImageInfo::FORMAT_RGB ? SPNG_COLOR_TYPE_TRUECOLOR : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA,
+					.compression_method = 0,
+					.filter_method = 0,
+					.interlace_method = 0
+				};
+				if(!(Error = spng_set_ihdr(pPng, &Info)))
+				{
+					spng_set_png_file(pPng, (FILE *) File);
+					spng_encode_image(pPng, Image.m_pData, NewWidth * NewHeight * CImageInfo::GetPixelSize(Image.m_Format), SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
+					io_close(File);
+					File = 0;
+				}
+				spng_ctx_free(pPng);
+			}
+			if(File)
+				io_close(File);
 		}
 		mem_free(Image.m_pData);
 		m_pfnScreenshot = 0;

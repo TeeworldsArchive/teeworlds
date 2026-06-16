@@ -6,6 +6,7 @@ Import("bamfind/sdl.lua")
 Import("bamfind/freetype.lua")
 Import("bamfind/opus.lua")
 Import("bamfind/opusfile.lua")
+Import("bamfind/spng.lua")
 
 --- Setup Config -------
 config = NewConfig()
@@ -19,6 +20,7 @@ config:Add(SDL.OptFind("sdl", true))
 config:Add(FreeType.OptFind("freetype", true))
 config:Add(Opus.OptFind("opus", true))
 config:Add(Opusfile.OptFind("opusfile", true))
+config:Add(SPNG.OptFind("spng", true))
 config:Finalize("config.lua")
 
 generated_src_dir = "build/src"
@@ -112,12 +114,11 @@ function GenerateCommonSettings(settings, conf, arch, compiler)
 	end
 
 	local md5 = Compile(settings, Collect("src/engine/external/md5/*.c"))
-	local png = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
 	local json = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 	local glad = Compile(settings, Collect("src/engine/external/glad/gl.c"))
 
 	-- globally available libs
-	libs = {zlib=zlib, png=png, md5=md5, json=json, glad=glad}
+	libs = {zlib=zlib, md5=md5, json=json, glad=glad}
 end
 
 function GenerateMacOSSettings(settings, conf, arch, compiler)
@@ -378,13 +379,14 @@ function BuildClient(settings, family, platform)
 	config.freetype:Apply(settings)
 	config.opus:Apply(settings)
 	config.opusfile:Apply(settings)
+	config.spng:Apply(settings)
 	
 	local client = Compile(settings, Collect("src/engine/client/*.cpp"))
 	
 	local game_client = Compile(settings, CollectRecursive("src/game/client/*.cpp"), SharedClientFiles())
 	local game_editor = Compile(settings, Collect("src/game/editor/*.cpp"))
 	
-	Link(settings, "ArchiveClient", libs["zlib"], libs["png"], libs["json"], libs["md5"], libs["glad"], client, game_client, game_editor)
+	Link(settings, "ArchiveClient", libs["zlib"], libs["json"], libs["md5"], libs["glad"], client, game_client, game_editor)
 end
 
 function BuildServer(settings, family, platform)
@@ -399,7 +401,7 @@ function BuildTools(settings)
 	local tools = {}
 	for i,v in ipairs(Collect("src/tools/*.cpp", "src/tools/*.c")) do
 		local toolname = PathFilename(PathBase(v))
-		tools[i] = Link(settings, toolname, Compile(settings, v), libs["zlib"], libs["md5"], libs["png"], libs["json"])
+		tools[i] = Link(settings, toolname, Compile(settings, v), libs["zlib"], libs["md5"], libs["json"])
 	end
 	PseudoTarget(settings.link.Output(settings, "pseudo_tools") .. settings.link.extension, tools)
 end
@@ -463,7 +465,6 @@ function GenerateSettings(conf, arch, builddir, compiler, headless)
 	end
 	
 	settings.cc.includes:Add("src")
-	settings.cc.includes:Add("src/engine/external/pnglite")
 	settings.cc.includes:Add(generated_src_dir)
 	
 	if family == "windows" then

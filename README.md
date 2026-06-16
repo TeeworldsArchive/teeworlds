@@ -27,19 +27,19 @@ Dependencies
 ==========================
 ```bash
     # Debian/Ubuntu
-    sudo apt install build-essential cmake git libfreetype6-dev libsdl3-dev libpnglite-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev
+    sudo apt install build-essential cmake git libfreetype6-dev libsdl3-dev libspng-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev
     
     # Fedora
-    sudo dnf install @development-tools cmake gcc-c++ git freetype-devel pnglite-devel python3 SDL3-devel opus-devel opusfile-devel openssl-devel libcurl-devel
+    sudo dnf install @development-tools cmake gcc-c++ git freetype-devel libspng-devel python3 SDL3-devel opus-devel opusfile-devel openssl-devel libcurl-devel
     
-    # Arch Linux (doesn't have pnglite in its repositories)
-    sudo pacman -S --needed base-devel cmake freetype2 git python sdl3 opus opusfile openssl curl
+    # Arch Linux
+    sudo pacman -S --needed base-devel cmake freetype2 git python sdl3 opus opusfile openssl curl libspng
     
     # macOS
-    brew install cmake freetype sdl3 opus opusfile openssl curl
+    brew install cmake freetype sdl3 opus opusfile openssl curl libspng
 
     # MSYS2 (Windows)
-    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib mingw-w64-ucrt-x86_64-opus mingw-w64-ucrt-x86_64-opusfile mingw-w64-ucrt-x86_64-curl
+    pacman -S mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-freetype mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-zlib mingw-w64-ucrt-x86_64-opus mingw-w64-ucrt-x86_64-opusfile mingw-w64-ucrt-x86_64-curl mingw-w64-ucrt-x86_64-libspng
 ```
 
 Downloading repository

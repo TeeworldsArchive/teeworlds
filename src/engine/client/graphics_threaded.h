@@ -447,6 +447,7 @@ public:
 
 	// simple uncompressed RGBA loaders
 	virtual IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
+	virtual int LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData, int Size, const char *pContext);
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType);
 
 	void ScreenshotDirect(const char *pFilename, const char *pThumbnail);
