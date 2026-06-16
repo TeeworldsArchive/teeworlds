@@ -550,7 +550,6 @@ int CInput::Update()
 		{
 			// handle on the spot text editing
 			case SDL_EVENT_TEXT_EDITING:
-			{
 				m_CompositionLength = str_length(Event.edit.text);
 				if(m_CompositionLength)
 				{
@@ -572,13 +571,28 @@ int CInput::Update()
 					m_CompositionSelectedLength = 0;
 				}
 				break;
-			}
+
 			case SDL_EVENT_TEXT_INPUT:
 				m_aComposition[0] = 0;
 				m_CompositionLength = COMP_LENGTH_INACTIVE;
 				m_CompositionCursor = 0;
 				m_CompositionSelectedLength = 0;
 				AddEvent(Event.text.text, 0, IInput::FLAG_TEXT);
+				break;
+			
+			case SDL_EVENT_TEXT_EDITING_CANDIDATES:
+				m_CandidateCount = 0;
+				if(Event.edit_candidates.num_candidates > 0 && Event.edit_candidates.candidates)
+				{
+					m_CandidateSelectedIndex = Event.edit_candidates.selected_candidate;
+					for(int i = 0; i < Event.edit_candidates.num_candidates; i++)
+					{
+						str_copy(m_aaCandidates[i], str_skip_whitespaces_const(str_skip_to_whitespace_const(Event.edit_candidates.candidates[i])), sizeof(m_aaCandidates[i]));
+						m_CandidateCount++;
+					}
+				}
+				else
+					m_CandidateSelectedIndex = -1;
 				break;
 
 			// handle keys

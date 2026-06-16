@@ -837,7 +837,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 
 	if(Flags & IGraphicsBackend::INITFLAG_X11XRANDR)
 		SDL_SetHint(SDL_HINT_VIDEO_X11_XRANDR, "1");
-	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "composition");
+	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "candidates");
 #ifdef CONF_PLATFORM_LINUX
 	SDL_SetHint(SDL_HINT_APP_ID, "Teeworlds Archive");
 #endif

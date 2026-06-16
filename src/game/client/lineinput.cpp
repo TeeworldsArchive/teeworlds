@@ -443,10 +443,10 @@ void CLineInput::RenderCandidates()
 		}
 	}
 
-	if(!s_pInput->HasComposition() || !s_pInput->GetCandidateCount())
+	if(!s_pInput->GetCandidateCount())
 		return;
 
-	const float FontSize = 7.0f;
+	const float FontSize = 7.0f / s_pGraphics->ScreenUIScale();
 	const float HMargin = 8.0f;
 	const float VMargin = 4.0f;
 	const float Height = 300 * s_pGraphics->ScreenUIScale();
