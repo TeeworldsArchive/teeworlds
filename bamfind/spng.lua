@@ -5,24 +5,36 @@ SPNG = {
 		local check = function(option, settings)
 			option.value = false
 			option.use_pkgconfig = false
+			option.default_package = false;
 			option.lib_path = nil
 			
 			if ExecuteSilent("pkg-config --exists libspng") == 0 then
 				option.value = true
+				option.default_package = true
+				option.use_pkgconfig = true
+			elseif ExecuteSilent("pkg-config --exists spng") == 0 then
+				option.value = true
+				option.default_package = false;
 				option.use_pkgconfig = true
 			end
 		end
 		
 		local apply = function(option, settings)
 			if option.use_pkgconfig == true then
-				settings.cc.flags:Add(RunCommand("pkg-config --cflags libspng"))
-				settings.link.flags:Add(RunCommand("pkg-config --libs libspng"))
+				if option.default_package == true then
+					settings.cc.flags:Add(RunCommand("pkg-config --cflags libspng"))
+					settings.link.flags:Add(RunCommand("pkg-config --libs libspng"))
+				else
+					settings.cc.flags:Add(RunCommand("pkg-config --cflags spng"))
+					settings.link.flags:Add(RunCommand("pkg-config --libs spng"))
+				end
 			end
 		end
 		
 		local save = function(option, output)
 			output:option(option, "value")
 			output:option(option, "use_pkgconfig")
+			output:option(option, "default_package")
 		end
 		
 		local display = function(option)

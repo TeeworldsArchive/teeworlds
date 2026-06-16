@@ -534,6 +534,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 		char aBuf[IO_MAX_PATH_LENGTH + 32];
 		IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath));
 		int Error = 0;
+		uint8_t ColorType = static_cast<uint8_t>(Image.m_Format == CImageInfo::FORMAT_RGB ? SPNG_COLOR_TYPE_TRUECOLOR : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA);
 		if(File)
 		{
 			spng_ctx *pPng = spng_ctx_new(SPNG_CTX_ENCODER);
@@ -545,7 +546,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 					.width = (unsigned) Image.m_Width,
 					.height = (unsigned) Image.m_Height,
 					.bit_depth = 8,
-					.color_type = Image.m_Format == CImageInfo::FORMAT_RGB ? SPNG_COLOR_TYPE_TRUECOLOR : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA,
+					.color_type = ColorType,
 					.compression_method = 0,
 					.filter_method = 0,
 					.interlace_method = 0
@@ -597,7 +598,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 					.width = (unsigned) NewWidth,
 					.height = (unsigned) NewHeight,
 					.bit_depth = 8,
-					.color_type = Image.m_Format == CImageInfo::FORMAT_RGB ? SPNG_COLOR_TYPE_TRUECOLOR : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA,
+					.color_type = ColorType,
 					.compression_method = 0,
 					.filter_method = 0,
 					.interlace_method = 0
