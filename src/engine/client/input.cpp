@@ -372,78 +372,78 @@ void CInput::SetClipboardImage(unsigned char *pData, int DataSize)
 	pImg->m_pBmpData = 0;
 	pImg->m_BmpDataSize = 0;
 
-    // magic converter
-    if(pData && DataSize > 0)
-    {
-        CImageInfo Img;
-        if(Graphics()->LoadPNGRaw(&Img, pData, DataSize, "Clipboard"))
-        {
-            int w = Img.m_Width;
-            int h = Img.m_Height;
+	// magic converter
+	if(pData && DataSize > 0)
+	{
+		CImageInfo Img;
+		if(Graphics()->LoadPNGRaw(&Img, pData, DataSize, "Clipboard"))
+		{
+			int w = Img.m_Width;
+			int h = Img.m_Height;
 
-            if(Img.m_Format == CImageInfo::FORMAT_RGB || Img.m_Format == CImageInfo::FORMAT_RGBA)
-            {
-                const int BytesPerPixel = Img.GetPixelSize();
-                const int RowSize = (w * 3 + 3) & ~3;
-                const int ImageSize = RowSize * h;
-                const int HeaderSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
-                const int TotalSize = HeaderSize + ImageSize;
+			if(Img.m_Format == CImageInfo::FORMAT_RGB || Img.m_Format == CImageInfo::FORMAT_RGBA)
+			{
+				const int BytesPerPixel = Img.GetPixelSize();
+				const int RowSize = (w * 3 + 3) & ~3;
+				const int ImageSize = RowSize * h;
+				const int HeaderSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+				const int TotalSize = HeaderSize + ImageSize;
 
-                unsigned char *pBmpData = (unsigned char *) mem_alloc(TotalSize);
-                if(pBmpData)
-                {
+				unsigned char *pBmpData = (unsigned char *) mem_alloc(TotalSize);
+				if(pBmpData)
+				{
 					BITMAPFILEHEADER bf;
-                    BITMAPINFOHEADER bi;
+					BITMAPINFOHEADER bi;
 
-                    bf.bfType = 0x4D42;
-                    bf.bfSize = TotalSize;
-                    bf.bfReserved1 = 0;
-                    bf.bfReserved2 = 0;
-                    bf.bfOffBits = HeaderSize;
+					bf.bfType = 0x4D42;
+					bf.bfSize = TotalSize;
+					bf.bfReserved1 = 0;
+					bf.bfReserved2 = 0;
+					bf.bfOffBits = HeaderSize;
 
-                    bi.biSize = sizeof(BITMAPINFOHEADER);
-                    bi.biWidth = w;
-                    bi.biHeight = h;
-                    bi.biPlanes = 1;
-                    bi.biBitCount = 24;
-                    bi.biCompression = BI_RGB;
-                    bi.biSizeImage = ImageSize;
-                    bi.biXPelsPerMeter = 0;
-                    bi.biYPelsPerMeter = 0;
-                    bi.biClrUsed = 0;
-                    bi.biClrImportant = 0;
+					bi.biSize = sizeof(BITMAPINFOHEADER);
+					bi.biWidth = w;
+					bi.biHeight = h;
+					bi.biPlanes = 1;
+					bi.biBitCount = 24;
+					bi.biCompression = BI_RGB;
+					bi.biSizeImage = ImageSize;
+					bi.biXPelsPerMeter = 0;
+					bi.biYPelsPerMeter = 0;
+					bi.biClrUsed = 0;
+					bi.biClrImportant = 0;
 
-                    mem_copy(pBmpData, &bf, sizeof(bf));
-                    mem_copy(pBmpData + sizeof(bf), &bi, sizeof(bi));
+					mem_copy(pBmpData, &bf, sizeof(bf));
+					mem_copy(pBmpData + sizeof(bf), &bi, sizeof(bi));
 
-                    unsigned char *pPixelData = pBmpData + HeaderSize;
-                    unsigned char *pSrc = (unsigned char *) Img.m_pData;
-                    const int SrcRowSize = w * BytesPerPixel;
+					unsigned char *pPixelData = pBmpData + HeaderSize;
+					unsigned char *pSrc = (unsigned char *) Img.m_pData;
+					const int SrcRowSize = w * BytesPerPixel;
 
-                    for(int y = 0; y < h; ++y)
-                    {
-                        unsigned char *pDst = pPixelData + y * RowSize;
-                        unsigned char *pSrcRow = pSrc + (h - 1 - y) * SrcRowSize;
-                        for(int x = 0; x < w; ++x)
-                        {
-                            int idx = x * BytesPerPixel;
-                            // RGB -> BGR
-                            pDst[x * 3 + 0] = pSrcRow[idx + 2]; // B
-                            pDst[x * 3 + 1] = pSrcRow[idx + 1]; // G
-                            pDst[x * 3 + 2] = pSrcRow[idx + 0]; // R
-                        }
-                        if(RowSize > w * 3)
-                            memset(pDst + w * 3, 0, RowSize - w * 3);
-                    }
+					for(int y = 0; y < h; ++y)
+					{
+						unsigned char *pDst = pPixelData + y * RowSize;
+						unsigned char *pSrcRow = pSrc + (h - 1 - y) * SrcRowSize;
+						for(int x = 0; x < w; ++x)
+						{
+							int idx = x * BytesPerPixel;
+							// RGB -> BGR
+							pDst[x * 3 + 0] = pSrcRow[idx + 2]; // B
+							pDst[x * 3 + 1] = pSrcRow[idx + 1]; // G
+							pDst[x * 3 + 2] = pSrcRow[idx + 0]; // R
+						}
+						if(RowSize > w * 3)
+							memset(pDst + w * 3, 0, RowSize - w * 3);
+					}
 
-                    pImg->m_pBmpData = pBmpData;
-                    pImg->m_BmpDataSize = TotalSize;
-                }
-            }
-            if(Img.m_pData)
-                mem_free(Img.m_pData);
-        }
-    }
+					pImg->m_pBmpData = pBmpData;
+					pImg->m_BmpDataSize = TotalSize;
+				}
+			}
+			if(Img.m_pData)
+				mem_free(Img.m_pData);
+		}
+	}
 #endif
 
 	if(!SDL_SetClipboardData(ClipboardImageCallback, ClipboardCleanupCallback, pImg, apMimeTypes, NumMimeTypes))
@@ -689,7 +689,7 @@ int CInput::Update()
 				m_CompositionSelectedLength = 0;
 				AddEvent(Event.text.text, 0, IInput::FLAG_TEXT);
 				break;
-			
+
 			case SDL_EVENT_TEXT_EDITING_CANDIDATES:
 				m_CandidateCount = 0;
 				if(Event.edit_candidates.num_candidates > 0 && Event.edit_candidates.candidates)

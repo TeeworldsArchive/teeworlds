@@ -435,8 +435,8 @@ int CGraphics_Threaded::LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData,
 		return 0;
 	}
 
-    spng_ihdr Info;
-    Error = spng_get_ihdr(pPng, &Info);
+	spng_ihdr Info;
+	Error = spng_get_ihdr(pPng, &Info);
 	if(Error || Info.bit_depth != 8 || Info.width > (2 << 12) || Info.height > (2 << 12))
 	{
 		dbg_msg("game/png", "invalid format. context='%s', error='%s'", pContext, spng_strerror(Error));
@@ -455,9 +455,9 @@ int CGraphics_Threaded::LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData,
 		return 0;
 	}
 
-    size_t ImageSize;
+	size_t ImageSize;
 	spng_format Format = Info.color_type == SPNG_COLOR_TYPE_TRUECOLOR ? SPNG_FMT_RGB8 : SPNG_FMT_RGBA8;
-    Error = spng_decoded_image_size(pPng, Format, &ImageSize);
+	Error = spng_decoded_image_size(pPng, Format, &ImageSize);
 	if(Error)
 	{
 		dbg_msg("game/png", "invalid size. context='%s', error='%s'", pContext, spng_strerror(Error));
@@ -549,8 +549,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 					.color_type = ColorType,
 					.compression_method = 0,
 					.filter_method = 0,
-					.interlace_method = 0
-				};
+					.interlace_method = 0};
 				if(!(Error = spng_set_ihdr(pPng, &Info)))
 				{
 					spng_set_png_file(pPng, (FILE *) File);
@@ -601,8 +600,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 					.color_type = ColorType,
 					.compression_method = 0,
 					.filter_method = 0,
-					.interlace_method = 0
-				};
+					.interlace_method = 0};
 				if(!(Error = spng_set_ihdr(pPng, &Info)))
 				{
 					spng_set_png_file(pPng, (FILE *) File);
