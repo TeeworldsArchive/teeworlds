@@ -839,7 +839,7 @@ set(EXPECTED_DATA
   editor/entities/reinfected.png
   emoticons.png
   fonts/DejaVuSans.ttf
-  fonts/LitcaneSans.ttc
+  fonts/SourceHanSans.ttc
   fonts/index.json
   fonts/remixicon.ttf
   game.png

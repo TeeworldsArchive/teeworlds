@@ -1,18 +1,18 @@
 {
     "font files": [
         "DejaVuSans.ttf",
-        "LitcaneSans.ttc",
+        "SourceHanSans.ttc",
         "remixicon.ttf"
     ],
     "default": "DejaVu Sans",
     "language variants": {
-        "japanese": "Litcane Sans",
-        "korean": "Litcane Sans K",
-        "simplified_chinese": "Litcane Sans SC", 
-        "traditional_chinese": "Litcane Sans TC"
+        "japanese": "Source Han Sans",
+        "korean": "Source Han Sans K",
+        "simplified_chinese": "Source Han Sans SC", 
+        "traditional_chinese": "Source Han Sans TC"
     },
     "fallbacks": [
-        "Litcane Sans",
+        "Source Han Sans",
         "remixicon"
     ]
 }
