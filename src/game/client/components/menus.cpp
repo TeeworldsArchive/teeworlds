@@ -244,23 +244,7 @@ bool CMenus::DoButton_CheckBox(const void *pID, const char *pText, bool Checked,
 	Label.VSplitLeft(5.0f, 0, &Label);
 
 	Checkbox.Margin(2.0f, &Checkbox);
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_MENUICONS].m_Id);
-	Graphics()->QuadsBegin();
-	if(Locked)
-		Graphics()->SetColor(0.5f, 0.5f, 0.5f, 1.0f);
-	else
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-	IGraphics::CQuadItem QuadItem(Checkbox.x, Checkbox.y, Checkbox.w, Checkbox.h);
-	if(UI()->HotItem() == pID)
-	{
-		RenderTools()->SelectSprite(SPRITE_MENU_CHECKBOX_HOVER);
-		Graphics()->SingleQuadDrawTL(&QuadItem);
-	}
-	RenderTools()->SelectSprite(Checked ? SPRITE_MENU_CHECKBOX_ACTIVE : SPRITE_MENU_CHECKBOX_INACTIVE);
-	Graphics()->SingleQuadDrawTL(&QuadItem);
-	Graphics()->QuadsEnd();
-
+	UI()->DoLabel(&Checkbox, Checked ? "\uEB85" : "\uEB7F", Label.h * CUI::ms_FontmodHeight, TEXTALIGN_MC, -1.0f, false);
 	UI()->DoLabel(&Label, pText, Label.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
 
 	if(Locked)
@@ -316,17 +300,8 @@ float CMenus::DoIndependentDropdownMenu(void *pID, const CUIRect *pRect, const c
 	CUIRect Button;
 	Header.VSplitLeft(Header.h, &Button, 0);
 	Button.Margin(2.0f, &Button);
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_MENUICONS].m_Id);
-	Graphics()->QuadsBegin();
-	if(UI()->MouseHovered(&Header))
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	else
-		Graphics()->SetColor(0.6f, 0.6f, 0.6f, 1.0f);
-	RenderTools()->SelectSprite(*pActive ? SPRITE_MENU_EXPANDED : SPRITE_MENU_COLLAPSED);
-	IGraphics::CQuadItem QuadItem(Button.x, Button.y, Button.w, Button.h);
-	Graphics()->SingleQuadDrawTL(&QuadItem);
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	Graphics()->QuadsEnd();
+	const vec4 TextColor = UI()->MouseHovered(&Header) ? vec4(1.0f, 1.0f, 1.0f, 1.0f) : vec4(0.6f, 0.6f, 0.6f, 1.0f);
+	UI()->DoLabelColor(&Button, TextColor, *pActive ? "\uF1AF" : "\uF4B1", Header.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
 
 	// label
 	UI()->DoLabel(&Header, pStr, Header.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);

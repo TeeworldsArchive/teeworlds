@@ -688,7 +688,7 @@ void CMenus::RenderFilterHeader(CUIRect View, int FilterIndex)
 	vec4 Color = UI()->MouseHovered(&View) ? vec4(1.0f, 1.0f, 1.0f, 1.0f) : vec4(0.6f, 0.6f, 0.6f, 1.0f);
 	View.VSplitLeft(20.0f, &Button, &View);
 	Button.Margin(2.0f, &Button);
-	DoIcon(IMAGE_MENUICONS, pFilter->Extended() ? SPRITE_MENU_EXPANDED : SPRITE_MENU_COLLAPSED, &Button, &Color);
+	UI()->DoLabelColor(&Button, Color, pFilter->Extended() ? "\uF1AF" : "\uF4B1", ButtonHeight * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
 
 	// split buttons from label
 	View.VSplitLeft(Spacing, 0, &View);
@@ -1278,18 +1278,18 @@ void CMenus::RenderServerbrowserSidebar(CUIRect View)
 	float Width = Header.w;
 	Header.VSplitLeft(Width * 0.30f, &Button, &Header);
 	static CButtonContainer s_TabInfo;
-	if(DoButton_SpriteID(&s_TabInfo, IMAGE_SIDEBARICONS, m_SidebarTab != SIDEBAR_TAB_INFO ? SPRITE_SIDEBAR_INFO_A : SPRITE_SIDEBAR_INFO_B, m_SidebarTab == SIDEBAR_TAB_INFO, &Button, CUIRect::CORNER_TL, 5.0f, true))
+	if(DoButton_Menu(&s_TabInfo, "\uF0DF", m_SidebarTab == SIDEBAR_TAB_INFO, &Button, 0, CUIRect::CORNER_TL, 5.0f))
 	{
 		m_SidebarTab = SIDEBAR_TAB_INFO;
 	}
 	Header.VSplitLeft(Width * 0.30f, &Button, &Header);
 	static CButtonContainer s_TabFilter;
-	if(DoButton_SpriteID(&s_TabFilter, IMAGE_SIDEBARICONS, m_SidebarTab != SIDEBAR_TAB_FILTER ? SPRITE_SIDEBAR_FILTER_A : SPRITE_SIDEBAR_FILTER_B, m_SidebarTab == SIDEBAR_TAB_FILTER, &Button, 0, 0.0f, true))
+	if(DoButton_Menu(&s_TabFilter, "\uED27", m_SidebarTab == SIDEBAR_TAB_FILTER, &Button, 0, 0, 0.0f))
 	{
 		m_SidebarTab = SIDEBAR_TAB_FILTER;
 	}
 	static CButtonContainer s_TabFriends;
-	if(DoButton_SpriteID(&s_TabFriends, IMAGE_SIDEBARICONS, m_SidebarTab != SIDEBAR_TAB_FRIEND ? SPRITE_SIDEBAR_FRIEND_A : SPRITE_SIDEBAR_FRIEND_B, m_SidebarTab == SIDEBAR_TAB_FRIEND, &Header, CUIRect::CORNER_TR, 5.0f, true))
+	if(DoButton_Menu(&s_TabFriends, "\uF263", m_SidebarTab == SIDEBAR_TAB_FRIEND, &Header, 0, CUIRect::CORNER_TR, 5.0f))
 	{
 		m_SidebarTab = SIDEBAR_TAB_FRIEND;
 	}
@@ -1469,7 +1469,7 @@ void CMenus::RenderServerbrowserFriendTab(CUIRect View)
 		Header.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 		Header.VSplitLeft(Header.h, &Icon, &Label);
 		vec4 Color = UI()->MouseHovered(&Header) ? vec4(1.0f, 1.0f, 1.0f, 1.0f) : vec4(0.6f, 0.6f, 0.6f, 1.0f);
-		DoIcon(IMAGE_MENUICONS, s_ListExtended[i] ? SPRITE_MENU_EXPANDED : SPRITE_MENU_COLLAPSED, &Icon, &Color);
+		UI()->DoLabelColor(&Icon, Color, s_ListExtended[i] ? "\uF1AF" : "\uF4B1", FontSize, TEXTALIGN_MC);
 		int ListSize = m_lFriendList[i].size();
 		switch(i)
 		{
@@ -1503,24 +1503,21 @@ void CMenus::RenderServerbrowserFriendTab(CUIRect View)
 
 	BottomArea.HSplitTop(HeaderHeight, &Button, &BottomArea);
 	Button.Draw(vec4(1.0f, 1.0f, 1.0f, 0.25f));
-	if(s_NameInput.GetLength() || s_ClanInput.GetLength())
-		Button.VSplitLeft(Button.h, &Icon, &Label);
-	else
-		Label = Button;
 
-	const char *pButtonText = (!s_NameInput.GetLength() && !s_ClanInput.GetLength()) ? Localize("Add friend/clan") : s_NameInput.GetLength() ? Localize("Add friend") :
-																		   Localize("Add clan");
-	UI()->DoLabel(&Label, pButtonText, FontSize, TEXTALIGN_MC);
-	if(s_NameInput.GetLength() || s_ClanInput.GetLength())
-		DoIcon(IMAGE_FRIENDICONS, UI()->MouseHovered(&Button) ? SPRITE_FRIEND_PLUS_A : SPRITE_FRIEND_PLUS_B, &Icon);
-	static CButtonContainer s_AddFriend;
-	if((s_NameInput.GetLength() || s_ClanInput.GetLength()) && UI()->DoButtonLogic(&s_AddFriend, &Button))
 	{
-		m_pClient->Friends()->AddFriend(s_NameInput.GetString(), s_ClanInput.GetString());
-		FriendlistOnUpdate();
-		Client()->ServerBrowserUpdate();
-		s_NameInput.Clear();
-		s_ClanInput.Clear();
+		char aBuf[128];
+		const char *pButtonText = (!s_NameInput.GetLength() && !s_ClanInput.GetLength()) ? Localize("Add friend/clan") : s_NameInput.GetLength() ? Localize("Add friend") :
+																			   Localize("Add clan");
+		str_format(aBuf, sizeof(aBuf), "\uEE0D %s", pButtonText);
+		static CButtonContainer s_AddFriend;
+		if(DoButton_Menu(&s_AddFriend, aBuf, 0, &Button, 0, CUIRect::CORNER_ALL, 5.0f, 0.2f) && (s_NameInput.GetLength() || s_ClanInput.GetLength()))
+		{
+			m_pClient->Friends()->AddFriend(s_NameInput.GetString(), s_ClanInput.GetString());
+			FriendlistOnUpdate();
+			Client()->ServerBrowserUpdate();
+			s_NameInput.Clear();
+			s_ClanInput.Clear();
+		}
 	}
 
 	// delete friend
@@ -1556,11 +1553,11 @@ void CMenus::RenderServerbrowserFilterTab(CUIRect View)
 	UI()->DoEditBox(&s_FilterInput, &Icon, FontSize, CUIRect::CORNER_L);
 	Button.Draw(vec4(1.0f, 1.0f, 1.0f, 0.25f), 5.0f, CUIRect::CORNER_R);
 	Button.VSplitLeft(Button.h, &Icon, &Label);
-	Label.x -= Button.h / 2.0f;
+	Label.x -= Icon.w / 2.0f;
 	UI()->DoLabel(&Label, Localize("New filter"), FontSize, TEXTALIGN_MC);
 	// if(s_FilterInput.GetLength())
 	{
-		DoIcon(IMAGE_FRIENDICONS, UI()->MouseHovered(&Button) ? SPRITE_FRIEND_PLUS_A : SPRITE_FRIEND_PLUS_B, &Icon);
+		UI()->DoLabel(&Icon, "\uEF3A", FontSize, TEXTALIGN_MC);
 		static CButtonContainer s_AddFilter;
 		if(UI()->DoButtonLogic(&s_AddFilter, &Button) && s_FilterInput.GetLength())
 		{
