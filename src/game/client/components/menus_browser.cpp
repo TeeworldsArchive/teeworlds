@@ -469,6 +469,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 	}
 
 	const float FontSize = 12.0f;
+	const float IconSize = 14.0f;
 	const float TextAlpha = (pEntry->m_NumClients == pEntry->m_MaxClients) ? 0.5f : 1.0f;
 	vec4 TextBaseColor = vec4(1.0f, 1.0f, 1.0f, TextAlpha);
 	vec4 TextUnrecommendedColor = vec4(1.0f, 0.4f, 0.4f, TextAlpha);
@@ -498,11 +499,12 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			CUIRect Rect = Button;
 			CUIRect Icon;
 
+			TextRender()->TextColor(TextBaseColor);
+			TextRender()->TextSecondaryColor(TextBaseOutlineColor);
 			Rect.VSplitLeft(Rect.h, &Icon, &Rect);
 			if(pEntry->m_Flags & IServerBrowser::FLAG_PASSWORD)
 			{
-				Icon.Margin(2.0f, &Icon);
-				DoIcon(IMAGE_BROWSEICONS, Selected ? SPRITE_BROWSE_LOCK_B : SPRITE_BROWSE_LOCK_A, &Icon);
+				UI()->DoLabel(&Icon, "\uEECE", IconSize, TEXTALIGN_MC);
 				UI()->DoTooltip(&pEntry->m_Flags, &Icon, Localize("This server is protected by a password."));
 			}
 
@@ -512,8 +514,12 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			UI()->DoTooltip(&pEntry->m_ServerLevel, &Icon, s_aDifficultyLabels[pEntry->m_ServerLevel]);
 
 			Rect.VSplitLeft(Rect.h, &Icon, &Rect);
-			Icon.Margin(2.0f, &Icon);
-			DoIcon(IMAGE_BROWSEICONS, pEntry->m_Favorite ? SPRITE_BROWSE_STAR_A : SPRITE_BROWSE_STAR_B, &Icon);
+			if(pEntry->m_Favorite)
+			{
+				TextRender()->TextColor(1.0f, 0.8f, 0.4f, 1.0f);
+				TextRender()->TextSecondaryColor(0.0f, 0.0f, 0.0f, 0.0f);
+			}
+			UI()->DoLabel(&Icon, pEntry->m_Favorite ? "\uF186" : "\uF18B", IconSize, TEXTALIGN_MC);
 			if(UI()->DoButtonLogic(&pEntry->m_Favorite, &Icon))
 			{
 				if(!pEntry->m_Favorite)
@@ -526,15 +532,9 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			Rect.VSplitLeft(Rect.h, &Icon, &Rect);
 			if(pEntry->m_FriendState != CContactInfo::CONTACT_NO)
 			{
-				Icon.Margin(2.0f, &Icon);
-				Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BROWSEICONS].m_Id);
-				Graphics()->QuadsBegin();
-				Graphics()->SetColor(1.0f, 0.75f, 1.0f, 1.0f);
-				RenderTools()->SelectSprite(Selected ? SPRITE_BROWSE_HEART_B : SPRITE_BROWSE_HEART_A);
-				IGraphics::CQuadItem QuadItem(Icon.x, Icon.y, Icon.w, Icon.h);
-				Graphics()->SingleQuadDrawTL(&QuadItem);
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-				Graphics()->QuadsEnd();
+				TextRender()->TextColor(1.0f, 0.75f, 1.0f, 1.0f);
+				TextRender()->TextSecondaryColor(0.0f, 0.0f, 0.0f, 0.0f);
+				UI()->DoLabel(&Icon, "\uEE0E", IconSize, TEXTALIGN_MC);
 				UI()->DoTooltip(&pEntry->m_FriendState, &Icon, Localize("Friends are online on this server."));
 			}
 		}
@@ -1976,6 +1976,7 @@ void CMenus::RenderDetailScoreboard(CUIRect View, const CServerInfo *pInfo, int 
 
 	const float RowWidth = (RowCount == 0) ? View.w : (View.w * 0.25f);
 	const float FontSize = 8.0f;
+	const float IconSize = 9.0f;
 	const vec4 HighlightColor = vec4(TextHighlightColor.r, TextHighlightColor.g, TextHighlightColor.b, TextColor.a);
 	const vec4 GreyTextColor = vec4(TextColor.r, TextColor.g, TextColor.b, TextColor.a * 0.6f);
 	float LineHeight = 20.0f;
@@ -2045,9 +2046,8 @@ void CMenus::RenderDetailScoreboard(CUIRect View, const CServerInfo *pInfo, int 
 		}
 		UI()->DoTooltip(&pInfo->m_aClients[i], &Name, pInfo->m_aClients[i].m_FriendState == CContactInfo::CONTACT_PLAYER ? Localize("Click to remove the player from your friends.") : Localize("Click to add the player to your friends."));
 		Name.VSplitLeft(Name.h - 8.0f, &Icon, &Name);
-		Icon.HMargin(4.0f, &Icon);
 		if(pInfo->m_aClients[i].m_FriendState != CContactInfo::CONTACT_NO)
-			DoIcon(IMAGE_BROWSEICONS, SPRITE_BROWSE_HEART_A, &Icon);
+			UI()->DoLabel(&Icon, "\uEE0E", IconSize, TEXTALIGN_MC);
 
 		Name.VSplitLeft(2.0f, 0, &Name);
 		Name.VSplitLeft(40.0f, &Score, &Name);

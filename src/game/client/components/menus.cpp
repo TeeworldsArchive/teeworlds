@@ -243,6 +243,8 @@ bool CMenus::DoButton_CheckBox(const void *pID, const char *pText, bool Checked,
 	pRect->VSplitLeft(pRect->h, &Checkbox, &Label);
 	Label.VSplitLeft(5.0f, 0, &Label);
 
+	if(UI()->HotItem() == pID)
+		Checkbox.Draw(vec4(0.75f, 0.75f, 0.75f, 0.75f));
 	Checkbox.Margin(2.0f, &Checkbox);
 	UI()->DoLabel(&Checkbox, Checked ? "\uEB85" : "\uEB7F", Label.h * CUI::ms_FontmodHeight, TEXTALIGN_MC, -1.0f, false);
 	UI()->DoLabel(&Label, pText, Label.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
@@ -498,12 +500,8 @@ void CMenus::RenderMenubar(CUIRect Rect)
 		Right.VSplitRight(Spacing, &Right, 0); // little space
 		Right.VSplitRight(ButtonWidth / 2.0f, &Right, &Button);
 		static CButtonContainer s_ServerBrowserButton;
-		if(DoButton_SpriteID(&s_ServerBrowserButton, IMAGE_BROWSER, UI()->MouseHovered(&Button) || m_GamePage == PAGE_INTERNET || m_GamePage == PAGE_LAN ? SPRITE_BROWSER_B : SPRITE_BROWSER_A,
-			   m_GamePage == PAGE_INTERNET || m_GamePage == PAGE_LAN, &Button) ||
-			CheckHotKey(KEY_B))
-		{
+		if(DoButton_MenuTabTop(&s_ServerBrowserButton, "\uEC7A", m_GamePage == PAGE_INTERNET || m_GamePage == PAGE_LAN, &Button) || CheckHotKey(KEY_B))
 			NewPage = ServerBrowser()->GetType() == IServerBrowser::TYPE_INTERNET ? PAGE_INTERNET : PAGE_LAN;
-		}
 
 		Rect.HSplitTop(Spacing, 0, &Rect);
 		Rect.HSplitTop(25.0f, &Box, &Rect);
