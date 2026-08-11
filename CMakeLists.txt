@@ -136,7 +136,7 @@ if(NOT MSVC)
 
   if(TARGET_OS STREQUAL "mac")
     add_c_compiler_flag_if_supported(OUR_FLAGS -stdlib=libc++)
-    add_c_compiler_flag_if_supported(OUR_FLAGS -mmacosx-version-min=10.15)
+    add_c_compiler_flag_if_supported(OUR_FLAGS -mmacosx-version-min=26.0)
   endif()
 
   add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -Wall)
@@ -231,7 +231,7 @@ if(NOT CMAKE_CROSSCOMPILING)
   # quietly.
   find_package(PkgConfig)
 endif()
-find_package(ZLIB)
+find_package(zlib-ng)
 
 find_package(OpenSSL)
 find_package(CURL)
@@ -296,7 +296,11 @@ show_dependency_status("Python3" Python3)
 show_dependency_status("SDL3" SDL3)
 show_dependency_status("Opus" OPUS)
 show_dependency_status("Opusfile" OPUSFILE)
-show_dependency_status("Zlib" ZLIB)
+show_dependency_status("zlib-ng" zlib-ng)
+
+if(NOT(zlib-ng_FOUND))
+  message(SEND_ERROR "You must install zlib-ng to compile Teeworlds")
+endif()
 
 if(NOT(Python3_FOUND))
   message(SEND_ERROR "You must install Python to compile Teeworlds")
@@ -1343,15 +1347,10 @@ set(GAME_GENERATED_SHARED
   src/generated/protocol.h
 )
 
-set(DEPS ${DEP_JSON} ${DEP_MD5} ${ZLIB_DEP})
+set(DEPS ${DEP_JSON} ${DEP_MD5})
 
 # Libraries
-set(LIBS ${CMAKE_THREAD_LIBS_INIT} OpenSSL::Crypto CURL::libcurl ${PLATFORM_LIBS})
-if(ZLIB_BUNDLED)
-  list(APPEND LIBS ${ZLIB_LIBRARIES})
-else()
-  list(APPEND LIBS ZLIB::ZLIB)
-endif()
+set(LIBS ${CMAKE_THREAD_LIBS_INIT} OpenSSL::Crypto CURL::libcurl zlib-ng::zlib ${PLATFORM_LIBS})
 
 # Targets
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_GENERATED_SHARED} ${BASE})
@@ -1989,7 +1988,7 @@ foreach(target ${TARGETS_OWN})
   target_include_directories(${target} PRIVATE src)
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
   target_include_directories(${target} PRIVATE ${CURL_INCLUDE_DIRS})
-  target_include_directories(${target} PRIVATE ${ZLIB_INCLUDE_DIRS})
+  target_include_directories(${target} PRIVATE ${zlib-ng_INCLUDE_DIR})
   if(OPENSSL_FOUND)
     target_compile_definitions(${target} PRIVATE CONF_OPENSSL)
     target_include_directories(${target} PRIVATE ${OPENSSL_INCLUDE_DIR})

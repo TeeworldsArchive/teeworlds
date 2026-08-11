@@ -7,6 +7,7 @@ Import("bamfind/freetype.lua")
 Import("bamfind/opus.lua")
 Import("bamfind/opusfile.lua")
 Import("bamfind/spng.lua")
+Import("bamfind/zlib-ng.lua")
 
 --- Setup Config -------
 config = NewConfig()
@@ -14,13 +15,13 @@ config:Add(OptCCompiler("compiler"))
 config:Add(OptTestCompileC("stackprotector", "int main(){return 0;}", "-fstack-protector -fstack-protector-all"))
 config:Add(OptTestCompileC("minmacosxsdk", "int main(){return 0;}", "-mmacosx-version-min=10.15 -isysroot /Developer/SDKs/MacOSX10.15.sdk"))
 config:Add(OptTestCompileC("buildwithoutsseflag", "#include <immintrin.h>\nint main(){_mm_pause();return 0;}", ""))
-config:Add(OptLibrary("zlib", "zlib.h", false))
 config:Add(Curl.OptFind("libcurl", true))
 config:Add(SDL.OptFind("sdl", true))
 config:Add(FreeType.OptFind("freetype", true))
 config:Add(Opus.OptFind("opus", true))
 config:Add(Opusfile.OptFind("opusfile", true))
 config:Add(SPNG.OptFind("spng", true))
+config:Add(ZLIB.OptFind("zlib", true))
 config:Finalize("config.lua")
 
 generated_src_dir = "build/src"
@@ -95,30 +96,18 @@ function GenerateCommonSettings(settings, conf, arch, compiler)
 		settings.cc.flags:Add("-Wall", "-fno-exceptions")
 	end
 
-	-- Compile zlib if needed
-	local zlib = nil
-	if config.zlib.value == 1 then -- there's a issue need to fix, this should be true instead of 1, but if we do the correct way, we would get error.
-		settings.link.libs:Add("z")
-		if config.zlib.include_path then
-			settings.cc.includes:Add(config.zlib.include_path)
-		end
-	else
-		settings.cc.includes:Add("src/engine/external/zlib")
-		zlib = Compile(settings, Collect("src/engine/external/zlib/*.c"))
-	end
+	-- Apply zlib-ng
+	settings.cc.includes:Add(config.zlib.include_path)
+	config.zlib:Apply(settings)
 
-	if config.opus.value == true then
-		if config.opus.include_path then
-			settings.cc.includes:Add(config.opus.include_path)
-		end
-	end
+	settings.cc.includes:Add(config.opus.include_path)
 
 	local md5 = Compile(settings, Collect("src/engine/external/md5/*.c"))
 	local json = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 	local glad = Compile(settings, Collect("src/engine/external/glad/gl.c"))
 
 	-- globally available libs
-	libs = {zlib=zlib, md5=md5, json=json, glad=glad}
+	libs = {md5=md5, json=json, glad=glad}
 end
 
 function GenerateMacOSSettings(settings, conf, arch, compiler)
@@ -145,14 +134,14 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 	-- c++ stdlib needed
 	settings.cc.flags:Add("-stdlib=libc++")
 	settings.link.flags:Add("-stdlib=libc++")
-	-- this also needs the macOS min SDK version to be at least 10.15
+	-- this also needs the macOS min SDK version to be at least 26.0
 
-	settings.cc.flags:Add("-mmacosx-version-min=10.15")
-	settings.link.flags:Add("-mmacosx-version-min=10.15")
+	settings.cc.flags:Add("-mmacosx-version-min=26.0")
+	settings.link.flags:Add("-mmacosx-version-min=26.0")
 
 	if config.minmacosxsdk.value == 1 then
-		settings.cc.flags:Add("-isysroot /Developer/SDKs/MacOSX10.15.sdk")
-		settings.link.flags:Add("-isysroot /Developer/SDKs/MacOSX10.15.sdk")
+		settings.cc.flags:Add("-isysroot /Developer/SDKs/MacOSX26.0.sdk")
+		settings.link.flags:Add("-isysroot /Developer/SDKs/MacOSX26.0.sdk")
 	end
 
 	settings.link.frameworks:Add("Carbon")
@@ -179,7 +168,6 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 
 	-- Client
 	settings.link.frameworks:Add("OpenGL")
-	settings.link.frameworks:Add("AGL")
 	-- FIXME: the SDL config is applied in BuildClient too but is needed here before so the launcher will compile
 	config.sdl:Apply(settings)
 	settings.link.extrafiles:Merge(Compile(settings, "src/macoslaunch/client.m"))
@@ -386,7 +374,7 @@ function BuildClient(settings, family, platform)
 	local game_client = Compile(settings, CollectRecursive("src/game/client/*.cpp"), SharedClientFiles())
 	local game_editor = Compile(settings, Collect("src/game/editor/*.cpp"))
 	
-	Link(settings, "ArchiveClient", libs["zlib"], libs["json"], libs["md5"], libs["glad"], client, game_client, game_editor)
+	Link(settings, "ArchiveClient", libs["json"], libs["md5"], libs["glad"], client, game_client, game_editor)
 end
 
 function BuildServer(settings, family, platform)
@@ -394,24 +382,24 @@ function BuildServer(settings, family, platform)
 	
 	local game_server = Compile(settings, CollectRecursive("src/game/server/*.cpp"), SharedServerFiles())
 	
-	return Link(settings, "ArchiveServer", libs["zlib"], libs["json"], libs["md5"], server, game_server)
+	return Link(settings, "ArchiveServer", libs["json"], libs["md5"], server, game_server)
 end
 
 function BuildTools(settings)
 	local tools = {}
 	for i,v in ipairs(Collect("src/tools/*.cpp", "src/tools/*.c")) do
 		local toolname = PathFilename(PathBase(v))
-		tools[i] = Link(settings, toolname, Compile(settings, v), libs["zlib"], libs["md5"], libs["json"])
+		tools[i] = Link(settings, toolname, Compile(settings, v), libs["md5"], libs["json"])
 	end
 	PseudoTarget(settings.link.Output(settings, "pseudo_tools") .. settings.link.extension, tools)
 end
 
 function BuildMasterserver(settings)
-	return Link(settings, "mastersrv", Compile(settings, Collect("src/mastersrv/*.cpp")), libs["zlib"], libs["md5"], libs["json"])
+	return Link(settings, "mastersrv", Compile(settings, Collect("src/mastersrv/*.cpp")), libs["md5"], libs["json"])
 end
 
 function BuildVersionserver(settings)
-	return Link(settings, "versionsrv", Compile(settings, Collect("src/versionsrv/*.cpp")), libs["zlib"], libs["md5"], libs["json"])
+	return Link(settings, "versionsrv", Compile(settings, Collect("src/versionsrv/*.cpp")), libs["md5"], libs["json"])
 end
 
 function BuildContent(settings, arch, conf)
