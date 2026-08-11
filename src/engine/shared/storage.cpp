@@ -4,7 +4,7 @@
 #include <base/system.h>
 #include <engine/storage.h>
 #include "linereader.h"
-#include <zlib.h>
+#include <zlib-ng.h>
 
 // compiled-in data-dir path
 #define DATA_DIR "data"
@@ -598,7 +598,7 @@ public:
 			if(Bytes <= 0)
 				break;
 			sha256_update(&Sha256Ctx, aBuffer, Bytes);
-			Crc = crc32(Crc, aBuffer, Bytes);
+			Crc = zng_crc32(Crc, aBuffer, Bytes);
 			Size += Bytes;
 		}
 

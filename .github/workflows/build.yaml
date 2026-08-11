@@ -1,4 +1,4 @@
-name: Build
+name: Build Test
 
 on: [push, pull_request]
 
@@ -10,9 +10,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-26.04, windows-latest, macOS-latest]
         include:
-        - os: ubuntu-latest
+        - os: ubuntu-26.04
           cmake-args: -G Ninja
           package-file: "*-linux_x86_64.tar.xz"
           archtitecture: "x86_64"
@@ -56,7 +56,7 @@ jobs:
           toolchain:p
           cmake:p
           ninja:p
-          zlib:p
+          zlib-ng:p
           sdl3:p
           freetype:p
           opus:p
@@ -65,22 +65,21 @@ jobs:
           curl:p
           libspng:p
 
-    - name: Checkout SDL3
+    - name: Checkout zlib-ng
       if: contains(matrix.os, 'ubuntu')
       uses: actions/checkout@v4
       with:
-        repository: libsdl-org/SDL
-        ref: release-3.2.28
-        path: ./SDL
+        repository: zlib-ng/zlib-ng
+        ref: 2.3.3
+        path: ./zlib-ng
 
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt-get install pkg-config ninja-build libfreetype6-dev libopus-dev libopusfile-dev libspng-dev libcurl4-openssl-dev libgl1-mesa-dev -y
-        sudo apt-get install build-essential git cmake libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev libudev-dev libinput-dev libts-dev libjpeg-dev libwebp-dev -y
-        cd SDL
-        cmake . -DCMAKE_BUILD_TYPE=Release -DSDL_TEST=OFF -DSDL_STATIC=OFF 
+        sudo apt install build-essential cmake git libgl1-mesa-dev libfreetype6-dev libsdl3-dev libspng-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev -y
+        cd zlib-ng
+        cmake . -DCMAKE_BUILD_TYPE=Release
         sudo make install
         sudo ldconfig
 
@@ -88,7 +87,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update || true
-        brew install pkg-config sdl3 python3 ninja opus opusfile openssl curl libspng || true
+        brew install pkg-config sdl3 python3 ninja opus opusfile openssl curl libspng zlib-ng || true
         brew upgrade freetype
         sudo rm -rf /Library/Developer/CommandLineTools
 
@@ -160,9 +159,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-26.04, windows-latest, macOS-latest]
         include:
-        - os: ubuntu-latest
+        - os: ubuntu-26.04
           archtitecture: "x86_64"
           shell: "bash"
         - os: windows-latest
@@ -187,14 +186,6 @@ jobs:
         ref: a44a2c7dc16caae7ac457f17dfd14a87e7059c57
         path: ./bam
 
-    - name: Checkout SDL3
-      if: contains(matrix.os, 'ubuntu')
-      uses: actions/checkout@v4
-      with:
-        repository: libsdl-org/SDL
-        ref: release-3.2.28
-        path: ./SDL
-    
     - name: Prepare MSYS2 (Windows)
       if: contains(matrix.os, 'windows')
       uses: msys2/setup-msys2@v2
@@ -205,7 +196,7 @@ jobs:
           toolchain:p
           cmake:p
           ninja:p
-          zlib:p
+          zlib-ng:p
           sdl3:p
           freetype:p
           opus:p
@@ -214,17 +205,25 @@ jobs:
           curl:p
           libspng:p
 
+    - name: Checkout zlib-ng
+      if: contains(matrix.os, 'ubuntu')
+      uses: actions/checkout@v4
+      with:
+        repository: zlib-ng/zlib-ng
+        ref: 2.3.3
+        path: ./zlib-ng
+
     - name: Prepare Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt-get install libfreetype6-dev libopus-dev libopusfile-dev libspng-dev libcurl4-openssl-dev libgl1-mesa-dev -y
-        sudo apt-get install build-essential git cmake libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev libdbus-1-dev libudev-dev libinput-dev libts-dev libjpeg-dev libwebp-dev -y
+        sudo apt install build-essential cmake git libgl1-mesa-dev libfreetype6-dev libsdl3-dev libspng-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev -y
         cd bam
         ./make_unix.sh
-        cd ../SDL
+        cd ../zlib-ng
         cmake . -DCMAKE_BUILD_TYPE=Release
         sudo make install
+        sudo ldconfig
 
     - name: Prepare Windows
       if: contains(matrix.os, 'windows')
@@ -236,7 +235,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update
-        brew install sdl3 opus opusfile openssl curl libspng || true
+        brew install sdl3 opus opusfile openssl curl libspng zlib-ng || true
         cd bam
         ./make_unix.sh
 

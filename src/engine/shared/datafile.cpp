@@ -6,7 +6,7 @@
 #include <base/math.h>
 #include <base/system.h>
 #include <engine/storage.h>
-#include <zlib.h>
+#include <zlib-ng.h>
 
 static const int DEBUG = 0;
 
@@ -84,7 +84,7 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	// take the hashes of the file and store them
 	SHA256_CTX Sha256Ctx;
 	sha256_init(&Sha256Ctx);
-	unsigned Crc = crc32(0L, 0x0, 0);
+	unsigned Crc = zng_crc32(0L, 0x0, 0);
 	{
 		enum
 		{
@@ -99,7 +99,7 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 			if(Bytes == 0)
 				break;
 			sha256_update(&Sha256Ctx, aBuffer, Bytes);
-			Crc = crc32(Crc, aBuffer, Bytes);
+			Crc = zng_crc32(Crc, aBuffer, Bytes);
 		}
 
 		io_seek(File, 0, IOSEEK_START);
@@ -305,7 +305,7 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 			// v4 has compressed data
 			void *pTemp = (char *) mem_alloc(DataSize);
 			unsigned long UncompressedSize = m_pDataFile->m_Info.m_pDataSizes[Index];
-			unsigned long s;
+			size_t s;
 
 			dbg_msg("datafile", "loading data index=%d size=%d uncompressed=%lu", Index, DataSize, UncompressedSize);
 			m_pDataFile->m_ppDataPtrs[Index] = (char *) mem_alloc(UncompressedSize);
@@ -316,8 +316,8 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 			io_read(m_pDataFile->m_File, pTemp, DataSize);
 
 			// decompress the data
-			s = UncompressedSize;
-			int Result = uncompress((Bytef *) m_pDataFile->m_ppDataPtrs[Index], &s, (Bytef *) pTemp, DataSize);
+			s = (size_t) UncompressedSize;
+			int Result = zng_uncompress((Bytef *) m_pDataFile->m_ppDataPtrs[Index], &s, (Bytef *) pTemp, DataSize);
 			if(Result != Z_OK)
 			{
 				dbg_msg("datafile", "zlib uncompress failed: %d", Result);
@@ -606,10 +606,10 @@ int CDataFileWriter::AddData(int Size, const void *pData)
 	dbg_assert(m_NumDatas < 1024, "too much data");
 
 	CDataInfo *pInfo = &m_pDatas[m_NumDatas];
-	unsigned long s = compressBound(Size);
+	size_t s = zng_compressBound(Size);
 	void *pCompData = mem_alloc(s); // temporary buffer that we use during compression
 
-	int Result = compress((Bytef *) pCompData, &s, (Bytef *) pData, Size);
+	int Result = zng_compress((Bytef *) pCompData, &s, (Bytef *) pData, Size);
 	if(Result != Z_OK)
 	{
 		dbg_msg("datafile", "compression error %d", Result);
