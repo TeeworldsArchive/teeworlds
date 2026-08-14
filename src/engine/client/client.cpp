@@ -942,7 +942,7 @@ int CClient::UnpackServerInfo(CUnpacker *pUnpacker, CServerInfo *pInfo, int *pTo
 	pInfo->m_NumBotSpectators = 0;
 
 	// don't add invalid info to the server browser list
-	if(pInfo->m_NumClients < 0 || pInfo->m_NumClients > pInfo->m_MaxClients || pInfo->m_MaxClients < 0 || pInfo->m_MaxClients > MAX_CLIENTS || pInfo->m_MaxPlayers < pInfo->m_NumPlayers ||
+	if(pInfo->m_NumClients < 0 || pInfo->m_NumClients > pInfo->m_MaxClients || pInfo->m_MaxClients < 0 || pInfo->m_MaxPlayers < pInfo->m_NumPlayers ||
 		pInfo->m_NumPlayers < 0 || pInfo->m_NumPlayers > pInfo->m_NumClients || pInfo->m_MaxPlayers < 0 || pInfo->m_MaxPlayers > pInfo->m_MaxClients)
 		return -1;
 	// drop standard gametype with more than VANILLA_MAX_PLAYERS

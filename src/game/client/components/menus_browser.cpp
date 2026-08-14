@@ -543,9 +543,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			TextRender()->TextColor(TextBaseColor);
 			TextRender()->TextSecondaryColor(TextBaseOutlineColor);
 			Button.y += (Button.h - FontSize / CUI::ms_FontmodHeight) / 2.0f;
-			UI()->DoLabelHighlighted(&Button, pEntry->m_aName, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME) ? Config()->m_BrFilterString : 0, FontSize, (!Selected && !Highlighted && pEntry->m_Unrecommended) ? TextUnrecommendedColor : TextBaseColor, HighlightColor);
-			if(pEntry->m_Unrecommended)
-				UI()->DoTooltip(&pEntry->m_aName, &Button, Localize("This server is unrecommended because its gametype only offers a better experience on the dedicated client."));
+			UI()->DoLabelHighlighted(&Button, pEntry->m_aName, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME) ? Config()->m_BrFilterString : 0, FontSize, TextBaseColor, HighlightColor);
 		}
 		else if(ID == COL_BROWSER_MAP)
 		{
@@ -646,7 +644,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			TextRender()->TextColor(TextBaseColor);
 			TextRender()->TextSecondaryColor(TextBaseOutlineColor);
 			Button.y += (Button.h - FontSize / CUI::ms_FontmodHeight) / 2.0f;
-			UI()->DoLabelHighlighted(&Button, pEntry->m_aGameType, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_GAMETYPE) ? Config()->m_BrFilterString : 0, FontSize, TextBaseColor, HighlightColor);
+			UI()->DoLabelHighlighted(&Button, pEntry->m_aGameType, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_GAMETYPE) ? Config()->m_BrFilterString : 0, FontSize, (!Selected && !Highlighted && pEntry->m_Unrecommended) ? TextUnrecommendedColor : TextBaseColor, HighlightColor);
 		}
 	}
 
