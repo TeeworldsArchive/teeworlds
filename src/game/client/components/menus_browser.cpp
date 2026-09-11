@@ -34,11 +34,12 @@ CMenus::CColumn CMenus::ms_aBrowserCols[] = {
 	{COL_BROWSER_PING, IServerBrowser::SORT_PING, "Ping", 1, 40.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
 };
 
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterStandard = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_PURE | IServerBrowser::FILTER_PURE_MAP | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{0}}, {0}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{"Race"}}, {false}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterFavorites = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_FAVORITE | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{0}}, {0}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterAll = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_SORTING_UNRECOMMENDED, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterStandard = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_PURE | IServerBrowser::FILTER_PURE_MAP, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_COMPAT_VERSION, 999, -1, 0, {{"Race"}}, {false}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterFavorites = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_FAVORITE, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterAll = {IServerBrowser::FILTER_COMPAT_VERSION, 999, -1, 0, {{0}}, {0}, {0}};
 
+// Localize("Casual"); Localize("Normal"); Localize("Competitive"); - these strings are localized within CLocConstString
 static CLocConstString s_aDifficultyLabels[] = {
 	"Casual",
 	"Normal",
@@ -844,9 +845,37 @@ void CMenus::RenderServerbrowserServerList(CUIRect View)
 		if(i == COL_BROWSER_FLAG)
 			continue;
 
-		if(DoButton_GridHeader(ms_aBrowserCols[i].m_Caption, ms_aBrowserCols[i].m_Caption, Config()->m_BrSort == ms_aBrowserCols[i].m_Sort, ms_aBrowserCols[i].m_Align, &ms_aBrowserCols[i].m_Rect))
+		// the ping column additionally hosts the combined players/ping sort as a second click state
+		const bool PingColumn = ms_aBrowserCols[i].m_ID == COL_BROWSER_PING;
+		const bool PlayersColumn = ms_aBrowserCols[i].m_ID == COL_BROWSER_PLAYERS;
+		const bool CombinedSort = Config()->m_BrSort == IServerBrowser::SORT_PLAYERS_PING;
+		// highlight both columns that take part in the combined players/ping sort, in yellow
+		const bool CombinedColumn = CombinedSort && (PingColumn || PlayersColumn);
+		const bool Checked = CombinedColumn || Config()->m_BrSort == ms_aBrowserCols[i].m_Sort;
+		const vec4 CheckedColor = CombinedColumn ? vec4(1.0f, 0.8f, 0.2f, 0.55f) : vec4(0.9f, 0.9f, 0.9f, 0.5f);
+
+		if(DoButton_GridHeader(ms_aBrowserCols[i].m_Caption, ms_aBrowserCols[i].m_Caption, Checked, ms_aBrowserCols[i].m_Align, &ms_aBrowserCols[i].m_Rect, CUIRect::CORNER_ALL, CheckedColor))
 		{
-			if(ms_aBrowserCols[i].m_Sort != -1)
+			if(PingColumn)
+			{
+				// cycle: lowest latency -> players within 100 ms latency bands -> highest latency
+				if(Config()->m_BrSort == IServerBrowser::SORT_PING && Config()->m_BrSortOrder == 0)
+				{
+					Config()->m_BrSort = IServerBrowser::SORT_PLAYERS_PING;
+					Config()->m_BrSortOrder = 0;
+				}
+				else if(CombinedSort)
+				{
+					Config()->m_BrSort = IServerBrowser::SORT_PING;
+					Config()->m_BrSortOrder = 1;
+				}
+				else
+				{
+					Config()->m_BrSort = IServerBrowser::SORT_PING;
+					Config()->m_BrSortOrder = 0;
+				}
+			}
+			else if(ms_aBrowserCols[i].m_Sort != -1)
 			{
 				if(Config()->m_BrSort == ms_aBrowserCols[i].m_Sort)
 					Config()->m_BrSortOrder ^= 1;
@@ -856,6 +885,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View)
 			}
 			ServerBrowserSortingOnUpdate();
 		}
+
+		if(PingColumn)
+			UI()->DoTooltip(&ms_aBrowserCols[i], &ms_aBrowserCols[i].m_Rect, Localize("Click to cycle: lowest latency, players within 100 ms latency bands, highest latency."));
 	}
 
 	// list background
@@ -875,6 +907,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View)
 				break;
 			case IServerBrowser::SORT_NUMPLAYERS:
 				Column = COL_BROWSER_PLAYERS;
+				break;
+			case IServerBrowser::SORT_PLAYERS_PING:
+				Column = COL_BROWSER_PING;
 				break;
 		}
 
@@ -1905,7 +1940,7 @@ void CMenus::RenderDetailInfo(CUIRect View, const CServerInfo *pInfo, const vec4
 		return;
 
 	CUIRect Row;
-	// Localize("Map:"); Localize("Game type:"); Localize("Version:"); Localize("Difficulty:"); Localize("Casual", "Server difficulty"); Localize("Normal", "Server difficulty"); Localize("Competitive", "Server difficulty");
+	// Localize("This server is unrecommended because its gametype only offers a better experience on the dedicated client."); Localize("Map:"); Localize("Game type:"); Localize("Version:"); Localize("Difficulty:"); Localize("Casual", "Server difficulty"); Localize("Normal", "Server difficulty"); Localize("Competitive", "Server difficulty");
 	static CLocConstString s_aLabels[] = {
 		"This server is unrecommended because its gametype only offers a better experience on the dedicated client.",
 		"Map:",

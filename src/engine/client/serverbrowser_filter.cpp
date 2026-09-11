@@ -30,6 +30,25 @@ public:
 	}
 };
 
+// like SortWrap, but the primary sort criterion decides the direction itself
+// (needed for sorts that mix ascending and descending keys in one comparator)
+class SortWrapPlayersPing
+{
+	typedef int (CServerBrowserFilter::CServerFilter::*ExtraSortFunc)(int, int) const;
+	ExtraSortFunc m_pfnExtraSort;
+	CServerBrowserFilter::CServerFilter *m_pThis;
+
+public:
+	SortWrapPlayersPing(CServerBrowserFilter::CServerFilter *t, ExtraSortFunc e) : m_pfnExtraSort(e), m_pThis(t) {}
+	bool operator()(int a, int b)
+	{
+		int ExtraResult;
+		if((ExtraResult = (m_pThis->*m_pfnExtraSort)(a, b)))
+			return ExtraResult > 0;
+		return m_pThis->SortComparePlayersPing(a, b);
+	}
+};
+
 //	CServerFilter
 CServerBrowserFilter::CServerFilter::CServerFilter()
 {
@@ -279,6 +298,10 @@ void CServerBrowserFilter::CServerFilter::Sort()
 			break;
 		case IServerBrowser::SORT_GAMETYPE:
 			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareGametype, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+			break;
+		case IServerBrowser::SORT_PLAYERS_PING:
+			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrapPlayersPing(this, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+			break;
 	}
 
 	m_FilterInfo.m_SortHash = GetSortHash();
@@ -359,6 +382,36 @@ bool CServerBrowserFilter::CServerFilter::SortCompareNumRealClients(int Index1, 
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
 	return (a->m_Info.m_NumClients - a->m_Info.m_NumBotPlayers - a->m_Info.m_NumBotSpectators) < (b->m_Info.m_NumClients - b->m_Info.m_NumBotPlayers - b->m_Info.m_NumBotSpectators) ||
 	       ((a->m_Info.m_NumClients - a->m_Info.m_NumBotPlayers - a->m_Info.m_NumBotSpectators) == (b->m_Info.m_NumClients - b->m_Info.m_NumBotPlayers - b->m_Info.m_NumBotSpectators) && !(a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && (b->m_Info.m_Flags & IServerBrowser::FLAG_PURE));
+}
+
+bool CServerBrowserFilter::CServerFilter::SortComparePlayersPing(int Index1, int Index2) const
+{
+	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
+	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
+
+	// group the servers by 100 ms latency bands, lowest latency first
+	const int Band1 = a->m_Info.m_Latency / 100;
+	const int Band2 = b->m_Info.m_Latency / 100;
+	if(Band1 != Band2)
+		return Band1 < Band2;
+
+	// within a latency band sort by the number of players, like SORT_NUMPLAYERS
+	int Players1 = (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? a->m_Info.m_NumPlayers : a->m_Info.m_NumClients;
+	int Players2 = (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? b->m_Info.m_NumPlayers : b->m_Info.m_NumClients;
+	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_BOTS)
+	{
+		Players1 -= a->m_Info.m_NumBotPlayers;
+		Players2 -= b->m_Info.m_NumBotPlayers;
+		if(!(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS))
+		{
+			Players1 -= a->m_Info.m_NumBotSpectators;
+			Players2 -= b->m_Info.m_NumBotSpectators;
+		}
+	}
+
+	if(Players1 != Players2)
+		return Config()->m_BrSortOrder ? Players1 < Players2 : Players1 > Players2;
+	return !(a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && (b->m_Info.m_Flags & IServerBrowser::FLAG_PURE);
 }
 
 //	CServerBrowserFilter

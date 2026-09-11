@@ -47,6 +47,7 @@ public:
 		bool SortCompareNumRealPlayers(int Index1, int Index2) const;
 		bool SortCompareNumClients(int Index1, int Index2) const;
 		bool SortCompareNumRealClients(int Index1, int Index2) const;
+		bool SortComparePlayersPing(int Index1, int Index2) const;
 	};
 	CConfig *Config() { return m_pConfig; }
 

@@ -49,7 +49,7 @@ private:
 	bool DoButton_CheckBox(const void *pID, const char *pText, bool Checked, const CUIRect *pRect, bool Locked = false);
 
 	void DoIcon(int ImageId, int SpriteId, const CUIRect *pRect, const vec4 *pColor = 0);
-	bool DoButton_GridHeader(const void *pID, const char *pText, bool Checked, int Align, const CUIRect *pRect, int Corners = CUIRect::CORNER_ALL);
+	bool DoButton_GridHeader(const void *pID, const char *pText, bool Checked, int Align, const CUIRect *pRect, int Corners = CUIRect::CORNER_ALL, vec4 CheckedColor = vec4(0.9f, 0.9f, 0.9f, 0.5f));
 
 	float DoIndependentDropdownMenu(void *pID, const CUIRect *pRect, const char *pStr, float HeaderHeight, FDropdownCallback pfnCallback, bool *pActive);
 	void DoInfoBox(const CUIRect *pRect, const char *pLable, const char *pValue);

@@ -114,6 +114,7 @@ public:
 		SORT_MAP - Sort by map
 		SORT_GAMETYPE - Sort by game type. DM, TDM etc.
 		SORT_NUMPLAYERS - Sort after how many players there are on the server.
+		SORT_PLAYERS_PING - Sort by how many players there are, grouped by 100 ms latency bands.
 	*/
 	enum
 	{
@@ -122,6 +123,7 @@ public:
 		SORT_MAP,
 		SORT_GAMETYPE,
 		SORT_NUMPLAYERS,
+		SORT_PLAYERS_PING,
 
 		QUICK_SERVERNAME = 1,
 		QUICK_PLAYER = 2,

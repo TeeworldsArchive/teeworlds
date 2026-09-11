@@ -204,11 +204,11 @@ bool CMenus::DoButton_MenuTabTop(CButtonContainer *pButtonContainer, const char 
 	return UI()->DoButtonLogic(pButtonContainer, pRect);
 }
 
-bool CMenus::DoButton_GridHeader(const void *pID, const char *pText, bool Checked, int Align, const CUIRect *pRect, int Corners)
+bool CMenus::DoButton_GridHeader(const void *pID, const char *pText, bool Checked, int Align, const CUIRect *pRect, int Corners, vec4 CheckedColor)
 {
 	if(Checked)
 	{
-		pRect->Draw(vec4(0.9f, 0.9f, 0.9f, 0.5f), 5.0f, Corners);
+		pRect->Draw(CheckedColor, 5.0f, Corners);
 		TextRender()->TextColor(CUI::ms_HighlightTextColor);
 		TextRender()->TextSecondaryColor(CUI::ms_HighlightTextOutlineColor);
 	}
