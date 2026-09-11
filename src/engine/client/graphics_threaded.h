@@ -411,6 +411,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	void Rotate4(const CCommandBuffer::CPoint &rCenter, CCommandBuffer::CVertex *pPoints);
 
 	void KickCommandBuffer();
+	void FlushPendingVerticesOnStateChange();
 
 	int IssueInit();
 	int InitWindow();

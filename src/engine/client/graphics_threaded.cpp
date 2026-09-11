@@ -102,6 +102,12 @@ void CGraphics_Threaded::AddVertices(int Count)
 		FlushVertices();
 }
 
+void CGraphics_Threaded::FlushPendingVerticesOnStateChange()
+{
+	if(m_Drawing != 0 && m_NumVertices > 0)
+		FlushVertices();
+}
+
 void CGraphics_Threaded::Rotate4(const CCommandBuffer::CPoint &rCenter, CCommandBuffer::CVertex *pPoints)
 {
 	float c = cosf(m_Rotation);
@@ -166,42 +172,62 @@ void CGraphics_Threaded::ClipEnable(int x, int y, int w, int h)
 	w = clamp(w, 0, ScreenWidth() - x);
 	h = clamp(h, 0, ScreenHeight() - y);
 
-	m_State.m_ClipEnable = true;
-	m_State.m_ClipX = x;
-	m_State.m_ClipY = ScreenHeight() - (y + h);
-	m_State.m_ClipW = w;
-	m_State.m_ClipH = h;
+	const int ClipY = ScreenHeight() - (y + h);
+	if(!m_State.m_ClipEnable || m_State.m_ClipX != x || m_State.m_ClipY != ClipY ||
+		m_State.m_ClipW != w || m_State.m_ClipH != h)
+	{
+		FlushPendingVerticesOnStateChange();
+		m_State.m_ClipEnable = true;
+		m_State.m_ClipX = x;
+		m_State.m_ClipY = ClipY;
+		m_State.m_ClipW = w;
+		m_State.m_ClipH = h;
+	}
 }
 
 void CGraphics_Threaded::ClipDisable()
 {
+	if(!m_State.m_ClipEnable)
+		return;
+
+	FlushPendingVerticesOnStateChange();
 	m_State.m_ClipEnable = false;
 }
 
 void CGraphics_Threaded::BlendNone()
 {
+	if(m_State.m_BlendMode == CCommandBuffer::BLEND_NONE)
+		return;
+
+	FlushPendingVerticesOnStateChange();
 	m_State.m_BlendMode = CCommandBuffer::BLEND_NONE;
 }
 
 void CGraphics_Threaded::BlendNormal()
 {
+	if(m_State.m_BlendMode == CCommandBuffer::BLEND_ALPHA)
+		return;
+
+	FlushPendingVerticesOnStateChange();
 	m_State.m_BlendMode = CCommandBuffer::BLEND_ALPHA;
 }
 
 void CGraphics_Threaded::WrapNormal()
 {
-	m_State.m_WrapModeU = IGraphics::WRAP_REPEAT;
-	m_State.m_WrapModeV = IGraphics::WRAP_REPEAT;
+	WrapMode(IGraphics::WRAP_REPEAT, IGraphics::WRAP_REPEAT);
 }
 
 void CGraphics_Threaded::WrapClamp()
 {
-	m_State.m_WrapModeU = WRAP_CLAMP;
-	m_State.m_WrapModeV = WRAP_CLAMP;
+	WrapMode(WRAP_CLAMP, WRAP_CLAMP);
 }
 
 void CGraphics_Threaded::WrapMode(int WrapU, int WrapV)
 {
+	if(m_State.m_WrapModeU == WrapU && m_State.m_WrapModeV == WrapV)
+		return;
+
+	FlushPendingVerticesOnStateChange();
 	m_State.m_WrapModeU = WrapU;
 	m_State.m_WrapModeV = WrapV;
 }
@@ -213,6 +239,10 @@ int CGraphics_Threaded::MemoryUsage() const
 
 void CGraphics_Threaded::StainedOnly(bool Flag)
 {
+	if(m_State.m_IsStainedOnly == Flag)
+		return;
+
+	FlushPendingVerticesOnStateChange();
 	m_State.m_IsStainedOnly = Flag;
 }
 
@@ -223,6 +253,11 @@ float CGraphics_Threaded::ScreenUIScale() const
 
 void CGraphics_Threaded::MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY)
 {
+	if(m_State.m_ScreenTL.x == TopLeftX && m_State.m_ScreenTL.y == TopLeftY &&
+		m_State.m_ScreenBR.x == BottomRightX && m_State.m_ScreenBR.y == BottomRightY)
+		return;
+
+	FlushPendingVerticesOnStateChange();
 	m_State.m_ScreenTL.x = TopLeftX;
 	m_State.m_ScreenTL.y = TopLeftY;
 	m_State.m_ScreenBR.x = BottomRightX;
@@ -621,6 +656,7 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 void CGraphics_Threaded::TextureSet(CTextureHandle TextureID)
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->TextureSet within begin");
+	FlushPendingVerticesOnStateChange();
 	m_State.m_Texture = TextureID.Id();
 }
 
