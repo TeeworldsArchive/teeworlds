@@ -55,6 +55,7 @@ tags
 # CMake
 data
 generated
+/.ci/
 
 .ninja_deps
 .ninja_log

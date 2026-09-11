@@ -68,8 +68,23 @@ option(DOWNLOAD_GTEST "Download and compile GTest if not found" ${AUTO_DEPENDENC
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
 option(MACOS_DO_INSTALL "MacOS option" OFF)
+option(BUNDLE_RUNTIME_DEPS "Copy the required runtime libraries into the package (recommended for Steam)" ON)
 
 set(OpenGL_GL_PREFERENCE GLVND)
+
+# Make the installed package self-contained. The game is meant to run inside the
+# Steam Linux Runtime, which does not necessarily provide (recent enough versions
+# of) SDL3, libspng, zlib-ng, opus, ... . The install step copies those libraries
+# into <prefix>/lib (see cmake/InstallRuntimeDeps.cmake.in); the executables look
+# them up relative to themselves so the package stays relocatable.
+if(TARGET_OS STREQUAL "linux")
+  set(CMAKE_INSTALL_RPATH "$ORIGIN/lib")
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+  # Prefer the legacy DT_RPATH tag over DT_RUNPATH: DT_RPATH is inherited by the
+  # whole dependency tree, so the bundled libraries can find each other inside
+  # <executable dir>/lib.
+  add_link_options(-Wl,--disable-new-dtags)
+endif()
 
 # Set the default build type to Release
 if(NOT(CMAKE_BUILD_TYPE))
@@ -1886,13 +1901,48 @@ if(NOT DEV)
     install(TARGETS ${CPACK_TARGETS} DESTINATION bin COMPONENT Runtime)
   endif()
 
-  set(FIXUP_BUNDLE_SCRIPT "${CMAKE_BINARY_DIR}/.install_deps.cmake")
-  configure_file(
-    "${PROJECT_SOURCE_DIR}/cmake/FixupBundleHelper.cmake.in"
-    "${FIXUP_BUNDLE_SCRIPT}"
-    @ONLY
-  )
-  install(SCRIPT "${FIXUP_BUNDLE_SCRIPT}" COMPONENT portable)
+  if(APPLE)
+    # macOS: BundleUtilities copies and rewrites the dylibs inside the .app.
+    set(FIXUP_BUNDLE_SCRIPT "${CMAKE_BINARY_DIR}/.install_deps.cmake")
+    configure_file(
+      "${PROJECT_SOURCE_DIR}/cmake/FixupBundleHelper.cmake.in"
+      "${FIXUP_BUNDLE_SCRIPT}"
+      @ONLY
+    )
+    install(SCRIPT "${FIXUP_BUNDLE_SCRIPT}" COMPONENT portable)
+  endif()
+
+  if(BUNDLE_RUNTIME_DEPS AND NOT APPLE)
+    # Linux/Windows: copy the non-system shared libraries into the package so it
+    # does not depend on what the Steam Linux Runtime happens to provide.
+    # RuntimeDepsExcludes.cmake is included verbatim by the install script (it
+    # must not go through configure_file, which would break the regex escaping).
+    set(RUNTIME_DEPS_EXCLUDES_FILE "${PROJECT_SOURCE_DIR}/cmake/RuntimeDepsExcludes.cmake")
+    # The install step resolves the dependencies *after* CMake has rewritten the
+    # RPATH, so libraries that only exist in a custom prefix have to be found via
+    # an explicit search path. Paths are normalized to forward slashes because the
+    # list is substituted into the install script through configure_file().
+    set(RUNTIME_DEPS_SEARCH_DIRS "")
+    foreach(_dep_prefix IN LISTS CMAKE_PREFIX_PATH)
+      file(TO_CMAKE_PATH "${_dep_prefix}" _dep_prefix)
+      list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_dep_prefix}")
+      if(TARGET_OS STREQUAL "windows")
+        list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_dep_prefix}/bin")
+      else()
+        list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_dep_prefix}/lib")
+      endif()
+    endforeach()
+    set(RUNTIME_DEPS_INSTALL_SCRIPT "${CMAKE_BINARY_DIR}/InstallRuntimeDeps.cmake")
+    configure_file(
+      "${PROJECT_SOURCE_DIR}/cmake/InstallRuntimeDeps.cmake.in"
+      "${RUNTIME_DEPS_INSTALL_SCRIPT}"
+      @ONLY
+    )
+    install(SCRIPT "${RUNTIME_DEPS_INSTALL_SCRIPT}" COMPONENT portable)
+    # Also bundle for the plain `bin/` layout produced by a bare
+    # `cmake --install` (the Runtime component is never part of a CPack package).
+    install(SCRIPT "${RUNTIME_DEPS_INSTALL_SCRIPT}" COMPONENT Runtime)
+  endif()
 endif()
 
 # Unset these variables, they might do something in the future of CPack.

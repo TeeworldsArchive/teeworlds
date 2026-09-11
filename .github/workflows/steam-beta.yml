@@ -1,0 +1,293 @@
+name: Steam Beta
+
+# Builds the Linux + Windows packages and pushes them to a Steam beta branch.
+#
+# Triggered by the "Build Test" workflow (build.yaml) *after it succeeds* on the
+# mods branch, and it checks out the exact commit that passed those tests, so a
+# revision that fails the build tests is never uploaded to Steam.
+# Manual workflow_dispatch runs bypass that gate (useful to re-publish, or to
+# preview the depot mapping without uploading).
+#
+# Required repository variables (Settings -> Secrets and variables -> Actions):
+#   STEAM_APP_ID          Steam AppID
+#   STEAM_DEPOT_LINUX     depot id for the Linux content
+#   STEAM_DEPOT_WINDOWS   depot id for the Windows content
+#   STEAM_BETA_BRANCH     optional, defaults to "beta"
+#
+# Required secrets:
+#   STEAM_USERNAME        dedicated Steamworks build account
+#   STEAM_PASSWORD        its password
+#   STEAM_CONFIG_VDF      optional: base64 of the account's config.vdf login token
+#   STEAM_GUARD_CODE      optional: Steam Guard code (when no cached token is used)
+#
+# The "default" branch can never be set live automatically: SetLive only accepts
+# a beta branch, which is exactly what this workflow targets.
+
+on:
+  # Gate publication on the build tests: this fires when "Build Test" finishes
+  # on mods, and the jobs below additionally require conclusion == success.
+  workflow_run:
+    workflows: ["Build Test"]
+    types: [completed]
+    branches: [mods]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Beta branch to set live
+        required: false
+        default: beta
+      preview:
+        description: Only validate the file mapping (upload nothing)
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  # Steam does not like two builds being uploaded for the same app at once.
+  group: steam-beta
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SDL3_VERSION: "3.4.0"
+  ZLIB_NG_VERSION: "2.3.3"
+  SPNG_VERSION: "0.7.4"
+  CMAKE_VERSION: "3.31.6"
+  # Valve's official Steam Runtime SDK: building inside it gives exactly the
+  # glibc/library stack of the Steam Linux Runtime
+  STEAM_BASE_IMAGE: "registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:latest"
+
+jobs:
+  linux:
+    name: Linux package (Steam Runtime 4.0)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Cache Linux dependencies
+        uses: actions/cache@v4
+        with:
+          path: .ci/linux-prefix
+          key: linux-deps-${{ runner.os }}-${{ env.SDL3_VERSION }}-${{ env.ZLIB_NG_VERSION }}-${{ env.SPNG_VERSION }}-${{ hashFiles('scripts/ci/linux-deps.sh', 'scripts/ci/build-sdl3.sh') }}
+
+      - name: Build missing dependencies (SDL3, zlib-ng, libspng)
+        env:
+          PREFIX: /src/.ci/linux-prefix
+        run: |
+          docker run --rm --entrypoint bash \
+            -v "$PWD:/src" -w /src \
+            -e PREFIX -e SDL3_VERSION -e ZLIB_NG_VERSION -e SPNG_VERSION -e CMAKE_VERSION \
+            "$STEAM_BASE_IMAGE" \
+            /src/scripts/ci/linux-deps.sh
+
+      - name: Build and stage the package
+        run: |
+          docker run --rm --entrypoint bash \
+            -v "$PWD:/src" -w /src \
+            -e PREFIX=/src/.ci/linux-prefix \
+            "$STEAM_BASE_IMAGE" \
+            /src/scripts/ci/linux-build.sh
+
+      - name: Verify bundled runtime libraries
+        run: |
+          set -euo pipefail
+          test -d .ci/staging/linux/lib
+          libs=$(find .ci/staging/linux/lib -maxdepth 1 -type f | wc -l)
+          echo "bundled runtime libraries: $libs"
+          test "$libs" -ge 5
+          find .ci/staging/linux -maxdepth 1 | sort
+          # The executables must look for the bundled libraries relative to themselves.
+          readelf -d .ci/staging/linux/ArchiveClient | grep -q '\$ORIGIN/lib'
+          echo "ArchiveClient runs from \$ORIGIN/lib"
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: steam-linux
+          path: .ci/staging/linux
+          if-no-files-found: error
+
+  windows:
+    name: Windows package
+    runs-on: windows-latest
+    timeout-minutes: 90
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Prepare MSYS2 (UCRT64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            ninja:p
+            zlib-ng:p
+            freetype:p
+            opus:p
+            opusfile:p
+            openssl:p
+            curl:p
+            libspng:p
+
+      - name: Cache SDL3
+        uses: actions/cache@v4
+        with:
+          path: .ci/win-prefix
+          key: win-deps-${{ runner.os }}-${{ hashFiles('scripts/ci/build-sdl3.sh') }}-${{ env.SDL3_VERSION }}
+
+      - name: Build SDL3 from source
+        run: |
+          PREFIX="$PWD/.ci/win-prefix" JOBS="$(nproc)" \
+            SDL3_VERSION="$SDL3_VERSION" \
+            bash scripts/ci/build-sdl3.sh
+
+      - name: Configure and build
+        run: |
+          # cygpath -m keeps forward slashes: native CMake accepts them and they
+          # avoid backslash-escaping surprises in generated install scripts.
+          prefix="$(cygpath -m "$PWD/.ci/win-prefix")"
+          cmake -S . -B .ci-build/win -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$prefix" \
+            -DDEV=OFF \
+            -DBUNDLE_RUNTIME_DEPS=ON
+          cmake --build .ci-build/win --target ArchiveClient ArchiveServer -j "$(nproc)"
+
+      - name: Stage the package
+        run: |
+          export PATH="$PWD/.ci/win-prefix/bin:/ucrt64/bin:$PATH"
+          rm -rf .ci/staging/windows
+          cmake --install .ci-build/win --component portable --prefix "$(cygpath -m "$PWD/.ci/staging/windows")"
+          dlls=$(find .ci/staging/windows -maxdepth 1 -iname '*.dll' | wc -l)
+          echo "bundled DLLs: $dlls"
+          test "$dlls" -ge 1
+          ls .ci/staging/windows
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: steam-windows
+          path: .ci/staging/windows
+          if-no-files-found: error
+
+  deploy:
+    name: Upload to Steam (${{ github.event.inputs.branch || vars.STEAM_BETA_BRANCH || 'beta' }})
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: ${{ (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')) && vars.STEAM_APP_ID != '' && vars.STEAM_DEPOT_LINUX != '' && vars.STEAM_DEPOT_WINDOWS != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          name: steam-linux
+          path: content/linux
+      - uses: actions/download-artifact@v4
+        with:
+          name: steam-windows
+          path: content/windows
+
+      - name: Generate app_build.vdf
+        env:
+          APP_ID: ${{ vars.STEAM_APP_ID }}
+          DEPOT_LINUX: ${{ vars.STEAM_DEPOT_LINUX }}
+          DEPOT_WINDOWS: ${{ vars.STEAM_DEPOT_WINDOWS }}
+          BETA_BRANCH: ${{ github.event.inputs.branch || vars.STEAM_BETA_BRANCH || 'beta' }}
+          PREVIEW: ${{ github.event.inputs.preview }}
+          DESCRIPTION: ${{ github.event.workflow_run.head_branch || github.ref_name }} ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          args=(
+            --app-id "$APP_ID"
+            --content-root "$PWD/content"
+            --output "$PWD/steam-scripts/app_build_${APP_ID}.vdf"
+            --desc "$DESCRIPTION"
+            --depot "linux=${DEPOT_LINUX}=linux"
+            --depot "windows=${DEPOT_WINDOWS}=windows"
+          )
+          if [ "$PREVIEW" = "true" ]; then
+            args+=(--preview)
+          else
+            args+=(--set-live "$BETA_BRANCH")
+          fi
+          python3 scripts/ci/steam-vdf.py "${args[@]}"
+          echo "--- app_build.vdf ---"
+          cat "steam-scripts/app_build_${APP_ID}.vdf"
+
+      - name: Restore cached Steam login token
+        env:
+          STEAM_CONFIG_VDF: ${{ secrets.STEAM_CONFIG_VDF }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STEAM_CONFIG_VDF:-}" ]; then
+            echo "No STEAM_CONFIG_VDF secret; will log in with username/password."
+            exit 0
+          fi
+          # The location of steamcmd's config.vdf depends on the platform and how
+          # steamcmd was installed, so drop the token into every candidate path.
+          for dir in \
+            "$HOME/steamcmd/config" \
+            "$HOME/Steam/config" \
+            "$HOME/.steam/steam/config" \
+            "$HOME/.local/share/Steam/config"; do
+            mkdir -p "$dir"
+            printf '%s' "$STEAM_CONFIG_VDF" | tr -d '\n\r ' | base64 -d > "$dir/config.vdf"
+          done
+          echo "restored cached Steam login token"
+
+      - name: Install steamcmd
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lib32gcc-s1 lib32stdc++6 ca-certificates
+          mkdir -p "$HOME/steamcmd"
+          curl -fsSL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" \
+            | tar -xz -C "$HOME/steamcmd"
+          # Run from the steamcmd directory so it keeps config/ next to the tool,
+          # and bootstrap the installation itself.
+          cd "$HOME/steamcmd"
+          ./steamcmd.sh +quit || true
+
+      - name: Upload build to Steam
+        env:
+          APP_ID: ${{ vars.STEAM_APP_ID }}
+          STEAM_USERNAME: ${{ secrets.STEAM_USERNAME }}
+          STEAM_PASSWORD: ${{ secrets.STEAM_PASSWORD }}
+          STEAM_GUARD_CODE: ${{ secrets.STEAM_GUARD_CODE }}
+          STEAM_CONFIG_VDF: ${{ secrets.STEAM_CONFIG_VDF }}
+        run: |
+          set -euo pipefail
+          vdf="$PWD/steam-scripts/app_build_${APP_ID}.vdf"
+          login=()
+          if [ -n "${STEAM_CONFIG_VDF:-}" ]; then
+            # Reusing the token avoids issuing a new Steam Guard token on every run.
+            login=(+login "$STEAM_USERNAME")
+          else
+            login=(+login "$STEAM_USERNAME" "$STEAM_PASSWORD")
+            if [ -n "${STEAM_GUARD_CODE:-}" ]; then
+              login=(+set_steam_guard_code "$STEAM_GUARD_CODE" "${login[@]}")
+            fi
+          fi
+          # Run from the steamcmd directory so config/ is read from there too.
+          cd "$HOME/steamcmd"
+          ./steamcmd.sh "${login[@]}" +run_app_build "$vdf" +quit

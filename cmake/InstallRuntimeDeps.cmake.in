@@ -1,0 +1,183 @@
+# Install-time helper that makes the package self-contained by copying the
+# non-system shared libraries the executables depend on.
+#
+# This file is configured by CMakeLists.txt into the build directory and run via
+# `install(SCRIPT ...)`. On Linux the libraries end up in <prefix>/lib and the
+# executables carry a DT_RPATH of $ORIGIN/lib (see CMakeLists.txt). On Windows
+# the DLLs are copied next to the executables.
+#
+# The whole dependency closure is resolved with file(GET_RUNTIME_DEPENDENCIES);
+# see cmake/RuntimeDepsExcludes.cmake for what is deliberately *not* bundled.
+
+set(_target_os "@TARGET_OS@")
+set(_exe_suffix "@CMAKE_EXECUTABLE_SUFFIX@")
+
+# CPack stages the package with DESTDIR, so the real location on disk is
+# $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}. We only ever write through `cmake -E`
+# or file(MAKE_DIRECTORY), neither of which applies DESTDIR itself, so _root is
+# used verbatim everywhere below.
+set(_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+string(REGEX REPLACE "/$" "" _root "${_root}")
+
+# Give GET_RUNTIME_DEPENDENCIES a hint when the surrounding generated install
+# script did not already do so (e.g. MinGW builds on Windows, where objdump is
+# the tool that understands PE files).
+if(NOT DEFINED CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM)
+  if(_target_os STREQUAL "windows")
+    set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM "windows+pe")
+  elseif(_target_os STREQUAL "linux")
+    set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM "linux+elf")
+  endif()
+endif()
+if(NOT DEFINED CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL AND DEFINED CMAKE_OBJDUMP)
+  set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL "objdump")
+  set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND "${CMAKE_OBJDUMP}")
+endif()
+
+set(_executables "")
+set(_exe_dirs "")
+foreach(_name "@CLIENT_EXECUTABLE@" "@SERVER_EXECUTABLE@")
+  set(_found FALSE)
+  # The portable component installs the binaries at the package root, the plain
+  # "Runtime" component installs them into bin/.
+  foreach(_subdir "" "bin")
+    set(_candidate "${_root}/${_name}${_exe_suffix}")
+    if(NOT _subdir STREQUAL "")
+      set(_candidate "${_root}/${_subdir}/${_name}${_exe_suffix}")
+    endif()
+    if(EXISTS "${_candidate}")
+      list(APPEND _executables "${_candidate}")
+      get_filename_component(_exe_dir "${_candidate}" DIRECTORY)
+      list(APPEND _exe_dirs "${_exe_dir}")
+      set(_found TRUE)
+    endif()
+  endforeach()
+  if(NOT _found)
+    message(WARNING "InstallRuntimeDeps: '${_name}${_exe_suffix}' was not installed, skipping it")
+  endif()
+endforeach()
+
+if(NOT _executables)
+  message(WARNING "InstallRuntimeDeps: no executables installed, nothing to bundle")
+  return()
+endif()
+
+list(REMOVE_DUPLICATES _exe_dirs)
+list(LENGTH _exe_dirs _exe_dir_count)
+if(_exe_dir_count GREATER 1)
+  message(WARNING "InstallRuntimeDeps: executables live in several directories (${_exe_dirs}); bundling into the first one only")
+endif()
+list(GET _exe_dirs 0 _exe_dir)
+
+if(_target_os STREQUAL "linux")
+  set(_lib_dir "${_exe_dir}/lib")
+  set(_lib_rpath "$ORIGIN")
+  set(_exe_rpath "$ORIGIN/lib")
+elseif(_target_os STREQUAL "windows")
+  set(_lib_dir "${_exe_dir}")
+  set(_lib_rpath "")
+  set(_exe_rpath "")
+else()
+  message(STATUS "InstallRuntimeDeps: runtime bundling is not supported on ${_target_os}")
+  return()
+endif()
+
+set(_dest "${_lib_dir}")
+file(MAKE_DIRECTORY "${_dest}")
+
+# The exclusion lists live in a normal CMake file that is included verbatim.
+# Substituting them through configure_file() would eat one layer of backslash
+# escaping and turn the regexes into invalid ones.
+set(TARGET_OS "@TARGET_OS@")
+include("@RUNTIME_DEPS_EXCLUDES_FILE@")
+
+# Quoted on purpose: configure_file() substitutes the raw value, and expanding it
+# unquoted below turns it back into a CMake list.
+set(_search_dirs "@RUNTIME_DEPS_SEARCH_DIRS@")
+set(_existing_search_dirs "")
+foreach(_dir IN LISTS _search_dirs)
+  if(IS_DIRECTORY "${_dir}")
+    list(APPEND _existing_search_dirs "${_dir}")
+  endif()
+endforeach()
+
+file(GET_RUNTIME_DEPENDENCIES
+  EXECUTABLES ${_executables}
+  RESOLVED_DEPENDENCIES_VAR _resolved
+  UNRESOLVED_DEPENDENCIES_VAR _unresolved
+  DIRECTORIES ${_existing_search_dirs}
+  PRE_EXCLUDE_REGEXES ${RUNTIME_DEPS_PRE_EXCLUDE_REGEXES}
+  POST_EXCLUDE_REGEXES ${RUNTIME_DEPS_POST_EXCLUDE_REGEXES}
+)
+
+if(_unresolved)
+  message(WARNING "InstallRuntimeDeps: could not resolve:\n  ${_unresolved}")
+endif()
+
+find_program(_patchelf patchelf)
+
+foreach(_dep IN LISTS _resolved)
+  get_filename_component(_dep_name "${_dep}" NAME)
+
+  # Never bundle the executables themselves.
+  list(FIND _executables "${_dep}" _self_index)
+  if(NOT _self_index EQUAL -1)
+    continue()
+  endif()
+
+  # Resolve symlinks (e.g. libz-ng.so.2 -> libz-ng.so.2.2.3) and store the real
+  # file under the name the dynamic loader will ask for.
+  file(REAL_PATH "${_dep}" _dep_real)
+
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_dep_real}" "${_dest}/${_dep_name}"
+    RESULT_VARIABLE _copy_rc
+  )
+  if(_copy_rc)
+    message(WARNING "InstallRuntimeDeps: failed to copy '${_dep}'")
+    continue()
+  endif()
+
+  if(_target_os STREQUAL "linux" AND _patchelf)
+    # $ORIGIN as DT_RPATH (--force-rpath) so the bundled libraries can find each
+    # other regardless of the loader's RUNPATH rules.
+    execute_process(
+      COMMAND "${_patchelf}" --force-rpath --set-rpath "${_lib_rpath}" "${_dest}/${_dep_name}"
+      RESULT_VARIABLE _rpath_rc
+    )
+    if(_rpath_rc)
+      message(WARNING "InstallRuntimeDeps: patchelf failed for '${_dep_name}'")
+    endif()
+  endif()
+endforeach()
+
+# Belt and braces: make sure the executables really look in <exe dir>/lib even if
+# the project was configured without CMAKE_INSTALL_RPATH.
+if(_target_os STREQUAL "linux" AND _patchelf)
+  foreach(_exe IN LISTS _executables)
+    execute_process(
+      COMMAND "${_patchelf}" --print-rpath "${_exe}"
+      OUTPUT_VARIABLE _current_rpath
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _print_rc
+    )
+    if(_print_rc OR _current_rpath MATCHES "ORIGIN")
+      continue()
+    endif()
+    if(_current_rpath)
+      set(_new_rpath "${_exe_rpath}:${_current_rpath}")
+    else()
+      set(_new_rpath "${_exe_rpath}")
+    endif()
+    execute_process(
+      COMMAND "${_patchelf}" --force-rpath --set-rpath "${_new_rpath}" "${_exe}"
+      RESULT_VARIABLE _exe_rpath_rc
+    )
+    if(_exe_rpath_rc)
+      message(WARNING "InstallRuntimeDeps: could not set the rpath of '${_exe}'")
+    endif()
+  endforeach()
+endif()
+
+list(LENGTH _resolved _resolved_count)
+message(STATUS "InstallRuntimeDeps: bundled ${_resolved_count} runtime libraries into '${_dest}'")
