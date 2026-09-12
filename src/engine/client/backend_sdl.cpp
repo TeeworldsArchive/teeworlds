@@ -839,6 +839,20 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 		SDL_SetHint(SDL_HINT_VIDEO_X11_XRANDR, "1");
 	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "candidates");
 #ifdef CONF_PLATFORM_LINUX
+	// Prefer SDL's native Wayland backend on Wayland sessions.
+	//
+	// SDL only prefers Wayland on its own when the compositor advertises the
+	// fifo-v1 protocol and otherwise falls back to XWayland. On X11 the input
+	// method has to go through XIM, which is not reliable for this game: SDL's
+	// X11 backend only calls Xutf8LookupString() for key events that the input
+	// method did not consume, so text committed by fcitx5 can be delayed or
+	// dropped entirely. The Wayland backend uses the text-input protocol
+	// instead, which the compositor and fcitx5 handle out of the box.
+	// "wayland,x11" keeps XWayland as a fallback if no Wayland compositor is
+	// reachable. An explicitly requested driver always wins, so a user can
+	// still force X11 with SDL_VIDEO_DRIVER=x11 (or the legacy SDL_VIDEODRIVER).
+	if(SDL_getenv("WAYLAND_DISPLAY") && !SDL_getenv("SDL_VIDEO_DRIVER") && !SDL_getenv("SDL_VIDEODRIVER"))
+		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
 	SDL_SetHint(SDL_HINT_APP_ID, "Teeworlds Archive");
 #endif
 	// set gl attributes for OpenGL 3.3 Core Profile
