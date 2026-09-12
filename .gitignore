@@ -27,6 +27,7 @@ map_resave*
 map_version*
 mastersrv*
 packetgen*
+/zstd_dict_gen
 ArchiveClient*
 !ArchiveClient.desktop
 !teeworlds.manifest

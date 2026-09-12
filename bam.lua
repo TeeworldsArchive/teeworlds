@@ -8,6 +8,7 @@ Import("bamfind/opus.lua")
 Import("bamfind/opusfile.lua")
 Import("bamfind/spng.lua")
 Import("bamfind/zlib-ng.lua")
+Import("bamfind/zstd.lua")
 
 --- Setup Config -------
 config = NewConfig()
@@ -22,6 +23,7 @@ config:Add(Opus.OptFind("opus", true))
 config:Add(Opusfile.OptFind("opusfile", true))
 config:Add(SPNG.OptFind("spng", true))
 config:Add(ZLIB.OptFind("zlib", true))
+config:Add(ZSTD.OptFind("zstd", true))
 config:Finalize("config.lua")
 
 generated_src_dir = "build/src"
@@ -99,6 +101,10 @@ function GenerateCommonSettings(settings, conf, arch, compiler)
 	-- Apply zlib-ng
 	settings.cc.includes:Add(config.zlib.include_path)
 	config.zlib:Apply(settings)
+
+	-- Apply zstd, used by the packet compression that is negotiated during the
+	-- connection handshake
+	config.zstd:Apply(settings)
 
 	settings.cc.includes:Add(config.opus.include_path)
 

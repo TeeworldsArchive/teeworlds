@@ -125,6 +125,7 @@ void CNetBase::Init(NETSOCKET Socket, CConfig *pConfig, IConsole *pConsole, IEng
 	m_pConfig = pConfig;
 	m_pEngine = pEngine;
 	m_Huffman.Init();
+	m_Zstd.Init();
 	mem_zero(m_aRequestTokenBuf, sizeof(m_aRequestTokenBuf));
 	if(pEngine)
 		pConsole->Chain("dbg_lognetwork", ConchainDbgLognetwork, this);
@@ -186,21 +187,28 @@ void CNetBase::SendPacket(const NETADDR *pAddr, CNetPacketConstruct *pPacket)
 	dbg_assert((pPacket->m_Token & ~NET_TOKEN_MASK) == 0, "token out of range");
 
 	// compress if not ctrl msg
+	pPacket->m_Flags &= ~(NET_PACKETFLAG_COMPRESSION | NET_PACKETFLAG_COMPRESSION_ZSTD);
 	if(!(pPacket->m_Flags & NET_PACKETFLAG_CONTROL))
-		CompressedSize = m_Huffman.Compress(pPacket->m_aChunkData, pPacket->m_DataSize, &aBuffer[NET_PACKETHEADERSIZE], NET_MAX_PAYLOAD);
+	{
+		if(pPacket->m_Compression == NET_COMPRESSION_ZSTD)
+			CompressedSize = m_Zstd.Compress(pPacket->m_aChunkData, pPacket->m_DataSize, &aBuffer[NET_PACKETHEADERSIZE], NET_MAX_PAYLOAD);
+		else
+			CompressedSize = m_Huffman.Compress(pPacket->m_aChunkData, pPacket->m_DataSize, &aBuffer[NET_PACKETHEADERSIZE], NET_MAX_PAYLOAD);
+	}
 
 	// check if the compression was enabled, successful and good enough
 	if(CompressedSize > 0 && CompressedSize < pPacket->m_DataSize)
 	{
 		FinalSize = CompressedSize;
 		pPacket->m_Flags |= NET_PACKETFLAG_COMPRESSION;
+		if(pPacket->m_Compression == NET_COMPRESSION_ZSTD)
+			pPacket->m_Flags |= NET_PACKETFLAG_COMPRESSION_ZSTD;
 	}
 	else
 	{
 		// use uncompressed data
 		FinalSize = pPacket->m_DataSize;
 		mem_copy(&aBuffer[NET_PACKETHEADERSIZE], pPacket->m_aChunkData, pPacket->m_DataSize);
-		pPacket->m_Flags &= ~NET_PACKETFLAG_COMPRESSION;
 	}
 
 	// set header and send the packet if all things are good
@@ -307,7 +315,13 @@ int CNetBase::UnpackPacket(NETADDR *pAddr, unsigned char *pBuffer, CNetPacketCon
 		// TTTTTTTT TTTTTTTT TTTTTTTT TTTTTTTT
 		pPacket->m_ResponseToken = NET_TOKEN_NONE;
 
-		if(pPacket->m_Flags & NET_PACKETFLAG_COMPRESSION)
+		if(pPacket->m_Flags & NET_PACKETFLAG_COMPRESSION_ZSTD)
+		{
+			// A peer only sets this after seeing our capability bit, so it is
+			// always something this build can decode.
+			pPacket->m_DataSize = m_Zstd.Decompress(&pBuffer[NET_PACKETHEADERSIZE], pPacket->m_DataSize, pPacket->m_aChunkData, sizeof(pPacket->m_aChunkData));
+		}
+		else if(pPacket->m_Flags & NET_PACKETFLAG_COMPRESSION)
 			pPacket->m_DataSize = m_Huffman.Decompress(&pBuffer[NET_PACKETHEADERSIZE], pPacket->m_DataSize, pPacket->m_aChunkData, sizeof(pPacket->m_aChunkData));
 		else
 			mem_copy(pPacket->m_aChunkData, &pBuffer[NET_PACKETHEADERSIZE], pPacket->m_DataSize);
@@ -372,6 +386,12 @@ void CNetBase::SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ac
 	m_aRequestTokenBuf[1] = (MyToken >> 16) & 0xff;
 	m_aRequestTokenBuf[2] = (MyToken >> 8) & 0xff;
 	m_aRequestTokenBuf[3] = (MyToken) & 0xff;
+
+	// Advertise that this build can do zstd with the dictionary. It is only
+	// read out of a NET_CTRLMSG_CONNECT, but keeping it set for the token
+	// request as well is harmless and means the slot is never stale.
+	m_aRequestTokenBuf[NET_CTRL_REQUEST_CAPABILITY_OFFSET] = NET_CTRLFLAG_ZSTD_DICT;
+
 	SendControlMsg(pAddr, Token, 0, ControlMsg, m_aRequestTokenBuf, Extended ? sizeof(m_aRequestTokenBuf) : 4);
 }
 

@@ -5,6 +5,7 @@
 
 #include "huffman.h"
 #include "ringbuffer.h"
+#include "zstd_dict.h"
 
 /*
 
@@ -82,6 +83,13 @@ enum
 	NET_PACKETFLAG_COMPRESSION = 4,
 	NET_PACKETFLAG_CONNLESS = 8,
 
+	// The payload is compressed with zstd + embedded dictionary instead of the
+	// legacy Huffman coder. Only ever set on a connection that negotiated
+	// NET_CTRLFLAG_ZSTD_DICT during the handshake, so peers that did not
+	// negotiate keep exchanging plain NET_PACKETFLAG_COMPRESSION packets.
+	// Bit 4 was unused before the flag got 6 bits, so old peers just ignore it.
+	NET_PACKETFLAG_COMPRESSION_ZSTD = 16,
+
 	NET_MAX_PACKET_CHUNKS = 256,
 
 	// token
@@ -132,6 +140,33 @@ enum
 	NET_ENUM_TERMINATOR
 };
 
+// Packet payload codec, negotiated per connection during the handshake.
+enum
+{
+	NET_COMPRESSION_HUFFMAN = 0, // legacy coder, always available
+	NET_COMPRESSION_ZSTD = 1, // zstd with the embedded dictionary
+};
+
+// Capability bits exchanged while connecting. The client advertises its own
+// bits in NET_CTRLMSG_CONNECT (in the extended token request buffer, right
+// behind the 4 byte token), the server answers with the codec it picked in
+// NET_CTRLMSG_ACCEPT. A peer that does not understand the byte leaves it zero,
+// which means plain Huffman and therefore stays wire compatible.
+enum
+{
+	NET_CTRLFLAG_ZSTD_DICT = 1,
+};
+
+// Where the capability bits sit in the handshake. Chunk data starts with the
+// control byte, so the extended NET_CTRLMSG_CONNECT request buffer (which
+// begins with the 4 byte token) is shifted by one.
+enum
+{
+	NET_CTRL_REQUEST_CAPABILITY_OFFSET = 4, // inside m_aRequestTokenBuf
+	NET_CTRL_CONNECT_CAPABILITY_OFFSET = NET_CTRL_REQUEST_CAPABILITY_OFFSET + 1, // inside m_aChunkData
+	NET_CTRL_ACCEPT_CAPABILITY_OFFSET = 1, // inside m_aChunkData
+};
+
 typedef int (*NETFUNC_DELCLIENT)(int ClientID, const char *pReason, void *pUser);
 typedef int (*NETFUNC_NEWCLIENT)(int ClientID, void *pUser);
 
@@ -180,6 +215,10 @@ public:
 	int m_Ack;
 	int m_NumChunks;
 	int m_DataSize;
+	// Codec to use for this packet, set by the connection from its negotiated
+	// state. Zero (NET_COMPRESSION_HUFFMAN) for control packets and for
+	// connections that did not negotiate zstd.
+	int m_Compression;
 	unsigned char m_aChunkData[NET_MAX_PAYLOAD];
 };
 
@@ -202,6 +241,7 @@ class CNetBase
 	IOHANDLE m_DataLogSent;
 	IOHANDLE m_DataLogRecv;
 	CHuffman m_Huffman;
+	CZstdDict m_Zstd;
 	unsigned char m_aRequestTokenBuf[NET_TOKENREQUEST_DATASIZE];
 
 public:
@@ -322,6 +362,10 @@ private:
 	unsigned short m_PeerAck;
 	unsigned m_State;
 
+	// Negotiated packet payload codec (NET_COMPRESSION_*). Stays Huffman until
+	// the handshake agreed on zstd.
+	int m_Compression;
+
 	int m_RemoteClosed;
 	bool m_BlockCloseMsg;
 
@@ -351,6 +395,7 @@ private:
 	int QueueChunkEx(int Flags, int DataSize, const void *pData, int Sequence);
 	void SendControl(int ControlMsg, const void *pExtra, int ExtraSize);
 	void SendControlWithToken(int ControlMsg);
+	void SendAccept();
 	void ResendChunk(CNetChunkResend *pResend);
 	void Resend();
 
@@ -377,6 +422,7 @@ public:
 	const char *ErrorString();
 	void SignalResend();
 	int State() const { return m_State; }
+	int Compression() const { return m_Compression; }
 	const NETADDR *PeerAddress() const { return &m_PeerAddr; }
 
 	void ResetErrorString() { m_ErrorString[0] = 0; }

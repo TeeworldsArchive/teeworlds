@@ -39,7 +39,7 @@ libxinerama-dev libxss-dev libxkbcommon-dev libwayland-dev
 libdrm-dev libgbm-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev
 libfreetype6-dev libfreetype-dev libssl-dev libcurl4-openssl-dev
 libopus-dev libopusfile-dev libogg-dev
-zlib1g-dev
+zlib1g-dev libzstd-dev
 "
 
 # GLVND splits its development files into several packages, and which of them

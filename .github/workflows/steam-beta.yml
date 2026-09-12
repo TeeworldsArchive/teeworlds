@@ -224,6 +224,7 @@ jobs:
             cmake:p
             ninja:p
             zlib-ng:p
+            zstd:p
             freetype:p
             opus:p
             opusfile:p

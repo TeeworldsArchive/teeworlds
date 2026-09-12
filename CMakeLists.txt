@@ -263,6 +263,10 @@ find_package(Threads)
 find_package(Opus)
 find_package(Opusfile)
 
+# Required: the packet compression that is negotiated during the connection
+# handshake uses zstd with an embedded dictionary.
+find_package(zstd)
+
 # The Steamworks SDK cannot be redistributed with the source tree, so the path
 # has to be passed in explicitly. Only the client uses it (rich presence).
 if(STEAM)
@@ -367,9 +371,14 @@ show_dependency_status("SDL3" SDL3)
 show_dependency_status("Opus" OPUS)
 show_dependency_status("Opusfile" OPUSFILE)
 show_dependency_status("zlib-ng" zlib-ng)
+show_dependency_status("zstd" zstd)
 
 if(NOT(zlib-ng_FOUND))
   message(SEND_ERROR "You must install zlib-ng to compile Teeworlds")
+endif()
+
+if(NOT(zstd_FOUND))
+  message(SEND_ERROR "You must install libzstd to compile Teeworlds")
 endif()
 
 if(NOT(Python3_FOUND))
@@ -1393,6 +1402,8 @@ set_src(ENGINE_SHARED GLOB src/engine/shared
   storage.cpp
   uuid_manager.cpp
   uuid_manager.h
+  zstd_dict.cpp
+  zstd_dict.h
 )
 set(ENGINE_GENERATED_SHARED src/generated/nethash.cpp src/generated/protocol.cpp src/generated/protocol.h)
 set_src(GAME_SHARED GLOB src/game
@@ -1420,7 +1431,7 @@ set(GAME_GENERATED_SHARED
 set(DEPS ${DEP_JSON} ${DEP_MD5})
 
 # Libraries
-set(LIBS ${CMAKE_THREAD_LIBS_INIT} OpenSSL::Crypto CURL::libcurl zlib-ng::zlib ${PLATFORM_LIBS})
+set(LIBS ${CMAKE_THREAD_LIBS_INIT} OpenSSL::Crypto CURL::libcurl zlib-ng::zlib zstd::libzstd ${PLATFORM_LIBS})
 
 # Targets
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_GENERATED_SHARED} ${BASE})

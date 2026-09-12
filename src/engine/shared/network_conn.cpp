@@ -18,6 +18,7 @@ void CNetConnection::Reset()
 	m_RemoteClosed = 0;
 
 	m_State = NET_CONNSTATE_OFFLINE;
+	m_Compression = NET_COMPRESSION_HUFFMAN;
 	m_LastSendTime = 0;
 	m_LastRecvTime = 0;
 	m_LastUpdateTime = 0;
@@ -92,6 +93,7 @@ int CNetConnection::Flush()
 	// send of the packets
 	m_Construct.m_Ack = m_Ack;
 	m_Construct.m_Token = m_PeerToken;
+	m_Construct.m_Compression = m_Compression;
 	m_pNetBase->SendPacket(&m_PeerAddr, &m_Construct);
 
 	// update send times
@@ -175,6 +177,17 @@ void CNetConnection::SendControlWithToken(int ControlMsg)
 {
 	m_LastSendTime = time_get();
 	m_pNetBase->SendControlMsgWithToken(&m_PeerAddr, m_PeerToken, 0, ControlMsg, m_Token, true);
+}
+
+// Accept the connection and tell the client which payload codec the server
+// picked. A client that does not know the byte ignores it; zero means Huffman,
+// which is exactly the fallback.
+void CNetConnection::SendAccept()
+{
+	unsigned char Capabilities = 0;
+	if(m_Compression == NET_COMPRESSION_ZSTD)
+		Capabilities |= NET_CTRLFLAG_ZSTD_DICT;
+	SendControl(NET_CTRLMSG_ACCEPT, &Capabilities, sizeof(Capabilities));
 }
 
 void CNetConnection::ResendChunk(CNetChunkResend *pResend)
@@ -313,6 +326,13 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr)
 				{
 					if(CtrlMsg == NET_CTRLMSG_CONNECT)
 					{
+						// Read what the client advertised before Reset() clears
+						// the connection state. A peer that does not know the
+						// byte leaves it zero, which means Huffman.
+						int PeerCapabilities = 0;
+						if(pPacket->m_DataSize > NET_CTRL_CONNECT_CAPABILITY_OFFSET)
+							PeerCapabilities = pPacket->m_aChunkData[NET_CTRL_CONNECT_CAPABILITY_OFFSET];
+
 						// send response and init connection
 						TOKEN Token = m_Token;
 						Reset();
@@ -324,9 +344,15 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr)
 						m_LastSendTime = Now;
 						m_LastRecvTime = Now;
 						m_LastUpdateTime = Now;
-						SendControl(NET_CTRLMSG_ACCEPT, 0, 0);
+
+						// The client has to understand it too, so this stays on
+						// the legacy coder unless it advertised the capability.
+						if(PeerCapabilities & NET_CTRLFLAG_ZSTD_DICT)
+							m_Compression = NET_COMPRESSION_ZSTD;
+
+						SendAccept();
 						if(Config()->m_Debug)
-							dbg_msg("connection", "got connection, sending accept");
+							dbg_msg("connection", "got connection, sending accept (compression=%s)", m_Compression == NET_COMPRESSION_ZSTD ? "zstd+dict" : "huffman");
 					}
 				}
 				else if(State() == NET_CONNSTATE_CONNECT)
@@ -336,8 +362,18 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr)
 					{
 						m_LastRecvTime = Now;
 						m_State = NET_CONNSTATE_ONLINE;
+
+						// Switch to zstd only if the server confirmed it.
+						// Anything else stays Huffman, which is also what an
+						// old server that sends no byte implies.
+						int ServerCapabilities = 0;
+						if(pPacket->m_DataSize > NET_CTRL_ACCEPT_CAPABILITY_OFFSET)
+							ServerCapabilities = pPacket->m_aChunkData[NET_CTRL_ACCEPT_CAPABILITY_OFFSET];
+						if(ServerCapabilities & NET_CTRLFLAG_ZSTD_DICT)
+							m_Compression = NET_COMPRESSION_ZSTD;
+
 						if(Config()->m_Debug)
-							dbg_msg("connection", "got accept. connection online");
+							dbg_msg("connection", "got accept. connection online (compression=%s)", m_Compression == NET_COMPRESSION_ZSTD ? "zstd+dict" : "huffman");
 					}
 				}
 			}
@@ -429,7 +465,7 @@ int CNetConnection::Update()
 	else if(State() == NET_CONNSTATE_PENDING)
 	{
 		if(Now - m_LastSendTime > time_freq() / 2) // send a new connect/accept every 500ms
-			SendControl(NET_CTRLMSG_ACCEPT, 0, 0);
+			SendAccept();
 	}
 
 	return 0;

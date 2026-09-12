@@ -87,6 +87,7 @@ jobs:
           cmake:p
           ninja:p
           zlib-ng:p
+          zstd:p
           sdl3:p
           freetype:p
           opus:p
@@ -109,7 +110,7 @@ jobs:
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt install build-essential cmake git ccache libgl1-mesa-dev libfreetype6-dev libsdl3-dev libspng-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev -y
+        sudo apt install build-essential cmake git ccache libgl1-mesa-dev libfreetype6-dev libsdl3-dev libspng-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev libzstd-dev -y
         cd zlib-ng
         cmake . -DCMAKE_BUILD_TYPE=Release
         sudo make install
@@ -119,7 +120,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update || true
-        brew install pkg-config ccache sdl3 python3 ninja opus opusfile openssl curl libspng zlib-ng || true
+        brew install pkg-config ccache sdl3 python3 ninja opus opusfile openssl curl libspng zlib-ng zstd || true
         brew upgrade freetype
         sudo rm -rf /Library/Developer/CommandLineTools
 
@@ -253,6 +254,7 @@ jobs:
           cmake:p
           ninja:p
           zlib-ng:p
+          zstd:p
           sdl3:p
           freetype:p
           opus:p
@@ -274,7 +276,7 @@ jobs:
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update -y
-        sudo apt install build-essential cmake git libgl1-mesa-dev libfreetype6-dev libsdl3-dev libspng-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev -y
+        sudo apt install build-essential cmake git libgl1-mesa-dev libfreetype6-dev libsdl3-dev libspng-dev libopus-dev libopusfile-dev python3 libcurl4-openssl-dev libzstd-dev -y
         cd bam
         ./make_unix.sh
         cd ../zlib-ng
@@ -292,7 +294,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update
-        brew install sdl3 opus opusfile openssl curl libspng zlib-ng || true
+        brew install sdl3 opus opusfile openssl curl libspng zlib-ng zstd || true
         cd bam
         ./make_unix.sh
 
