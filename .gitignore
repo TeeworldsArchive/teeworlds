@@ -17,6 +17,8 @@ scripts/work/
 /SDL.dll
 /freetype.dll
 /autoexec.cfg
+# Only needed to develop with Steam rich presence, never shipped.
+steam_appid.txt
 Info.plist
 
 crapnet*

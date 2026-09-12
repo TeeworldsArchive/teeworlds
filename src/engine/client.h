@@ -189,6 +189,11 @@ public:
 	virtual const char *NetVersionHashUsed() const = 0;
 	virtual const char *NetVersionHashReal() const = 0;
 	virtual int ClientVersion() const = 0;
+
+	// Number of clients connected to the server we are playing on (players and
+	// spectators), 0 while not connected. This is the count the in-game menu
+	// shows as "Players".
+	virtual int GetNumPlayers() const = 0;
 };
 
 extern IGameClient *CreateGameClient();

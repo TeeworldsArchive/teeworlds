@@ -1736,6 +1736,41 @@ void CClient::Update()
 		m_pEditor->OnUpdate();
 	else
 		GameClient()->OnUpdate();
+
+	UpdateSteamPresence();
+}
+
+void CClient::UpdateSteamPresence()
+{
+	int Mode = CSteamPresence::MODE_NONE;
+	const char *pGameType = "";
+	const char *pMapName = "";
+	const char *pGroup = "";
+	int GroupSize = 0;
+
+	// The editor and everything that is not actually being played (menus,
+	// loading screen, server browser, ...) intentionally has no presence.
+	if(!m_EditorActive)
+	{
+		if(State() == IClient::STATE_ONLINE)
+		{
+			Mode = CSteamPresence::MODE_INGAME;
+			pGameType = m_CurrentServerInfo.m_aGameType;
+			pMapName = m_aCurrentMap;
+			// Group everybody who is on the same server together in the friends
+			// list. The address is the same for all of them, so Steam can match
+			// them up; the in-game server info reports 0 players, so the size
+			// comes from the game client instead.
+			pGroup = m_CurrentServerInfo.m_aAddress;
+			GroupSize = GameClient()->GetNumPlayers();
+		}
+		else if(State() == IClient::STATE_DEMOPLAYBACK)
+		{
+			Mode = CSteamPresence::MODE_DEMO;
+		}
+	}
+
+	m_SteamPresence.SetPresence(Mode, pGameType, pMapName, pGroup, GroupSize);
 }
 
 void CClient::VersionUpdate()
@@ -1902,6 +1937,10 @@ void CClient::Run()
 {
 	m_LocalStartTime = time_get();
 	m_SnapshotParts = 0;
+
+	// Initialize Steamworks before the graphics context is created so that the
+	// Steam overlay can hook into it. Failure is not fatal.
+	m_SteamPresence.Init();
 
 	// init SDL
 	{
@@ -2082,6 +2121,7 @@ void CClient::Run()
 			m_pTextRender->Update();
 
 			Update();
+			m_SteamPresence.RunCallbacks();
 
 			const bool SkipFrame = LimitFps();
 

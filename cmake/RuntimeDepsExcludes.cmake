@@ -87,8 +87,9 @@ elseif(TARGET_OS STREQUAL "linux")
     "libsystemd.*"
     "libpipewire.*"
     "libjack.*"
-    # Steamworks overlay + vendor drivers
-    "libsteam_api.*"
+    # Vendor drivers (host-provided). Note that libsteam_api is deliberately NOT
+    # excluded: the Steam client does not inject it, so a client built with
+    # STEAM=ON has to ship it (see STEAM_RUNTIME_DIR in CMakeLists.txt).
     "libnvidia.*"
     "libcuda.*"
   )

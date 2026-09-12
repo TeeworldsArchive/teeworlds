@@ -299,6 +299,7 @@ public:
 	virtual const char *NetVersionHashUsed() const;
 	virtual const char *NetVersionHashReal() const;
 	virtual int ClientVersion() const;
+	virtual int GetNumPlayers() const;
 	void GetPlayerLabel(char *aBuf, int BufferSize, int ClientID, const char *ClientName);
 	void StartRendering();
 

@@ -69,6 +69,7 @@ option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AU
 option(DEV "Don't generate stuff necessary for packaging" OFF)
 option(MACOS_DO_INSTALL "MacOS option" OFF)
 option(BUNDLE_RUNTIME_DEPS "Copy the required runtime libraries into the package (recommended for Steam)" ON)
+option(STEAM "Enable Steam rich presence (requires -DSTEAM_SDK_PATH=<steamworks sdk>)" OFF)
 
 set(OpenGL_GL_PREFERENCE GLVND)
 
@@ -258,6 +259,57 @@ find_package(SDL3)
 find_package(Threads)
 find_package(Opus)
 find_package(Opusfile)
+
+# The Steamworks SDK cannot be redistributed with the source tree, so the path
+# has to be passed in explicitly. Only the client uses it (rich presence).
+if(STEAM)
+  set(STEAM_SDK_PATH "" CACHE PATH "Root of the Steamworks SDK (contains public/ and redistributable_bin/)")
+  if(NOT STEAM_SDK_PATH)
+    message(FATAL_ERROR "STEAM=ON requires -DSTEAM_SDK_PATH=<path to the Steamworks SDK>")
+  endif()
+  if(NOT EXISTS "${STEAM_SDK_PATH}/public/steam/steam_api.h")
+    message(FATAL_ERROR "'${STEAM_SDK_PATH}' does not look like a Steamworks SDK: public/steam/steam_api.h is missing")
+  endif()
+
+  set(STEAM_INCLUDE_DIR "${STEAM_SDK_PATH}/public")
+
+  if(TARGET_OS STREQUAL "windows")
+    if(TARGET_BITS STREQUAL "64")
+      set(STEAM_RUNTIME_DIR "${STEAM_SDK_PATH}/redistributable_bin/win64")
+      set(STEAM_IMPORT_LIBRARY "${STEAM_RUNTIME_DIR}/steam_api64.lib")
+    else()
+      set(STEAM_RUNTIME_DIR "${STEAM_SDK_PATH}/redistributable_bin")
+      set(STEAM_IMPORT_LIBRARY "${STEAM_RUNTIME_DIR}/steam_api.lib")
+    endif()
+    # MinGW cannot always consume the MSVC import library. When one was
+    # generated next to it (gendef + dlltool) it is preferred.
+    if(MINGW AND EXISTS "${STEAM_RUNTIME_DIR}/libsteam_api.a")
+      set(STEAM_LIBRARY "${STEAM_RUNTIME_DIR}/libsteam_api.a")
+    else()
+      set(STEAM_LIBRARY "${STEAM_IMPORT_LIBRARY}")
+    endif()
+    if(NOT EXISTS "${STEAM_LIBRARY}" AND EXISTS "${STEAM_RUNTIME_DIR}/libsteam_api.a")
+      set(STEAM_LIBRARY "${STEAM_RUNTIME_DIR}/libsteam_api.a")
+    endif()
+  elseif(TARGET_OS STREQUAL "mac")
+    set(STEAM_RUNTIME_DIR "${STEAM_SDK_PATH}/redistributable_bin/osx")
+    set(STEAM_LIBRARY "${STEAM_RUNTIME_DIR}/libsteam_api.dylib")
+  else()
+    if(TARGET_BITS STREQUAL "64")
+      set(STEAM_RUNTIME_DIR "${STEAM_SDK_PATH}/redistributable_bin/linux64")
+    else()
+      set(STEAM_RUNTIME_DIR "${STEAM_SDK_PATH}/redistributable_bin/linux32")
+    endif()
+    set(STEAM_LIBRARY "${STEAM_RUNTIME_DIR}/libsteam_api.so")
+  endif()
+
+  if(NOT EXISTS "${STEAM_LIBRARY}")
+    message(FATAL_ERROR "Steamworks library not found at '${STEAM_LIBRARY}', is STEAM_SDK_PATH complete?")
+  endif()
+
+  message(STATUS "Steamworks SDK: ${STEAM_SDK_PATH}")
+  message(STATUS "Steamworks library: ${STEAM_LIBRARY}")
+endif()
 
 
 if(TARGET_OS AND TARGET_OS STREQUAL "mac")
@@ -1401,6 +1453,8 @@ if(CLIENT)
     serverbrowser_filter.h
     sound.cpp
     sound.h
+    steam.cpp
+    steam.h
     textrender.cpp
     textrender.h
   )
@@ -1542,6 +1596,12 @@ if(CLIENT)
     $<TARGET_OBJECTS:game-shared>
   )
   target_link_libraries(${TARGET_CLIENT} ${LIBS_CLIENT})
+
+  if(STEAM)
+    target_compile_definitions(${TARGET_CLIENT} PRIVATE CONF_STEAM)
+    target_include_directories(${TARGET_CLIENT} PRIVATE "${STEAM_INCLUDE_DIR}")
+    target_link_libraries(${TARGET_CLIENT} "${STEAM_LIBRARY}")
+  endif()
 
   list(APPEND TARGETS_OWN ${TARGET_CLIENT})
   list(APPEND TARGETS_LINK ${TARGET_CLIENT})
@@ -1932,6 +1992,11 @@ if(NOT DEV)
         list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_dep_prefix}/lib")
       endif()
     endforeach()
+    if(STEAM)
+      # libsteam_api lives in the SDK, which is not part of CMAKE_PREFIX_PATH.
+      file(TO_CMAKE_PATH "${STEAM_RUNTIME_DIR}" _steam_runtime_dir)
+      list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_steam_runtime_dir}")
+    endif()
     set(RUNTIME_DEPS_INSTALL_SCRIPT "${CMAKE_BINARY_DIR}/InstallRuntimeDeps.cmake")
     configure_file(
       "${PROJECT_SOURCE_DIR}/cmake/InstallRuntimeDeps.cmake.in"

@@ -5,6 +5,8 @@
 
 #include <base/hash.h>
 
+#include "steam.h"
+
 class CGraph
 {
 	enum
@@ -80,6 +82,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	class CServerBrowser m_ServerBrowser;
 	class CFriends m_Friends;
 	class CBlacklist m_Blacklist;
+	CSteamPresence m_SteamPresence;
 
 	char m_aServerAddressStr[256];
 	char m_aServerPassword[128];
@@ -267,6 +270,7 @@ public:
 	virtual void OnDemoPlayerMessage(void *pData, int Size);
 
 	void Update();
+	void UpdateSteamPresence();
 
 	void RegisterInterfaces();
 	void InitInterfaces();

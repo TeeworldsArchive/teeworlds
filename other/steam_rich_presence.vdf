@@ -1,0 +1,32 @@
+// Steam Rich Presence localization for the ArchiveClient.
+//
+// Reference: https://partner.steamgames.com/doc/api/ISteamFriends#richpresencelocalization
+// Test page: https://steamcommunity.com/dev/testrichpresence
+
+"lang"
+{
+	"english"
+	{
+		"tokens"
+		{
+			"#Status"		"Playing %mapname% in %gamemode%"
+			"#WatchingDemo"	"Watching a replay"
+		}
+	}
+	"schinese"
+	{
+		"tokens"
+		{
+			"#Status"		"正在 %gamemode% 中游玩 %mapname%"
+			"#WatchingDemo"	"正在观看回放"
+		}
+	}
+	"tchinese"
+	{
+		"tokens"
+		{
+			"#Status"		"正在 %gamemode% 中遊玩 %mapname%"
+			"#WatchingDemo"	"正在觀看回放"
+		}
+	}
+}

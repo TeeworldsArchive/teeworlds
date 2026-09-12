@@ -45,6 +45,18 @@ if ! first_existing /usr/lib/*/libOpenGL.so /usr/lib/libOpenGL.so > /dev/null; t
 	fi
 fi
 
+# Steam rich presence is only built when the workflow provides the Steamworks
+# SDK (it is not redistributable with the source tree). Without it the client
+# simply never advertises anything.
+if [ -n "${STEAMWORKS_SDK_ROOT:-}" ]; then
+	if [ ! -f "$STEAMWORKS_SDK_ROOT/public/steam/steam_api.h" ]; then
+		echo "STEAMWORKS_SDK_ROOT=$STEAMWORKS_SDK_ROOT does not contain public/steam/steam_api.h" >&2
+		exit 1
+	fi
+	echo "building with Steam rich presence (SDK: $STEAMWORKS_SDK_ROOT)"
+	extra_cmake_args+=("-DSTEAM=ON" "-DSTEAM_SDK_PATH=$STEAMWORKS_SDK_ROOT")
+fi
+
 cmake -S "$REPO_ROOT" -B "$BUILD_DIR" -G Ninja \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_PREFIX_PATH="$PREFIX" \

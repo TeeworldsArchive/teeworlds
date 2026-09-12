@@ -20,6 +20,15 @@ name: Steam Beta
 #   STEAM_CONFIG_VDF      optional: base64 of the account's config.vdf login token
 #   STEAM_GUARD_CODE      optional: Steam Guard code (when no cached token is used)
 #
+# Optional secrets for Steam rich presence ("playing <map> in <gamemode>"):
+#   STEAMWORKS_SDK_REPOSITORY  private repository holding the Steamworks SDK
+#                              (either the SDK at its root or in an sdk/ folder)
+#   STEAMWORKS_SDK_TOKEN       token that can read that repository
+# When the repository is not configured the packages are built without Steamworks
+# support: the game still runs, it just never sets a rich presence string. Note
+# that Steam cannot hand the SDK to the build for us, it is not redistributable
+# with the source tree.
+#
 # The "default" branch can never be set live automatically: SetLive only accepts
 # a beta branch, which is exactly what this workflow targets.
 
@@ -65,11 +74,46 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    # Secrets cannot be referenced in `if:` directly, so expose it as an env var.
+    env:
+      STEAMWORKS_SDK_REPOSITORY: ${{ secrets.STEAMWORKS_SDK_REPOSITORY }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Checkout Steamworks SDK
+        if: ${{ env.STEAMWORKS_SDK_REPOSITORY != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.STEAMWORKS_SDK_REPOSITORY }}
+          token: ${{ secrets.STEAMWORKS_SDK_TOKEN }}
+          path: steamworks-sdk
+          persist-credentials: false
+
+      - name: Locate Steamworks SDK
+        if: ${{ env.STEAMWORKS_SDK_REPOSITORY != '' }}
+        run: |
+          set -euo pipefail
+          # Accept both layouts: the SDK at the checkout root, or nested in sdk/.
+          if [ -f "$GITHUB_WORKSPACE/steamworks-sdk/public/steam/steam_api.h" ]; then
+            sdk_root="$GITHUB_WORKSPACE/steamworks-sdk"
+          elif [ -f "$GITHUB_WORKSPACE/steamworks-sdk/sdk/public/steam/steam_api.h" ]; then
+            sdk_root="$GITHUB_WORKSPACE/steamworks-sdk/sdk"
+          else
+            echo "Steamworks SDK checkout must contain public/steam/steam_api.h" >&2
+            exit 1
+          fi
+          # The build itself runs inside the Steam Runtime container, where the
+          # repository is mounted at /src.
+          sdk_subdir="${sdk_root#"$GITHUB_WORKSPACE"/}"
+          echo "STEAMWORKS_SDK_ROOT=/src/$sdk_subdir" >> "$GITHUB_ENV"
+          echo "using Steamworks SDK at $sdk_root"
+
+      - name: Note missing Steamworks SDK
+        if: ${{ env.STEAMWORKS_SDK_REPOSITORY == '' }}
+        run: echo "::warning::STEAMWORKS_SDK_REPOSITORY is not set, building without Steam rich presence"
 
       - name: Cache Linux dependencies
         uses: actions/cache@v4
@@ -92,6 +136,7 @@ jobs:
           docker run --rm --entrypoint bash \
             -v "$PWD:/src" -w /src \
             -e PREFIX=/src/.ci/linux-prefix \
+            -e STEAMWORKS_SDK_ROOT="${STEAMWORKS_SDK_ROOT:-}" \
             "$STEAM_BASE_IMAGE" \
             /src/scripts/ci/linux-build.sh
 
@@ -106,6 +151,12 @@ jobs:
           # The executables must look for the bundled libraries relative to themselves.
           readelf -d .ci/staging/linux/ArchiveClient | grep -q '\$ORIGIN/lib'
           echo "ArchiveClient runs from \$ORIGIN/lib"
+          if [ -n "${STEAMWORKS_SDK_ROOT:-}" ]; then
+            # A Steam build must ship libsteam_api: the client does not provide it.
+            test -f .ci/staging/linux/lib/libsteam_api.so
+            readelf -d .ci/staging/linux/ArchiveClient | grep -q 'libsteam_api.so'
+            echo "Steam rich presence library bundled"
+          fi
 
       - name: Upload Linux package
         uses: actions/upload-artifact@v4
@@ -119,6 +170,9 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 90
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    # Secrets cannot be referenced in `if:` directly, so expose it as an env var.
+    env:
+      STEAMWORKS_SDK_REPOSITORY: ${{ secrets.STEAMWORKS_SDK_REPOSITORY }}
     defaults:
       run:
         shell: msys2 {0}
@@ -127,6 +181,38 @@ jobs:
         with:
           submodules: true
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Checkout Steamworks SDK
+        if: ${{ env.STEAMWORKS_SDK_REPOSITORY != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.STEAMWORKS_SDK_REPOSITORY }}
+          token: ${{ secrets.STEAMWORKS_SDK_TOKEN }}
+          path: steamworks-sdk
+          persist-credentials: false
+
+      - name: Locate Steamworks SDK
+        if: ${{ env.STEAMWORKS_SDK_REPOSITORY != '' }}
+        shell: pwsh
+        run: |
+          $checkoutRoot = Join-Path $env:GITHUB_WORKSPACE "steamworks-sdk"
+          # Accept both layouts: the SDK at the checkout root, or nested in sdk/.
+          $rootManifest = Join-Path $checkoutRoot "public/steam/steam_api.h"
+          $nestedRoot = Join-Path $checkoutRoot "sdk"
+          $nestedManifest = Join-Path $nestedRoot "public/steam/steam_api.h"
+          if (Test-Path $rootManifest) {
+            $sdkRoot = $checkoutRoot
+          } elseif (Test-Path $nestedManifest) {
+            $sdkRoot = $nestedRoot
+          } else {
+            throw "Steamworks SDK checkout must contain public/steam/steam_api.h"
+          }
+          "STEAMWORKS_SDK_ROOT=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "using Steamworks SDK at $sdkRoot"
+
+      - name: Note missing Steamworks SDK
+        if: ${{ env.STEAMWORKS_SDK_REPOSITORY == '' }}
+        run: echo "::warning::STEAMWORKS_SDK_REPOSITORY is not set, building without Steam rich presence"
 
       - name: Prepare MSYS2 (UCRT64)
         uses: msys2/setup-msys2@v2
@@ -162,11 +248,16 @@ jobs:
           # cygpath -m keeps forward slashes: native CMake accepts them and they
           # avoid backslash-escaping surprises in generated install scripts.
           prefix="$(cygpath -m "$PWD/.ci/win-prefix")"
+          steam_args=()
+          if [ -n "${STEAMWORKS_SDK_ROOT:-}" ]; then
+            steam_args+=("-DSTEAM=ON" "-DSTEAM_SDK_PATH=$(cygpath -m "$STEAMWORKS_SDK_ROOT")")
+          fi
           cmake -S . -B .ci-build/win -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="$prefix" \
             -DDEV=OFF \
-            -DBUNDLE_RUNTIME_DEPS=ON
+            -DBUNDLE_RUNTIME_DEPS=ON \
+            "${steam_args[@]}"
           cmake --build .ci-build/win --target ArchiveClient ArchiveServer -j "$(nproc)"
 
       - name: Stage the package
@@ -177,6 +268,11 @@ jobs:
           dlls=$(find .ci/staging/windows -maxdepth 1 -iname '*.dll' | wc -l)
           echo "bundled DLLs: $dlls"
           test "$dlls" -ge 1
+          if [ -n "${STEAMWORKS_SDK_ROOT:-}" ]; then
+            # A Steam build must ship steam_api64.dll: the client does not provide it.
+            test -f .ci/staging/windows/steam_api64.dll
+            echo "Steam rich presence DLL bundled"
+          fi
           ls .ci/staging/windows
 
       - name: Upload Windows package
