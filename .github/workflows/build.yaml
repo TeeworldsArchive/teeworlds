@@ -165,9 +165,24 @@ jobs:
     - name: Package
       run: |
         cd release
-        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -DMACOS_DO_INSTALL=ON -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        # The Windows package must carry every MSYS2 runtime DLL. file(
+        # GET_RUNTIME_DEPENDENCIES) does not search PATH, so point the bundling at
+        # the MSYS2 prefix and make an unresolved dependency fail the install
+        # instead of silently shipping a package that needs MSYS2 installed.
+        runtime_deps=()
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          runtime_deps+=("-DRUNTIME_DEPS_STRICT=ON")
+          runtime_deps+=("-DRUNTIME_DEPS_EXTRA_DIRS=$(cygpath -m "${MINGW_PREFIX:-/ucrt64}")/bin")
+        fi
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -DMACOS_DO_INSTALL=ON -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. "${runtime_deps[@]}" ..
         cmake --build . --config Release --target everything
         cpack -V
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          archive=$(ls teeworlds-archive-*-win64.7z)
+          dlls=$(7z l -ba "$archive" | grep -ci '\.dll' || true)
+          echo "bundled DLLs in $archive: $dlls"
+          test "$dlls" -ge 5
+        fi
         mkdir artifacts
         mv ${{ matrix.package-file }} artifacts
 

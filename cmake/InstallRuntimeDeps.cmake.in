@@ -12,6 +12,15 @@
 set(_target_os "@TARGET_OS@")
 set(_exe_suffix "@CMAKE_EXECUTABLE_SUFFIX@")
 
+# CMP0207 (CMake >= 4.1) only changes whether GET_RUNTIME_DEPENDENCIES normalizes
+# the resolved paths before matching the include/exclude regexes. We want the
+# normalized form (forward slashes, see RuntimeDepsExcludes.cmake), and opting in
+# also silences the policy warning that would otherwise be printed for every
+# resolved Windows system DLL.
+if(POLICY CMP0207)
+  cmake_policy(SET CMP0207 NEW)
+endif()
+
 # CPack stages the package with DESTDIR, so the real location on disk is
 # $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}. We only ever write through `cmake -E`
 # or file(MAKE_DIRECTORY), neither of which applies DESTDIR itself, so _root is
@@ -111,7 +120,13 @@ file(GET_RUNTIME_DEPENDENCIES
 )
 
 if(_unresolved)
-  message(WARNING "InstallRuntimeDeps: could not resolve:\n  ${_unresolved}")
+  # Single string on purpose: separate arguments would become a CMake list and
+  # message() would print the list separator between the lines.
+  set(_unresolved_message "InstallRuntimeDeps: could not resolve the following runtime dependencies:\n  ${_unresolved}\nThey will NOT be part of the package, so it may not start on a clean machine.\nAdd their directory to -DRUNTIME_DEPS_EXTRA_DIRS=<dir> or CMAKE_PREFIX_PATH.")
+  if("@RUNTIME_DEPS_STRICT@")
+    message(FATAL_ERROR "${_unresolved_message}")
+  endif()
+  message(WARNING "${_unresolved_message}")
 endif()
 
 find_program(_patchelf patchelf)
@@ -137,6 +152,7 @@ foreach(_dep IN LISTS _resolved)
     message(WARNING "InstallRuntimeDeps: failed to copy '${_dep}'")
     continue()
   endif()
+  list(APPEND _bundled_names "${_dep_name}")
 
   if(_target_os STREQUAL "linux" AND _patchelf)
     # $ORIGIN as DT_RPATH (--force-rpath) so the bundled libraries can find each
@@ -181,3 +197,7 @@ endif()
 
 list(LENGTH _resolved _resolved_count)
 message(STATUS "InstallRuntimeDeps: bundled ${_resolved_count} runtime libraries into '${_dest}'")
+if(_bundled_names)
+  list(SORT _bundled_names)
+  message(STATUS "InstallRuntimeDeps: ${_bundled_names}")
+endif()

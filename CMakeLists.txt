@@ -69,6 +69,9 @@ option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AU
 option(DEV "Don't generate stuff necessary for packaging" OFF)
 option(MACOS_DO_INSTALL "MacOS option" OFF)
 option(BUNDLE_RUNTIME_DEPS "Copy the required runtime libraries into the package (recommended for Steam)" ON)
+option(RUNTIME_DEPS_STRICT "Fail the install when a required runtime library cannot be resolved" OFF)
+set(RUNTIME_DEPS_EXTRA_DIRS "" CACHE STRING
+  "Extra directories searched when bundling runtime libraries (BUNDLE_RUNTIME_DEPS)")
 option(STEAM "Enable Steam rich presence (requires -DSTEAM_SDK_PATH=<steamworks sdk>)" OFF)
 
 set(OpenGL_GL_PREFERENCE GLVND)
@@ -1982,6 +1985,8 @@ if(NOT DEV)
     # RPATH, so libraries that only exist in a custom prefix have to be found via
     # an explicit search path. Paths are normalized to forward slashes because the
     # list is substituted into the install script through configure_file().
+    # Earlier entries win, so the prefixes the build was configured against come
+    # first.
     set(RUNTIME_DEPS_SEARCH_DIRS "")
     foreach(_dep_prefix IN LISTS CMAKE_PREFIX_PATH)
       file(TO_CMAKE_PATH "${_dep_prefix}" _dep_prefix)
@@ -1992,6 +1997,32 @@ if(NOT DEV)
         list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_dep_prefix}/lib")
       endif()
     endforeach()
+    if(TARGET_OS STREQUAL "windows")
+      # file(GET_RUNTIME_DEPENDENCIES) does *not* search PATH on Windows: it only
+      # looks next to the depending file, in System32/the Windows directory and in
+      # the DIRECTORIES below. MSYS2/MinGW keeps the DLLs of every third-party
+      # package (zlib-ng, libspng, freetype, opus, openssl, curl, ...) in the same
+      # directory as the compiler, so derive that directory from the compiler
+      # itself. Without this the packaged Windows build silently misses all of
+      # them and only runs on machines that happen to have MSYS2 installed.
+      set(_runtime_deps_compiler "${CMAKE_C_COMPILER}")
+      if(NOT IS_ABSOLUTE "${_runtime_deps_compiler}")
+        find_program(_runtime_deps_compiler NAMES "${CMAKE_C_COMPILER}")
+      endif()
+      if(_runtime_deps_compiler)
+        get_filename_component(_runtime_deps_compiler_dir "${_runtime_deps_compiler}" DIRECTORY)
+        file(TO_CMAKE_PATH "${_runtime_deps_compiler_dir}" _runtime_deps_compiler_dir)
+        list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_runtime_deps_compiler_dir}")
+      endif()
+    endif()
+    # Explicit escape hatch, e.g. -DRUNTIME_DEPS_EXTRA_DIRS=C:/msys64/ucrt64/bin.
+    foreach(_extra_dir IN LISTS RUNTIME_DEPS_EXTRA_DIRS)
+      file(TO_CMAKE_PATH "${_extra_dir}" _extra_dir)
+      list(APPEND RUNTIME_DEPS_SEARCH_DIRS "${_extra_dir}")
+    endforeach()
+    if(RUNTIME_DEPS_SEARCH_DIRS)
+      list(REMOVE_DUPLICATES RUNTIME_DEPS_SEARCH_DIRS)
+    endif()
     if(STEAM)
       # libsteam_api lives in the SDK, which is not part of CMAKE_PREFIX_PATH.
       file(TO_CMAKE_PATH "${STEAM_RUNTIME_DIR}" _steam_runtime_dir)

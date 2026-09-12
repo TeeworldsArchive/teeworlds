@@ -248,6 +248,12 @@ jobs:
           # cygpath -m keeps forward slashes: native CMake accepts them and they
           # avoid backslash-escaping surprises in generated install scripts.
           prefix="$(cygpath -m "$PWD/.ci/win-prefix")"
+          # MSYS2 installs every pacboy DLL into <prefix>/bin (e.g. /ucrt64/bin).
+          # file(GET_RUNTIME_DEPENDENCIES) does not search PATH on Windows, so
+          # point the runtime bundling at that directory explicitly. CMakeLists
+          # also derives it from the compiler, this keeps it obvious and lets a
+          # differently laid out toolchain be handled with one variable.
+          msys_prefix="$(cygpath -m "${MINGW_PREFIX:-/ucrt64}")"
           steam_args=()
           if [ -n "${STEAMWORKS_SDK_ROOT:-}" ]; then
             steam_args+=("-DSTEAM=ON" "-DSTEAM_SDK_PATH=$(cygpath -m "$STEAMWORKS_SDK_ROOT")")
@@ -257,17 +263,43 @@ jobs:
             -DCMAKE_PREFIX_PATH="$prefix" \
             -DDEV=OFF \
             -DBUNDLE_RUNTIME_DEPS=ON \
+            -DRUNTIME_DEPS_STRICT=ON \
+            -DRUNTIME_DEPS_EXTRA_DIRS="$msys_prefix/bin" \
             "${steam_args[@]}"
           cmake --build .ci-build/win --target ArchiveClient ArchiveServer -j "$(nproc)"
 
       - name: Stage the package
         run: |
-          export PATH="$PWD/.ci/win-prefix/bin:/ucrt64/bin:$PATH"
+          export PATH="$PWD/.ci/win-prefix/bin:${MINGW_PREFIX:-/ucrt64}/bin:$PATH"
           rm -rf .ci/staging/windows
+          # -DRUNTIME_DEPS_STRICT=ON makes the install fail if any dependency is
+          # unresolved; the assertions below additionally pin the MSYS2-provided
+          # DLLs so a wrong search path can never silently ship a package that
+          # only runs on a machine with MSYS2 installed.
           cmake --install .ci-build/win --component portable --prefix "$(cygpath -m "$PWD/.ci/staging/windows")"
           dlls=$(find .ci/staging/windows -maxdepth 1 -iname '*.dll' | wc -l)
           echo "bundled DLLs: $dlls"
-          test "$dlls" -ge 1
+          test "$dlls" -ge 5
+          missing=0
+          for pattern in \
+            'SDL3.dll' \
+            'libspng*.dll' \
+            'libopus-*.dll' \
+            'libopusfile-*.dll' \
+            'libfreetype-*.dll' \
+            'libz-ng*.dll' \
+            'libssl-*.dll' \
+            'libcrypto-*.dll' \
+            'libcurl-*.dll' \
+            'libgcc_s_*.dll' \
+            'libstdc++-*.dll' \
+            'libwinpthread-*.dll'; do
+            if ! compgen -G ".ci/staging/windows/$pattern" > /dev/null; then
+              echo "::error::runtime DLL not bundled: $pattern"
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
           if [ -n "${STEAMWORKS_SDK_ROOT:-}" ]; then
             # A Steam build must ship steam_api64.dll: the client does not provide it.
             test -f .ci/staging/windows/steam_api64.dll
