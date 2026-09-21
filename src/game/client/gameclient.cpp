@@ -2,7 +2,6 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <engine/contacts.h>
 #include <engine/demo.h>
-#include <engine/editor.h>
 #include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/map.h>
@@ -233,7 +232,6 @@ void CGameClient::OnConsoleInit()
 	m_pDemoPlayer = Kernel()->RequestInterface<IDemoPlayer>();
 	m_pDemoRecorder = Kernel()->RequestInterface<IDemoRecorder>();
 	m_pServerBrowser = Kernel()->RequestInterface<IServerBrowser>();
-	m_pEditor = Kernel()->RequestInterface<IEditor>();
 	m_pFriends = Kernel()->RequestInterface<IFriends>();
 	m_pBlacklist = Kernel()->RequestInterface<IBlacklist>();
 
@@ -379,7 +377,7 @@ void CGameClient::OnInit()
 		Client()->SnapSetStaticsize(i, m_NetObjHandler.GetObjSize(i));
 
 	// determine total work for loading all components
-	int TotalWorkAmount = g_pData->m_NumImages + 4 + 1 + 1 + 2; // +4=load init, +1=font, +1=localization, +2=editor
+	int TotalWorkAmount = g_pData->m_NumImages + 4 + 1 + 1; // +4=load init, +1=font, +1=localization
 	for(int i = m_All.m_Num - 1; i >= 0; --i)
 		TotalWorkAmount += m_All.m_apComponents[i]->GetInitAmount();
 
@@ -404,10 +402,6 @@ void CGameClient::OnInit()
 		g_pData->m_aImages[i].m_Id = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, g_pData->m_aImages[i].m_Flag ? IGraphics::TEXLOAD_LINEARMIPMAPS : 0);
 		m_pMenus->RenderLoading(1);
 	}
-
-	// init the editor
-	m_pEditor->Init();
-	m_pMenus->RenderLoading(2);
 
 	OnReset();
 
@@ -623,7 +617,7 @@ void CGameClient::StartRendering()
 
 void CGameClient::OnRender()
 {
-	CUIElementBase::Init(UI()); // update static pointer because game and editor use separate UI
+	CUIElementBase::Init(UI()); // update static pointer to this UI instance
 
 	// update the local character and spectate position
 	UpdatePositions();
@@ -1062,7 +1056,7 @@ void CGameClient::OnEnterGame() {}
 
 void CGameClient::OnGameOver()
 {
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK && Config()->m_ClEditor == 0)
+	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		Client()->AutoScreenshot_Start();
 }
 
@@ -1724,15 +1718,6 @@ vec2 CGameClient::GetCharPos(int ClientID, bool Predicted) const
 			vec2(m_Snap.m_aCharacters[ClientID].m_Cur.m_X, m_Snap.m_aCharacters[ClientID].m_Cur.m_Y),
 			Client()->IntraGameTick());
 	}
-}
-
-void CGameClient::OnActivateEditor()
-{
-	OnRelease();
-
-	CLineInput *pActiveInput = CLineInput::GetActiveInput();
-	if(pActiveInput)
-		pActiveInput->Deactivate();
 }
 
 void CGameClient::CClientData::UpdateBotRenderInfo(CGameClient *pGameClient, int ClientID)

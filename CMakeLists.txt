@@ -909,17 +909,6 @@ set(EXPECTED_DATA
   countryflags/default.png
   countryflags/index.json
   deadtee.png
-  editor/automap/desert_main.json
-  editor/automap/grass_doodads.json
-  editor/automap/grass_main.json
-  editor/automap/jungle_deathtiles.json
-  editor/automap/jungle_main.json
-  editor/automap/winter_main.json
-  editor/background.png
-  editor/checker.png
-  editor/cursor.png
-  editor/entities.png
-  editor/entities/reinfected.png
   emoticons.png
   fonts/DejaVuSans.ttf
   fonts/SourceHanSans.ttc
@@ -1173,7 +1162,6 @@ set(EXPECTED_DATA
   ui/icons/timer_clock.png
   ui/icons/tools.png
   ui/menuimages/demos.png
-  ui/menuimages/editor.png
   ui/menuimages/local_server.png
   ui/menuimages/play_game.png
   ui/menuimages/settings.png
@@ -1326,7 +1314,6 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   console.h
   contacts.h
   demo.h
-  editor.h
   engine.h
   graphics.h
   input.h
@@ -1558,22 +1545,11 @@ if(CLIENT)
     ui_scrollregion.cpp
     ui_scrollregion.h
   )
-  set_src(GAME_EDITOR GLOB src/game/editor
-    auto_map.cpp
-    auto_map.h
-    editor.cpp
-    editor.h
-    io.cpp
-    layer_game.cpp
-    layer_quads.cpp
-    layer_tiles.cpp
-    popups.cpp
-  )
   set(GAME_GENERATED_CLIENT
     src/generated/client_data.cpp
     src/generated/client_data.h
   )
-  set(CLIENT_SRC ${PLATFORM_CLIENT} ${ENGINE_CLIENT} ${GAME_CLIENT} ${GAME_EDITOR} ${GAME_GENERATED_CLIENT})
+  set(CLIENT_SRC ${PLATFORM_CLIENT} ${ENGINE_CLIENT} ${GAME_CLIENT} ${GAME_GENERATED_CLIENT})
 
   set(DEPS_CLIENT ${DEPS} ${DEP_GLAD})
 

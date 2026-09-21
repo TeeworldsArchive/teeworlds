@@ -164,8 +164,6 @@ void CSounds::EnqueueSample(int Channel, ISound::CSampleHandle Sample)
 		return;
 	if(m_QueuePos >= QUEUE_SIZE)
 		return;
-	if(Channel != CHN_MUSIC && Config()->m_ClEditor)
-		return;
 	if(!Sample.IsValid())
 		return;
 

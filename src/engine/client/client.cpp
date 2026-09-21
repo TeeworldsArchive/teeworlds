@@ -12,7 +12,6 @@
 #include <engine/client.h>
 #include <engine/config.h>
 #include <engine/console.h>
-#include <engine/editor.h>
 #include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/input.h>
@@ -238,7 +237,6 @@ void CSmoothTime::Update(CGraph *pGraph, int64 Target, int TimeLeft, int AdjustD
 
 CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta)
 {
-	m_pEditor = 0;
 	m_pInput = 0;
 	m_pGraphics = 0;
 	m_pSound = 0;
@@ -263,7 +261,6 @@ CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotD
 	m_SnapCrcErrors = 0;
 	m_AutoScreenshotRecycle = false;
 	m_AutoStatScreenshotRecycle = false;
-	m_EditorActive = false;
 
 	m_AckGameTick = -1;
 	m_CurrentRecvTick = 0;
@@ -785,14 +782,7 @@ const char *CClient::ErrorString() const
 
 void CClient::Render()
 {
-	if(m_EditorActive)
-	{
-		m_pEditor->OnRender();
-	}
-	else
-	{
-		GameClient()->OnRender();
-	}
+	GameClient()->OnRender();
 	DebugRender();
 }
 
@@ -1731,11 +1721,8 @@ void CClient::Update()
 	// update the server browser
 	m_ServerBrowser.Update();
 
-	// update editor/gameclient
-	if(m_EditorActive)
-		m_pEditor->OnUpdate();
-	else
-		GameClient()->OnUpdate();
+	// update gameclient
+	GameClient()->OnUpdate();
 
 	UpdateSteamPresence();
 }
@@ -1748,26 +1735,23 @@ void CClient::UpdateSteamPresence()
 	const char *pGroup = "";
 	int GroupSize = 0;
 
-	// The editor and everything that is not actually being played (menus,
-	// loading screen, server browser, ...) intentionally has no presence.
-	if(!m_EditorActive)
+	// Everything that is not actually being played (menus, loading screen,
+	// server browser, ...) intentionally has no presence.
+	if(State() == IClient::STATE_ONLINE)
 	{
-		if(State() == IClient::STATE_ONLINE)
-		{
-			Mode = CSteamPresence::MODE_INGAME;
-			pGameType = m_CurrentServerInfo.m_aGameType;
-			pMapName = m_aCurrentMap;
-			// Group everybody who is on the same server together in the friends
-			// list. The address is the same for all of them, so Steam can match
-			// them up; the in-game server info reports 0 players, so the size
-			// comes from the game client instead.
-			pGroup = m_CurrentServerInfo.m_aAddress;
-			GroupSize = GameClient()->GetNumPlayers();
-		}
-		else if(State() == IClient::STATE_DEMOPLAYBACK)
-		{
-			Mode = CSteamPresence::MODE_DEMO;
-		}
+		Mode = CSteamPresence::MODE_INGAME;
+		pGameType = m_CurrentServerInfo.m_aGameType;
+		pMapName = m_aCurrentMap;
+		// Group everybody who is on the same server together in the friends
+		// list. The address is the same for all of them, so Steam can match
+		// them up; the in-game server info reports 0 players, so the size
+		// comes from the game client instead.
+		pGroup = m_CurrentServerInfo.m_aAddress;
+		GroupSize = GameClient()->GetNumPlayers();
+	}
+	else if(State() == IClient::STATE_DEMOPLAYBACK)
+	{
+		Mode = CSteamPresence::MODE_DEMO;
 	}
 
 	m_SteamPresence.SetPresence(Mode, pGameType, pMapName, pGroup, GroupSize);
@@ -1831,7 +1815,6 @@ void CClient::InitInterfaces()
 {
 	// fetch interfaces
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
-	m_pEditor = Kernel()->RequestInterface<IEditor>();
 	// m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	m_pSound = Kernel()->RequestInterface<IEngineSound>();
 	m_pTextRender = Kernel()->RequestInterface<IEngineTextRender>();
@@ -2022,9 +2005,6 @@ void CClient::Run()
 	//
 	m_FpsGraph.Init(0.0f, 120.0f);
 
-	// never start with the editor
-	Config()->m_ClEditor = 0;
-
 	// process pending commands
 	m_pConsole->StoreCommands(false);
 
@@ -2098,26 +2078,8 @@ void CClient::Run()
 		if(IsCtrlPressed && IsLShiftPressed && Input()->KeyPress(KEY_G, true))
 			Config()->m_DbgGraphs ^= 1;
 
-		if(IsCtrlPressed && IsLShiftPressed && Input()->KeyPress(KEY_E, true))
-		{
-			Config()->m_ClEditor = Config()->m_ClEditor ^ 1;
-			Input()->MouseModeRelative();
-		}
-
 		// render
 		{
-			if(Config()->m_ClEditor)
-			{
-				if(!m_EditorActive)
-				{
-					GameClient()->OnActivateEditor();
-					Input()->MouseModeRelative();
-					m_EditorActive = true;
-				}
-			}
-			else if(m_EditorActive)
-				m_EditorActive = false;
-
 			m_pTextRender->Update();
 
 			Update();
@@ -2735,7 +2697,6 @@ int main(int argc, const char **argv)
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IEngineMasterServer *>(pEngineMasterServer)); // register as both
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IMasterServer *>(pEngineMasterServer));
 
-		RegisterFail = RegisterFail || !pKernel->RegisterInterface(CreateEditor());
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(CreateGameClient());
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pStorage);
 

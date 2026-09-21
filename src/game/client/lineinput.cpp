@@ -428,7 +428,7 @@ void CLineInput::RenderCandidates()
 {
 	// Check if the active line input was not rendered and deactivate it in that case.
 	// This can happen e.g. when an input in the ingame menu is active and the menu is
-	// closed or when switching between menu and editor with an active input.
+	// closed or when switching between two menus with an active input.
 	CLineInput *pActiveInput = GetActiveInput();
 	if(pActiveInput != nullptr)
 	{

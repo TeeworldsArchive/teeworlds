@@ -55,7 +55,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 {
 	// needed interfaces
 	IEngine *m_pEngine;
-	IEditor *m_pEditor;
 	IEngineInput *m_pInput;
 	IEngineGraphics *m_pGraphics;
 	IEngineSound *m_pSound;
@@ -102,7 +101,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	int m_SnapCrcErrors;
 	bool m_AutoScreenshotRecycle;
 	bool m_AutoStatScreenshotRecycle;
-	bool m_EditorActive;
 	bool m_SoundInitFailed;
 	bool m_RecordGameMessage;
 

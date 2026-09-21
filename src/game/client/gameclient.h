@@ -44,7 +44,6 @@ class CGameClient : public IGameClient
 	class IDemoPlayer *m_pDemoPlayer;
 	class IDemoRecorder *m_pDemoRecorder;
 	class IServerBrowser *m_pServerBrowser;
-	class IEditor *m_pEditor;
 	class IFriends *m_pFriends;
 	class IBlacklist *m_pBlacklist;
 
@@ -96,7 +95,6 @@ public:
 	class CRenderTools *RenderTools() { return &m_RenderTools; }
 	class CLayers *Layers() { return &m_Layers; }
 	class CCollision *Collision() { return &m_Collision; }
-	class IEditor *Editor() { return m_pEditor; }
 	class IFriends *Friends() { return m_pFriends; }
 	class IBlacklist *Blacklist() { return m_pBlacklist; }
 
@@ -285,7 +283,6 @@ public:
 	virtual void OnNewSnapshot();
 	virtual void OnDemoRecSnap();
 	virtual void OnPredict();
-	virtual void OnActivateEditor();
 	virtual int OnSnapInput(int *pData);
 	virtual void OnShutdown();
 	virtual void OnEnterGame();

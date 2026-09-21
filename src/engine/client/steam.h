@@ -6,7 +6,7 @@
 
 	While the player is connected to a server the Steam friends list shows what
 	they are playing; during demo playback that they are watching a replay. In
-	every other state (menus, loading screen, server browser, editor, ...) no
+	every other state (menus, loading screen, server browser, ...) no
 	rich presence is set at all.
 
 */

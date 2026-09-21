@@ -378,9 +378,8 @@ function BuildClient(settings, family, platform)
 	local client = Compile(settings, Collect("src/engine/client/*.cpp"))
 	
 	local game_client = Compile(settings, CollectRecursive("src/game/client/*.cpp"), SharedClientFiles())
-	local game_editor = Compile(settings, Collect("src/game/editor/*.cpp"))
 	
-	Link(settings, "ArchiveClient", libs["json"], libs["md5"], libs["glad"], client, game_client, game_editor)
+	Link(settings, "ArchiveClient", libs["json"], libs["md5"], libs["glad"], client, game_client)
 end
 
 function BuildServer(settings, family, platform)

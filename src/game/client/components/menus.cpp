@@ -8,7 +8,6 @@
 
 #include <engine/config.h>
 #include <engine/contacts.h>
-#include <engine/editor.h>
 #include <engine/engine.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
@@ -1266,19 +1265,8 @@ void CMenus::RenderMenu(CUIRect Screen)
 		}
 		else if(m_Popup == POPUP_QUIT)
 		{
-			// additional info
 			CUIRect Label;
-			if(m_pClient->Editor()->HasUnsavedData())
-			{
-				Box.HSplitTop(12.0f, 0, &Part);
-				Part.HSplitTop(20.0f, &Label, &Part);
-				Part.VMargin(5.0f, &Part);
-				UI()->DoLabel(&Part, Localize("There's an unsaved map in the editor; you may want to save it before you quit the game."), FontSize, TEXTALIGN_ML, Part.w);
-			}
-			else
-			{
-				Box.HSplitTop(27.0f, 0, &Label);
-			}
+			Box.HSplitTop(27.0f, 0, &Label);
 			UI()->DoLabel(&Label, Localize("Are you sure that you want to quit?"), FontSize, TEXTALIGN_CENTER);
 
 			// buttons
