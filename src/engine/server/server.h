@@ -145,6 +145,11 @@ public:
 
 	CSnapshotDelta m_SnapshotDelta;
 	CSnapshotBuilder m_SnapshotBuilder;
+	// reusable per-tick buffers, grown on demand instead of fixed 64 KiB stack buffers
+	array<unsigned char> m_SnapshotBuildData;
+	array<unsigned char> m_SnapshotDeltaData;
+	array<unsigned char> m_SnapshotCompData;
+	array<unsigned char> m_DemoSnapshotData;
 	CSnapIDPool m_IDPool;
 	CNetServer m_NetServer;
 	CEcon m_Econ;

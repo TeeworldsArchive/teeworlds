@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_GAMECLIENT_H
 #define GAME_CLIENT_GAMECLIENT_H
 
+#include <base/tl/hashtable.h>
 #include <base/vmath.h>
 #include <engine/client.h>
 #include <engine/console.h>
@@ -143,8 +144,7 @@ public:
 
 	struct CPlayerInfoItem
 	{
-		const CNetObj_PlayerInfo *m_pPlayerInfo;
-		const CNetObj_PlayerInfoExtra *m_pPlayerInfoExtra;
+		const CNetObj_TeeInfo *m_pTeeInfo;
 		int m_ClientID;
 	};
 
@@ -153,7 +153,7 @@ public:
 	{
 		const CNetObj_Character *m_pLocalCharacter;
 		const CNetObj_Character *m_pLocalPrevCharacter;
-		const CNetObj_PlayerInfo *m_pLocalInfo;
+		const CNetObj_TeeInfo *m_pLocalInfo;
 		const CNetObj_SpectatorInfo *m_pSpectatorInfo;
 		const CNetObj_SpectatorInfo *m_pPrevSpectatorInfo;
 		const CNetObj_Flag *m_apFlags[2];
@@ -161,15 +161,12 @@ public:
 		const CNetObj_GameDataTeam *m_pGameDataTeam;
 		const CNetObj_GameDataFlag *m_pGameDataFlag;
 		const CNetObj_GameDataRace *m_pGameDataRace;
-		const CNetObj_GameDataPrediction *m_pGameDataPrediction;
 		int m_GameDataFlagSnapID;
 
 		int m_NotReadyCount;
 		int m_AliveCount[NUM_TEAMS];
 
-		const CNetObj_PlayerInfo *m_apPlayerInfos[MAX_CLIENTS];
-		const CNetObj_PlayerInfoRace *m_apPlayerInfosRace[MAX_CLIENTS];
-		const CNetObj_PlayerInfoExtra *m_apPlayerInfosExtra[MAX_CLIENTS];
+		const CNetObj_TeeInfo *m_apTeeInfos[MAX_CLIENTS];
 		CPlayerInfoItem m_aInfoByScore[MAX_CLIENTS];
 
 		// spectate data
@@ -222,16 +219,60 @@ public:
 		CNetObj_Character m_Evolved;
 
 		float m_Angle;
+		// A player exists as soon as its TeeInfo appears in a snapshot;
+		// Sv_ClientEnter is only an early hint and Sv_ClientDrop clears it.
 		bool m_Active;
 		bool m_ChatIgnore;
 		bool m_Friend;
 
+		// TeeInfoID of this Tee. For real clients it equals the client slot;
+		// for bots it is the id the hash table entry is keyed by.
+		int m_TeeInfoID;
+
 		void UpdateRenderInfo(CGameClient *pGameClient, int ClientID, bool UpdateSkinInfo);
-		void UpdateBotRenderInfo(CGameClient *pGameClient, int ClientID);
+		void UpdateBotRenderInfo(CGameClient *pGameClient, const CNetObj_TeeInfo *pTeeInfo, int ClientID);
 		void Reset(CGameClient *pGameClient, int CLientID);
 	};
 
 	CClientData m_aClients[MAX_CLIENTS];
+
+	// Bots use TeeInfoID in [MAX_CLIENTS, MAX_TEES), which is far too sparse for
+	// the fixed m_aClients/m_aCharacters arrays. Their identity and snapshot
+	// state are kept here, keyed by TeeInfoID, while real clients stay in the
+	// fixed arrays.
+	enum
+	{
+		BOT_HASH_TABLE_SIZE = 64,
+	};
+	hash_table<int, CClientData, BOT_HASH_TABLE_SIZE> m_BotClients;
+	hash_table<int, CSnapState::CCharacterInfo, BOT_HASH_TABLE_SIZE> m_BotCharacters;
+	hash_table<int, const CNetObj_TeeInfo *, BOT_HASH_TABLE_SIZE> m_BotTeeInfos;
+	// TeeInfoIDs of the bots present in the current snapshot, for iteration
+	array<int> m_aBotTeeInfoIDs;
+
+	// Returns the identity data for any TeeInfoID, real client or bot.
+	// Returns 0 when no Tee with that id is currently known.
+	CClientData *GetClientData(int TeeInfoID);
+	const CClientData *GetClientData(int TeeInfoID) const;
+
+	// Same, but creates the identity for a bot on first use.
+	CClientData *GetOrCreateClientData(int TeeInfoID);
+
+	// Returns the snapshot Character state for any TeeInfoID, real client or
+	// bot. Returns 0 when no Character with that id is currently known.
+	CSnapState::CCharacterInfo *GetCharacterInfo(int TeeInfoID);
+	const CSnapState::CCharacterInfo *GetCharacterInfo(int TeeInfoID) const;
+
+	// Same, but creates the Character state for a bot on first use.
+	CSnapState::CCharacterInfo *GetOrCreateCharacterInfo(int TeeInfoID);
+
+	// Returns the TeeInfo snapshot object for any TeeInfoID, or 0.
+	const CNetObj_TeeInfo *GetTeeInfo(int TeeInfoID) const;
+
+	// Appends the TeeInfoID of every Tee with an active Character in the
+	// current snapshot, real clients and bots alike.
+	void CollectActiveTeeIDs(array<int> &IDs) const;
+
 	int m_LocalClientID;
 	int m_TeamCooldownTick;
 	float m_TeamChangeTime;
@@ -283,6 +324,7 @@ public:
 	virtual void OnNewSnapshot();
 	virtual void OnDemoRecSnap();
 	virtual void OnPredict();
+	virtual void OnDemoRecorderStart();
 	virtual int OnSnapInput(int *pData);
 	virtual void OnShutdown();
 	virtual void OnEnterGame();
@@ -316,8 +358,8 @@ public:
 	int GetRealClientID(int SnapClientID);
 
 	// ----- gamedata prediction helper -----
-	bool GameDataPredictInput() { return !m_Snap.m_pGameDataPrediction || m_Snap.m_pGameDataPrediction->m_PredictionFlags & GAMEPREDICTIONFLAG_INPUT; }
-	bool GameDataPredictEvent() { return !m_Snap.m_pGameDataPrediction || m_Snap.m_pGameDataPrediction->m_PredictionFlags & GAMEPREDICTIONFLAG_EVENT; }
+	bool GameDataPredictInput() { return !m_Snap.m_pGameData || m_Snap.m_pGameData->m_PredictionFlags & GAMEPREDICTIONFLAG_INPUT; }
+	bool GameDataPredictEvent() { return !m_Snap.m_pGameData || m_Snap.m_pGameData->m_PredictionFlags & GAMEPREDICTIONFLAG_EVENT; }
 
 	// ----- send functions -----
 	// TODO: move these

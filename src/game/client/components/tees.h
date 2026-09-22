@@ -1,20 +1,20 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#ifndef GAME_CLIENT_COMPONENTS_PLAYERS_H
-#define GAME_CLIENT_COMPONENTS_PLAYERS_H
+#ifndef GAME_CLIENT_COMPONENTS_TEES_H
+#define GAME_CLIENT_COMPONENTS_TEES_H
 #include <game/client/component.h>
 
-class CPlayers : public CComponent
+class CTees : public CComponent
 {
-	void RenderPlayer(
+	void RenderTee(
 		const CNetObj_Character *pPrevChar,
-		const CNetObj_Character *pPlayerChar,
-		const CNetObj_PlayerInfo *pPlayerInfo,
+		const CNetObj_Character *pCurChar,
+		const CNetObj_TeeInfo *pTeeInfo,
 		const CTeeRenderInfo *pRenderInfo,
 		int ClientID) const;
 	void RenderHook(
 		const CNetObj_Character *pPrevChar,
-		const CNetObj_Character *pPlayerChar,
+		const CNetObj_Character *pCurChar,
 		const CTeeRenderInfo *pRenderInfo,
 		int ClientID) const;
 

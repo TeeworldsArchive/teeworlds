@@ -43,6 +43,12 @@ bool CServerBrowserFavorites::AddFavoriteEx(const char *pHostname, const NETADDR
 	if(m_NumFavoriteServers == MAX_FAVORITES)
 		return false;
 
+	// Older builds tagged legacy (0.7) servers with a leading '@'. The marker
+	// no longer exists; drop it so configs written back then keep working and
+	// are rewritten as plain addresses on the next save.
+	if(pHostname[0] == '@')
+		pHostname++;
+
 	CFavoriteServer *pExistingFavorite = FindFavoriteByHostname(pHostname, 0);
 	if(pExistingFavorite)
 	{

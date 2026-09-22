@@ -2,6 +2,13 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "gamecore.h"
 
+#include <generated/protocol.h>
+
+// The Tuning snapshot object has a fixed NetArray size (NUM_TUNES in
+// datasrc/network.py), so it must stay in sync with CTuningParams. This is the
+// single place that guards the count.
+static_assert(sizeof(((CNetObj_Tuning *) 0)->m_aTuneParams) / sizeof(int) == CTuningParams::Num(), "Tuning NetArray size must match CTuningParams");
+
 const char *CTuningParams::ms_apNames[] =
 	{
 #define MACRO_TUNING_PARAM(Name, ScriptName, Value) #ScriptName,

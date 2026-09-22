@@ -164,6 +164,18 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 			{
 				if(m_RecvUnpacker.m_Data.m_aChunkData[0] == NET_CTRLMSG_CONNECT)
 				{
+					// A 0.8 server only talks to 0.8 clients. A 0.7 client does
+					// not send the generation marker, so reject it here, before
+					// any slot is allocated, instead of mis-parsing its 0.7
+					// traffic.
+					if(!Net8HasGenerationMarker(m_RecvUnpacker.m_Data.m_aChunkData, m_RecvUnpacker.m_Data.m_DataSize, NET_CTRL_CONNECT_CAPABILITY_OFFSET))
+					{
+						// silent ignore
+						// const char WrongGenMsg[] = "wrong version generation";
+						// SendControlMsg(&Addr, m_RecvUnpacker.m_Data.m_ResponseToken, 0, NET_CTRLMSG_CLOSE, WrongGenMsg, sizeof(WrongGenMsg));
+						continue;
+					}
+
 					// check if there are free slots
 					if(m_NumClients >= m_MaxClients)
 					{

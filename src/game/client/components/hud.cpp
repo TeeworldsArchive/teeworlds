@@ -191,7 +191,7 @@ void CHud::RenderNetworkIssueNotification()
 
 void CHud::RenderDeadNotification()
 {
-	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags == 0 && m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS && m_pClient->m_Snap.m_pLocalInfo && (m_pClient->m_Snap.m_pLocalInfo->m_PlayerFlags & PLAYERFLAG_DEAD))
+	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags == 0 && m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS && m_pClient->m_Snap.m_pLocalInfo && (m_pClient->m_Snap.m_pLocalInfo->m_Flag & TEEFLAG_DEAD))
 	{
 		static CTextCursor s_Cursor(16.0f);
 		s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 50 * Graphics()->ScreenUIScale());
@@ -321,7 +321,7 @@ void CHud::RenderScoreHud()
 			int aPos[2] = {1, 2};
 			CGameClient::CPlayerInfoItem aPlayerInfo[2] = {{0}};
 			int i = 0;
-			for(int t = 0; t < 2 && i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pPlayerInfo; ++i)
+			for(int t = 0; t < 2 && i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pTeeInfo; ++i)
 			{
 				if(m_pClient->m_aClients[m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
 				{
@@ -334,7 +334,7 @@ void CHud::RenderScoreHud()
 			// search local player info if not a spectator, nor within top2 scores
 			if(Local == -1 && m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS)
 			{
-				for(; i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pPlayerInfo; ++i)
+				for(; i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pTeeInfo; ++i)
 				{
 					if(m_pClient->m_aClients[m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
 						++aPos[1];
@@ -354,13 +354,13 @@ void CHud::RenderScoreHud()
 			for(int t = 0; t < 2; ++t)
 			{
 				s_ScoreCursors[t].m_FontSize = FontSize;
-				if(aPlayerInfo[t].m_pPlayerInfo)
+				if(aPlayerInfo[t].m_pTeeInfo)
 				{
 					if(GameFlags & GAMEFLAG_RACE)
-						FormatTime(aBuf, sizeof(aBuf), aPlayerInfo[t].m_pPlayerInfo->m_Score, m_pClient->RacePrecision());
+						FormatTime(aBuf, sizeof(aBuf), aPlayerInfo[t].m_pTeeInfo->m_Score, m_pClient->RacePrecision());
 					else
-						str_format(aBuf, sizeof(aBuf), "%d", aPlayerInfo[t].m_pPlayerInfo->m_Score);
-					s_ScoreCursors[t].Reset(aPlayerInfo[t].m_pPlayerInfo->m_Score);
+						str_format(aBuf, sizeof(aBuf), "%d", aPlayerInfo[t].m_pTeeInfo->m_Score);
+					s_ScoreCursors[t].Reset(aPlayerInfo[t].m_pTeeInfo->m_Score);
 				}
 				else
 				{
@@ -405,7 +405,7 @@ void CHud::RenderScoreHud()
 				s_ScoreCursors[t].MoveTo(Whole - ScoreWidthMax + (ScoreWidthMax - s_ScoreCursors[t].Width()) / 2 - Split, StartY + t * TeamOffset + Spacing);
 				TextRender()->DrawTextOutlined(&s_ScoreCursors[t]);
 
-				if(aPlayerInfo[t].m_pPlayerInfo)
+				if(aPlayerInfo[t].m_pTeeInfo)
 				{
 					// draw name
 					static CTextCursor s_NameCursor(8.0f);
@@ -844,7 +844,7 @@ void CHud::RenderSpectatorNotification()
 
 void CHud::RenderReadyUpNotification()
 {
-	if(m_pClient->m_LocalClientID != -1 && !(m_pClient->m_Snap.m_apPlayerInfos[m_pClient->m_LocalClientID]->m_PlayerFlags & PLAYERFLAG_READY))
+	if(m_pClient->m_LocalClientID != -1 && !(m_pClient->m_Snap.m_apTeeInfos[m_pClient->m_LocalClientID]->m_Flag & TEEFLAG_READY))
 	{
 		static CTextCursor s_Cursor(16.0f);
 
@@ -861,7 +861,7 @@ void CHud::RenderReadyUpNotification()
 	}
 }
 
-void CHud::RenderRaceTime(const CNetObj_PlayerInfoRace *pRaceInfo)
+void CHud::RenderRaceTime(const CNetObj_TeeInfo *pRaceInfo)
 {
 	if(!pRaceInfo || pRaceInfo->m_RaceStartTick == -1)
 		return;
@@ -984,7 +984,7 @@ void CHud::OnRender()
 			RenderHealthAndAmmo(m_pClient->m_Snap.m_pLocalCharacter);
 			if(Race && m_pClient->m_LocalClientID != -1)
 			{
-				RenderRaceTime(m_pClient->m_Snap.m_apPlayerInfosRace[m_pClient->m_LocalClientID]);
+				RenderRaceTime(m_pClient->m_Snap.m_apTeeInfos[m_pClient->m_LocalClientID]);
 				RenderCheckpoint();
 			}
 		}
@@ -992,10 +992,15 @@ void CHud::OnRender()
 		{
 			if(m_pClient->m_Snap.m_SpecInfo.m_SpectatorID != -1)
 			{
-				RenderHealthAndAmmo(&m_pClient->m_Snap.m_aCharacters[m_pClient->m_Snap.m_SpecInfo.m_SpectatorID].m_Cur);
+				const int SpecID = m_pClient->m_Snap.m_SpecInfo.m_SpectatorID;
+				const CGameClient::CSnapState::CCharacterInfo *pSpecChar = m_pClient->GetCharacterInfo(SpecID);
+				if(pSpecChar)
+					RenderHealthAndAmmo(&pSpecChar->m_Cur);
 				if(Race)
 				{
-					RenderRaceTime(m_pClient->m_Snap.m_apPlayerInfosRace[m_pClient->m_Snap.m_SpecInfo.m_SpectatorID]);
+					const CNetObj_TeeInfo *pSpecInfo = m_pClient->GetTeeInfo(SpecID);
+					if(pSpecInfo)
+						RenderRaceTime(pSpecInfo);
 					RenderCheckpoint();
 				}
 			}

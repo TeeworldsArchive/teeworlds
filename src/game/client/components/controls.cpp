@@ -135,12 +135,12 @@ int CControls::SnapInput(int *pData)
 
 	// update player state
 	if(m_pClient->m_pChat->IsActive())
-		m_InputData.m_PlayerFlags = PLAYERFLAG_CHATTING;
+		m_InputData.m_PlayerFlags = TEEFLAG_CHATTING;
 	else
 		m_InputData.m_PlayerFlags = 0;
 
 	if(m_pClient->m_pScoreboard->IsActive())
-		m_InputData.m_PlayerFlags |= PLAYERFLAG_SCOREBOARD;
+		m_InputData.m_PlayerFlags |= TEEFLAG_SCOREBOARD;
 
 	if(m_LastData.m_PlayerFlags != m_InputData.m_PlayerFlags)
 		Send = true;

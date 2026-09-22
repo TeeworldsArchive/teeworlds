@@ -278,7 +278,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		{
 			if(i == m_pClient->m_LocalClientID || !m_pClient->m_aClients[i].m_Active || m_pClient->m_aClients[i].m_Team != Teams[Team])
 				continue;
-			if(m_pClient->m_Snap.m_apPlayerInfosExtra[i] && m_pClient->m_Snap.m_apPlayerInfosExtra[i]->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+			if(m_pClient->m_Snap.m_apTeeInfos[i] && m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
 				continue;
 
 			MainView.HSplitTop(ButtonHeight, &Row, &MainView);
@@ -388,7 +388,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 
 	ServerInfo.HSplitTop(ButtonHeight, &Label, &ServerInfo);
 	Label.y += 2.0f;
-	str_format(aBuf, sizeof(aBuf), "%s: %d", Localize("Ping"), m_pClient->m_Snap.m_pLocalInfo->m_Latency);
+	str_format(aBuf, sizeof(aBuf), "%s: %d", Localize("Ping"), (m_pClient->m_Snap.m_pLocalInfo->m_LatencyAndCountry >> 16) & 0xffff);
 	UI()->DoLabel(&Label, aBuf, ButtonHeight * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_LEFT);
 
 	ServerInfo.HSplitTop(ButtonHeight, &Label, &ServerInfo);
@@ -554,9 +554,9 @@ void CMenus::RenderServerControlKick(CUIRect MainView, bool FilterSpectators)
 		{
 			if(i == m_pClient->m_LocalClientID || !m_pClient->m_aClients[i].m_Active || m_pClient->m_aClients[i].m_Team != Teams[Team] ||
 				(FilterSpectators && m_pClient->m_aClients[i].m_Team == TEAM_SPECTATORS) ||
-				(!FilterSpectators && m_pClient->m_Snap.m_apPlayerInfos[i] && (m_pClient->m_Snap.m_apPlayerInfos[i]->m_PlayerFlags & PLAYERFLAG_ADMIN)))
+				(!FilterSpectators && m_pClient->m_Snap.m_apTeeInfos[i] && (m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_ADMIN)))
 				continue;
-			if(m_pClient->m_Snap.m_apPlayerInfosExtra[i] && m_pClient->m_Snap.m_apPlayerInfosExtra[i]->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+			if(m_pClient->m_Snap.m_apTeeInfos[i] && m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
 				continue;
 			if(m_CallvoteSelectedPlayer == i)
 				Selected = NumOptions;

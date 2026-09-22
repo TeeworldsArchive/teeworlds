@@ -503,16 +503,14 @@ void CServer::DoSnapshot()
 	// create snapshot for demo recording
 	if(m_DemoRecorder.IsRecording())
 	{
-		char aData[CSnapshot::MAX_SIZE];
-		int SnapshotSize;
-
 		// build snap and possibly add some messages
 		m_SnapshotBuilder.Init();
 		GameServer()->OnSnap(-1);
-		SnapshotSize = m_SnapshotBuilder.Finish(aData);
+		m_DemoSnapshotData.set_size(m_SnapshotBuilder.RequiredSize());
+		int SnapshotSize = m_SnapshotBuilder.Finish(m_DemoSnapshotData.base_ptr());
 
 		// write snapshot
-		m_DemoRecorder.RecordSnapshot(Tick(), aData, SnapshotSize);
+		m_DemoRecorder.RecordSnapshot(Tick(), m_DemoSnapshotData.base_ptr(), SnapshotSize);
 	}
 
 	// create snapshots for all clients
@@ -531,10 +529,6 @@ void CServer::DoSnapshot()
 			continue;
 
 		{
-			char aData[CSnapshot::MAX_SIZE];
-			CSnapshot *pData = (CSnapshot *) aData; // Fix compiler warning for strict-aliasing
-			char aDeltaData[CSnapshot::MAX_SIZE];
-			char aCompData[CSnapshot::MAX_SIZE];
 			int SnapshotSize;
 			int Crc;
 			static CSnapshot EmptySnap;
@@ -547,7 +541,9 @@ void CServer::DoSnapshot()
 
 			GameServer()->OnSnap(i);
 
-			// finish snapshot
+			// finish snapshot into the reusable build buffer
+			m_SnapshotBuildData.set_size(m_SnapshotBuilder.RequiredSize());
+			CSnapshot *pData = (CSnapshot *) m_SnapshotBuildData.base_ptr();
 			SnapshotSize = m_SnapshotBuilder.Finish(pData);
 			Crc = pData->Crc();
 
@@ -574,7 +570,8 @@ void CServer::DoSnapshot()
 			}
 
 			// create delta
-			DeltaSize = m_SnapshotDelta.CreateDelta(pDeltashot, pData, aDeltaData);
+			m_SnapshotDeltaData.set_size(m_SnapshotBuilder.RequiredSize() * 2 + 4096);
+			DeltaSize = m_SnapshotDelta.CreateDelta(pDeltashot, pData, m_SnapshotDeltaData.base_ptr());
 
 			if(DeltaSize > 0)
 			{
@@ -583,10 +580,19 @@ void CServer::DoSnapshot()
 				const int MaxSize = MAX_SNAPSHOT_PACKSIZE;
 				int NumPackets;
 
-				SnapshotSize = CVariableInt::Compress(aDeltaData, DeltaSize, aCompData, sizeof(aCompData));
-				NumPackets = (SnapshotSize + MaxSize - 1) / MaxSize;
+				m_SnapshotCompData.set_size(DeltaSize + DeltaSize / 2 + 4096);
+				SnapshotSize = CVariableInt::Compress(m_SnapshotDeltaData.base_ptr(), DeltaSize, m_SnapshotCompData.base_ptr(), m_SnapshotCompData.size());
+				if(SnapshotSize < 0)
+				{
+					char aBuf[64];
+					str_format(aBuf, sizeof(aBuf), "intpack failed! (%d)", SnapshotSize);
+					m_pConsole->Print(IConsole::OUTPUT_LEVEL_DEBUG, "server", aBuf);
+					NumPackets = 0;
+				}
+				else
+					NumPackets = (SnapshotSize + MaxSize - 1) / MaxSize;
 
-				for(int n = 0, Left = SnapshotSize; Left > 0; n++)
+				for(int n = 0, Left = SnapshotSize; Left > 0 && NumPackets > 0; n++)
 				{
 					int Chunk = Left < MaxSize ? Left : MaxSize;
 					Left -= Chunk;
@@ -598,7 +604,7 @@ void CServer::DoSnapshot()
 						Msg.AddInt(m_CurrentGameTick - DeltaTick);
 						Msg.AddInt(Crc);
 						Msg.AddInt(Chunk);
-						Msg.AddRaw(&aCompData[n * MaxSize], Chunk);
+						Msg.AddRaw(&m_SnapshotCompData[n * MaxSize], Chunk);
 						SendMsg(&Msg, MSGFLAG_FLUSH, i);
 					}
 					else
@@ -610,7 +616,7 @@ void CServer::DoSnapshot()
 						Msg.AddInt(n);
 						Msg.AddInt(Crc);
 						Msg.AddInt(Chunk);
-						Msg.AddRaw(&aCompData[n * MaxSize], Chunk);
+						Msg.AddRaw(&m_SnapshotCompData[n * MaxSize], Chunk);
 						SendMsg(&Msg, MSGFLAG_FLUSH, i);
 					}
 				}
@@ -1632,13 +1638,14 @@ void CServer::DemoRecorder_HandleAutoStart()
 		char aFilename[128];
 		char aDate[20];
 		str_timestamp(aDate, sizeof(aDate));
-		str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", "auto/autorecord", aDate);
+		str_format(aFilename, sizeof(aFilename), "demos/auto/server/%s_%s.demo", GetMapName(), aDate);
 		m_DemoRecorder.Start(aFilename, GameServer()->NetVersion(), m_aCurrentMap, m_CurrentMapSha256, m_CurrentMapCrc, "server");
+		GameServer()->OnDemoRecorderStart();
 		if(Config()->m_SvAutoDemoMax)
 		{
 			// clean up auto recorded demos
 			CFileCollection AutoDemos;
-			AutoDemos.Init(Storage(), "demos/server", "autorecord", ".demo", Config()->m_SvAutoDemoMax);
+			AutoDemos.Init(Storage(), "demos/auto/server", "", ".demo", Config()->m_SvAutoDemoMax);
 		}
 	}
 }
@@ -1658,9 +1665,10 @@ void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
 	{
 		char aDate[20];
 		str_timestamp(aDate, sizeof(aDate));
-		str_format(aFilename, sizeof(aFilename), "demos/demo_%s.demo", aDate);
+		str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", pServer->GetMapName(), aDate);
 	}
 	pServer->m_DemoRecorder.Start(aFilename, pServer->GameServer()->NetVersion(), pServer->m_aCurrentMap, pServer->m_CurrentMapSha256, pServer->m_CurrentMapCrc, "server");
+	pServer->GameServer()->OnDemoRecorderStart();
 }
 
 void CServer::ConStopRecord(IConsole::IResult *pResult, void *pUser)

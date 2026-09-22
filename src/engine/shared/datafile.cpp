@@ -7,6 +7,7 @@
 #include <base/system.h>
 #include <engine/storage.h>
 #include <zlib-ng.h>
+#include <zstd.h>
 
 static const int DEBUG = 0;
 
@@ -121,7 +122,7 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 #if defined(CONF_ARCH_ENDIAN_BIG)
 	swap_endian(&Header, sizeof(int), sizeof(Header) / sizeof(int));
 #endif
-	if(Header.m_Version != 3 && Header.m_Version != 4)
+	if(Header.m_Version != 3 && Header.m_Version != 4 && Header.m_Version != 5)
 	{
 		dbg_msg("datafile", "wrong version. version=%x", Header.m_Version);
 		io_close(File);
@@ -132,8 +133,8 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	int64 Size = 0;
 	Size += Header.m_NumItemTypes * sizeof(CDatafileItemType);
 	Size += (Header.m_NumItems + Header.m_NumRawData) * sizeof(int);
-	if(Header.m_Version == 4)
-		Size += Header.m_NumRawData * sizeof(int); // v4 has uncompressed data sizes aswell
+	if(Header.m_Version >= 4)
+		Size += Header.m_NumRawData * sizeof(int); // v4/v5 have uncompressed data sizes aswell
 	Size += Header.m_ItemSize;
 
 	int64 AllocSize = Size;
@@ -192,7 +193,7 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	m_pDataFile->m_Info.m_pDataOffsets = (int *) &m_pDataFile->m_Info.m_pItemOffsets[m_pDataFile->m_Header.m_NumItems];
 	m_pDataFile->m_Info.m_pDataSizes = (int *) &m_pDataFile->m_Info.m_pDataOffsets[m_pDataFile->m_Header.m_NumRawData];
 
-	if(Header.m_Version == 4)
+	if(Header.m_Version >= 4)
 		m_pDataFile->m_Info.m_pItemStart = (char *) &m_pDataFile->m_Info.m_pDataSizes[m_pDataFile->m_Header.m_NumRawData];
 	else
 		m_pDataFile->m_Info.m_pItemStart = (char *) &m_pDataFile->m_Info.m_pDataOffsets[m_pDataFile->m_Header.m_NumRawData];
@@ -300,12 +301,12 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 		int SwapSize = DataSize;
 #endif
 
-		if(m_pDataFile->m_Header.m_Version == 4)
+		if(m_pDataFile->m_Header.m_Version >= 4)
 		{
-			// v4 has compressed data
+			// v4 uses zlib-ng, v5 uses zstd; both store the uncompressed size in the file
 			void *pTemp = (char *) mem_alloc(DataSize);
 			unsigned long UncompressedSize = m_pDataFile->m_Info.m_pDataSizes[Index];
-			size_t s;
+			size_t s = (size_t) UncompressedSize;
 
 			dbg_msg("datafile", "loading data index=%d size=%d uncompressed=%lu", Index, DataSize, UncompressedSize);
 			m_pDataFile->m_ppDataPtrs[Index] = (char *) mem_alloc(UncompressedSize);
@@ -316,14 +317,27 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 			io_read(m_pDataFile->m_File, pTemp, DataSize);
 
 			// decompress the data
-			s = (size_t) UncompressedSize;
-			int Result = zng_uncompress((Bytef *) m_pDataFile->m_ppDataPtrs[Index], &s, (Bytef *) pTemp, DataSize);
-			if(Result != Z_OK)
+			if(m_pDataFile->m_Header.m_Version == 5)
 			{
-				dbg_msg("datafile", "zlib uncompress failed: %d", Result);
-				mem_free(pTemp);
-				UnloadData(Index);
-				return 0;
+				size_t Result = ZSTD_decompress(m_pDataFile->m_ppDataPtrs[Index], s, pTemp, DataSize);
+				if(ZSTD_isError(Result) || Result != s)
+				{
+					dbg_msg("datafile", "zstd decompress failed: %s", ZSTD_isError(Result) ? ZSTD_getErrorName(Result) : "size mismatch");
+					mem_free(pTemp);
+					UnloadData(Index);
+					return 0;
+				}
+			}
+			else
+			{
+				int Result = zng_uncompress((Bytef *) m_pDataFile->m_ppDataPtrs[Index], &s, (Bytef *) pTemp, DataSize);
+				if(Result != Z_OK)
+				{
+					dbg_msg("datafile", "zlib uncompress failed: %d", Result);
+					mem_free(pTemp);
+					UnloadData(Index);
+					return 0;
+				}
 			}
 #if defined(CONF_ARCH_ENDIAN_BIG)
 			SwapSize = s;
@@ -525,6 +539,8 @@ bool CDataFileReader::CheckSha256(IOHANDLE Handle, const void *pSha256)
 CDataFileWriter::CDataFileWriter()
 {
 	m_File = 0;
+	m_Version = 5;
+	m_CompressLevel = ZSTD_CLEVEL_DEFAULT;
 	m_pItemTypes = static_cast<CItemTypeInfo *>(mem_alloc(sizeof(CItemTypeInfo) * MAX_ITEM_TYPES));
 	m_pItems = static_cast<CItemInfo *>(mem_alloc(sizeof(CItemInfo) * MAX_ITEMS));
 	m_pDatas = static_cast<CDataInfo *>(mem_alloc(sizeof(CDataInfo) * MAX_DATAS));
@@ -540,13 +556,15 @@ CDataFileWriter::~CDataFileWriter()
 	m_pDatas = 0;
 }
 
-bool CDataFileWriter::Open(class IStorage *pStorage, const char *pFilename)
+bool CDataFileWriter::Open(class IStorage *pStorage, const char *pFilename, int Version)
 {
 	dbg_assert(!m_File, "a file already exists");
+	dbg_assert(Version == 4 || Version == 5, "unsupported datafile version");
 	m_File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!m_File)
 		return false;
 
+	m_Version = Version;
 	m_NumItems = 0;
 	m_NumDatas = 0;
 	m_NumItemTypes = 0;
@@ -567,7 +585,7 @@ int CDataFileWriter::AddItem(int Type, int ID, int Size, const void *pData)
 		return 0;
 
 	dbg_assert(Type >= 0 && Type < 0xFFFF, "incorrect type");
-	dbg_assert(m_NumItems < 1024, "too many items");
+	dbg_assert(m_NumItems < MAX_ITEMS, "too many items");
 	dbg_assert(Size % sizeof(int) == 0, "incorrect boundary");
 
 	m_pItems[m_NumItems].m_Type = Type;
@@ -603,21 +621,40 @@ int CDataFileWriter::AddData(int Size, const void *pData)
 	if(!m_File)
 		return 0;
 
-	dbg_assert(m_NumDatas < 1024, "too much data");
+	dbg_assert(m_NumDatas < MAX_DATAS, "too much data");
 
 	CDataInfo *pInfo = &m_pDatas[m_NumDatas];
-	size_t s = zng_compressBound(Size);
-	void *pCompData = mem_alloc(s); // temporary buffer that we use during compression
+	void *pCompData = 0;
+	int CompressedSize = 0;
 
-	int Result = zng_compress((Bytef *) pCompData, &s, (Bytef *) pData, Size);
-	if(Result != Z_OK)
+	if(m_Version == 5)
 	{
-		dbg_msg("datafile", "compression error %d", Result);
-		dbg_assert(0, "zlib error");
+		size_t Bound = ZSTD_compressBound(Size);
+		pCompData = mem_alloc(Bound);
+		size_t Result = ZSTD_compress(pCompData, Bound, pData, Size, m_CompressLevel);
+		if(ZSTD_isError(Result))
+		{
+			dbg_msg("datafile", "compression error %s", ZSTD_getErrorName(Result));
+			dbg_assert(0, "zstd error");
+		}
+		CompressedSize = (int) Result;
+	}
+	else
+	{
+		size_t Bound = zng_compressBound(Size);
+		pCompData = mem_alloc(Bound); // temporary buffer that we use during compression
+
+		int Result = zng_compress((Bytef *) pCompData, &Bound, (Bytef *) pData, Size);
+		if(Result != Z_OK)
+		{
+			dbg_msg("datafile", "compression error %d", Result);
+			dbg_assert(0, "zlib error");
+		}
+		CompressedSize = (int) Bound;
 	}
 
 	pInfo->m_UncompressedSize = Size;
-	pInfo->m_CompressedSize = (int) s;
+	pInfo->m_CompressedSize = CompressedSize;
 	pInfo->m_pCompressedData = mem_alloc(pInfo->m_CompressedSize);
 	mem_copy(pInfo->m_pCompressedData, pCompData, pInfo->m_CompressedSize);
 	mem_free(pCompData);
@@ -685,7 +722,7 @@ int CDataFileWriter::Finish()
 		Header.m_aID[1] = 'A';
 		Header.m_aID[2] = 'T';
 		Header.m_aID[3] = 'A';
-		Header.m_Version = 4;
+		Header.m_Version = m_Version;
 		Header.m_Size = FileSize - 16;
 		Header.m_Swaplen = SwapSize - 16;
 		Header.m_NumItemTypes = m_NumItemTypes;

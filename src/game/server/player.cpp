@@ -115,7 +115,7 @@ void CPlayer::Tick()
 void CPlayer::PostTick()
 {
 	// update latency value
-	if(m_PlayerFlags & PLAYERFLAG_SCOREBOARD)
+	if(m_PlayerFlags & TEEFLAG_SCOREBOARD)
 	{
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
@@ -139,22 +139,46 @@ void CPlayer::Snap(int SnappingClient)
 	if(!IsDummy() && !Server()->ClientIngame(m_ClientID))
 		return;
 
-	CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, m_ClientID, sizeof(CNetObj_PlayerInfo)));
-	if(!pPlayerInfo)
+	// TeeInfo carries the whole identity of this Tee. Its item ID is the
+	// TeeInfoID, which equals the ClientID for real clients; no back-reference
+	// to a client slot is needed.
+	CNetObj_TeeInfo *pTeeInfo = static_cast<CNetObj_TeeInfo *>(Server()->SnapNewItem(NETOBJTYPE_TEEINFO, m_ClientID, sizeof(CNetObj_TeeInfo)));
+	if(!pTeeInfo)
 		return;
 
-	pPlayerInfo->m_PlayerFlags = m_PlayerFlags & PLAYERFLAG_CHATTING;
+	int Flags = m_PlayerFlags & TEEFLAG_CHATTING;
 	if(Server()->IsAuthed(m_ClientID))
-		pPlayerInfo->m_PlayerFlags |= PLAYERFLAG_ADMIN;
+		Flags |= TEEFLAG_ADMIN;
 	if(!GameServer()->m_pController->IsPlayerReadyMode() || m_IsReadyToPlay)
-		pPlayerInfo->m_PlayerFlags |= PLAYERFLAG_READY;
+		Flags |= TEEFLAG_READY;
 	if(m_RespawnDisabled && (!GetCharacter() || !GetCharacter()->IsAlive()))
-		pPlayerInfo->m_PlayerFlags |= PLAYERFLAG_DEAD;
+		Flags |= TEEFLAG_DEAD;
 	if(SnappingClient != -1 && (m_Team == TEAM_SPECTATORS || m_DeadSpecMode) && (SnappingClient == m_SpectatorID))
-		pPlayerInfo->m_PlayerFlags |= PLAYERFLAG_WATCHING;
+		Flags |= TEEFLAG_WATCHING;
+	if(IsDummy())
+		Flags |= TEEFLAG_BOT;
+	// the local marker is per-recipient: only the client's own TeeInfo carries it
+	if(SnappingClient != -1 && SnappingClient == m_ClientID)
+		Flags |= TEEFLAG_LOCAL;
+	pTeeInfo->m_Flag = Flags;
 
-	pPlayerInfo->m_Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
-	pPlayerInfo->m_Score = m_Score;
+	const int Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
+	const int Country = Server()->ClientCountry(m_ClientID);
+	pTeeInfo->m_LatencyAndCountry = ((Latency & 0xffff) << 16) | (Country & 0xffff);
+	pTeeInfo->m_Team = m_Team;
+	pTeeInfo->m_Score = m_Score;
+	pTeeInfo->m_RaceStartTick = -1;
+
+	// the fields are raw content without a terminator, so they can hold the
+	// full identity string
+	str_copy_fixed(pTeeInfo->m_aName, Server()->ClientName(m_ClientID), sizeof(pTeeInfo->m_aName));
+	str_copy_fixed(pTeeInfo->m_aClan, Server()->ClientClan(m_ClientID), sizeof(pTeeInfo->m_aClan));
+	for(int p = 0; p < NUM_SKINPARTS; p++)
+	{
+		str_copy_fixed(pTeeInfo->m_aaSkinPartNames[p], m_TeeInfos.m_aaSkinPartNames[p], sizeof(pTeeInfo->m_aaSkinPartNames[p]));
+		pTeeInfo->m_aUseCustomColors[p] = m_TeeInfos.m_aUseCustomColors[p];
+		pTeeInfo->m_aSkinPartColors[p] = m_TeeInfos.m_aSkinPartColors[p];
+	}
 
 	if(m_ClientID == SnappingClient && (m_Team == TEAM_SPECTATORS || m_DeadSpecMode))
 	{
@@ -173,27 +197,6 @@ void CPlayer::Snap(int SnappingClient)
 		{
 			pSpectatorInfo->m_X = m_ViewPos.x;
 			pSpectatorInfo->m_Y = m_ViewPos.y;
-		}
-	}
-
-	// demo recording
-	if(SnappingClient == -1)
-	{
-		CNetObj_De_ClientInfo *pClientInfo = static_cast<CNetObj_De_ClientInfo *>(Server()->SnapNewItem(NETOBJTYPE_DE_CLIENTINFO, m_ClientID, sizeof(CNetObj_De_ClientInfo)));
-		if(!pClientInfo)
-			return;
-
-		pClientInfo->m_Local = 0;
-		pClientInfo->m_Team = m_Team;
-		StrToInts(pClientInfo->m_aName, 4, Server()->ClientName(m_ClientID));
-		StrToInts(pClientInfo->m_aClan, 3, Server()->ClientClan(m_ClientID));
-		pClientInfo->m_Country = Server()->ClientCountry(m_ClientID);
-
-		for(int p = 0; p < NUM_SKINPARTS; p++)
-		{
-			StrToInts(pClientInfo->m_aaSkinPartNames[p], 6, m_TeeInfos.m_aaSkinPartNames[p]);
-			pClientInfo->m_aUseCustomColors[p] = m_TeeInfos.m_aUseCustomColors[p];
-			pClientInfo->m_aSkinPartColors[p] = m_TeeInfos.m_aSkinPartColors[p];
 		}
 	}
 }
@@ -224,7 +227,7 @@ void CPlayer::OnDisconnect()
 void CPlayer::OnPredictedInput(CNetObj_PlayerInput *NewInput)
 {
 	// skip the input if chat is active
-	if((m_PlayerFlags & PLAYERFLAG_CHATTING) && (NewInput->m_PlayerFlags & PLAYERFLAG_CHATTING))
+	if((m_PlayerFlags & TEEFLAG_CHATTING) && (NewInput->m_PlayerFlags & TEEFLAG_CHATTING))
 		return;
 
 	if(m_pCharacter)
@@ -239,10 +242,10 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 		return;
 	}
 
-	if(NewInput->m_PlayerFlags & PLAYERFLAG_CHATTING)
+	if(NewInput->m_PlayerFlags & TEEFLAG_CHATTING)
 	{
 		// skip the input if chat is active
-		if(m_PlayerFlags & PLAYERFLAG_CHATTING)
+		if(m_PlayerFlags & TEEFLAG_CHATTING)
 			return;
 
 		// reset input

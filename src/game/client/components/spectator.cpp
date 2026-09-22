@@ -42,7 +42,7 @@ bool CSpectator::SpecModePossible(int SpecMode, int SpectatorID)
 			{
 				return false;
 			}
-			if(m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS && (SpectatorID == m_pClient->m_LocalClientID || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != m_pClient->m_aClients[SpectatorID].m_Team || (m_pClient->m_Snap.m_apPlayerInfos[SpectatorID] && (m_pClient->m_Snap.m_apPlayerInfos[SpectatorID]->m_PlayerFlags & PLAYERFLAG_DEAD))))
+			if(m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS && (SpectatorID == m_pClient->m_LocalClientID || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != m_pClient->m_aClients[SpectatorID].m_Team || (m_pClient->m_Snap.m_apTeeInfos[SpectatorID] && (m_pClient->m_Snap.m_apTeeInfos[SpectatorID]->m_Flag & TEEFLAG_DEAD))))
 			{
 				return false;
 			}
@@ -276,7 +276,7 @@ void CSpectator::OnRender()
 	{
 		if(!SpecModePossible(SPEC_PLAYER, i))
 			continue;
-		if(m_pClient->m_Snap.m_apPlayerInfosExtra[i] && m_pClient->m_Snap.m_apPlayerInfosExtra[i]->m_PlayerFlagsExtra & PLAYERFLAGEXTRA_HIDDEN_IN_BOARD)
+		if(m_pClient->m_Snap.m_apTeeInfos[i] && m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
 			continue;
 
 		if(Count != 0 && Count % ColumnSize == 0)

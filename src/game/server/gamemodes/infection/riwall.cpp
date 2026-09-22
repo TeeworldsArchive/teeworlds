@@ -9,7 +9,7 @@ CRIWall::CRIWall(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, int Owner) : 
 {
 	m_Dir = Direction;
 	m_Owner = Owner;
-	if(Owner < 0 || Owner > MAX_CLIENTS)
+	if(Owner < 0 || Owner >= MAX_CLIENTS)
 		m_Team = -1;
 	else
 		m_Team = GameServer()->m_pController->GetPlayerCheckTeam(GameServer()->m_apPlayers[Owner]);

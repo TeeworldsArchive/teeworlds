@@ -58,7 +58,7 @@ endif()
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 option(CLIENT "Compile client" ON)
@@ -1233,6 +1233,7 @@ function(generate_source output_file script_parameter)
       datasrc/content.py
       datasrc/datatypes.py
       datasrc/network.py
+      datasrc/network7.py
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
 endfunction()
@@ -1271,6 +1272,8 @@ generate_source("src/generated/client_data.cpp" "client_content_source")
 generate_source("src/generated/client_data.h" "client_content_header")
 generate_source("src/generated/protocol.cpp" "network_source")
 generate_source("src/generated/protocol.h" "network_header")
+generate_source("src/generated/protocol7.cpp" "network7_source")
+generate_source("src/generated/protocol7.h" "network7_header")
 generate_source("src/generated/server_data.cpp" "server_content_source")
 generate_source("src/generated/server_data.h" "server_content_header")
 
@@ -1330,7 +1333,7 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   textrender.h
   uuid.h
 )
-set_src(ENGINE_SHARED GLOB src/engine/shared
+set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   compression.cpp
   compression.h
   config.cpp
@@ -1358,6 +1361,10 @@ set_src(ENGINE_SHARED GLOB src/engine/shared
   jsonwriter.cpp
   jsonwriter.h
   kernel.cpp
+  legacy/network7.cpp
+  legacy/network7.h
+  legacy/network_translator.cpp
+  legacy/network_translator.h
   linereader.cpp
   linereader.h
   map.cpp
@@ -1392,7 +1399,7 @@ set_src(ENGINE_SHARED GLOB src/engine/shared
   zstd_dict.cpp
   zstd_dict.h
 )
-set(ENGINE_GENERATED_SHARED src/generated/nethash.cpp src/generated/protocol.cpp src/generated/protocol.h)
+set(ENGINE_GENERATED_SHARED src/generated/nethash.cpp src/generated/protocol.cpp src/generated/protocol.h src/generated/protocol7.cpp src/generated/protocol7.h)
 set_src(GAME_SHARED GLOB src/game
   collision.cpp
   collision.h
@@ -1515,8 +1522,6 @@ if(CLIENT)
     components/notifications.h
     components/particles.cpp
     components/particles.h
-    components/players.cpp
-    components/players.h
     components/scoreboard.cpp
     components/scoreboard.h
     components/skins.cpp
@@ -1527,6 +1532,8 @@ if(CLIENT)
     components/spectator.h
     components/stats.cpp
     components/stats.h
+    components/tees.cpp
+    components/tees.h
     components/voting.cpp
     components/voting.h
     gameclient.cpp
@@ -1611,6 +1618,7 @@ set_src(ENGINE_SERVER GLOB src/engine/server
 )
 set_src(GAME_SERVER GLOB_RECURSE src/game/server
   alloc.h
+  clientmask.h
   entities/character.cpp
   entities/character.h
   entities/flag.cpp
@@ -1758,6 +1766,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     jsonparser.cpp
     jsonwriter.cpp
     packer.cpp
+    snapshot.cpp
     sorted_array.cpp
     storage.cpp
     str.cpp

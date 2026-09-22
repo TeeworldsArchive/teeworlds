@@ -43,7 +43,7 @@ enum
 	NETMSG_SNAP, // normal snapshot, multiple parts
 	NETMSG_SNAPEMPTY, // empty snapshot
 	NETMSG_SNAPSINGLE, // ?
-	NETMSG_SNAPSMALL, // todo 0.8: remove unused
+	NETMSG_SNAPSMALL, // reserved, unused; number frozen so 0.7 packets pass through
 	NETMSG_INPUTTIMING, // reports how off the input was
 	NETMSG_RCON_AUTH_ON, // rcon authentication enabled
 	NETMSG_RCON_AUTH_OFF, // rcon authentication disabled
@@ -86,7 +86,11 @@ enum
 	SERVERINFO_VERSION_LEGACY = -1,
 	SERVERINFO_VERSION_CURRENT, // add extend player info
 
-	MAX_CLIENTS = 64,
+	MAX_CLIENTS = 128,
+	// Tee/TeeInfo snapshot item ID space. [0, MAX_CLIENTS) are real clients
+	// (TeeInfoID == ClientID), [MAX_CLIENTS, MAX_TEES) are reserved for bots,
+	// which are owned by the game/mod layer. 0xffff stays an invalid sentinel.
+	MAX_TEES = 65535,
 	VANILLA_MAX_PLAYERS = 16,
 
 	MAX_INPUT_SIZE = 128,

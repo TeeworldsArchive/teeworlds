@@ -117,6 +117,7 @@ public:
 	void AbortVoteOnTeamChange(int ClientID);
 
 	int m_VoteCreator;
+	// -1 means "no vote running"; VOTE_* values are only the wire enum now
 	int m_VoteType;
 	int64 m_VoteCloseTime;
 	int64 m_VoteCancelTime;
@@ -132,9 +133,6 @@ public:
 	{
 		VOTE_TIME = 25,
 		VOTE_CANCEL_TIME = 10,
-
-		MIN_SKINCHANGE_CLIENTVERSION = 0x0703,
-		MIN_RACE_CLIENTVERSION = 0x0704,
 	};
 	class CHeap *m_pVoteOptionHeap;
 	CVoteOptionServer *m_pVoteOptionFirst;
@@ -179,7 +177,7 @@ public:
 	void CreateHammerHit(vec2 Pos);
 	void CreatePlayerSpawn(vec2 Pos);
 	void CreateDeath(vec2 Pos, int Who);
-	void CreateSound(vec2 Pos, int Sound, int64 Mask = -1);
+	void CreateSound(vec2 Pos, int Sound, const CClientMask &Mask = CClientMask::All());
 
 	// ----- send functions -----
 	void SendChat(int ChatterClientID, int Mode, int To, const char *pText);
@@ -188,8 +186,6 @@ public:
 	void SendWeaponPickup(int ClientID, int Weapon);
 	void SendMotd(int ClientID);
 	void SendSettings(int ClientID);
-	void SendSkinChange(int ClientID, int TargetID);
-	void SendTuningParams(int ClientID);
 	void SendReadyToEnter(CPlayer *pPlayer);
 
 	void SendGameMsg(int GameMsgID, int ClientID);
@@ -223,6 +219,7 @@ public:
 	virtual void OnPostSnap();
 
 	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID);
+	virtual void OnDemoRecorderStart();
 
 	virtual void OnClientConnected(int ClientID, bool AsSpec) { OnClientConnected(ClientID, false, AsSpec); }
 	void OnClientConnected(int ClientID, bool Dummy, bool AsSpec);
@@ -248,10 +245,15 @@ public:
 	virtual int GetMaxPlayerSlots();
 };
 
-inline int64 CmaskAll() { return -1; }
-inline int64 CmaskOne(int ClientID) { return (int64) 1 << ClientID; }
-inline int64 CmaskAllExceptOne(int ClientID) { return CmaskAll() ^ CmaskOne(ClientID); }
-inline bool CmaskIsSet(int64 Mask, int ClientID) { return (Mask & CmaskOne(ClientID)) != 0; }
+inline CClientMask CmaskAll() { return CClientMask::All(); }
+inline CClientMask CmaskOne(int ClientID)
+{
+	CClientMask Mask;
+	Mask.Set(ClientID);
+	return Mask;
+}
+inline CClientMask CmaskAllExceptOne(int ClientID) { return CmaskAll() ^ CmaskOne(ClientID); }
+inline bool CmaskIsSet(const CClientMask &Mask, int ClientID) { return Mask.IsSet(ClientID); }
 
 const char *Localize(const char *pStr, const char *pContext = "")
 	GNUC_ATTRIBUTE((format_arg(1)));

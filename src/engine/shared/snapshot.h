@@ -4,6 +4,7 @@
 #define ENGINE_SHARED_SNAPSHOT_H
 
 #include <base/system.h>
+#include <base/tl/array.h>
 
 // CSnapshot
 
@@ -39,8 +40,7 @@ public:
 		OFFSET_UUID_TYPE = 0x4000,
 		MAX_TYPE = 0x7fff,
 		MAX_ID = 0xffff,
-		MAX_PARTS = 64,
-		MAX_SIZE = MAX_PARTS * 1024
+		MAX_PARTS = 2048
 	};
 
 	void Clear()
@@ -93,6 +93,11 @@ public:
 	const CData *EmptyDelta() const;
 	int CreateDelta(const class CSnapshot *pFrom, class CSnapshot *pTo, void *pDstData);
 	int UnpackDelta(const class CSnapshot *pFrom, class CSnapshot *pTo, const void *pSrcData, int DataSize);
+
+private:
+	void EmitNewItem(const class CSnapshot *pTo, int Index, int **ppData);
+	bool EmitDiffOrSkip(const class CSnapshot *pFrom, const class CSnapshot *pTo, int FromIndex, int ToIndex, int **ppData);
+	bool IncludeItemSize(int Type) const;
 };
 
 // CSnapshotStorage
@@ -127,20 +132,9 @@ public:
 
 class CSnapshotBuilder
 {
-	enum
-	{
-		MAX_ITEMS = 1024,
-		MAX_EXTENDED_ITEM_TYPES = 64
-	};
-
-	char m_aData[CSnapshot::MAX_SIZE];
-	int m_DataSize;
-
-	int m_aOffsets[MAX_ITEMS];
-	int m_NumItems;
-
-	int m_aExtendedItemTypes[MAX_EXTENDED_ITEM_TYPES];
-	int m_NumExtendedItemTypes;
+	array<unsigned char> m_Data;
+	array<int> m_aOffsets;
+	array<int> m_aExtendedItemTypes;
 
 	bool AddExtendedItemType(int Index);
 	int GetExtendedItemTypeIndex(int TypeID);
@@ -157,6 +151,9 @@ public:
 	CSnapshotItem *GetItem(int Index) const;
 	int *GetItemData(int Key) const;
 
+	int NumItems() const { return m_aOffsets.size(); }
+	int DataSize() const { return m_Data.size(); }
+	int RequiredSize() const;
 	int Finish(void *pSnapdata);
 };
 

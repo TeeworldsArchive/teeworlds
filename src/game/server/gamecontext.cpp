@@ -187,7 +187,7 @@ void CGameContext::CreateDeath(vec2 Pos, int ClientID)
 	}
 }
 
-void CGameContext::CreateSound(vec2 Pos, int Sound, int64 Mask)
+void CGameContext::CreateSound(vec2 Pos, int Sound, const CClientMask &Mask)
 {
 	if(Sound < 0)
 		return;
@@ -304,19 +304,6 @@ void CGameContext::SendSettings(int ClientID)
 	Msg.m_PlayerSlots = GetMaxPlayerSlots();
 	Msg.m_AllowSpecVoting = Config()->m_SvAllowSpecVoting;
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
-}
-
-void CGameContext::SendSkinChange(int ClientID, int TargetID)
-{
-	CNetMsg_Sv_SkinChange Msg;
-	Msg.m_ClientID = ClientID;
-	for(int p = 0; p < NUM_SKINPARTS; p++)
-	{
-		Msg.m_apSkinPartNames[p] = m_apPlayers[ClientID]->m_TeeInfos.m_aaSkinPartNames[p];
-		Msg.m_aUseCustomColors[p] = m_apPlayers[ClientID]->m_TeeInfos.m_aUseCustomColors[p];
-		Msg.m_aSkinPartColors[p] = m_apPlayers[ClientID]->m_TeeInfos.m_aSkinPartColors[p];
-	}
-	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, TargetID);
 }
 
 void CGameContext::SendGameMsg(int GameMsgID, int ClientID)
@@ -477,17 +464,6 @@ void CGameContext::SendVoteOptions(int ClientID)
 		}
 		Server()->SendMsg(&Msg, MSGFLAG_VITAL, ClientID);
 	}
-}
-
-void CGameContext::SendTuningParams(int ClientID)
-{
-	CheckPureTuning();
-
-	CMsgPacker Msg(NETMSGTYPE_SV_TUNEPARAMS);
-	int *pParams = (int *) &m_Tuning;
-	for(unsigned i = 0; i < sizeof(m_Tuning) / sizeof(int); i++)
-		Msg.AddInt(pParams[i]);
-	Server()->SendMsg(&Msg, MSGFLAG_VITAL, ClientID);
 }
 
 void CGameContext::SendReadyToEnter(CPlayer *pPlayer)
@@ -688,65 +664,9 @@ void CGameContext::OnClientEnter(int ClientID)
 
 	m_VoteUpdate = true;
 
-	// update client infos (others before local)
-	CNetMsg_Sv_ClientInfo NewClientInfoMsg;
-	NewClientInfoMsg.m_ClientID = ClientID;
-	NewClientInfoMsg.m_Local = 0;
-	NewClientInfoMsg.m_Team = m_apPlayers[ClientID]->GetTeam();
-	NewClientInfoMsg.m_pName = Server()->ClientName(ClientID);
-	NewClientInfoMsg.m_pClan = Server()->ClientClan(ClientID);
-	NewClientInfoMsg.m_Country = Server()->ClientCountry(ClientID);
-	NewClientInfoMsg.m_Silent = false;
-
-	if(Config()->m_SvSilentSpectatorMode && m_apPlayers[ClientID]->GetTeam() == TEAM_SPECTATORS)
-		NewClientInfoMsg.m_Silent = true;
-
-	for(int p = 0; p < NUM_SKINPARTS; p++)
-	{
-		NewClientInfoMsg.m_apSkinPartNames[p] = m_apPlayers[ClientID]->m_TeeInfos.m_aaSkinPartNames[p];
-		NewClientInfoMsg.m_aUseCustomColors[p] = m_apPlayers[ClientID]->m_TeeInfos.m_aUseCustomColors[p];
-		NewClientInfoMsg.m_aSkinPartColors[p] = m_apPlayers[ClientID]->m_TeeInfos.m_aSkinPartColors[p];
-	}
-
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-	{
-		if(i == ClientID || !m_apPlayers[i] || (!Server()->ClientIngame(i) && !m_apPlayers[i]->IsDummy()))
-			continue;
-
-		// new info for others
-		if(Server()->ClientIngame(i))
-			Server()->SendPackMsg(&NewClientInfoMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
-
-		// existing infos for new player
-		CNetMsg_Sv_ClientInfo ClientInfoMsg;
-		ClientInfoMsg.m_ClientID = i;
-		ClientInfoMsg.m_Local = 0;
-		ClientInfoMsg.m_Team = m_apPlayers[i]->GetTeam();
-		ClientInfoMsg.m_pName = Server()->ClientName(i);
-		ClientInfoMsg.m_pClan = Server()->ClientClan(i);
-		ClientInfoMsg.m_Country = Server()->ClientCountry(i);
-		ClientInfoMsg.m_Silent = true;
-		for(int p = 0; p < NUM_SKINPARTS; p++)
-		{
-			ClientInfoMsg.m_apSkinPartNames[p] = m_apPlayers[i]->m_TeeInfos.m_aaSkinPartNames[p];
-			ClientInfoMsg.m_aUseCustomColors[p] = m_apPlayers[i]->m_TeeInfos.m_aUseCustomColors[p];
-			ClientInfoMsg.m_aSkinPartColors[p] = m_apPlayers[i]->m_TeeInfos.m_aSkinPartColors[p];
-		}
-		Server()->SendPackMsg(&ClientInfoMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
-	}
-
-	// local info
-	NewClientInfoMsg.m_Local = 1;
-	Server()->SendPackMsg(&NewClientInfoMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
-
-	if(Server()->DemoRecorder_IsRecording())
-	{
-		CNetMsg_De_ClientEnter Msg;
-		Msg.m_pName = NewClientInfoMsg.m_pName;
-		Msg.m_ClientID = ClientID;
-		Msg.m_Team = NewClientInfoMsg.m_Team;
-		Server()->SendPackMsg(&Msg, MSGFLAG_NOSEND, -1);
-	}
+	CNetMsg_Sv_ClientEnter Msg;
+	Msg.m_ClientID = ClientID;
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
 }
 
 void CGameContext::OnClientConnected(int ClientID, bool Dummy, bool AsSpec)
@@ -791,22 +711,10 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 	// update clients on drop
 	if(Server()->ClientIngame(ClientID) || IsClientBot(ClientID))
 	{
-		if(Server()->DemoRecorder_IsRecording())
-		{
-			CNetMsg_De_ClientLeave Msg;
-			Msg.m_ClientID = ClientID;
-			Msg.m_pName = Server()->ClientName(ClientID);
-			Msg.m_pReason = pReason;
-			Server()->SendPackMsg(&Msg, MSGFLAG_NOSEND, -1);
-		}
-
 		CNetMsg_Sv_ClientDrop Msg;
 		Msg.m_ClientID = ClientID;
 		Msg.m_pReason = pReason;
-		Msg.m_Silent = false;
-		if(Config()->m_SvSilentSpectatorMode && m_apPlayers[ClientID]->GetTeam() == TEAM_SPECTATORS)
-			Msg.m_Silent = true;
-		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
 	}
 
 	// mark client's projectile has team projectile
@@ -916,7 +824,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				pPlayer->m_LastVoteTryTick = Now;
 			}
 
-			m_VoteType = VOTE_UNKNOWN;
+			m_VoteType = -1;
 			char aDesc[VOTE_DESC_LENGTH] = {0};
 			char aCmd[VOTE_CMD_LENGTH] = {0};
 			const char *pReason = pMsg->m_Reason[0] ? pMsg->m_Reason : "No reason given";
@@ -1017,7 +925,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				m_VoteClientID = SpectateID;
 			}
 
-			if(m_VoteType != VOTE_UNKNOWN)
+			if(m_VoteType != -1)
 			{
 				m_VoteCreator = ClientID;
 				StartVote(aDesc, aCmd, pReason);
@@ -1123,26 +1031,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				pPlayer->m_TeeInfos.m_aSkinPartColors[p] = pMsg->m_aSkinPartColors[p];
 			}
 
-			/*
-			// update all clients
-			for(int i = 0; i < MAX_CLIENTS; ++i)
-			{
-				if(!m_apPlayers[i] || (!Server()->ClientIngame(i) && !m_apPlayers[i]->IsDummy()) || Server()->GetClientVersion(i) < MIN_SKINCHANGE_CLIENTVERSION)
-					continue;
-
-				SendSkinChange(pPlayer->GetCID(), i);
-			}
-			*/
-
 			m_pController->OnPlayerInfoChange(pPlayer);
-			// update all clients
-			for(int i = 0; i < MAX_CLIENTS; ++i)
-			{
-				if(!m_apPlayers[i] || (!Server()->ClientIngame(i) && !m_apPlayers[i]->IsDummy()) || Server()->GetClientVersion(i) < MIN_SKINCHANGE_CLIENTVERSION)
-					continue;
-
-				SendSkinChange(pPlayer->GetCID(), i);
-			}
+			// skins are part of TeeInfo now, so the next snapshot carries the update
 		}
 		else if(MsgID == NETMSGTYPE_CL_COMMAND)
 		{
@@ -1176,10 +1066,15 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 			SendVoteClearOptions(ClientID);
 			SendVoteOptions(ClientID);
-			SendTuningParams(ClientID);
 			SendReadyToEnter(pPlayer);
 		}
 	}
+}
+
+void CGameContext::OnDemoRecorderStart()
+{
+	m_pController->SendGameInfo(-1);
+	SendSettings(-1);
 }
 
 void CGameContext::ConTuneParam(IConsole::IResult *pResult, void *pUserData)
@@ -1194,7 +1089,6 @@ void CGameContext::ConTuneParam(IConsole::IResult *pResult, void *pUserData)
 		if(pSelf->Tuning()->Set(pParamName, NewValue) && pSelf->Tuning()->Get(pParamName, &NewValue))
 		{
 			str_format(aBuf, sizeof(aBuf), "%s changed to %.2f", pParamName, NewValue);
-			pSelf->SendTuningParams(-1);
 		}
 		else
 		{
@@ -1229,7 +1123,6 @@ void CGameContext::ConTuneReset(IConsole::IResult *pResult, void *pUserData)
 		if(TuningParams.Get(pParamName, &DefaultValue) && pSelf->Tuning()->Set(pParamName, DefaultValue))
 		{
 			str_format(aBuf, sizeof(aBuf), "%s reset to %.2f", pParamName, DefaultValue);
-			pSelf->SendTuningParams(-1);
 		}
 		else
 		{
@@ -1240,7 +1133,6 @@ void CGameContext::ConTuneReset(IConsole::IResult *pResult, void *pUserData)
 	else
 	{
 		*pSelf->Tuning() = TuningParams;
-		pSelf->SendTuningParams(-1);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", "Tuning reset");
 	}
 }
@@ -1823,16 +1715,11 @@ void CGameContext::OnShutdown()
 
 void CGameContext::OnSnap(int ClientID)
 {
-	// add tuning to demo
-	CTuningParams StandardTuning;
-	if(ClientID == -1 && Server()->DemoRecorder_IsRecording() && mem_comp(&StandardTuning, &m_Tuning, sizeof(CTuningParams)) != 0)
-	{
-		CNetObj_De_TuneParams *pTuneParams = static_cast<CNetObj_De_TuneParams *>(Server()->SnapNewItem(NETOBJTYPE_DE_TUNEPARAMS, 0, sizeof(CNetObj_De_TuneParams)));
-		if(!pTuneParams)
-			return;
-
-		mem_copy(pTuneParams->m_aTuneParams, &m_Tuning, sizeof(pTuneParams->m_aTuneParams));
-	}
+	// Tuning is a singleton snapshot object (item id 0). It changes rarely, so
+	// the delta makes it free in the common case, and demos record it for free.
+	CNetObj_Tuning *pTuning = static_cast<CNetObj_Tuning *>(Server()->SnapNewItem(NETOBJTYPE_TUNING, 0, sizeof(CNetObj_Tuning)));
+	if(pTuning)
+		mem_copy(pTuning->m_aTuneParams, &m_Tuning, sizeof(pTuning->m_aTuneParams));
 
 	m_World.Snap(ClientID);
 	m_pController->Snap(ClientID);

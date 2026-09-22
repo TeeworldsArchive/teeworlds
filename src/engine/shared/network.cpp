@@ -377,7 +377,26 @@ void CNetBase::SendControlMsg(const NETADDR *pAddr, TOKEN Token, int Ack, int Co
 	SendPacket(pAddr, &Construct);
 }
 
-void CNetBase::SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, TOKEN MyToken, bool Extended)
+bool Net8WriteGenerationMarker(unsigned char *pChunkData, int ChunkDataSize, int Offset)
+{
+	if(Offset < 0 || Offset + NET_GENERATION_MARKER_SIZE > ChunkDataSize)
+		return false;
+	pChunkData[Offset] = NET_GENERATION_MARKER_0;
+	pChunkData[Offset + 1] = NET_GENERATION_MARKER_1;
+	pChunkData[Offset + 2] = NET_GENERATION_MARKER_2;
+	return true;
+}
+
+bool Net8HasGenerationMarker(const unsigned char *pChunkData, int ChunkDataSize, int Offset)
+{
+	if(Offset < 0 || Offset + NET_GENERATION_MARKER_SIZE > ChunkDataSize)
+		return false;
+	return pChunkData[Offset] == NET_GENERATION_MARKER_0 &&
+	       pChunkData[Offset + 1] == NET_GENERATION_MARKER_1 &&
+	       pChunkData[Offset + 2] == NET_GENERATION_MARKER_2;
+}
+
+void CNetBase::SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, TOKEN MyToken, bool Extended, bool GenerationMarker)
 {
 	dbg_assert((Token & ~NET_TOKEN_MASK) == 0, "token out of range");
 	dbg_assert((MyToken & ~NET_TOKEN_MASK) == 0, "resp token out of range");
@@ -390,7 +409,10 @@ void CNetBase::SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ac
 	// Advertise that this build can do zstd with the dictionary. It is only
 	// read out of a NET_CTRLMSG_CONNECT, but keeping it set for the token
 	// request as well is harmless and means the slot is never stale.
-	m_aRequestTokenBuf[NET_CTRL_REQUEST_CAPABILITY_OFFSET] = NET_CTRLFLAG_ZSTD_DICT;
+	const int CapabilityOffset = GenerationMarker ? NET_CTRL_REQUEST_CAPABILITY_OFFSET_8 : NET_CTRL_REQUEST_CAPABILITY_OFFSET;
+	m_aRequestTokenBuf[CapabilityOffset] = legacy::Net7BuildClientCapabilities(true);
+	if(GenerationMarker)
+		Net8WriteGenerationMarker(m_aRequestTokenBuf, sizeof(m_aRequestTokenBuf), NET_CTRL_REQUEST_CAPABILITY_OFFSET);
 
 	SendControlMsg(pAddr, Token, 0, ControlMsg, m_aRequestTokenBuf, Extended ? sizeof(m_aRequestTokenBuf) : 4);
 }

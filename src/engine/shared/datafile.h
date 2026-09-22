@@ -72,11 +72,13 @@ class CDataFileWriter
 	enum
 	{
 		MAX_ITEM_TYPES = 0xffff,
-		MAX_ITEMS = 1024,
-		MAX_DATAS = 1024,
+		MAX_ITEMS = 4096,
+		MAX_DATAS = 4096,
 	};
 
 	IOHANDLE m_File;
+	int m_Version;
+	int m_CompressLevel;
 	int m_NumItems;
 	int m_NumDatas;
 	int m_NumItemTypes;
@@ -87,7 +89,8 @@ class CDataFileWriter
 public:
 	CDataFileWriter();
 	~CDataFileWriter();
-	bool Open(class IStorage *pStorage, const char *Filename);
+	bool Open(class IStorage *pStorage, const char *Filename, int Version = 5);
+	void SetCompressLevel(int Level) { m_CompressLevel = Level; }
 	int AddData(int Size, const void *pData);
 	int AddDataSwapped(int Size, const void *pData);
 	int AddItem(int Type, int ID, int Size, const void *pData);

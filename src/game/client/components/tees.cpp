@@ -18,16 +18,16 @@
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
 
-#include "players.h"
+#include "tees.h"
 
-void CPlayers::RenderHook(
+void CTees::RenderHook(
 	const CNetObj_Character *pPrevChar,
-	const CNetObj_Character *pPlayerChar,
+	const CNetObj_Character *pCurChar,
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientID) const
 {
 	CNetObj_Character Prev = *pPrevChar;
-	CNetObj_Character Player = *pPlayerChar;
+	CNetObj_Character Cur = *pCurChar;
 	CTeeRenderInfo RenderInfo = *pRenderInfo;
 
 	float IntraTick = Client()->IntraGameTick();
@@ -37,29 +37,30 @@ void CPlayers::RenderHook(
 
 	if(m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(ClientID))
 	{
-		m_pClient->UsePredictedChar(&Prev, &Player, &IntraTick, ClientID);
+		m_pClient->UsePredictedChar(&Prev, &Cur, &IntraTick, ClientID);
 	}
 
-	vec2 Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
+	vec2 Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), IntraTick);
 
 	// draw hook
-	if(Prev.m_HookState > 0 && Player.m_HookState > 0)
+	if(Prev.m_HookState > 0 && Cur.m_HookState > 0)
 	{
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 		Graphics()->QuadsBegin();
 
 		vec2 HookPos;
 
-		if(Player.m_HookedPlayer != -1 && m_pClient->m_Snap.m_aCharacters[Player.m_HookedPlayer].m_Active)
+		const CGameClient::CSnapState::CCharacterInfo *pHooked = m_pClient->GetCharacterInfo(Cur.m_HookedPlayer);
+		if(Cur.m_HookedPlayer != -1 && pHooked && pHooked->m_Active)
 		{
-			// `HookedPlayer != -1` means that a player is being hooked
-			bool Predicted = m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(Player.m_HookedPlayer);
-			HookPos = m_pClient->GetCharPos(Player.m_HookedPlayer, Predicted);
+			// `HookedPlayer != -1` means that a tee is being hooked
+			bool Predicted = m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(Cur.m_HookedPlayer);
+			HookPos = m_pClient->GetCharPos(Cur.m_HookedPlayer, Predicted);
 		}
 		else
 		{
 			// The hook is in the air, on a hookable tile or the hooked player is out of range
-			HookPos = mix(vec2(Prev.m_HookX, Prev.m_HookY), vec2(Player.m_HookX, Player.m_HookY), IntraTick);
+			HookPos = mix(vec2(Prev.m_HookX, Prev.m_HookY), vec2(Cur.m_HookX, Cur.m_HookY), IntraTick);
 		}
 
 		const float HookDistance = distance(Position, HookPos);
@@ -90,15 +91,15 @@ void CPlayers::RenderHook(
 	}
 }
 
-void CPlayers::RenderPlayer(
+void CTees::RenderTee(
 	const CNetObj_Character *pPrevChar,
-	const CNetObj_Character *pPlayerChar,
-	const CNetObj_PlayerInfo *pPlayerInfo,
+	const CNetObj_Character *pCurChar,
+	const CNetObj_TeeInfo *pTeeInfo,
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientID) const
 {
 	CNetObj_Character Prev = *pPrevChar;
-	CNetObj_Character Player = *pPlayerChar;
+	CNetObj_Character Cur = *pCurChar;
 	CTeeRenderInfo RenderInfo = *pRenderInfo;
 
 	// set size
@@ -106,35 +107,35 @@ void CPlayers::RenderPlayer(
 
 	float IntraTick = Client()->IntraGameTick();
 
-	if(Prev.m_Angle < pi * -128 && Player.m_Angle > pi * 128)
+	if(Prev.m_Angle < pi * -128 && Cur.m_Angle > pi * 128)
 		Prev.m_Angle += 2 * pi * 256;
-	else if(Prev.m_Angle > pi * 128 && Player.m_Angle < pi * -128)
-		Player.m_Angle += 2 * pi * 256;
-	float Angle = mix((float) Prev.m_Angle, (float) Player.m_Angle, IntraTick) / 256.0f;
+	else if(Prev.m_Angle > pi * 128 && Cur.m_Angle < pi * -128)
+		Cur.m_Angle += 2 * pi * 256;
+	float Angle = mix((float) Prev.m_Angle, (float) Cur.m_Angle, IntraTick) / 256.0f;
 
 	if(m_pClient->m_LocalClientID == ClientID && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
-		// just use the direct input if it's local player we are rendering
+		// just use the direct input if it's local tee we are rendering
 		Angle = angle(m_pClient->m_pControls->m_MousePos);
 	}
 
 	if(m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(ClientID))
 	{
-		m_pClient->UsePredictedChar(&Prev, &Player, &IntraTick, ClientID);
+		m_pClient->UsePredictedChar(&Prev, &Cur, &IntraTick, ClientID);
 	}
 	const bool Paused = m_pClient->IsWorldPaused() || m_pClient->IsDemoPlaybackPaused();
 
 	vec2 Direction = direction(Angle);
-	vec2 Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
-	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), IntraTick);
+	vec2 Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), IntraTick);
+	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Cur.m_VelX / 256.0f, Cur.m_VelY / 256.0f), IntraTick);
 
 	m_pClient->m_pFlow->Add(Position, Vel * 100.0f, 10.0f);
 
-	RenderInfo.m_GotAirJump = Player.m_Jumped & 2 ? 0 : 1;
+	RenderInfo.m_GotAirJump = Cur.m_Jumped & 2 ? 0 : 1;
 
-	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
-	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16);
-	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
+	bool Stationary = Cur.m_VelX <= 1 && Cur.m_VelX >= -1;
+	bool InAir = !Collision()->CheckPoint(Cur.m_X, Cur.m_Y + 16);
+	bool WantOtherDir = (Cur.m_Direction == -1 && Vel.x > 0) || (Cur.m_Direction == 1 && Vel.x < 0);
 
 	// evaluate animation
 	const float WalkTimeMagic = 100.0f;
@@ -166,14 +167,14 @@ void CPlayers::RenderPlayer(
 		}
 	}
 
-	if(Player.m_Weapon == WEAPON_HAMMER)
+	if(Cur.m_Weapon == WEAPON_HAMMER)
 	{
-		float ct = (Client()->PrevGameTick() - Player.m_AttackTick) / (float) SERVER_TICK_SPEED + s_LastGameTickTime;
+		float ct = (Client()->PrevGameTick() - Cur.m_AttackTick) / (float) SERVER_TICK_SPEED + s_LastGameTickTime;
 		State.Add(&g_pData->m_aAnimations[ANIM_HAMMER_SWING], clamp(ct * 5.0f, 0.0f, 1.0f), 1.0f);
 	}
-	if(Player.m_Weapon == WEAPON_NINJA)
+	if(Cur.m_Weapon == WEAPON_NINJA)
 	{
-		float ct = (Client()->PrevGameTick() - Player.m_AttackTick) / (float) SERVER_TICK_SPEED + s_LastGameTickTime;
+		float ct = (Client()->PrevGameTick() - Cur.m_AttackTick) / (float) SERVER_TICK_SPEED + s_LastGameTickTime;
 		State.Add(&g_pData->m_aAnimations[ANIM_NINJA_SWING], clamp(ct * 2.0f, 0.0f, 1.0f), 1.0f);
 	}
 
@@ -188,23 +189,23 @@ void CPlayers::RenderPlayer(
 		}
 
 		m_pClient->m_pEffects->SkidTrail(
-			Position + vec2(-Player.m_Direction * 6, 12),
-			vec2(-Player.m_Direction * 100 * length(Vel), -50));
+			Position + vec2(-Cur.m_Direction * 6, 12),
+			vec2(-Cur.m_Direction * 100 * length(Vel), -50));
 	}
 
 	// draw gun
-	if(Player.m_Weapon >= 0)
+	if(Cur.m_Weapon >= 0)
 	{
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 		Graphics()->QuadsBegin();
 		Graphics()->QuadsSetRotation(State.GetAttach()->m_Angle * pi * 2 + Angle);
 
 		// normal weapons
-		const int Weapon = clamp(Player.m_Weapon, 0, NUM_WEAPONS - 1);
+		const int Weapon = clamp(Cur.m_Weapon, 0, NUM_WEAPONS - 1);
 		RenderTools()->SelectSprite(g_pData->m_Weapons.m_aId[Weapon].m_pSpriteBody, Direction.x < 0 ? SPRITE_FLAG_FLIP_Y : 0);
 
 		vec2 p;
-		if(Player.m_Weapon == WEAPON_HAMMER)
+		if(Cur.m_Weapon == WEAPON_HAMMER)
 		{
 			// Static position for hammer
 			p = Position + vec2(State.GetAttach()->m_X, State.GetAttach()->m_Y);
@@ -221,7 +222,7 @@ void CPlayers::RenderPlayer(
 			}
 			RenderTools()->DrawSprite(p.x, p.y, g_pData->m_Weapons.m_aId[Weapon].m_VisualSize);
 		}
-		else if(Player.m_Weapon == WEAPON_NINJA)
+		else if(Cur.m_Weapon == WEAPON_NINJA)
 		{
 			p = Position;
 			p.y += g_pData->m_Weapons.m_aId[Weapon].m_Offsety;
@@ -240,7 +241,7 @@ void CPlayers::RenderPlayer(
 			RenderTools()->DrawSprite(p.x, p.y, g_pData->m_Weapons.m_aId[Weapon].m_VisualSize);
 
 			// HADOKEN
-			if((Client()->GameTick() - Player.m_AttackTick) <= (SERVER_TICK_SPEED / 6) && g_pData->m_Weapons.m_aId[Weapon].m_NumSpriteMuzzles)
+			if((Client()->GameTick() - Cur.m_AttackTick) <= (SERVER_TICK_SPEED / 6) && g_pData->m_Weapons.m_aId[Weapon].m_NumSpriteMuzzles)
 			{
 				const int IteX = random_int() % g_pData->m_Weapons.m_aId[Weapon].m_NumSpriteMuzzles;
 				static int s_LastIteX = IteX;
@@ -249,7 +250,7 @@ void CPlayers::RenderPlayer(
 
 				if(g_pData->m_Weapons.m_aId[Weapon].m_aSpriteMuzzles[s_LastIteX])
 				{
-					const vec2 Dir = normalize(vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y));
+					const vec2 Dir = normalize(vec2(pCurChar->m_X, pCurChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y));
 					p = Position - Dir * g_pData->m_Weapons.m_aId[Weapon].m_Muzzleoffsetx;
 					Graphics()->QuadsSetRotation(angle(Dir));
 					RenderTools()->SelectSprite(g_pData->m_Weapons.m_aId[Weapon].m_aSpriteMuzzles[s_LastIteX], 0);
@@ -260,19 +261,19 @@ void CPlayers::RenderPlayer(
 		else
 		{
 			// TODO: should be an animation
-			const float RecoilTick = (Client()->GameTick() - Player.m_AttackTick + s_LastIntraTick) / 5.0f;
+			const float RecoilTick = (Client()->GameTick() - Cur.m_AttackTick + s_LastIntraTick) / 5.0f;
 			const float Recoil = RecoilTick < 1.0f ? sinf(RecoilTick * pi) : 0.0f;
 			p = Position + Direction * (g_pData->m_Weapons.m_aId[Weapon].m_Offsetx - Recoil * 10.0f);
 			p.y += g_pData->m_Weapons.m_aId[Weapon].m_Offsety;
 			RenderTools()->DrawSprite(p.x, p.y, g_pData->m_Weapons.m_aId[Weapon].m_VisualSize);
 		}
 
-		if(Player.m_Weapon == WEAPON_GUN || Player.m_Weapon == WEAPON_SHOTGUN)
+		if(Cur.m_Weapon == WEAPON_GUN || Cur.m_Weapon == WEAPON_SHOTGUN)
 		{
 			// check if we're firing stuff
 			if(g_pData->m_Weapons.m_aId[Weapon].m_NumSpriteMuzzles)
 			{
-				const float MuzzleTick = Client()->GameTick() - Player.m_AttackTick + s_LastIntraTick;
+				const float MuzzleTick = Client()->GameTick() - Cur.m_AttackTick + s_LastIntraTick;
 				const int IteX = random_int() % g_pData->m_Weapons.m_aId[Weapon].m_NumSpriteMuzzles;
 				static int s_LastIteX = IteX;
 				if(UpdateSingleAnimationFrame)
@@ -290,7 +291,7 @@ void CPlayers::RenderPlayer(
 		}
 		Graphics()->QuadsEnd();
 
-		switch(Player.m_Weapon)
+		switch(Cur.m_Weapon)
 		{
 			case WEAPON_GUN: RenderTools()->RenderTeeHand(&RenderInfo, p, Direction, -3 * pi / 4, vec2(-15, 4)); break;
 			case WEAPON_SHOTGUN: RenderTools()->RenderTeeHand(&RenderInfo, p, Direction, -pi / 2, vec2(-5, 4)); break;
@@ -301,16 +302,16 @@ void CPlayers::RenderPlayer(
 	// render the "shadow" tee
 	if(m_pClient->m_LocalClientID == ClientID && Config()->m_Debug)
 	{
-		vec2 GhostPosition = mix(vec2(pPrevChar->m_X, pPrevChar->m_Y), vec2(pPlayerChar->m_X, pPlayerChar->m_Y), Client()->IntraGameTick());
+		vec2 GhostPosition = mix(vec2(pPrevChar->m_X, pPrevChar->m_Y), vec2(pCurChar->m_X, pCurChar->m_Y), Client()->IntraGameTick());
 		CTeeRenderInfo Ghost = RenderInfo;
 		for(int p = 0; p < NUM_SKINPARTS; p++)
 			Ghost.m_aColors[p].a *= 0.5f;
-		RenderTools()->RenderTee(&State, &Ghost, Player.m_Emote, Direction, GhostPosition); // render ghost
+		RenderTools()->RenderTee(&State, &Ghost, Cur.m_Emote, Direction, GhostPosition); // render ghost
 	}
 
-	RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, Position);
+	RenderTools()->RenderTee(&State, &RenderInfo, Cur.m_Emote, Direction, Position);
 
-	if(pPlayerInfo->m_PlayerFlags & PLAYERFLAG_CHATTING)
+	if(pTeeInfo->m_Flag & TEEFLAG_CHATTING)
 	{
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_EMOTICONS].m_Id);
 		Graphics()->QuadsBegin();
@@ -320,8 +321,8 @@ void CPlayers::RenderPlayer(
 		Graphics()->QuadsEnd();
 	}
 
-	CGameClient::CClientData *pClientData = &m_pClient->m_aClients[ClientID];
-	if(pClientData->m_EmoticonStart != -1 && pClientData->m_Emoticon >= 0 && pClientData->m_Emoticon < NUM_EMOTICONS)
+	CGameClient::CClientData *pClientData = m_pClient->GetClientData(ClientID);
+	if(pClientData && pClientData->m_EmoticonStart != -1 && pClientData->m_Emoticon >= 0 && pClientData->m_Emoticon < NUM_EMOTICONS)
 	{
 		// adjust start tick if world paused; not if demo paused because ticks are synchronized with demo
 		static int s_LastGameTick = Client()->GameTick();
@@ -351,27 +352,32 @@ void CPlayers::RenderPlayer(
 	}
 }
 
-void CPlayers::OnRender()
+void CTees::OnRender()
 {
 	if(Client()->State() < IClient::STATE_ONLINE)
 		return;
 
-	static const CNetObj_PlayerInfo *s_apInfo[MAX_CLIENTS];
-	static CTeeRenderInfo s_aRenderInfo[MAX_CLIENTS];
+	// Active tees are real clients (dense, in m_aClients) plus bots (sparse, in
+	// a hash table). CollectActiveTeeIDs hides that distinction.
+	static array<int> s_aTeeIDs;
+	static array<const CNetObj_TeeInfo *> s_apTeeInfos;
+	static array<CTeeRenderInfo> s_aRenderInfo;
+	m_pClient->CollectActiveTeeIDs(s_aTeeIDs);
+	s_apTeeInfos.clear_size();
+	s_aRenderInfo.clear_size();
 
 	// update RenderInfo for ninja
 	bool IsTeamplay = (m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS) != 0;
-	for(int i = 0; i < MAX_CLIENTS; ++i)
+	for(int Index = 0; Index < s_aTeeIDs.size(); ++Index)
 	{
-		if(!m_pClient->m_Snap.m_aCharacters[i].m_Active)
-			continue;
+		const int i = s_aTeeIDs[Index];
+		const CGameClient::CSnapState::CCharacterInfo *pCharInfo = m_pClient->GetCharacterInfo(i);
+		const CGameClient::CClientData *pClientData = m_pClient->GetClientData(i);
+		CTeeRenderInfo RenderInfo = pClientData->m_RenderInfo;
 
-		s_apInfo[i] = (const CNetObj_PlayerInfo *) Client()->SnapFindItem(IClient::SNAP_CURRENT, NETOBJTYPE_PLAYERINFO, i);
-		s_aRenderInfo[i] = m_pClient->m_aClients[i].m_RenderInfo;
-
-		if(m_pClient->m_Snap.m_aCharacters[i].m_Cur.m_Weapon == WEAPON_NINJA)
+		if(pCharInfo->m_Cur.m_Weapon == WEAPON_NINJA)
 		{
-			// change the skin for the player to the ninja
+			// change the skin for the tee to the ninja
 			int Skin = m_pClient->m_pSkins->Find("x_ninja", true);
 			if(Skin != -1)
 			{
@@ -380,32 +386,38 @@ void CPlayers::OnRender()
 				{
 					if(IsTeamplay)
 					{
-						s_aRenderInfo[i].m_aTextures[p] = pNinja->m_apParts[p]->m_ColorTexture;
-						int ColorVal = m_pClient->m_pSkins->GetTeamColor(true, pNinja->m_aPartColors[p], m_pClient->m_aClients[i].m_Team, p);
-						s_aRenderInfo[i].m_aColors[p] = m_pClient->m_pSkins->GetColorV4(ColorVal, p == SKINPART_MARKING);
+						RenderInfo.m_aTextures[p] = pNinja->m_apParts[p]->m_ColorTexture;
+						int ColorVal = m_pClient->m_pSkins->GetTeamColor(true, pNinja->m_aPartColors[p], pClientData->m_Team, p);
+						RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(ColorVal, p == SKINPART_MARKING);
 					}
 					else if(pNinja->m_aUseCustomColors[p])
 					{
-						s_aRenderInfo[i].m_aTextures[p] = pNinja->m_apParts[p]->m_ColorTexture;
-						s_aRenderInfo[i].m_aColors[p] = m_pClient->m_pSkins->GetColorV4(pNinja->m_aPartColors[p], p == SKINPART_MARKING);
+						RenderInfo.m_aTextures[p] = pNinja->m_apParts[p]->m_ColorTexture;
+						RenderInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(pNinja->m_aPartColors[p], p == SKINPART_MARKING);
 					}
 					else
 					{
-						s_aRenderInfo[i].m_aTextures[p] = pNinja->m_apParts[p]->m_OrgTexture;
-						s_aRenderInfo[i].m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+						RenderInfo.m_aTextures[p] = pNinja->m_apParts[p]->m_OrgTexture;
+						RenderInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 					}
 				}
 			}
 		}
+
+		s_apTeeInfos.add(m_pClient->GetTeeInfo(i));
+		s_aRenderInfo.add(RenderInfo);
 	}
 
-	// render other players in two passes, first pass we render the other, second pass we render our self
+	// render other tees in two passes, first pass we render the other, second pass we render our self
 	for(int p = 0; p < 4; p++)
 	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
+		for(int Index = 0; Index < s_aTeeIDs.size(); Index++)
 		{
-			// only render active characters
-			if(!m_pClient->m_Snap.m_aCharacters[i].m_Active || !s_apInfo[i])
+			const int i = s_aTeeIDs[Index];
+
+			// only render active characters with a known identity
+			const CGameClient::CSnapState::CCharacterInfo *pCharInfo = m_pClient->GetCharacterInfo(i);
+			if(!pCharInfo || !pCharInfo->m_Active || !s_apTeeInfos[Index])
 				continue;
 
 			//
@@ -415,24 +427,24 @@ void CPlayers::OnRender()
 			if((p % 2) == 1 && !Local)
 				continue;
 
-			CNetObj_Character *pPrevChar = &m_pClient->m_Snap.m_aCharacters[i].m_Prev;
-			CNetObj_Character *pCurChar = &m_pClient->m_Snap.m_aCharacters[i].m_Cur;
+			const CNetObj_Character *pPrevChar = &pCharInfo->m_Prev;
+			const CNetObj_Character *pCurChar = &pCharInfo->m_Cur;
 
 			if(p < 2)
 			{
 				RenderHook(
 					pPrevChar,
 					pCurChar,
-					&s_aRenderInfo[i],
+					&s_aRenderInfo[Index],
 					i);
 			}
 			else
 			{
-				RenderPlayer(
+				RenderTee(
 					pPrevChar,
 					pCurChar,
-					s_apInfo[i],
-					&s_aRenderInfo[i],
+					s_apTeeInfos[Index],
+					&s_aRenderInfo[Index],
 					i);
 			}
 		}

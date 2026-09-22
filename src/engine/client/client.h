@@ -4,6 +4,9 @@
 #define ENGINE_CLIENT_CLIENT_H
 
 #include <base/hash.h>
+#include <base/tl/array.h>
+
+#include <engine/shared/legacy/network_translator.h>
 
 #include "steam.h"
 
@@ -86,7 +89,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	char m_aServerAddressStr[256];
 	char m_aServerPassword[128];
 
-	unsigned m_SnapshotParts;
+	unsigned char m_aSnapshotParts[CSnapshot::MAX_PARTS / 8];
+	int m_NumSnapshotParts;
 	int64 m_LocalStartTime;
 
 	int64 m_LastRenderTime;
@@ -103,6 +107,12 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	bool m_AutoStatScreenshotRecycle;
 	bool m_SoundInitFailed;
 	bool m_RecordGameMessage;
+	// Set once the handshake reveals that the server speaks 0.7; all traffic then
+	// goes through legacy::CNetworkTranslator before it reaches the 0.8 client.
+	bool m_LegacyConnection;
+	legacy::CNetworkTranslator m_LegacyTranslator;
+	// Scratch for a translated 0.7 demo snapshot.
+	array<unsigned char> m_aLegacySnapData;
 
 	int m_AckGameTick;
 	int m_CurrentRecvTick;
@@ -163,10 +173,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	CSnapshotStorage::CHolder *m_aSnapshots[NUM_SNAPSHOT_TYPES];
 
 	int m_ReceivedSnapshots;
-	char m_aSnapshotIncomingData[CSnapshot::MAX_SIZE];
+	array<unsigned char> m_SnapshotIncomingData;
 
 	class CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
-	char *m_aDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2][CSnapshot::MAX_SIZE];
+	array<unsigned char> m_aDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2];
 	class CSnapshotBuilder m_DemoRecSnapshotBuilder;
 
 	class CSnapshotDelta m_SnapshotDelta;
@@ -229,6 +239,7 @@ public:
 	void DisconnectWithReason(const char *pReason);
 	virtual void Disconnect();
 	const char *ServerAddress() const { return m_aServerAddressStr; }
+	bool IsLegacyConnection() const { return m_LegacyConnection; }
 
 	virtual void GetServerInfo(CServerInfo *pServerInfo);
 

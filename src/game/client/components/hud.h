@@ -33,7 +33,7 @@ class CHud : public CComponent
 	void RenderSpectatorNotification();
 	void RenderReadyUpNotification();
 	void RenderWarmupTimer();
-	void RenderRaceTime(const CNetObj_PlayerInfoRace *pRaceInfo);
+	void RenderRaceTime(const CNetObj_TeeInfo *pRaceInfo);
 	void RenderCheckpoint();
 	void RenderLocalTime(float x);
 

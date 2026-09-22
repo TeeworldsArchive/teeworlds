@@ -3,6 +3,8 @@
 #ifndef GAME_SERVER_EVENTHANDLER_H
 #define GAME_SERVER_EVENTHANDLER_H
 
+#include "clientmask.h"
+
 //
 class CEventHandler
 {
@@ -14,7 +16,7 @@ class CEventHandler
 		int m_Type;
 		int m_Offset;
 		int m_Size;
-		int64 m_ClientMask;
+		CClientMask m_ClientMask;
 	};
 	CEventEntry m_aEventList[MAX_EVENTS];
 	char m_aData[MAX_DATASIZE];
@@ -29,7 +31,7 @@ public:
 	void SetGameServer(CGameContext *pGameServer);
 
 	CEventHandler();
-	void *Create(int Type, int Size, int64 Mask = -1);
+	void *Create(int Type, int Size, const CClientMask &Mask = CClientMask::All());
 	void Clear();
 	void Snap(int SnappingClient);
 };

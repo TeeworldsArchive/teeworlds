@@ -88,7 +88,7 @@ function ContentCompile(action, output)
 		Python("datasrc/compile.py") .. " " .. action .. " > " .. output
 	)
 	AddDependency(output, "datasrc/compile.py")
-	AddDependency("datasrc/compile.py", "datasrc/content.py", "datasrc/network.py", "datasrc/datatypes.py")
+	AddDependency("datasrc/compile.py", "datasrc/content.py", "datasrc/network.py", "datasrc/network7.py", "datasrc/datatypes.py")
 	return output
 end
 
@@ -303,8 +303,13 @@ function SharedCommonFiles()
 		local network_header = ContentCompile("network_header", "generated/protocol.h")
 		AddDependency(network_source, network_header, "src/engine/shared/protocol.h")
 
+		-- frozen 0.7 protocol table, generated into namespace protocol7
+		local network7_source = ContentCompile("network7_source", "generated/protocol7.cpp")
+		local network7_header = ContentCompile("network7_header", "generated/protocol7.h")
+		AddDependency(network7_source, network7_header, "src/engine/shared/protocol.h")
+
 		local nethash = CHash("generated/nethash.cpp", "src/engine/shared/protocol.h", "src/game/tuning.h", "src/game/gamecore.cpp", network_header)
-		shared_common_files = {network_source, nethash}
+		shared_common_files = {network_source, network7_source, nethash}
 	end
 
 	return shared_common_files
@@ -357,6 +362,7 @@ end
 function BuildEngineCommon(settings)
 	config.libcurl:Apply(settings)
 	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/*.cpp")))
+	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/legacy/*.cpp")))
 
 	local c11_settings = settings:Copy();
 	c11_settings.cc.flags:Add("-std=c11")

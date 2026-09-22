@@ -26,7 +26,7 @@
 
 CMenus::CColumn CMenus::ms_aBrowserCols[] = {
 	// Localize("Server"); Localize("Type"); Localize("Map"); Localize("Players"); Localize("Ping"); - these strings are localized within CLocConstString
-	{COL_BROWSER_FLAG, -1, " ", -1, 4 * 16.0f + 3 * 2.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
+	{COL_BROWSER_FLAG, -1, " ", -1, 5 * 16.0f + 4 * 2.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
 	{COL_BROWSER_NAME, IServerBrowser::SORT_NAME, "Server", 0, 310.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
 	{COL_BROWSER_GAMETYPE, IServerBrowser::SORT_GAMETYPE, "Type", 1, 70.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
 	{COL_BROWSER_MAP, IServerBrowser::SORT_MAP, "Map", 1, 100.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
@@ -34,10 +34,10 @@ CMenus::CColumn CMenus::ms_aBrowserCols[] = {
 	{COL_BROWSER_PING, IServerBrowser::SORT_PING, "Ping", 1, 40.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
 };
 
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterStandard = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_PURE | IServerBrowser::FILTER_PURE_MAP, 999, -1, 0, {{0}}, {0}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_COMPAT_VERSION, 999, -1, 0, {{"Race"}}, {false}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterFavorites = {IServerBrowser::FILTER_COMPAT_VERSION | IServerBrowser::FILTER_FAVORITE, 999, -1, 0, {{0}}, {0}, {0}};
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterAll = {IServerBrowser::FILTER_COMPAT_VERSION, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterStandard = {IServerBrowser::FILTER_IGNORE_UNKNOWN | IServerBrowser::FILTER_PURE | IServerBrowser::FILTER_PURE_MAP, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_IGNORE_UNKNOWN, 999, -1, 0, {{"Race"}}, {false}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterFavorites = {IServerBrowser::FILTER_IGNORE_UNKNOWN | IServerBrowser::FILTER_FAVORITE, 999, -1, 0, {{0}}, {0}, {0}};
+CServerFilterInfo CMenus::CBrowserFilter::ms_FilterAll = {IServerBrowser::FILTER_IGNORE_UNKNOWN, 999, -1, 0, {{0}}, {0}, {0}};
 
 // Localize("Casual"); Localize("Normal"); Localize("Competitive"); - these strings are localized within CLocConstString
 static CLocConstString s_aDifficultyLabels[] = {
@@ -473,7 +473,6 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 	const float IconSize = 14.0f;
 	const float TextAlpha = (pEntry->m_NumClients == pEntry->m_MaxClients) ? 0.5f : 1.0f;
 	vec4 TextBaseColor = vec4(1.0f, 1.0f, 1.0f, TextAlpha);
-	vec4 TextUnrecommendedColor = vec4(1.0f, 0.4f, 0.4f, TextAlpha);
 	vec4 TextBaseOutlineColor = vec4(0.0, 0.0, 0.0, 0.3f);
 	vec4 ServerInfoTextBaseColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	vec4 HighlightColor = vec4(TextHighlightColor.r, TextHighlightColor.g, TextHighlightColor.b, TextAlpha);
@@ -507,6 +506,15 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			{
 				UI()->DoLabel(&Icon, "\uEECE", IconSize, TEXTALIGN_MC);
 				UI()->DoTooltip(&pEntry->m_Flags, &Icon, Localize("This server is protected by a password."));
+			}
+
+			Rect.VSplitLeft(Rect.h, &Icon, &Rect);
+			if(pEntry->m_Legacy)
+			{
+				TextRender()->TextColor(1.0f, 0.3f, 0.3f, 1.0f);
+				UI()->DoLabel(&Icon, "\uECA1", IconSize, TEXTALIGN_MC);
+				UI()->DoTooltip(&pEntry->m_FriendState, &Icon, Localize("This is a legacy server which doesn't provide new features and the client will work on a compatibility layer"));
+				TextRender()->TextColor(TextBaseColor);
 			}
 
 			Rect.VSplitLeft(Rect.h, &Icon, &Rect);
@@ -645,7 +653,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			TextRender()->TextColor(TextBaseColor);
 			TextRender()->TextSecondaryColor(TextBaseOutlineColor);
 			Button.y += (Button.h - FontSize / CUI::ms_FontmodHeight) / 2.0f;
-			UI()->DoLabelHighlighted(&Button, pEntry->m_aGameType, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_GAMETYPE) ? Config()->m_BrFilterString : 0, FontSize, (!Selected && !Highlighted && pEntry->m_Unrecommended) ? TextUnrecommendedColor : TextBaseColor, HighlightColor);
+			UI()->DoLabelHighlighted(&Button, pEntry->m_aGameType, (pEntry->m_QuickSearchHit & IServerBrowser::QUICK_GAMETYPE) ? Config()->m_BrFilterString : 0, FontSize, TextBaseColor, HighlightColor);
 		}
 	}
 
@@ -1650,8 +1658,8 @@ void CMenus::RenderServerbrowserFilterTab(CUIRect View)
 
 	ServerFilter.HSplitTop(LineSize, &Button, &ServerFilter);
 	static int s_BrFilterCompatversion = 0;
-	if(DoButton_CheckBox(&s_BrFilterCompatversion, Localize("Compatible version"), FilterInfo.m_SortHash & IServerBrowser::FILTER_COMPAT_VERSION, &Button))
-		NewSortHash ^= IServerBrowser::FILTER_COMPAT_VERSION;
+	if(DoButton_CheckBox(&s_BrFilterCompatversion, Localize("Ignore Unknown"), FilterInfo.m_SortHash & IServerBrowser::FILTER_IGNORE_UNKNOWN, &Button))
+		NewSortHash ^= IServerBrowser::FILTER_IGNORE_UNKNOWN;
 
 	ServerFilter.HSplitTop(LineSize, &Button, &ServerFilter);
 	const bool Locked = pFilter->Custom() == CBrowserFilter::FILTER_STANDARD;
@@ -1665,9 +1673,9 @@ void CMenus::RenderServerbrowserFilterTab(CUIRect View)
 		NewSortHash ^= IServerBrowser::FILTER_PURE_MAP;
 
 	ServerFilter.HSplitTop(LineSize, &Button, &ServerFilter);
-	static int s_BrFilterSortingUnrecommended = 0;
-	if(DoButton_CheckBox(&s_BrFilterSortingUnrecommended, Localize("Sorting unrecommended"), FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_UNRECOMMENDED, &Button))
-		NewSortHash ^= IServerBrowser::FILTER_SORTING_UNRECOMMENDED;
+	static int s_BrFilterSortingLegacy = 0;
+	if(DoButton_CheckBox(&s_BrFilterSortingLegacy, Localize("Sorting legacy"), FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_LEGACY, &Button))
+		NewSortHash ^= IServerBrowser::FILTER_SORTING_LEGACY;
 
 	bool UpdateFilter = false;
 	if(FilterInfo.m_SortHash != NewSortHash)
@@ -1940,9 +1948,16 @@ void CMenus::RenderDetailInfo(CUIRect View, const CServerInfo *pInfo, const vec4
 		return;
 
 	CUIRect Row;
-	// Localize("This server is unrecommended because its gametype only offers a better experience on the dedicated client."); Localize("Map:"); Localize("Game type:"); Localize("Version:"); Localize("Difficulty:"); Localize("Casual", "Server difficulty"); Localize("Normal", "Server difficulty"); Localize("Competitive", "Server difficulty");
+	// Localize("This is a legacy server which doesn't provide new features and the client will work on a compatibility layer");
+	// Localize("Map:");
+	// Localize("Game type:");
+	// Localize("Version:");
+	// Localize("Difficulty:");
+	// Localize("Casual", "Server difficulty");
+	// Localize("Normal", "Server difficulty");
+	// Localize("Competitive", "Server difficulty");
 	static CLocConstString s_aLabels[] = {
-		"This server is unrecommended because its gametype only offers a better experience on the dedicated client.",
+		"This is a legacy server which doesn't provide new features and the client will work on a compatibility layer",
 		"Map:",
 		"Game type:",
 		"Version:",
@@ -1950,7 +1965,7 @@ void CMenus::RenderDetailInfo(CUIRect View, const CServerInfo *pInfo, const vec4
 
 	CUIRect LeftColumn, RightColumn;
 	View.VMargin(2.0f, &View);
-	if(pInfo->m_Unrecommended)
+	if(pInfo->m_Legacy)
 	{
 		View.HSplitTop(3.0f * RowHeight, &Row, &View);
 		UI()->DoLabel(&Row, s_aLabels[0], FontSize, TEXTALIGN_LEFT, Row.w);
@@ -2116,7 +2131,7 @@ void CMenus::RenderServerbrowserServerDetail(CUIRect View, const CServerInfo *pI
 	CUIRect ServerHeader, ServerDetails, ServerScoreboard;
 
 	// split off a piece to use for scoreboard
-	View.HSplitTop(pInfo->m_Unrecommended ? 125.0f : 80.0f, &ServerDetails, &ServerScoreboard);
+	View.HSplitTop(pInfo->m_Legacy ? 125.0f : 80.0f, &ServerDetails, &ServerScoreboard);
 
 	// server details
 	RenderDetailInfo(ServerDetails, pInfo, CUI::ms_DefaultTextColor, CUI::ms_DefaultTextOutlineColor);

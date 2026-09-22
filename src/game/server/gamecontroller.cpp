@@ -739,6 +739,8 @@ void IGameController::Snap(int SnappingClient)
 	if(m_SuddenDeath)
 		pGameData->m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
 
+	pGameData->m_PredictionFlags = GAMEPREDICTIONFLAG_EVENT | GAMEPREDICTIONFLAG_INPUT;
+
 	if(IsTeamplay())
 	{
 		CNetObj_GameDataTeam *pGameDataTeam = static_cast<CNetObj_GameDataTeam *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATATEAM, 0, sizeof(CNetObj_GameDataTeam)));
@@ -747,25 +749,6 @@ void IGameController::Snap(int SnappingClient)
 
 		pGameDataTeam->m_TeamscoreRed = m_aTeamscore[TEAM_RED];
 		pGameDataTeam->m_TeamscoreBlue = m_aTeamscore[TEAM_BLUE];
-	}
-
-	CNetObj_GameDataPrediction *pGameDataPrediction = static_cast<CNetObj_GameDataPrediction *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATAPREDICTION, 0, sizeof(CNetObj_GameDataPrediction)));
-	if(!pGameDataPrediction)
-		return;
-
-	pGameDataPrediction->m_PredictionFlags = GAMEPREDICTIONFLAG_EVENT | GAMEPREDICTIONFLAG_INPUT;
-	// demo recording
-	if(SnappingClient == -1)
-	{
-		CNetObj_De_GameInfo *pGameInfo = static_cast<CNetObj_De_GameInfo *>(Server()->SnapNewItem(NETOBJTYPE_DE_GAMEINFO, 0, sizeof(CNetObj_De_GameInfo)));
-		if(!pGameInfo)
-			return;
-
-		pGameInfo->m_GameFlags = m_GameFlags;
-		pGameInfo->m_ScoreLimit = m_GameInfo.m_ScoreLimit;
-		pGameInfo->m_TimeLimit = m_GameInfo.m_TimeLimit;
-		pGameInfo->m_MatchNum = m_GameInfo.m_MatchNum;
-		pGameInfo->m_MatchCurrent = m_GameInfo.m_MatchCurrent;
 	}
 }
 
@@ -930,26 +913,7 @@ void IGameController::SendGameInfo(int ClientID)
 	GameInfoMsg.m_TimeLimit = m_GameInfo.m_TimeLimit;
 	GameInfoMsg.m_MatchNum = m_GameInfo.m_MatchNum;
 	GameInfoMsg.m_MatchCurrent = m_GameInfo.m_MatchCurrent;
-
-	CNetMsg_Sv_GameInfo GameInfoMsgNoRace = GameInfoMsg;
-	GameInfoMsgNoRace.m_GameFlags &= ~GAMEFLAG_RACE;
-
-	if(ClientID == -1)
-	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
-		{
-			if(!GameServer()->m_apPlayers[i] || !Server()->ClientIngame(i))
-				continue;
-
-			CNetMsg_Sv_GameInfo *pInfoMsg = (Server()->GetClientVersion(i) < CGameContext::MIN_RACE_CLIENTVERSION) ? &GameInfoMsgNoRace : &GameInfoMsg;
-			Server()->SendPackMsg(pInfoMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
-		}
-	}
-	else
-	{
-		CNetMsg_Sv_GameInfo *pInfoMsg = (Server()->GetClientVersion(ClientID) < CGameContext::MIN_RACE_CLIENTVERSION) ? &GameInfoMsgNoRace : &GameInfoMsg;
-		Server()->SendPackMsg(pInfoMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
-	}
+	Server()->SendPackMsg(&GameInfoMsg, MSGFLAG_VITAL, ClientID);
 }
 
 // map

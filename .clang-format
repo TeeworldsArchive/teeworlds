@@ -21,7 +21,7 @@ BraceWrapping:
   AfterEnum: true
   AfterExternBlock: false
   AfterFunction: true
-  AfterNamespace: false
+  AfterNamespace: true
   AfterStruct: true
   AfterUnion: true
   BeforeCatch: true
@@ -45,6 +45,7 @@ IncludeCategories:
 IncludeIsMainRegex: '$'
 IndentWidth: 8
 IndentCaseLabels: true
+NamespaceIndentation: All
 KeepEmptyLinesAtTheStartOfBlocks: false
 PointerAlignment: Right
 ReflowComments: true

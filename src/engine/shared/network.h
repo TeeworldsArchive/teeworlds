@@ -4,6 +4,7 @@
 #define ENGINE_SHARED_NETWORK_H
 
 #include "huffman.h"
+#include "legacy/network7.h"
 #include "ringbuffer.h"
 #include "zstd_dict.h"
 
@@ -113,7 +114,7 @@ enum
 	NET_TOKENREQUEST_DATASIZE = 512,
 
 	//
-	NET_MAX_CLIENTS = 64,
+	NET_MAX_CLIENTS = 128,
 	NET_MAX_CONSOLE_CLIENTS = 4,
 
 	NET_MAX_SEQUENCE = 1 << 10,
@@ -141,10 +142,12 @@ enum
 };
 
 // Packet payload codec, negotiated per connection during the handshake.
+// The values are frozen in legacy::network7 so that the 0.7 translator and the
+// live engine can never drift apart.
 enum
 {
-	NET_COMPRESSION_HUFFMAN = 0, // legacy coder, always available
-	NET_COMPRESSION_ZSTD = 1, // zstd with the embedded dictionary
+	NET_COMPRESSION_HUFFMAN = legacy::NET7_COMPRESSION_HUFFMAN, // legacy coder, always available
+	NET_COMPRESSION_ZSTD = legacy::NET7_COMPRESSION_ZSTD, // zstd with the embedded dictionary
 };
 
 // Capability bits exchanged while connecting. The client advertises its own
@@ -154,7 +157,20 @@ enum
 // which means plain Huffman and therefore stays wire compatible.
 enum
 {
-	NET_CTRLFLAG_ZSTD_DICT = 1,
+	NET_CTRLFLAG_ZSTD_DICT = legacy::NET7_CTRLFLAG_ZSTD_DICT,
+};
+
+// 0.8 generation marker. The native handshake carries {'T','W','8'} in front of
+// the capability byte so a 0.8 server can tell a 0.8 client from a 0.7 one and
+// reject the latter instead of mis-parsing its traffic. A client always opens
+// with the marker; the legacy (0.7) stack omits it once the peer's ACCEPT
+// reveals that the server is a 0.7 one.
+enum
+{
+	NET_GENERATION_MARKER_SIZE = 3,
+	NET_GENERATION_MARKER_0 = 'T',
+	NET_GENERATION_MARKER_1 = 'W',
+	NET_GENERATION_MARKER_2 = '8',
 };
 
 // Where the capability bits sit in the handshake. Chunk data starts with the
@@ -162,10 +178,22 @@ enum
 // begins with the 4 byte token) is shifted by one.
 enum
 {
-	NET_CTRL_REQUEST_CAPABILITY_OFFSET = 4, // inside m_aRequestTokenBuf
-	NET_CTRL_CONNECT_CAPABILITY_OFFSET = NET_CTRL_REQUEST_CAPABILITY_OFFSET + 1, // inside m_aChunkData
-	NET_CTRL_ACCEPT_CAPABILITY_OFFSET = 1, // inside m_aChunkData
+	NET_CTRL_REQUEST_CAPABILITY_OFFSET = legacy::NET7_CTRL_REQUEST_CAPABILITY_OFFSET, // inside m_aRequestTokenBuf
+	NET_CTRL_CONNECT_CAPABILITY_OFFSET = legacy::NET7_CTRL_CONNECT_CAPABILITY_OFFSET, // inside m_aChunkData
+	NET_CTRL_ACCEPT_CAPABILITY_OFFSET = legacy::NET7_CTRL_ACCEPT_CAPABILITY_OFFSET, // inside m_aChunkData
+
+	// capability byte positions once the 0.8 generation marker is present
+	NET_CTRL_REQUEST_CAPABILITY_OFFSET_8 = NET_CTRL_REQUEST_CAPABILITY_OFFSET + NET_GENERATION_MARKER_SIZE,
+	NET_CTRL_CONNECT_CAPABILITY_OFFSET_8 = NET_CTRL_CONNECT_CAPABILITY_OFFSET + NET_GENERATION_MARKER_SIZE,
+	NET_CTRL_ACCEPT_CAPABILITY_OFFSET_8 = NET_CTRL_ACCEPT_CAPABILITY_OFFSET + NET_GENERATION_MARKER_SIZE,
 };
+
+// Write the 0.8 generation marker at pChunkData[Offset]. Returns false (and
+// writes nothing) when the buffer is too small.
+bool Net8WriteGenerationMarker(unsigned char *pChunkData, int ChunkDataSize, int Offset);
+
+// Check whether pChunkData[Offset] holds the 0.8 generation marker.
+bool Net8HasGenerationMarker(const unsigned char *pChunkData, int ChunkDataSize, int Offset);
 
 typedef int (*NETFUNC_DELCLIENT)(int ClientID, const char *pReason, void *pUser);
 typedef int (*NETFUNC_NEWCLIENT)(int ClientID, void *pUser);
@@ -257,7 +285,7 @@ public:
 	void Wait(int Time);
 
 	void SendControlMsg(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, const void *pExtra, int ExtraSize);
-	void SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, TOKEN MyToken, bool Extended);
+	void SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, TOKEN MyToken, bool Extended, bool GenerationMarker = true);
 	void SendPacketConnless(const NETADDR *pAddr, TOKEN Token, TOKEN ResponseToken, const void *pData, int DataSize);
 	void SendPacket(const NETADDR *pAddr, CNetPacketConstruct *pPacket);
 	int UnpackPacket(NETADDR *pAddr, unsigned char *pBuffer, CNetPacketConstruct *pPacket);
@@ -366,6 +394,12 @@ private:
 	// the handshake agreed on zstd.
 	int m_Compression;
 
+	// When set, the handshake omits the 0.8 generation marker and speaks the
+	// frozen 0.7 form. The client sets this itself once the peer's ACCEPT
+	// identifies it as a 0.7 server; 0.7 demo playback does not use a
+	// connection.
+	bool m_Legacy;
+
 	int m_RemoteClosed;
 	bool m_BlockCloseMsg;
 
@@ -407,6 +441,9 @@ public:
 	void Disconnect(const char *pReason);
 
 	void SetToken(TOKEN Token);
+
+	// True once the peer's ACCEPT identified it as a 0.7 server.
+	bool IsLegacy() const { return m_Legacy; }
 
 	TOKEN Token() const { return m_Token; }
 	TOKEN PeerToken() const { return m_PeerToken; }
@@ -590,6 +627,9 @@ public:
 	// connection state
 	int Disconnect(const char *Reason);
 	int Connect(NETADDR *Addr);
+
+	// True when the peer turned out to be a 0.7 server during the handshake.
+	bool IsLegacy() const { return m_Connection.IsLegacy(); }
 
 	// communication
 	int Recv(CNetChunk *pChunk, TOKEN *pResponseToken = 0);

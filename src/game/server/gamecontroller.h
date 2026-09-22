@@ -125,8 +125,6 @@ protected:
 	} m_GameInfo;
 	int m_MaxPlayerSlots;
 
-	void SendGameInfo(int ClientID);
-
 public:
 	IGameController(class CGameContext *pGameServer);
 	virtual ~IGameController() {}
@@ -209,6 +207,7 @@ public:
 
 	// info
 	void CheckGameInfo();
+	void SendGameInfo(int ClientID);
 	virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const;
 	virtual bool IsFriendlyTeamFire(int Team1, int Team2, int Damage) const;
 	virtual int GetPlayerCheckTeam(class CPlayer *pPlayer) const;

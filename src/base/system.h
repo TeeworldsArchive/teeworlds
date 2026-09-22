@@ -1018,6 +1018,23 @@ void str_append(char *dst, const char *src, int dst_size);
 void str_copy(char *dst, const char *src, int dst_size);
 
 /*
+	Function: str_copy_fixed
+		Copies a string into a fixed size field without a terminator, so the
+		field can carry its full content capacity.
+
+	Parameters:
+		dst - Pointer to the field that shall receive the bytes.
+		src - Zero-terminated string to be copied.
+		dst_size - Size of the field dst in bytes.
+
+	Remarks:
+		- At most dst_size bytes are copied.
+		- The remaining bytes of dst are zeroed, but dst is not
+		  zero-terminated unless the string is shorter than the field.
+*/
+void str_copy_fixed(char *dst, const char *src, int dst_size);
+
+/*
 	Function: str_truncate
 		Truncates a string to a given length.
 

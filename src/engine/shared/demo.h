@@ -18,7 +18,7 @@ class CDemoRecorder : public IDemoRecorder
 	int m_LastTickMarker;
 	int m_LastKeyFrame;
 	int m_FirstTick;
-	unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
+	array<unsigned char> m_aLastSnapshotData;
 	class CSnapshotDelta *m_pSnapshotDelta;
 	int m_NumTimelineMarkers;
 	int m_aTimelineMarkers[MAX_TIMELINE_MARKERS];
@@ -102,9 +102,15 @@ private:
 
 	CPlaybackInfo m_Info;
 	int m_DemoType;
-	unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
+	// The header netversion matched the legacy (0.7) version: snapshots and
+	// messages must be run through legacy::CNetworkTranslator.
+	bool m_Legacy;
+	array<unsigned char> m_aLastSnapshotData;
 	int m_LastSnapshotDataSize;
 	class CSnapshotDelta *m_pSnapshotDelta;
+	// Frozen 0.7 static item sizes; a legacy demo's delta chunks were
+	// encoded with these, so they must be decoded with them too.
+	CSnapshotDelta m_LegacySnapshotDelta;
 
 	int ReadChunkHeader(int *pType, int *pSize, int *pTick);
 	void DoTick();
@@ -115,7 +121,8 @@ public:
 	void Init(class IConsole *pConsole, class IStorage *pStorage);
 	void SetListener(IListener *pListener);
 
-	const char *Load(const char *pFilename, int StorageType, const char *pNetversion);
+	const char *Load(const char *pFilename, int StorageType, const char *pNetversion, const char *pLegacyNetversion = 0);
+	bool IsLegacy() const { return m_Legacy; }
 	int Play();
 	void Pause();
 	void Unpause();

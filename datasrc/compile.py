@@ -2,6 +2,10 @@ import sys
 from datatypes import *
 import content
 import network
+try:
+	import network7
+except ImportError:
+	network7 = None
 
 def create_enum_table(names, num, start = "0"):
 	lines = []
@@ -42,6 +46,8 @@ def EmitFlags(names, num):
 
 gen_network_header = False
 gen_network_source = False
+gen_network7_header = False
+gen_network7_source = False
 gen_client_content_header = False
 gen_client_content_source = False
 gen_server_content_header = False
@@ -49,6 +55,8 @@ gen_server_content_source = False
 
 if "network_header" in sys.argv: gen_network_header = True
 if "network_source" in sys.argv: gen_network_source = True
+if "network7_header" in sys.argv: gen_network7_header = True
+if "network7_source" in sys.argv: gen_network7_source = True
 if "client_content_header" in sys.argv: gen_client_content_header = True
 if "client_content_source" in sys.argv: gen_client_content_source = True
 if "server_content_header" in sys.argv: gen_server_content_header = True
@@ -94,34 +102,48 @@ if gen_client_content_source or gen_server_content_source:
 	EmitDefinition(content.container, "datacontainer")
 	print('CDataContainer *g_pData = &datacontainer;')
 
+
 # NETWORK
-if gen_network_header:
 
-	print("#ifndef GAME_GENERATED_PROTOCOL_H")
-	print("#define GAME_GENERATED_PROTOCOL_H")
-	print(network.RawHeader)
+def EmitNetworkHeader(net, guard, namespace = None):
+	print("#ifndef %s" % guard)
+	print("#define %s" % guard)
 
-	for e in network.Enums:
+	if namespace:
+		# The shared engine includes must stay outside the namespace; the raw
+		# enums (teams, flags, skin parts, ...) go inside so that this frozen
+		# protocol does not collide with the live one in the same translation unit.
+		print('#include <engine/message.h>')
+		print('#include <engine/shared/protocol_ex.h>')
+		print("namespace %s {" % namespace)
+		raw_header = net.RawHeader
+		raw_header = raw_header.replace("#include <engine/message.h>", "")
+		raw_header = raw_header.replace("#include <engine/shared/protocol_ex.h>", "")
+		print(raw_header)
+	else:
+		print(net.RawHeader)
+
+	for e in net.Enums:
 		for l in create_enum_table(["%s_%s"%(e.name, v) for v in e.values], 'NUM_%sS'%e.name): print(l)
 		print("")
 
-	for e in network.Flags:
+	for e in net.Flags:
 		for l in create_flags_table(["%s_%s" % (e.name, v) for v in e.values]): print(l)
 		print("")
 
-	non_extended = [o for o in network.Objects if o.ex is None]
-	extended = [o for o in network.Objects if o.ex is not None]
+	non_extended = [o for o in net.Objects if o.ex is None]
+	extended = [o for o in net.Objects if o.ex is not None]
 	for l in create_enum_table(["NETOBJTYPE_EX"]+[o.enum_name for o in non_extended], "NUM_NETOBJTYPES"): print(l)
 	for l in create_enum_table(["__NETOBJTYPE_UUID_HELPER"]+[o.enum_name for o in extended], "OFFSET_NETMSGTYPE_UUID", "OFFSET_GAME_UUID - 1"): print(l)
 	print("")
 
-	non_extended = [o for o in network.Messages if o.ex is None]
-	extended = [o for o in network.Messages if o.ex is not None]
+	non_extended = [o for o in net.Messages if o.ex is None]
+	extended = [o for o in net.Messages if o.ex is not None]
 	for l in create_enum_table(["NETMSGTYPE_EX"]+[o.enum_name for o in non_extended], "NUM_NETMSGTYPES"): print(l)
 	for l in create_enum_table(["__NETMSGTYPE_UUID_HELPER"]+[o.enum_name for o in extended], "OFFSET_MAPITEMTYPE_UUID", "OFFSET_NETMSGTYPE_UUID - 1"): print(l)
 	print("")
 
-	for item in network.Objects + network.Messages:
+	for item in net.Objects + net.Messages:
 		for line in item.emit_declaration():
 			print(line)
 		print("")
@@ -160,16 +182,22 @@ public:
 
 """)
 
-	print("#endif // GAME_GENERATED_PROTOCOL_H")
+	if namespace:
+		print("} // namespace %s" % namespace)
+
+	print("#endif // %s" % guard)
 
 
-if gen_network_source:
+def EmitNetworkSource(net, header_name, namespace = None):
 	# create names
 	lines = []
 
 	lines += ['#include <engine/shared/protocol.h>']
 	lines += ['#include <engine/message.h>']
-	lines += ['#include "protocol.h"']
+	lines += ['#include "%s"' % header_name]
+
+	if namespace:
+		lines += ['namespace %s {' % namespace]
 
 	lines += ['CNetObjHandler::CNetObjHandler()']
 	lines += ['{']
@@ -205,18 +233,18 @@ if gen_network_source:
 
 	lines += ["const char *CNetObjHandler::ms_apObjNames[] = {"]
 	lines += ['\t"invalid",']
-	lines += ['\t"%s",' % o.name for o in network.Objects]
+	lines += ['\t"%s",' % o.name for o in net.Objects]
 	lines += ['\t""', "};", ""]
 
 	lines += ["int CNetObjHandler::ms_aObjSizes[] = {"]
 	lines += ['\t0,']
-	lines += ['\tsizeof(%s),' % o.struct_name for o in network.Objects]
+	lines += ['\tsizeof(%s),' % o.struct_name for o in net.Objects]
 	lines += ['\t0', "};", ""]
 
 
 	lines += ['const char *CNetObjHandler::ms_apMsgNames[] = {']
 	lines += ['\t"invalid",']
-	for msg in network.Messages:
+	for msg in net.Messages:
 		lines += ['\t"%s",' % msg.name]
 	lines += ['\t""']
 	lines += ['};']
@@ -245,31 +273,7 @@ if gen_network_source:
 	lines += ['']
 
 
-	for l in lines:
-		print(l)
-
-	if 0:
-		for item in network.Objects:
-			for line in item.emit_validate():
-				print(line)
-			print("")
-
 	# create validate tables
-		lines = []
-		lines += ['static int validate_invalid(void *data, int size) { return -1; }']
-		lines += ["typedef int(*VALIDATEFUNC)(void *data, int size);"]
-		lines += ["static VALIDATEFUNC validate_funcs[] = {"]
-		lines += ['\tvalidate_invalid,']
-		lines += ['\tvalidate_%s,' % o.name for o in network.Objects]
-		lines += ["\t0x0", "};", ""]
-
-		lines += ["int netobj_validate(int type, void *data, int size)"]
-		lines += ["{"]
-		lines += ["\tif(type < 0 || type >= NUM_NETOBJTYPES) return -1;"]
-		lines += ["\treturn validate_funcs[type](data, size);"]
-		lines += ["};", ""]
-
-	lines = []
 	lines += ['int CNetObjHandler::ValidateObj(int Type, const void *pData, int Size)']
 	lines += ['{']
 	lines += ['\tswitch(Type)']
@@ -279,10 +283,10 @@ if gen_network_source:
 	lines += ['\t\treturn 0;']
 	lines += ['\t}']
 
-	for item in network.Objects:
+	for item in net.Objects:
 		base_item = None
 		if item.base:
-			base_item = next(i for i in network.Objects if i.name == item.base)
+			base_item = next(i for i in net.Objects if i.name == item.base)
 		for line in item.emit_validate(base_item):
 			lines += ["\t" + line]
 		lines += ['\t']
@@ -291,24 +295,6 @@ if gen_network_source:
 	lines += ['};']
 	lines += ['']
 
- #int Validate(int Type, void *pData, int Size);
-
-	if 0:
-		for item in network.Messages:
-			for line in item.emit_unpack():
-				print(line)
-			print("")
-
-		lines += ['static void *secure_unpack_invalid(CUnpacker *pUnpacker) { return 0; }']
-		lines += ['typedef void *(*SECUREUNPACKFUNC)(CUnpacker *pUnpacker);']
-		lines += ['static SECUREUNPACKFUNC secure_unpack_funcs[] = {']
-		lines += ['\tsecure_unpack_invalid,']
-		for msg in network.Messages:
-			lines += ['\tsecure_unpack_%s,' % msg.name]
-		lines += ['\t0x0']
-		lines += ['};']
-
-	#
 	lines += ['void *CNetObjHandler::SecureUnpackMsg(int Type, CUnpacker *pUnpacker)']
 	lines += ['{']
 	lines += ['\tm_pMsgFailedOn = 0;']
@@ -317,7 +303,7 @@ if gen_network_source:
 	lines += ['\t{']
 
 
-	for item in network.Messages:
+	for item in net.Messages:
 		for line in item.emit_unpack():
 			lines += ["\t" + line]
 		lines += ['\t']
@@ -346,13 +332,33 @@ if gen_network_source:
 	lines += ['void RegisterGameUuids(CUuidManager *pManager)']
 	lines += ['{']
 
-	for item in network.Objects + network.Messages:
+	for item in net.Objects + net.Messages:
 		if item.ex is not None:
 			lines += ['\tpManager->RegisterName(%s, "%s");' % (item.enum_name, item.ex)]
 	lines += ['}']
 
+	if namespace:
+		lines += ['} // namespace %s' % namespace]
+
 	for l in lines:
 		print(l)
+
+
+if gen_network_header:
+	EmitNetworkHeader(network, "GAME_GENERATED_PROTOCOL_H")
+
+if gen_network7_header:
+	if network7 is None:
+		raise RuntimeError("network7 module not available")
+	EmitNetworkHeader(network7, "GAME_GENERATED_PROTOCOL7_H", "protocol7")
+
+if gen_network_source:
+	EmitNetworkSource(network, "protocol.h")
+
+if gen_network7_source:
+	if network7 is None:
+		raise RuntimeError("network7 module not available")
+	EmitNetworkSource(network7, "protocol7.h", "protocol7")
 
 if gen_client_content_header or gen_server_content_header:
 	print("#endif")

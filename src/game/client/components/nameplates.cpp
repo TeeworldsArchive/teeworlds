@@ -15,6 +15,10 @@ void CNamePlates::RenderNameplate(
 	const CNetObj_Character *pPlayerChar,
 	int ClientID) const
 {
+	const CGameClient::CClientData *pClientData = m_pClient->GetClientData(ClientID);
+	if(!pClientData)
+		return;
+
 	bool Predicted = m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(ClientID);
 	vec2 Position = m_pClient->GetCharPos(ClientID, Predicted);
 
@@ -26,15 +30,15 @@ void CNamePlates::RenderNameplate(
 		a = clamp(1 - powf(distance(m_pClient->m_pControls->m_TargetPos, Position) / 200.0f, 16.0f), 0.0f, 1.0f);
 
 	char aName[64];
-	str_format(aName, sizeof(aName), "%s", Config()->m_ClShowsocial ? m_pClient->m_aClients[ClientID].m_aName : "");
+	str_format(aName, sizeof(aName), "%s", Config()->m_ClShowsocial ? pClientData->m_aName : "");
 
 	TextRender()->TextSecondaryColor(0.0f, 0.0f, 0.0f, 0.5f);
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 	if(Config()->m_ClNameplatesTeamcolors && m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS)
 	{
-		if(m_pClient->m_aClients[ClientID].m_Team == TEAM_RED)
+		if(pClientData->m_Team == TEAM_RED)
 			TextRender()->TextColor(1.0f, 0.5f, 0.5f, a);
-		else if(m_pClient->m_aClients[ClientID].m_Team == TEAM_BLUE)
+		else if(pClientData->m_Team == TEAM_BLUE)
 			TextRender()->TextColor(0.7f, 0.7f, 1.0f, a);
 	}
 
@@ -42,9 +46,9 @@ void CNamePlates::RenderNameplate(
 	vec4 BgIdColor(1.0f, 1.0f, 1.0f, a * 0.5f);
 	if(Config()->m_ClNameplatesTeamcolors && m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS)
 	{
-		if(m_pClient->m_aClients[ClientID].m_Team == TEAM_RED)
+		if(pClientData->m_Team == TEAM_RED)
 			BgIdColor = vec4(1.0f, 0.5f, 0.5f, a * 0.5f);
-		else if(m_pClient->m_aClients[ClientID].m_Team == TEAM_BLUE)
+		else if(pClientData->m_Team == TEAM_BLUE)
 			BgIdColor = vec4(0.7f, 0.7f, 1.0f, a * 0.5f);
 	}
 
@@ -73,15 +77,22 @@ void CNamePlates::OnRender()
 	if(!Config()->m_ClNameplates || Client()->State() < IClient::STATE_ONLINE)
 		return;
 
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	// real clients and bots alike, resolved through the unified accessors
+	static array<int> s_aTeeIDs;
+	m_pClient->CollectActiveTeeIDs(s_aTeeIDs);
+	for(int Index = 0; Index < s_aTeeIDs.size(); Index++)
 	{
-		// only render active characters
-		if(m_pClient->m_aClients[i].m_Active && m_pClient->m_Snap.m_aCharacters[i].m_Active && m_pClient->m_LocalClientID != i)
-		{
-			RenderNameplate(
-				&m_pClient->m_Snap.m_aCharacters[i].m_Prev,
-				&m_pClient->m_Snap.m_aCharacters[i].m_Cur,
-				i);
-		}
+		const int i = s_aTeeIDs[Index];
+		if(m_pClient->m_LocalClientID == i)
+			continue;
+
+		const CGameClient::CSnapState::CCharacterInfo *pCharInfo = m_pClient->GetCharacterInfo(i);
+		if(!pCharInfo || !pCharInfo->m_Active)
+			continue;
+
+		RenderNameplate(
+			&pCharInfo->m_Prev,
+			&pCharInfo->m_Cur,
+			i);
 	}
 }

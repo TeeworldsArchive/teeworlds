@@ -2424,6 +2424,17 @@ void str_copy(char *dst, const char *src, int dst_size)
 	strncat(dst, src, dst_size - 1);
 }
 
+void str_copy_fixed(char *dst, const char *src, int dst_size)
+{
+	dbg_assert(dst_size > 0, "dst_size invalid");
+	int len = str_length(src);
+	if(len > dst_size)
+		len = dst_size;
+	mem_copy(dst, src, len);
+	if(len < dst_size)
+		dst[len] = '\0';
+}
+
 void str_truncate(char *dst, int dst_size, const char *src, int truncation_len)
 {
 	int size = dst_size;

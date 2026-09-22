@@ -140,7 +140,7 @@ void CServerBrowserFilter::CServerFilter::Filter()
 			Filtered = true;
 		else if(m_FilterInfo.m_Ping < m_pServerBrowserFilter->m_ppServerlist[i]->m_Info.m_Latency)
 			Filtered = true;
-		else if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_COMPAT_VERSION && str_comp_num(m_pServerBrowserFilter->m_ppServerlist[i]->m_Info.m_aVersion, m_pServerBrowserFilter->m_aNetVersion, 3) != 0)
+		else if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_IGNORE_UNKNOWN && m_pServerBrowserFilter->m_ppServerlist[i]->m_InfoState != CServerEntry::STATE_READY)
 			Filtered = true;
 		else if(m_FilterInfo.m_aAddress[0] && !str_find_nocase(m_pServerBrowserFilter->m_ppServerlist[i]->m_Info.m_aAddress, m_FilterInfo.m_aAddress))
 			Filtered = true;
@@ -260,7 +260,7 @@ int CServerBrowserFilter::CServerFilter::GetSortHash() const
 		i |= 1 << 9;
 	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_FAVORITE)
 		i |= 1 << 10;
-	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_COMPAT_VERSION)
+	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_IGNORE_UNKNOWN)
 		i |= 1 << 11;
 	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE)
 		i |= 1 << 12;
@@ -268,7 +268,7 @@ int CServerBrowserFilter::CServerFilter::GetSortHash() const
 		i |= 1 << 13;
 	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_COUNTRY)
 		i |= 1 << 14;
-	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_UNRECOMMENDED)
+	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_LEGACY)
 		i |= 1 << 15;
 	return i;
 }
@@ -309,13 +309,13 @@ void CServerBrowserFilter::CServerFilter::Sort()
 
 int CServerBrowserFilter::CServerFilter::SortCompareRecommended(int Index1, int Index2) const
 {
-	if(!(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_UNRECOMMENDED))
+	if(!(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_LEGACY))
 		return 0;
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
-	if(!a->m_Info.m_Unrecommended && b->m_Info.m_Unrecommended)
+	if(!a->m_Info.m_Legacy && b->m_Info.m_Legacy)
 		return 1;
-	if(a->m_Info.m_Unrecommended && !b->m_Info.m_Unrecommended)
+	if(a->m_Info.m_Legacy && !b->m_Info.m_Legacy)
 		return -1;
 	return 0;
 }

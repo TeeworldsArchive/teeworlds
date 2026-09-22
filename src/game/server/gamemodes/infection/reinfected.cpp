@@ -18,7 +18,7 @@ public:
 
 	CTeeInfos m_aTeeInfos[MAX_CLIENTS];
 	CTeeInfos m_aInfectedInfos[MAX_CLIENTS];
-	int64 m_InfectedMask;
+	CClientMask m_InfectedMask;
 	int m_InfectedNum;
 	int m_HumanNum;
 
@@ -27,7 +27,7 @@ public:
 		m_pController = pController;
 		mem_zero(m_aTeeInfos, sizeof(m_aTeeInfos));
 		mem_zero(m_aInfectedInfos, sizeof(m_aInfectedInfos));
-		m_InfectedMask = 0;
+		m_InfectedMask.Clear();
 		m_InfectedNum = 0;
 		m_HumanNum = 0;
 	}
@@ -38,7 +38,7 @@ public:
 			return;
 
 		RemovePlayerFromList(ClientID);
-		m_InfectedMask |= CmaskOne(ClientID);
+		m_InfectedMask.Set(ClientID);
 		AddPlayerToList(ClientID);
 
 		m_pController->RefreshClientSkin(ClientID, false);
@@ -50,7 +50,7 @@ public:
 			return;
 
 		RemovePlayerFromList(ClientID);
-		m_InfectedMask &= CmaskAllExceptOne(ClientID);
+		m_InfectedMask.Unset(ClientID);
 		AddPlayerToList(ClientID);
 
 		m_pController->RefreshClientSkin(ClientID, false);
@@ -83,7 +83,7 @@ public:
 	}
 
 	bool IsInfected(CCharacter *pCharacter) const { return IsInfected(pCharacter->GetCID()); }
-	bool IsInfected(int ClientID) const { return m_InfectedMask & CmaskOne(ClientID); }
+	bool IsInfected(int ClientID) const { return m_InfectedMask.IsSet(ClientID); }
 };
 
 inline int GetInfectedColor(int UseCustomColors, int PartColor, int Part)
@@ -442,8 +442,8 @@ void CGameControllerReinfected::RefreshClientSkin(int ClientID, bool Sync)
 {
 	if(!GameServer()->m_apPlayers[ClientID])
 		return;
+	// skins are part of TeeInfo, so the next snapshot carries the update
 	RefreshPlayerSkin(GameServer()->m_apPlayers[ClientID], Sync);
-	GameServer()->SendSkinChange(ClientID, -1);
 }
 
 REGISTER_GAMEMODE("reinfected", CGameControllerReinfected);

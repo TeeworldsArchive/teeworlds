@@ -320,6 +320,16 @@ class NetStringStrict(NetVariable):
 	def emit_pack(self):
 		return ["pPacker->AddString(%s, -1);" % self.name]
 
+# Fixed-size character array holding a NUL-terminated string directly, for
+# snapshot objects whose identity fields are copied verbatim instead of being
+# packed into integers. The size may be a constant expression.
+class NetChar(NetVariable):
+	def __init__(self, name, size):
+		NetVariable.__init__(self, name)
+		self.size = str(size)
+	def emit_declaration(self):
+		return ["char %s[%s];" % (self.name, self.size)]
+
 class NetIntAny(NetVariable):
 	def emit_declaration(self):
 		return ["int %s;"%self.name]

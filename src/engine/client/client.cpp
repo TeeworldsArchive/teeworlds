@@ -261,6 +261,7 @@ CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotD
 	m_SnapCrcErrors = 0;
 	m_AutoScreenshotRecycle = false;
 	m_AutoStatScreenshotRecycle = false;
+	m_LegacyConnection = false;
 
 	m_AckGameTick = -1;
 	m_CurrentRecvTick = 0;
@@ -333,7 +334,20 @@ int CClient::SendMsg(CMsgPacker *pMsg, int Flags)
 	}
 
 	if(!(Flags & MSGFLAG_NOSEND))
-		m_NetClient.Send(&Packet);
+	{
+		if(m_LegacyConnection)
+		{
+			// record in 0.8 form (done above), send in 0.7 form; the original
+			// delivery flags ride along so that e.g. NETMSG_INPUT stays
+			// non-vital instead of being resent reliably every tick
+			CNetChunk aOut[legacy::CNetworkTranslator::MAX_OUT_CHUNKS];
+			const int NumOut = m_LegacyTranslator.TranslateClientChunk(Packet.m_pData, Packet.m_DataSize, Packet.m_Flags, aOut, legacy::CNetworkTranslator::MAX_OUT_CHUNKS);
+			for(int i = 0; i < NumOut; i++)
+				m_NetClient.Send(&aOut[i]);
+		}
+		else
+			m_NetClient.Send(&Packet);
+	}
 	return 0;
 }
 
@@ -346,9 +360,12 @@ void CClient::SendInfo()
 	str_copy(m_aServerPassword, pPassword, sizeof(m_aServerPassword));
 
 	CMsgPacker Msg(NETMSG_INFO, true);
-	Msg.AddString(GameClient()->NetVersion(), 128);
+	// A 0.7 server compares the version string against its own and drops the
+	// client on a mismatch, so the legacy stack must announce the frozen 0.7
+	// netversion (and the 0.7 client version) instead of the 0.8 ones.
+	Msg.AddString(m_LegacyConnection ? LEGACY_NET7_NETVERSION : GameClient()->NetVersion(), 128);
 	Msg.AddString(m_aServerPassword, 128);
-	Msg.AddInt(GameClient()->ClientVersion());
+	Msg.AddInt(m_LegacyConnection ? PREV_CLIENT_VERSION : GameClient()->ClientVersion());
 	Msg.AddInt(SERVERINFO_VERSION_CURRENT);
 	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
 }
@@ -487,7 +504,8 @@ void CClient::OnEnterGame()
 	m_aSnapshots[SNAP_PREV] = 0;
 	m_SnapshotStorage.PurgeAll();
 	m_ReceivedSnapshots = 0;
-	m_SnapshotParts = 0;
+	mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
+	m_NumSnapshotParts = 0;
 	m_PredTick = 0;
 	m_CurrentRecvTick = 0;
 	m_CurGameTick = 0;
@@ -534,10 +552,16 @@ void CClient::Connect(const char *pAddress)
 
 	str_copy(m_aServerAddressStr, pAddress, sizeof(m_aServerAddressStr));
 
+	// The address is never tagged: whether the server speaks 0.7 is decided by
+	// the network handshake, not by the user. m_LegacyConnection is filled in
+	// from the connection once it comes online.
+	m_LegacyConnection = false;
+
 	str_format(aBuf, sizeof(aBuf), "connecting to '%s'", m_aServerAddressStr);
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", aBuf);
 
 	mem_zero(&m_CurrentServerInfo, sizeof(m_CurrentServerInfo));
+	m_LegacyTranslator.Reset();
 
 	if(net_addr_from_str(&m_ServerAddress, m_aServerAddressStr) != 0 && net_host_lookup(m_aServerAddressStr, &m_ServerAddress, m_NetClient.NetType()) != 0)
 	{
@@ -1222,7 +1246,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		else if((pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_SERVERINFO)
 		{
 			CServerInfo Info = {0};
-			net_addr_str(&pPacket->m_Address, Info.m_aAddress, sizeof(Info.m_aAddress), true);
+			net_addr_str(&m_ServerAddress, Info.m_aAddress, sizeof(Info.m_aAddress), true);
 			if(!UnpackServerInfo(&Unpacker, &Info, 0) && !Unpacker.Error())
 			{
 				SortClients(&Info);
@@ -1349,36 +1373,51 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			{
 				if(GameTick != m_CurrentRecvTick)
 				{
-					m_SnapshotParts = 0;
+					mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
+					m_NumSnapshotParts = 0;
 					m_CurrentRecvTick = GameTick;
 				}
 
+				// make sure the incoming buffer can hold every part
+				const int IncomingBufferSize = CSnapshot::MAX_PARTS * MAX_SNAPSHOT_PACKSIZE;
+				if(m_SnapshotIncomingData.size() < IncomingBufferSize)
+					m_SnapshotIncomingData.set_size(IncomingBufferSize);
+
 				// TODO: clean this up abit
 				if(pData)
-					mem_copy((char *) m_aSnapshotIncomingData + Part * MAX_SNAPSHOT_PACKSIZE, pData, PartSize);
+					mem_copy(m_SnapshotIncomingData.base_ptr() + Part * MAX_SNAPSHOT_PACKSIZE, pData, PartSize);
 
-				m_SnapshotParts |= 1 << Part;
+				// mark the part, idempotent for duplicate parts
+				const int PartByte = Part / 8;
+				const unsigned char PartMask = (unsigned char) (1 << (Part % 8));
+				if(!(m_aSnapshotParts[PartByte] & PartMask))
+				{
+					m_aSnapshotParts[PartByte] |= PartMask;
+					m_NumSnapshotParts++;
+				}
 
-				if(m_SnapshotParts == (unsigned) ((1 << NumParts) - 1))
+				if(m_NumSnapshotParts == NumParts)
 				{
 					static CSnapshot s_Emptysnap;
 					CSnapshot *pDeltaShot = &s_Emptysnap;
-					unsigned char aTmpBuffer2[CSnapshot::MAX_SIZE];
-					unsigned char aTmpBuffer3[CSnapshot::MAX_SIZE];
-					CSnapshot *pTmpBuffer3 = (CSnapshot *) aTmpBuffer3; // Fix compiler warning for strict-aliasing
+					array<unsigned char> aTmpBuffer2;
+					array<unsigned char> aTmpBuffer3;
 
 					int CompleteSize = (NumParts - 1) * MAX_SNAPSHOT_PACKSIZE + PartSize;
 
 					// reset snapshoting
-					m_SnapshotParts = 0;
+					mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
+					m_NumSnapshotParts = 0;
 
 					// find snapshot that we should use as delta
 					s_Emptysnap.Clear();
 
+					int DeltashotSize = -1;
+
 					// find delta
 					if(DeltaTick >= 0)
 					{
-						int DeltashotSize = m_SnapshotStorage.Get(DeltaTick, 0, &pDeltaShot, 0);
+						DeltashotSize = m_SnapshotStorage.Get(DeltaTick, 0, &pDeltaShot, 0);
 
 						if(DeltashotSize < 0)
 						{
@@ -1404,16 +1443,21 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 
 					if(CompleteSize)
 					{
-						int IntSize = CVariableInt::Decompress(m_aSnapshotIncomingData, CompleteSize, aTmpBuffer2, sizeof(aTmpBuffer2));
+						// each packed byte can expand to at most one int
+						aTmpBuffer2.set_size(CompleteSize * 4 + 1024);
+						int IntSize = CVariableInt::Decompress(m_SnapshotIncomingData.base_ptr(), CompleteSize, aTmpBuffer2.base_ptr(), aTmpBuffer2.size());
 
 						if(IntSize < 0) // failure during decompression, bail
 							return;
 
-						pDeltaData = aTmpBuffer2;
+						pDeltaData = aTmpBuffer2.base_ptr();
 						DeltaSize = IntSize;
 					}
 
 					// unpack delta
+					const int BaseSize = DeltashotSize >= 0 ? DeltashotSize : (int) sizeof(CSnapshot);
+					aTmpBuffer3.set_size(BaseSize + DeltaSize + 4096);
+					CSnapshot *pTmpBuffer3 = (CSnapshot *) aTmpBuffer3.base_ptr();
 					int SnapSize = m_SnapshotDelta.UnpackDelta(pDeltaShot, pTmpBuffer3, pDeltaData, DeltaSize);
 					if(SnapSize < 0)
 					{
@@ -1466,10 +1510,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 						// build up snapshot and add local messages
 						m_DemoRecSnapshotBuilder.Init(pTmpBuffer3);
 						GameClient()->OnDemoRecSnap();
-						SnapSize = m_DemoRecSnapshotBuilder.Finish(pTmpBuffer3);
+						array<unsigned char> aDemoSnap;
+						aDemoSnap.set_size(m_DemoRecSnapshotBuilder.RequiredSize());
+						SnapSize = m_DemoRecSnapshotBuilder.Finish(aDemoSnap.base_ptr());
 
 						// write snapshot
-						m_DemoRecorder.RecordSnapshot(GameTick, pTmpBuffer3, SnapSize);
+						m_DemoRecorder.RecordSnapshot(GameTick, aDemoSnap.base_ptr(), SnapSize);
 					}
 
 					// apply snapshot, cycle pointers
@@ -1536,8 +1582,11 @@ void CClient::PumpNetwork()
 		//
 		if(State() == IClient::STATE_CONNECTING && m_NetClient.State() == NETSTATE_ONLINE)
 		{
-			// we switched to online
-			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", "connected, sending info");
+			// we switched to online; the handshake decided whether the peer is a 0.7
+			// server, so select the matching stack before SendInfo() runs and
+			// before any packet is translated
+			m_LegacyConnection = m_NetClient.IsLegacy();
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", m_LegacyConnection ? "connected (legacy 0.7), sending info" : "connected, sending info");
 			SetState(IClient::STATE_LOADING);
 			SendInfo();
 		}
@@ -1547,7 +1596,19 @@ void CClient::PumpNetwork()
 	CNetChunk Packet;
 	while(m_NetClient.Recv(&Packet))
 	{
-		if(!(Packet.m_Flags & NETSENDFLAG_CONNLESS))
+		if(Packet.m_Flags & NETSENDFLAG_CONNLESS)
+			continue;
+
+		if(m_LegacyConnection)
+		{
+			// the 0.7 peer's traffic is turned into 0.8 chunks before it
+			// reaches the normal message/snapshot path
+			CNetChunk aOut[legacy::CNetworkTranslator::MAX_OUT_CHUNKS];
+			const int NumOut = m_LegacyTranslator.TranslateServerChunk(Packet.m_pData, Packet.m_DataSize, aOut, legacy::CNetworkTranslator::MAX_OUT_CHUNKS);
+			for(int i = 0; i < NumOut; i++)
+				ProcessServerPacket(&aOut[i]);
+		}
+		else
 			ProcessServerPacket(&Packet);
 	}
 
@@ -1568,10 +1629,58 @@ void CClient::OnDemoPlayerSnapshot(void *pData, int Size)
 	m_CurGameTick = pInfo->m_Info.m_CurrentTick;
 	m_PrevGameTick = pInfo->m_PreviousTick;
 
+	// a 0.7 demo carries 0.7 snapshots; rebuild them as 0.8 before use
+	if(m_LegacyConnection)
+	{
+		// 0.7 demos carry the game info as a snapshot object; 0.8 reads it from
+		// the Sv_GameInfo message, so emit it first
+		CNetChunk aMsgs[legacy::CNetworkTranslator::MAX_OUT_CHUNKS];
+		const int NumMsgs = m_LegacyTranslator.TranslateServerSnapshotMessages(pData, Size, aMsgs, legacy::CNetworkTranslator::MAX_OUT_CHUNKS);
+		for(int i = 0; i < NumMsgs; i++)
+		{
+			CMsgUnpacker Unpacker(aMsgs[i].m_pData, aMsgs[i].m_DataSize);
+			if(!Unpacker.Error() && !Unpacker.System())
+				GameClient()->OnMessage(Unpacker.Type(), &Unpacker);
+		}
+
+		int Translated = m_LegacyTranslator.TranslateServerSnapshot(pData, Size, m_aLegacySnapData.base_ptr(), m_aLegacySnapData.size());
+		if(Translated < 0)
+		{
+			m_aLegacySnapData.set_size(Size * 4 + 65536);
+			Translated = m_LegacyTranslator.TranslateServerSnapshot(pData, Size, m_aLegacySnapData.base_ptr(), m_aLegacySnapData.size());
+			if(Translated < 0)
+			{
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "failed to translate 0.7 demo snapshot");
+				return;
+			}
+		}
+		pData = m_aLegacySnapData.base_ptr();
+		Size = Translated;
+	}
+
 	// handle snapshots
 	pTemp = m_aSnapshots[SNAP_PREV];
 	m_aSnapshots[SNAP_PREV] = m_aSnapshots[SNAP_CURRENT];
 	m_aSnapshots[SNAP_CURRENT] = pTemp;
+
+	// grow the backing buffers of the demo playback holders on demand
+	bool FoundHolder = false;
+	for(int t = 0; t < NUM_SNAPSHOT_TYPES; t++)
+	{
+		if(m_aSnapshots[SNAP_CURRENT] != &m_aDemorecSnapshotHolders[t])
+			continue;
+		for(int Alt = 0; Alt < 2; Alt++)
+		{
+			if(m_aDemorecSnapshotData[t][Alt].size() < Size)
+				m_aDemorecSnapshotData[t][Alt].set_size(Size);
+		}
+		m_aSnapshots[SNAP_CURRENT]->m_pSnap = (CSnapshot *) m_aDemorecSnapshotData[t][0].base_ptr();
+		m_aSnapshots[SNAP_CURRENT]->m_pAltSnap = (CSnapshot *) m_aDemorecSnapshotData[t][1].base_ptr();
+		FoundHolder = true;
+		break;
+	}
+	if(!FoundHolder)
+		return;
 
 	mem_copy(m_aSnapshots[SNAP_CURRENT]->m_pSnap, pData, Size);
 	mem_copy(m_aSnapshots[SNAP_CURRENT]->m_pAltSnap, pData, Size);
@@ -1581,6 +1690,20 @@ void CClient::OnDemoPlayerSnapshot(void *pData, int Size)
 
 void CClient::OnDemoPlayerMessage(void *pData, int Size)
 {
+	if(m_LegacyConnection)
+	{
+		CNetChunk aOut[legacy::CNetworkTranslator::MAX_OUT_CHUNKS];
+		const int NumOut = m_LegacyTranslator.TranslateServerChunk(pData, Size, aOut, legacy::CNetworkTranslator::MAX_OUT_CHUNKS);
+		for(int i = 0; i < NumOut; i++)
+		{
+			CMsgUnpacker Unpacker(aOut[i].m_pData, aOut[i].m_DataSize);
+			if(Unpacker.Error() || Unpacker.System())
+				continue;
+			GameClient()->OnMessage(Unpacker.Type(), &Unpacker);
+		}
+		return;
+	}
+
 	CMsgUnpacker Unpacker(pData, Size);
 	if(Unpacker.Error())
 		return;
@@ -1919,7 +2042,8 @@ bool CClient::LimitFps()
 void CClient::Run()
 {
 	m_LocalStartTime = time_get();
-	m_SnapshotParts = 0;
+	mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
+	m_NumSnapshotParts = 0;
 
 	// Initialize Steamworks before the graphics context is created so that the
 	// Steam overlay can hook into it. Failure is not fatal.
@@ -2280,10 +2404,13 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 
 	// try to start playback
 	m_DemoPlayer.SetListener(this);
+	m_LegacyTranslator.Reset();
 
-	const char *pError = m_DemoPlayer.Load(pFilename, StorageType, GameClient()->NetVersion());
+	const char *pError = m_DemoPlayer.Load(pFilename, StorageType, GameClient()->NetVersion(), LEGACY_NET7_NETVERSION);
 	if(pError)
 		return pError;
+	// a 0.7 demo is replayed through the legacy translator
+	m_LegacyConnection = m_DemoPlayer.IsLegacy();
 
 	// load map
 	const unsigned Crc = bytes_be_to_uint(m_DemoPlayer.Info()->m_Header.m_aMapCrc);
@@ -2297,18 +2424,16 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 	GameClient()->OnConnected();
 
 	// setup buffers
-	mem_zero(m_aDemorecSnapshotData, sizeof(m_aDemorecSnapshotData));
-
 	m_aSnapshots[SNAP_CURRENT] = &m_aDemorecSnapshotHolders[SNAP_CURRENT];
 	m_aSnapshots[SNAP_PREV] = &m_aDemorecSnapshotHolders[SNAP_PREV];
 
-	m_aSnapshots[SNAP_CURRENT]->m_pSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_CURRENT][0];
-	m_aSnapshots[SNAP_CURRENT]->m_pAltSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_CURRENT][1];
+	m_aSnapshots[SNAP_CURRENT]->m_pSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_CURRENT][0].base_ptr();
+	m_aSnapshots[SNAP_CURRENT]->m_pAltSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_CURRENT][1].base_ptr();
 	m_aSnapshots[SNAP_CURRENT]->m_SnapSize = 0;
 	m_aSnapshots[SNAP_CURRENT]->m_Tick = -1;
 
-	m_aSnapshots[SNAP_PREV]->m_pSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_PREV][0];
-	m_aSnapshots[SNAP_PREV]->m_pAltSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_PREV][1];
+	m_aSnapshots[SNAP_PREV]->m_pSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_PREV][0].base_ptr();
+	m_aSnapshots[SNAP_PREV]->m_pAltSnap = (CSnapshot *) m_aDemorecSnapshotData[SNAP_PREV][1].base_ptr();
 	m_aSnapshots[SNAP_PREV]->m_SnapSize = 0;
 	m_aSnapshots[SNAP_PREV]->m_Tick = -1;
 
@@ -2337,6 +2462,7 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp)
 		else
 			str_format(aFilename, sizeof(aFilename), "demos/%s.demo", pFilename);
 		m_DemoRecorder.Start(aFilename, GameClient()->NetVersion(), m_aCurrentMap, m_CurrentMapSha256, m_CurrentMapCrc, "client");
+		GameClient()->OnDemoRecorderStart();
 	}
 }
 
@@ -2375,7 +2501,7 @@ void CClient::Con_Record(IConsole::IResult *pResult, void *pUserData)
 	if(pResult->NumArguments())
 		pSelf->DemoRecorder_Start(pResult->GetString(0), false);
 	else
-		pSelf->DemoRecorder_Start("demo", true);
+		pSelf->DemoRecorder_Start(pSelf->m_aCurrentMap, true);
 }
 
 void CClient::Con_StopRecord(IConsole::IResult *pResult, void *pUserData)

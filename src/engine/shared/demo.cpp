@@ -10,6 +10,7 @@
 #include "compression.h"
 #include "datafile.h"
 #include "demo.h"
+#include "legacy/network7.h"
 #include "memheap.h"
 #include "network.h"
 #include "snapshot.h"
@@ -248,7 +249,7 @@ void CDemoRecorder::Write(int Type, const void *pData, int Size)
 
 void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
 {
-	char aTmpData[CSnapshot::MAX_SIZE];
+	array<unsigned char> aTmpData;
 
 	if(m_LastKeyFrame == -1 || (Tick - m_LastKeyFrame) > SERVER_TICK_SPEED * 5)
 	{
@@ -256,11 +257,13 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
 		WriteTickMarker(Tick, 1);
 
 		// write snapshot
-		int SnapSize = ((CSnapshot *) pData)->Serialize(aTmpData);
-		Write(CHUNKTYPE_SNAPSHOT, aTmpData, SnapSize);
+		aTmpData.set_size(Size);
+		int SnapSize = ((CSnapshot *) pData)->Serialize((char *) aTmpData.base_ptr());
+		Write(CHUNKTYPE_SNAPSHOT, aTmpData.base_ptr(), SnapSize);
 
 		m_LastKeyFrame = Tick;
-		mem_copy(m_aLastSnapshotData, pData, Size);
+		m_aLastSnapshotData.set_size(Size);
+		mem_copy(m_aLastSnapshotData.base_ptr(), pData, Size);
 	}
 	else
 	{
@@ -268,12 +271,14 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
 		WriteTickMarker(Tick, 0);
 
 		// create delta
-		int DeltaSize = m_pSnapshotDelta->CreateDelta((CSnapshot *) m_aLastSnapshotData, (CSnapshot *) pData, &aTmpData);
+		aTmpData.set_size(Size * 2 + 4096);
+		int DeltaSize = m_pSnapshotDelta->CreateDelta((CSnapshot *) m_aLastSnapshotData.base_ptr(), (CSnapshot *) pData, aTmpData.base_ptr());
 		if(DeltaSize)
 		{
 			// record delta
-			Write(CHUNKTYPE_DELTA, aTmpData, DeltaSize);
-			mem_copy(m_aLastSnapshotData, pData, Size);
+			Write(CHUNKTYPE_DELTA, aTmpData.base_ptr(), DeltaSize);
+			m_aLastSnapshotData.set_size(Size);
+			mem_copy(m_aLastSnapshotData.base_ptr(), pData, Size);
 		}
 	}
 }
@@ -487,10 +492,10 @@ void CDemoPlayer::ScanFile()
 
 void CDemoPlayer::DoTick()
 {
-	static char aCompressedData[CSnapshot::MAX_SIZE];
-	static char aDecompressed[CSnapshot::MAX_SIZE];
-	static char aData[CSnapshot::MAX_SIZE];
-	static char aNewSnap[CSnapshot::MAX_SIZE];
+	array<unsigned char> aCompressedData;
+	array<unsigned char> aDecompressed;
+	array<unsigned char> aData;
+	array<unsigned char> aNewSnap;
 	bool GotSnapshot = false;
 
 	// update ticks
@@ -519,7 +524,8 @@ void CDemoPlayer::DoTick()
 		// read the chunk
 		if(ChunkSize)
 		{
-			if(io_read(m_File, aCompressedData, ChunkSize) != (unsigned) ChunkSize)
+			aCompressedData.set_size(ChunkSize);
+			if(io_read(m_File, aCompressedData.base_ptr(), ChunkSize) != (unsigned) ChunkSize)
 			{
 				// stop on error or eof
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "demo_player", "error reading chunk");
@@ -527,7 +533,9 @@ void CDemoPlayer::DoTick()
 				break;
 			}
 
-			DataSize = m_Huffman.Decompress(aCompressedData, ChunkSize, aDecompressed, sizeof(aDecompressed));
+			// a Huffman code is at least one bit, so a byte expands to at most 8 symbols
+			aDecompressed.set_size(ChunkSize * 8 + 1024);
+			DataSize = m_Huffman.Decompress(aCompressedData.base_ptr(), ChunkSize, aDecompressed.base_ptr(), aDecompressed.size());
 			if(DataSize < 0)
 			{
 				// stop on error or eof
@@ -536,7 +544,9 @@ void CDemoPlayer::DoTick()
 				break;
 			}
 
-			DataSize = CVariableInt::Decompress(aDecompressed, DataSize, aData, sizeof(aData));
+			// each packed int is at least one byte and expands to at most one int
+			aData.set_size(DataSize * 4 + 1024);
+			DataSize = CVariableInt::Decompress(aDecompressed.base_ptr(), DataSize, aData.base_ptr(), aData.size());
 			if(DataSize < 0)
 			{
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "demo_player", "error during intpack decompression");
@@ -554,14 +564,21 @@ void CDemoPlayer::DoTick()
 			if(m_LastSnapshotDataSize == -1)
 				continue;
 
-			DataSize = m_pSnapshotDelta->UnpackDelta((CSnapshot *) m_aLastSnapshotData, (CSnapshot *) aNewSnap, aData, DataSize);
+			// a legacy (0.7) demo encodes deltas with the 0.7 static item
+			// sizes; decoding them with the live (0.8) table desyncs the
+			// item stream
+			CSnapshotDelta *pSnapshotDelta = m_Legacy ? &m_LegacySnapshotDelta : m_pSnapshotDelta;
+
+			aNewSnap.set_size(m_aLastSnapshotData.size() + DataSize * 2 + 4096);
+			DataSize = pSnapshotDelta->UnpackDelta((CSnapshot *) m_aLastSnapshotData.base_ptr(), (CSnapshot *) aNewSnap.base_ptr(), aData.base_ptr(), DataSize);
 			if(DataSize >= 0)
 			{
 				if(m_pListener)
-					m_pListener->OnDemoPlayerSnapshot(aNewSnap, DataSize);
+					m_pListener->OnDemoPlayerSnapshot(aNewSnap.base_ptr(), DataSize);
 
 				m_LastSnapshotDataSize = DataSize;
-				mem_copy(m_aLastSnapshotData, aNewSnap, DataSize);
+				m_aLastSnapshotData.set_size(DataSize);
+				mem_copy(m_aLastSnapshotData.base_ptr(), aNewSnap.base_ptr(), DataSize);
 			}
 			else
 			{
@@ -576,17 +593,21 @@ void CDemoPlayer::DoTick()
 			CSnapshotBuilder Builder;
 			GotSnapshot = true;
 
-			if(Builder.UnserializeSnap(aData, DataSize))
-				DataSize = Builder.Finish(aNewSnap);
+			if(Builder.UnserializeSnap((char *) aData.base_ptr(), DataSize))
+			{
+				aNewSnap.set_size(Builder.RequiredSize());
+				DataSize = Builder.Finish(aNewSnap.base_ptr());
+			}
 			else
 				DataSize = -1;
 
 			if(DataSize >= 0)
 			{
 				m_LastSnapshotDataSize = DataSize;
-				mem_copy(m_aLastSnapshotData, aNewSnap, DataSize);
+				m_aLastSnapshotData.set_size(DataSize);
+				mem_copy(m_aLastSnapshotData.base_ptr(), aNewSnap.base_ptr(), DataSize);
 				if(m_pListener)
-					m_pListener->OnDemoPlayerSnapshot(aNewSnap, DataSize);
+					m_pListener->OnDemoPlayerSnapshot(aNewSnap.base_ptr(), DataSize);
 			}
 			else
 			{
@@ -601,7 +622,7 @@ void CDemoPlayer::DoTick()
 			if(!GotSnapshot && m_pListener && m_LastSnapshotDataSize != -1)
 			{
 				GotSnapshot = true;
-				m_pListener->OnDemoPlayerSnapshot(m_aLastSnapshotData, m_LastSnapshotDataSize);
+				m_pListener->OnDemoPlayerSnapshot(m_aLastSnapshotData.base_ptr(), m_LastSnapshotDataSize);
 			}
 
 			// check the remaining types
@@ -610,9 +631,9 @@ void CDemoPlayer::DoTick()
 				m_Info.m_NextTick = ChunkTick;
 				break;
 			}
-			else if(ChunkType == CHUNKTYPE_MESSAGE && m_pListener && m_LastSnapshotDataSize != -1)
+			else if(ChunkType == CHUNKTYPE_MESSAGE && m_pListener)
 			{
-				m_pListener->OnDemoPlayerMessage(aData, DataSize);
+				m_pListener->OnDemoPlayerMessage(aData.base_ptr(), DataSize);
 			}
 		}
 	}
@@ -628,9 +649,10 @@ void CDemoPlayer::Unpause()
 	m_Info.m_Info.m_Paused = false;
 }
 
-const char *CDemoPlayer::Load(const char *pFilename, int StorageType, const char *pNetversion)
+const char *CDemoPlayer::Load(const char *pFilename, int StorageType, const char *pNetversion, const char *pLegacyNetversion)
 {
 	m_aErrorMsg[0] = 0;
+	m_Legacy = false;
 	m_File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
 	if(!m_File)
 	{
@@ -697,11 +719,20 @@ const char *CDemoPlayer::Load(const char *pFilename, int StorageType, const char
 
 	if(str_comp(m_Info.m_Header.m_aNetversion, pNetversion) != 0)
 	{
-		str_format(m_aErrorMsg, sizeof(m_aErrorMsg), "net version '%s' is not supported", m_Info.m_Header.m_aNetversion);
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_player", m_aErrorMsg);
-		io_close(m_File);
-		m_File = 0;
-		return m_aErrorMsg;
+		// a 0.7 demo is replayed through the legacy translator
+		if(pLegacyNetversion && str_comp(m_Info.m_Header.m_aNetversion, pLegacyNetversion) == 0)
+		{
+			m_Legacy = true;
+			legacy::Net7ConfigureSnapshotDelta(&m_LegacySnapshotDelta);
+		}
+		else
+		{
+			str_format(m_aErrorMsg, sizeof(m_aErrorMsg), "net version '%s' is not supported", m_Info.m_Header.m_aNetversion);
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_player", m_aErrorMsg);
+			io_close(m_File);
+			m_File = 0;
+			return m_aErrorMsg;
+		}
 	}
 
 	// get demo type

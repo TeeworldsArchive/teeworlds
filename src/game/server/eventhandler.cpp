@@ -19,7 +19,7 @@ void CEventHandler::SetGameServer(CGameContext *pGameServer)
 	m_pGameServer = pGameServer;
 }
 
-void *CEventHandler::Create(int Type, int Size, int64 Mask)
+void *CEventHandler::Create(int Type, int Size, const CClientMask &Mask)
 {
 	if(m_NumEvents == MAX_EVENTS)
 		return 0;
@@ -46,7 +46,7 @@ void CEventHandler::Snap(int SnappingClient)
 {
 	for(int i = 0; i < m_NumEvents; i++)
 	{
-		if(SnappingClient == -1 || CmaskIsSet(m_aEventList[i].m_ClientMask, SnappingClient))
+		if(SnappingClient == -1 || m_aEventList[i].m_ClientMask.IsSet(SnappingClient))
 		{
 			CNetEvent_Common *ev = (CNetEvent_Common *) &m_aData[m_aEventList[i].m_Offset];
 			if(SnappingClient == -1 || distance(GameServer()->m_apPlayers[SnappingClient]->m_ViewPos, vec2(ev->m_X, ev->m_Y)) < 1500.0f)

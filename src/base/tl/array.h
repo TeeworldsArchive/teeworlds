@@ -274,6 +274,28 @@ public:
 	}
 
 	/*
+		Function: append
+			Grows the array by the given number of (uninitialized) elements
+			using the same geometric growth as add(). Unlike repeated
+			set_size() calls this is amortized O(1) per element.
+
+		Arguments:
+			count - Number of elements to append.
+	*/
+	void append(int count)
+	{
+		const int needed = num_elements + count;
+		if(needed > list_size)
+		{
+			int new_size = list_size < 2 ? needed : list_size + list_size / 2;
+			if(new_size < needed)
+				new_size = needed;
+			alloc(new_size);
+		}
+		num_elements = needed;
+	}
+
+	/*
 		Function: hint_size
 			Allocates the number of elements wanted but
 			does not increase the list size.

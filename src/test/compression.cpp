@@ -109,39 +109,39 @@ static void FillChunk(unsigned char *pData, int Size, int Shape)
 {
 	switch(Shape)
 	{
-	case SHAPE_ZEROS:
-		mem_zero(pData, Size);
-		break;
-	case SHAPE_SEQUENTIAL:
-		for(int i = 0; i < Size; i++)
-			pData[i] = (unsigned char) i;
-		break;
-	case SHAPE_TEXT:
-	{
-		static const char s_pText[] = "The quick brown fox jumps over the lazy dog. /flag /pause nameless tee joined the game.";
-		for(int i = 0; i < Size; i++)
-			pData[i] = s_pText[i % (sizeof(s_pText) - 1)];
-		break;
-	}
-	case SHAPE_PATTERN:
-	{
-		static const unsigned char s_aPattern[] = {0x00, 0x00, 0x04, 0x80, 0x01, 0x00, 0x02, 0xff, 0x7f};
-		for(int i = 0; i < Size; i++)
-			pData[i] = s_aPattern[i % sizeof(s_aPattern)];
-		break;
-	}
-	case SHAPE_RANDOM:
-	{
-		unsigned State = 0x12345678;
-		for(int i = 0; i < Size; i++)
+		case SHAPE_ZEROS:
+			mem_zero(pData, Size);
+			break;
+		case SHAPE_SEQUENTIAL:
+			for(int i = 0; i < Size; i++)
+				pData[i] = (unsigned char) i;
+			break;
+		case SHAPE_TEXT:
 		{
-			State ^= State << 13;
-			State ^= State >> 17;
-			State ^= State << 5;
-			pData[i] = (unsigned char) State;
+			static const char s_pText[] = "The quick brown fox jumps over the lazy dog. /flag /pause nameless tee joined the game.";
+			for(int i = 0; i < Size; i++)
+				pData[i] = s_pText[i % (sizeof(s_pText) - 1)];
+			break;
 		}
-		break;
-	}
+		case SHAPE_PATTERN:
+		{
+			static const unsigned char s_aPattern[] = {0x00, 0x00, 0x04, 0x80, 0x01, 0x00, 0x02, 0xff, 0x7f};
+			for(int i = 0; i < Size; i++)
+				pData[i] = s_aPattern[i % sizeof(s_aPattern)];
+			break;
+		}
+		case SHAPE_RANDOM:
+		{
+			unsigned State = 0x12345678;
+			for(int i = 0; i < Size; i++)
+			{
+				State ^= State << 13;
+				State ^= State >> 17;
+				State ^= State << 5;
+				pData[i] = (unsigned char) State;
+			}
+			break;
+		}
 	}
 }
 
