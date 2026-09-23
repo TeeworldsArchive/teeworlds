@@ -982,33 +982,38 @@ void CGameClient::ProcessEvents()
 
 		if(Item.m_Type == NETEVENTTYPE_DAMAGE)
 		{
-			CNetEvent_Damage *ev = (CNetEvent_Damage *) pData;
-			m_pEffects->DamageIndicator(vec2(ev->m_X, ev->m_Y), ev->m_HealthAmount + ev->m_ArmorAmount, ev->m_Angle / 256.0f, ev->m_ClientID);
+			CNetEvent_Damage *pEvent = (CNetEvent_Damage *) pData;
+			m_pEffects->DamageIndicator(vec2(pEvent->m_X, pEvent->m_Y), pEvent->m_HealthAmount + pEvent->m_ArmorAmount, pEvent->m_Angle / 256.0f, pEvent->m_ClientID);
 		}
 		else if(Item.m_Type == NETEVENTTYPE_EXPLOSION)
 		{
-			CNetEvent_Explosion *ev = (CNetEvent_Explosion *) pData;
-			m_pEffects->Explosion(vec2(ev->m_X, ev->m_Y));
+			CNetEvent_Explosion *pEvent = (CNetEvent_Explosion *) pData;
+			m_pEffects->Explosion(vec2(pEvent->m_X, pEvent->m_Y));
 		}
 		else if(Item.m_Type == NETEVENTTYPE_HAMMERHIT)
 		{
-			CNetEvent_HammerHit *ev = (CNetEvent_HammerHit *) pData;
-			m_pEffects->HammerHit(vec2(ev->m_X, ev->m_Y));
+			CNetEvent_HammerHit *pEvent = (CNetEvent_HammerHit *) pData;
+			m_pEffects->HammerHit(vec2(pEvent->m_X, pEvent->m_Y));
 		}
 		else if(Item.m_Type == NETEVENTTYPE_SPAWN)
 		{
-			CNetEvent_Spawn *ev = (CNetEvent_Spawn *) pData;
-			m_pEffects->PlayerSpawn(vec2(ev->m_X, ev->m_Y));
+			CNetEvent_Spawn *pEvent = (CNetEvent_Spawn *) pData;
+			m_pEffects->PlayerSpawn(vec2(pEvent->m_X, pEvent->m_Y));
 		}
 		else if(Item.m_Type == NETEVENTTYPE_DEATH)
 		{
-			CNetEvent_Death *ev = (CNetEvent_Death *) pData;
-			m_pEffects->PlayerDeath(vec2(ev->m_X, ev->m_Y), ev->m_ClientID);
+			CNetEvent_Death *pEvent = (CNetEvent_Death *) pData;
+			m_pEffects->PlayerDeath(vec2(pEvent->m_X, pEvent->m_Y), pEvent->m_ClientID);
 		}
 		else if(Item.m_Type == NETEVENTTYPE_SOUNDWORLD)
 		{
-			CNetEvent_SoundWorld *ev = (CNetEvent_SoundWorld *) pData;
-			m_pSounds->PlayAt(CSounds::CHN_WORLD, ev->m_SoundID, 1.0f, vec2(ev->m_X, ev->m_Y));
+			CNetEvent_SoundWorld *pEvent = (CNetEvent_SoundWorld *) pData;
+			m_pSounds->PlayAt(CSounds::CHN_WORLD, pEvent->m_SoundID, 1.0f, vec2(pEvent->m_X, pEvent->m_Y));
+		}
+		else if(Item.m_Type == NETEVENTTYPE_SOUNDGLOBAL)
+		{
+			CNetEvent_SoundGlobal *pEvent = (CNetEvent_SoundGlobal *) pData;
+			m_pSounds->Enqueue(CSounds::CHN_GLOBAL, pEvent->m_SoundID);
 		}
 	}
 }

@@ -73,10 +73,15 @@ namespace legacy
 			case protocol7::NETOBJTYPE_CHARACTER: return NETOBJTYPE_CHARACTER;
 			case protocol7::NETOBJTYPE_SPECTATORINFO: return NETOBJTYPE_SPECTATORINFO;
 			case protocol7::NETOBJTYPE_GAMEDATARACE: return NETOBJTYPE_GAMEDATARACE;
+			// events
+			case protocol7::NETEVENTTYPE_COMMON: return NETEVENTTYPE_COMMON;
+			case protocol7::NETEVENTTYPE_EXPLOSION: return NETEVENTTYPE_EXPLOSION;
+			case protocol7::NETEVENTTYPE_SPAWN: return NETEVENTTYPE_SPAWN;
+			case protocol7::NETEVENTTYPE_HAMMERHIT: return NETEVENTTYPE_HAMMERHIT;
+			case protocol7::NETEVENTTYPE_DEATH: return NETEVENTTYPE_DEATH;
+			case protocol7::NETEVENTTYPE_SOUNDWORLD: return NETEVENTTYPE_SOUNDWORLD;
+			case protocol7::NETEVENTTYPE_DAMAGE: return NETEVENTTYPE_DAMAGE;
 		}
-		// The event block moved by one: 0.7 uses 16..22, 0.8 uses 15..21.
-		if(Type7 >= protocol7::NETEVENTTYPE_COMMON && Type7 <= protocol7::NETEVENTTYPE_DAMAGE)
-			return Type7 - 1;
 		return -1;
 	}
 

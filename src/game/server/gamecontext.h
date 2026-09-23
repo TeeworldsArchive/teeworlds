@@ -172,12 +172,13 @@ public:
 	class CHeap *m_pMapRotationHeap;
 
 	// helper functions
-	void CreateDamage(vec2 Pos, int Id, vec2 Source, int HealthAmount, int ArmorAmount, bool Self);
-	void CreateExplosion(vec2 Pos, int Owner, int Weapon, int MaxDamage);
-	void CreateHammerHit(vec2 Pos);
-	void CreatePlayerSpawn(vec2 Pos);
-	void CreateDeath(vec2 Pos, int Who);
+	void CreateDamage(vec2 Pos, int Id, vec2 Source, int HealthAmount, int ArmorAmount, bool Self, const CClientMask &Mask = CClientMask::All());
+	void CreateExplosion(vec2 Pos, int Owner, int Weapon, int MaxDamage, const CClientMask &Mask = CClientMask::All());
+	void CreateHammerHit(vec2 Pos, const CClientMask &Mask = CClientMask::All());
+	void CreatePlayerSpawn(vec2 Pos, const CClientMask &Mask = CClientMask::All());
+	void CreateDeath(vec2 Pos, int Who, const CClientMask &Mask = CClientMask::All());
 	void CreateSound(vec2 Pos, int Sound, const CClientMask &Mask = CClientMask::All());
+	void CreateSoundGlobal(int Sound, const CClientMask &Mask = CClientMask::All());
 
 	// ----- send functions -----
 	void SendChat(int ChatterClientID, int Mode, int To, const char *pText);

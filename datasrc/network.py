@@ -261,7 +261,11 @@ Objects = [
 		NetIntRange("m_SoundID", 0, 'NUM_SOUNDS-1'),
 	]),
 
-	NetEvent("Damage:Common", [ # Unused yet
+	NetEvent("SoundGlobal", [
+		NetIntRange("m_SoundID", 0, 'NUM_SOUNDS-1')
+	]),
+
+	NetEvent("Damage:Common", [
 		NetIntRange("m_ClientID", 0, 'MAX_TEES-1'),
 		NetIntAny("m_Angle"),
 		NetIntRange("m_HealthAmount", 0, 9),
