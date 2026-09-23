@@ -616,7 +616,11 @@ namespace legacy
 			m_aParts7[PartByte] |= PartMask;
 			m_NumParts7++;
 		}
-		m_LastPartSize7 = PartSize;
+		// Only the highest part determines the tail of the reassembled buffer.
+		// UDP may deliver it before the middle parts, so recording the size of
+		// whichever part arrived last would compute a wrong CompleteSize.
+		if(Part == NumParts - 1)
+			m_LastPartSize7 = PartSize;
 
 		if(m_NumParts7 != NumParts)
 			return 0;

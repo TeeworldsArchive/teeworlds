@@ -506,6 +506,7 @@ void CClient::OnEnterGame()
 	m_ReceivedSnapshots = 0;
 	mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
 	m_NumSnapshotParts = 0;
+	m_LastSnapshotPartSize = 0;
 	m_PredTick = 0;
 	m_CurrentRecvTick = 0;
 	m_CurGameTick = 0;
@@ -1375,6 +1376,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				{
 					mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
 					m_NumSnapshotParts = 0;
+					m_LastSnapshotPartSize = 0;
 					m_CurrentRecvTick = GameTick;
 				}
 
@@ -1395,6 +1397,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 					m_aSnapshotParts[PartByte] |= PartMask;
 					m_NumSnapshotParts++;
 				}
+				// only the highest part ends the buffer; a later-arriving middle
+				// part must not overwrite its size (UDP may reorder)
+				if(Part == NumParts - 1)
+					m_LastSnapshotPartSize = PartSize;
 
 				if(m_NumSnapshotParts == NumParts)
 				{
@@ -1403,11 +1409,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 					array<unsigned char> aTmpBuffer2;
 					array<unsigned char> aTmpBuffer3;
 
-					int CompleteSize = (NumParts - 1) * MAX_SNAPSHOT_PACKSIZE + PartSize;
+					int CompleteSize = (NumParts - 1) * MAX_SNAPSHOT_PACKSIZE + m_LastSnapshotPartSize;
 
 					// reset snapshoting
 					mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
 					m_NumSnapshotParts = 0;
+					m_LastSnapshotPartSize = 0;
 
 					// find snapshot that we should use as delta
 					s_Emptysnap.Clear();
@@ -2044,6 +2051,7 @@ void CClient::Run()
 	m_LocalStartTime = time_get();
 	mem_zero(m_aSnapshotParts, sizeof(m_aSnapshotParts));
 	m_NumSnapshotParts = 0;
+	m_LastSnapshotPartSize = 0;
 
 	// Initialize Steamworks before the graphics context is created so that the
 	// Steam overlay can hook into it. Failure is not fatal.

@@ -91,6 +91,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	unsigned char m_aSnapshotParts[CSnapshot::MAX_PARTS / 8];
 	int m_NumSnapshotParts;
+	// Size of the highest snapshot part seen for the current tick. UDP may
+	// deliver it before the middle parts, so the size of the last arriving part
+	// cannot be used to compute the reassembled buffer length.
+	int m_LastSnapshotPartSize;
 	int64 m_LocalStartTime;
 
 	int64 m_LastRenderTime;
