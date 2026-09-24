@@ -46,6 +46,8 @@ CCharacter::CCharacter(CGameWorld *pWorld) : CEntity(pWorld, CGameWorld::ENTTYPE
 {
 	m_Health = 0;
 	m_Armor = 0;
+	m_MaxHealth = 10;
+	m_MaxArmor = 10;
 	m_TriggeredEvents = 0;
 }
 
@@ -80,6 +82,13 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	for(int i = 0; i < NUM_WEAPONS; i++)
 		m_aWeapons[i].m_Valid = true;
+
+	// the game controller decides the maximum values for every character,
+	// clamp them to the protocol minimum so they are always valid on the wire
+	m_Health = 0;
+	m_Armor = 0;
+	m_MaxHealth = maximum(1, GameServer()->m_pController->GetCharacterMaxHealth(this));
+	m_MaxArmor = maximum(1, GameServer()->m_pController->GetCharacterMaxArmor(this));
 
 	GameServer()->m_pController->OnCharacterSpawn(this);
 
@@ -594,17 +603,17 @@ void CCharacter::TickPaused()
 
 bool CCharacter::IncreaseHealth(int Amount)
 {
-	if(m_Health >= 10)
+	if(m_Health >= m_MaxHealth)
 		return false;
-	m_Health = clamp(m_Health + Amount, 0, 10);
+	m_Health = clamp(m_Health + Amount, 0, m_MaxHealth);
 	return true;
 }
 
 bool CCharacter::IncreaseArmor(int Amount)
 {
-	if(m_Armor >= 10)
+	if(m_Armor >= m_MaxArmor)
 		return false;
-	m_Armor = clamp(m_Armor + Amount, 0, 10);
+	m_Armor = clamp(m_Armor + Amount, 0, m_MaxArmor);
 	return true;
 }
 
@@ -786,6 +795,10 @@ void CCharacter::Snap(int SnappingClient)
 	pCharacter->m_AmmoCount = 0;
 	pCharacter->m_Health = 0;
 	pCharacter->m_Armor = 0;
+	// maximum values are public and always sent, they also have to be valid
+	// for every character or the client discards the whole snapshot item
+	pCharacter->m_MaxHealth = m_MaxHealth;
+	pCharacter->m_MaxArmor = m_MaxArmor;
 	pCharacter->m_TriggeredEvents = m_TriggeredEvents;
 
 	pCharacter->m_Weapon = m_ActiveWeapon;

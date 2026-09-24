@@ -150,6 +150,11 @@ public:
 	*/
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
 
+	// maximum health and armor a character spawns with, can be overridden
+	// per gamemode and per character
+	virtual int GetCharacterMaxHealth(class CCharacter *pChr) const { return 10; }
+	virtual int GetCharacterMaxArmor(class CCharacter *pChr) const { return 10; }
+
 	virtual void OnFlagReturn(class CFlag *pFlag);
 
 	/*

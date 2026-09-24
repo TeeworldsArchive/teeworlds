@@ -64,6 +64,10 @@ public:
 	class CPlayer *GetPlayer() { return m_pPlayer; }
 	int GetCID();
 
+	// maximum values assigned by the game controller on spawn
+	int GetMaxHealth() const { return m_MaxHealth; }
+	int GetMaxArmor() const { return m_MaxArmor; }
+
 	// need this hook for gamecontroller to call ninja fire
 	void DoNinjaFire(vec2 Direction, int MoveTime);
 	// need this hook for gamecontroller to enable weapons, -1 to enable all
@@ -118,6 +122,8 @@ private:
 
 	int m_Health;
 	int m_Armor;
+	int m_MaxHealth;
+	int m_MaxArmor;
 
 	int m_TriggeredEvents;
 

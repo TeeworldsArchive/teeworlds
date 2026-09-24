@@ -189,8 +189,10 @@ Objects = [
 	]),
 
 	NetObject("Character:CharacterCore", [
-		NetIntRange("m_Health", 0, 10),
-		NetIntRange("m_Armor", 0, 10),
+		NetIntRange("m_Health", 0, 'max_int'),
+		NetIntRange("m_Armor", 0, 'max_int'),
+		NetIntRange("m_MaxHealth", 1, 'max_int'),
+		NetIntRange("m_MaxArmor", 1, 'max_int'),
 		NetIntAny("m_AmmoCount"),
 		NetIntRange("m_Weapon", -1, 'NUM_WEAPONS-1'),
 		NetEnum("m_Emote", Emotes),

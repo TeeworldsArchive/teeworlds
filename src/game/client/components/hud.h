@@ -22,6 +22,7 @@ class CHud : public CComponent
 	void RenderTeambalanceWarning();
 	void RenderVoting();
 	void RenderNinjaBar(float x, float y, float Progress);
+	void RenderTwoLayerIcon(int EmptySpriteID, int FullSpriteID, float x, float y, float Size, float Progress);
 	void RenderHealthAndAmmo(const CNetObj_Character *pCharacter);
 	void RenderGameTimer();
 	void RenderPauseTimer();

@@ -576,7 +576,7 @@ void CHud::RenderVoting()
 	if(!m_pClient->m_pVoting->IsVoting() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return;
 
-	CUIRect Rect = {-10.0f, 58.0f, 119.0f, 46.0f};
+	CUIRect Rect = {-10.0f, 64.0f, 119.0f, 46.0f};
 	Rect.Draw(vec4(0.0f, 0.0f, 0.0f, 0.4f));
 
 	TextRender()->TextColor(1, 1, 1, 1);
@@ -638,7 +638,7 @@ void CHud::RenderNinjaBar(float x, float y, float Progress)
 	Progress = clamp(Progress, 0.0f, 1.0f);
 	const float EndWidth = 6.0f;
 	const float BarHeight = 12.0f;
-	const float WholeBarWidth = 120.f;
+	const float WholeBarWidth = 60.f;
 	const float MiddleBarWidth = WholeBarWidth - (EndWidth * 2.0f);
 
 	IGraphics::CQuadItem QuadStartFull(x, y, EndWidth, BarHeight);
@@ -702,71 +702,134 @@ void CHud::RenderNinjaBar(float x, float y, float Progress)
 	Graphics()->SingleQuadDrawTL(&QuadEndEmpty);
 }
 
+void CHud::RenderTwoLayerIcon(int EmptySpriteID, int FullSpriteID, float x, float y, float Size, float Progress)
+{
+	Progress = clamp(Progress, 0.0f, 1.0f);
+
+	// bottom layer: the empty icon
+	RenderTools()->SelectSprite(EmptySpriteID);
+	IGraphics::CQuadItem EmptyQuad(x, y, Size, Size);
+	Graphics()->QuadsDrawTL(&EmptyQuad, 1);
+
+	if(Progress <= 0.0f)
+		return;
+
+	// top layer: the full icon anchored at the bottom, clipped to its bottom
+	// Progress fraction so the empty layer is revealed from the top down
+	const CDataSprite *pSprite = &g_pData->m_aSprites[FullSpriteID];
+	const int GridX = pSprite->m_pSet->m_Gridx;
+	const int GridY = pSprite->m_pSet->m_Gridy;
+	const float PadX = 0.5f / (float)(GridX * 32);
+	// half a texel expressed in sprite grid cells
+	const float PadCell = 0.5f / 32.0f;
+
+	const float x1 = pSprite->m_X / (float)GridX + PadX;
+	const float x2 = (pSprite->m_X + pSprite->m_W) / (float)GridX - PadX;
+	const float SpriteTop = pSprite->m_Y + pSprite->m_H * (1.0f - Progress);
+	const float SpriteBottom = pSprite->m_Y + pSprite->m_H;
+	float y1 = SpriteTop / (float)GridY;
+	const float y2 = (SpriteBottom - PadCell) / (float)GridY;
+	// keep the regular top padding when the whole sprite is shown
+	if(Progress >= 1.0f)
+		y1 = (SpriteTop + PadCell) / (float)GridY;
+	// a very small fraction can be thinner than the bottom padding
+	if(y2 <= y1)
+		y1 = y2 - 1.0f / (float)(GridY * 32);
+
+	Graphics()->QuadsSetSubset(x1, y1, x2, y2);
+	IGraphics::CQuadItem FullQuad(x, y + Size * (1.0f - Progress), Size, Size * Progress);
+	Graphics()->QuadsDrawTL(&FullQuad, 1);
+}
+
 void CHud::RenderHealthAndAmmo(const CNetObj_Character *pCharacter)
 {
 	if(!pCharacter)
 		return;
 
-	float x = 5;
-	float y = 5;
-	int i;
-	IGraphics::CQuadItem Array[10];
+	const float HUD_STATS_TOP = 5.0f;
+	const float HUD_STATS_ICON_SIZE = 16.0f;
+	const float HUD_STATS_ROW_SPACING = 2.0f;
+	const float HUD_STATS_ROW_STEP = HUD_STATS_ICON_SIZE + HUD_STATS_ROW_SPACING;
+
+	const float IconSize = HUD_STATS_ICON_SIZE;
+	const float TextSize = HUD_STATS_ICON_SIZE * 3.0f / 4.0f;
+	const float IconTextSpacing = 4.0f;
+	const float RowStep = HUD_STATS_ROW_STEP;
+
+	const float x = 5.0f;
+	const float y = HUD_STATS_TOP;
+	const float HealthY = y;
+	const float ArmorY = y + RowStep;
+	const float AmmoY = y + RowStep * 2.0f;
+
+	const int MaxHealth = maximum(1, pCharacter->m_MaxHealth);
+	const int MaxArmor = maximum(1, pCharacter->m_MaxArmor);
 
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
-
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 
+	// render health
+	RenderTwoLayerIcon(SPRITE_HEALTH_EMPTY, SPRITE_HEALTH_FULL, x, HealthY, IconSize, pCharacter->m_Health / (float)MaxHealth);
+
+	// render armor
+	RenderTwoLayerIcon(SPRITE_ARMOR_EMPTY, SPRITE_ARMOR_FULL, x, ArmorY, IconSize, pCharacter->m_Armor / (float)MaxArmor);
+
 	// render ammo
-	if(pCharacter->m_Weapon == WEAPON_NINJA)
+	if(pCharacter->m_Weapon == WEAPON_HAMMER || pCharacter->m_Weapon == WEAPON_NINJA)
 	{
-		const int Max = g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000;
-		float NinjaProgress = clamp(pCharacter->m_AmmoCount - Client()->GameTick(), 0, Max) / (float) Max;
-		RenderNinjaBar(x, y + 24.f, NinjaProgress);
+		RenderTools()->SelectSprite(g_pData->m_Weapons.m_aId[pCharacter->m_Weapon].m_pSpriteBody);
+		Graphics()->QuadsSetRotation(-pi / 2.0f - 0.1f * pi * 2.0f);
+		RenderTools()->DrawSprite(x + IconSize / 2.0f + 1.0f, AmmoY + IconSize / 2.0f, IconSize * 1.2f);
+		Graphics()->QuadsSetRotation(0.0f);
 	}
-	else
+	else if(pCharacter->m_Weapon != -1)
 	{
 		RenderTools()->SelectSprite(g_pData->m_Weapons.m_aId[maximum(0, pCharacter->m_Weapon % NUM_WEAPONS)].m_pSpriteProj);
-		if(pCharacter->m_Weapon == WEAPON_GRENADE)
-		{
-			for(i = 0; i < minimum(pCharacter->m_AmmoCount, 10); i++)
-				Array[i] = IGraphics::CQuadItem(x + 1 + i * 12, y + 24, 10, 10);
-		}
-		else
-		{
-			for(i = 0; i < minimum(pCharacter->m_AmmoCount, 10); i++)
-				Array[i] = IGraphics::CQuadItem(x + i * 12, y + 24, 12, 12);
-		}
-		Graphics()->QuadsDrawTL(Array, i);
+		IGraphics::CQuadItem AmmoQuad(x, AmmoY, IconSize, IconSize);
+		Graphics()->QuadsDrawTL(&AmmoQuad, 1);
 	}
 
-	int h = 0;
-
-	// render health
-	RenderTools()->SelectSprite(SPRITE_HEALTH_FULL);
-	for(; h < minimum(pCharacter->m_Health, 10); h++)
-		Array[h] = IGraphics::CQuadItem(x + h * 12, y, 12, 12);
-	Graphics()->QuadsDrawTL(Array, h);
-
-	i = 0;
-	RenderTools()->SelectSprite(SPRITE_HEALTH_EMPTY);
-	for(; h < 10; h++)
-		Array[i++] = IGraphics::CQuadItem(x + h * 12, y, 12, 12);
-	Graphics()->QuadsDrawTL(Array, i);
-
-	// render armor meter
-	h = 0;
-	RenderTools()->SelectSprite(SPRITE_ARMOR_FULL);
-	for(; h < minimum(pCharacter->m_Armor, 10); h++)
-		Array[h] = IGraphics::CQuadItem(x + h * 12, y + 12, 12, 12);
-	Graphics()->QuadsDrawTL(Array, h);
-
-	i = 0;
-	RenderTools()->SelectSprite(SPRITE_ARMOR_EMPTY);
-	for(; h < 10; h++)
-		Array[i++] = IGraphics::CQuadItem(x + h * 12, y + 12, 12, 12);
-	Graphics()->QuadsDrawTL(Array, i);
 	Graphics()->QuadsEnd();
+
+	// render the numeric values next to the icons
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+	const float TextX = x + IconSize + IconTextSpacing;
+	char aBuf[64];
+
+	static CTextCursor s_HealthCursor(TextSize);
+	s_HealthCursor.m_Align = TEXTALIGN_ML;
+	s_HealthCursor.MoveTo(TextX, HealthY + IconSize / 2.0f);
+	s_HealthCursor.Reset();
+	str_format(aBuf, sizeof(aBuf), "%d / %d", pCharacter->m_Health, MaxHealth);
+	TextRender()->TextOutlined(&s_HealthCursor, aBuf, -1);
+
+	static CTextCursor s_ArmorCursor(TextSize);
+	s_ArmorCursor.m_Align = TEXTALIGN_ML;
+	s_ArmorCursor.MoveTo(TextX, ArmorY + IconSize / 2.0f);
+	s_ArmorCursor.Reset();
+	str_format(aBuf, sizeof(aBuf), "%d / %d", pCharacter->m_Armor, MaxArmor);
+	TextRender()->TextOutlined(&s_ArmorCursor, aBuf, -1);
+
+	if(pCharacter->m_Weapon == WEAPON_NINJA)
+	{
+		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		const int Max = g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000;
+		float NinjaProgress = clamp(pCharacter->m_AmmoCount - Client()->GameTick(), 0, Max) / (float) Max;
+		RenderNinjaBar(x + IconSize, AmmoY + (IconSize - 12.0f) / 2.0f, NinjaProgress);
+		Graphics()->QuadsEnd();
+	}
+	else if(pCharacter->m_Weapon != -1)
+	{
+		static CTextCursor s_AmmoCursor(TextSize);
+		s_AmmoCursor.m_Align = TEXTALIGN_ML;
+		s_AmmoCursor.MoveTo(TextX, AmmoY + IconSize / 2.0f);
+		s_AmmoCursor.Reset();
+		str_format(aBuf, sizeof(aBuf), "%d", pCharacter->m_AmmoCount);
+		TextRender()->TextOutlined(&s_AmmoCursor, pCharacter->m_AmmoCount < 0 ? "∞" : aBuf, -1);
+	}
 }
 
 void CHud::RenderSpectatorHud()

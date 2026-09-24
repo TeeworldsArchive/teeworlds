@@ -1236,10 +1236,6 @@ void CGameClient::OnNewSnapshot()
 						const void *pOld = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, TeeInfoID);
 						pCharInfo->m_Cur = *((const CNetObj_Character *) pData);
 
-						// clamp ammo count for non ninja weapon
-						if(pCharInfo->m_Cur.m_Weapon != WEAPON_NINJA)
-							pCharInfo->m_Cur.m_AmmoCount = clamp(pCharInfo->m_Cur.m_AmmoCount, 0, 10);
-
 						if(pOld)
 						{
 							pCharInfo->m_Active = true;

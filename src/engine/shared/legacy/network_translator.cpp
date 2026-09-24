@@ -343,6 +343,44 @@ namespace legacy
 				continue;
 			}
 
+			if(Type == protocol7::NETOBJTYPE_CHARACTER)
+			{
+				if(Size < (int) sizeof(protocol7::CNetObj_Character))
+					continue;
+				CNetObj_Character *pOut = (CNetObj_Character *) Builder.NewItem(NETOBJTYPE_CHARACTER, ID, sizeof(CNetObj_Character));
+				if(!pOut)
+					return -1;
+				const protocol7::CNetObj_Character *pIn = (const protocol7::CNetObj_Character *) pItem->Data();
+				// character core
+				pOut->m_Tick = pIn->m_Tick;
+				pOut->m_X = pIn->m_X;
+				pOut->m_Y = pIn->m_Y;
+				pOut->m_VelX = pIn->m_VelX;
+				pOut->m_VelY = pIn->m_VelY;
+				pOut->m_Angle = pIn->m_Angle;
+				pOut->m_Direction = pIn->m_Direction;
+				pOut->m_Jumped = pIn->m_Jumped;
+				pOut->m_HookedPlayer = pIn->m_HookedPlayer;
+				pOut->m_HookState = pIn->m_HookState;
+				pOut->m_HookTick = pIn->m_HookTick;
+				pOut->m_HookX = pIn->m_HookX;
+				pOut->m_HookY = pIn->m_HookY;
+				pOut->m_HookDx = pIn->m_HookDx;
+				pOut->m_HookDy = pIn->m_HookDy;
+			
+				// character
+				pOut->m_Health = pIn->m_Health;
+				pOut->m_Armor = pIn->m_Armor;
+				pOut->m_MaxHealth = 10;
+				pOut->m_MaxArmor = 10;
+				pOut->m_AmmoCount = pIn->m_AmmoCount;
+				pOut->m_Weapon = pIn->m_Weapon;
+				pOut->m_Emote = pIn->m_Emote;
+				pOut->m_AttackTick = pIn->m_AttackTick;
+				pOut->m_TriggeredEvents = pIn->m_TriggeredEvents;
+				continue;
+			}
+
 			const int Type8 = MapObjectType7To8(Type);
 			if(Type8 < 0)
 				continue;
