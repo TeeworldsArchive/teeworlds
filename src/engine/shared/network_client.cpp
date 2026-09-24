@@ -13,15 +13,19 @@ bool CNetClient::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IE
 	if(!Socket.type)
 		return false;
 
-	// clean it
+	// clean it, releasing the queues' heap memory first so the zeroing below
+	// does not drop the only pointers to it
+	m_InboundPackets.Destroy();
+	m_OutboundPackets.Destroy();
+	m_PendingConnects.Destroy();
+	m_PendingDisconnects.Destroy();
 	mem_zero(this, sizeof(*this));
 
-	// the zeroing above wiped the queue locks, so create them again
+	// the zeroing above wiped the queue pointers, create them again
 	m_InboundPackets.Setup();
 	m_OutboundPackets.Setup();
 	m_PendingConnects.Setup();
 	m_PendingDisconnects.Setup();
-	m_Outbound.clear();
 
 	// init
 	Init(Socket, pConfig, pConsole, pEngine);
@@ -33,6 +37,11 @@ bool CNetClient::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IE
 	m_Flags = Flags;
 
 	return true;
+}
+
+CNetClient::~CNetClient()
+{
+	StopThread();
 }
 
 void CNetClient::StartThread()
@@ -61,7 +70,6 @@ void CNetClient::StopThread()
 	m_OutboundPackets.Clear();
 	m_PendingConnects.Clear();
 	m_PendingDisconnects.Clear();
-	m_Outbound.clear();
 }
 
 void CNetClient::ThreadEntry(void *pUser)
@@ -131,10 +139,10 @@ void CNetClient::RunThread()
 	}
 
 	// and write back what the game thread produced
-	m_OutboundPackets.Drain(m_Outbound);
-	for(int i = 0; i < m_Outbound.size(); i++)
-		Send(&m_Outbound[i].m_Chunk, m_Outbound[i].m_ResponseToken);
-	m_Outbound.clear();
+	array<CNetPacketEntry> Outbound;
+	m_OutboundPackets.Drain(Outbound);
+	for(int i = 0; i < Outbound.size(); i++)
+		Send(&Outbound[i].m_Chunk, Outbound[i].m_ResponseToken);
 }
 
 void CNetClient::DrainPackets(array<CNetPacketEntry> &Out)
@@ -255,10 +263,9 @@ int CNetClient::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 int CNetClient::Send(CNetChunk *pChunk, TOKEN Token, CSendCBData *pCallbackData)
 {
 	/*
-		The game thread never touches the socket, so what it sends is queued and
-		written by the network thread. The network thread itself (control
-		messages, resends) keeps sending directly, which also guarantees the
-		queue never feeds back into itself.
+		A send from the game thread is queued and written by the network thread,
+		which owns the socket. The network thread itself (control messages,
+		resends) sends directly, so the queue never feeds back into itself.
 	*/
 	if(IsGameThread())
 	{

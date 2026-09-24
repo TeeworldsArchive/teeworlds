@@ -13,13 +13,16 @@
 bool CNetServer::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, CNetBan *pNetBan,
 	int MaxClients, int MaxClientsPerIP, NETFUNC_NEWCLIENT pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser)
 {
-	// zero out the whole structure
+	// zero out the whole structure, releasing the queues' heap memory first
+	// so the zeroing does not drop the only pointers to it
+	m_InboundPackets.Destroy();
+	m_OutboundPackets.Destroy();
+	m_PendingDrops.Destroy();
 	mem_zero(this, sizeof(*this));
 
-	// the zeroing above wiped the queue locks, so create them again
+	// the zeroing above wiped the queue pointers, create them again
 	m_InboundPackets.Setup();
 	m_OutboundPackets.Setup();
-	m_Outbound.clear();
 	m_PendingDrops.Setup();
 
 	// open socket
@@ -46,6 +49,11 @@ bool CNetServer::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IE
 	m_UserPtr = pUser;
 
 	return true;
+}
+
+CNetServer::~CNetServer()
+{
+	StopThread();
 }
 
 void CNetServer::StartThread()
@@ -76,7 +84,6 @@ void CNetServer::StopThread()
 	m_InboundPackets.Clear();
 	m_OutboundPackets.Clear();
 	m_PendingDrops.Clear();
-	m_Outbound.clear();
 }
 
 void CNetServer::ThreadEntry(void *pUser)
@@ -139,10 +146,10 @@ void CNetServer::RunThread()
 	}
 
 	// and send back what the game thread produced
-	m_OutboundPackets.Drain(m_Outbound);
-	for(int i = 0; i < m_Outbound.size(); i++)
-		Send(&m_Outbound[i].m_Chunk, m_Outbound[i].m_ResponseToken);
-	m_Outbound.clear();
+	array<CNetPacketEntry> Outbound;
+	m_OutboundPackets.Drain(Outbound);
+	for(int i = 0; i < Outbound.size(); i++)
+		Send(&Outbound[i].m_Chunk, Outbound[i].m_ResponseToken);
 }
 
 void CNetServer::DrainPackets(array<CNetPacketEntry> &Out)
@@ -169,10 +176,10 @@ void CNetServer::Close(const char *pReason)
 void CNetServer::Drop(int ClientID, const char *pReason)
 {
 	/*
-		A drop from the game thread only records the request: the connection and
-		the DelClient callback belong to the network thread. Applying it on the
-		game thread would race the connection state and call the game back from
-		the wrong thread.
+		A drop from the game thread only records the request. The connection and
+		the DelClient callback belong to the network thread, so applying it here
+		would race the connection state and call back into the game from the
+		wrong thread.
 	*/
 	if(IsGameThread())
 	{
@@ -374,11 +381,10 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 int CNetServer::Send(CNetChunk *pChunk, TOKEN Token)
 {
 	/*
-		The game thread never touches the socket or a connection, so a send
-		from there is queued and performed by the network thread on its next
-		pass. The network thread itself (resends, control messages, connless
-		replies) keeps sending directly, which also guarantees the queue never
-		feeds back into itself.
+		A send from the game thread is queued and written by the network thread,
+		which owns the socket. The network thread itself (resends, control
+		messages, connless replies) sends directly, so the queue never feeds
+		back into itself.
 	*/
 	if(IsGameThread())
 	{

@@ -646,8 +646,8 @@ void CServer::DoSnapshot()
 
 /*
 	The transport runs on the network thread, so these callbacks must not touch
-	the game. They only record what happened in per-slot flags that the game
-	thread picks up in PumpNetwork, where NewClient/DelClient below run.
+	the game. They only record what happened in per-slot flags, which the game
+	thread picks up in PumpNetwork where HandleNewClient/HandleDelClient run.
 */
 int CServer::NewClientCallback(int ClientID, void *pUser)
 {
@@ -1195,18 +1195,17 @@ void CServer::SendServerInfo(int ClientID)
 void CServer::PumpNetwork()
 {
 	/*
-		The transport runs on its own thread: by the time we get here the
-		packets it decoded are already waiting in a queue, and anything we send
-		from this thread is queued back to it. No socket, connection or resend
-		buffer is touched from the game thread.
+		The transport runs on its own thread, so the packets it decoded are
+		already queued here and what this thread sends is queued back to it.
+		The socket, the connections and the resend buffers stay on that thread.
 	*/
 	m_aNetPackets.clear();
 	m_NetServer.DrainPackets(m_aNetPackets);
 
 	/*
-		Slots that appeared or vanished on the network thread are folded into
-		the game's client state first, so a packet from a slot that just went
-		away is not applied to a stale client.
+		Slots that appeared or vanished on the network thread are applied to the
+		game's client state first, so a packet from a slot that just went away is
+		not handled as a stale client.
 	*/
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{

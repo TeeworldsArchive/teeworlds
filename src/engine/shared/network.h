@@ -526,11 +526,11 @@ public:
 };
 
 /*
-	One packet that crossed between the network thread and the game thread.
+	A packet on its way between the network thread and the game thread.
 
-	The payload is copied into the entry instead of pointing at the receive
-	buffer, so the network thread can keep using that buffer while the game
-	thread still holds the packet. m_pData points into m_aData.
+	The payload is copied into the entry instead of pointing into the receive
+	buffer, so the network thread can keep receiving while the game thread
+	still holds the packet. m_Chunk.m_pData points into m_aData.
 */
 class CNetPacketEntry
 {
@@ -646,7 +646,8 @@ public:
 // server side
 class CNetServer : public CNetBase
 {
-	struct CSlot	{
+	struct CSlot
+	{
 	public:
 		CNetConnection m_Connection;
 	};
@@ -669,27 +670,25 @@ class CNetServer : public CNetBase
 	/*
 		The network thread.
 
-		The whole transport (socket, connections, resend queues, tokens) lives on
-		this thread. The game thread only ever sees fully unpacked packets, which
-		arrive through m_InboundPackets; packs are handed back with Send(), which
-		posts the chunk onto the network thread instead of touching the socket.
+		The socket, the connections, the resend queues and the tokens belong to
+		this thread. The game thread only sees unpacked packets, which arrive
+		through m_InboundPackets, and hands packets back with Send(), which
+		queues them instead of touching the socket.
 
-		A packet that the game thread is done with must be released with
-		FreePacket(), because its payload points into the queue entry.
+		A packet the game thread is done with is released with FreePacket(),
+		because its payload points into the queue entry.
 	*/
 	void *m_pThread;
 	volatile bool m_ThreadShutdown;
 	volatile bool m_ThreadRunning;
-	// only true inside the network thread, so Send/Drop know which side they
-	// were called from without asking the OS for a thread id
+	// only set inside the network thread, so Send/Drop can tell which side
+	// they were called from without asking the OS for a thread id
 	volatile bool m_InNetworkThread;
 
 	// a packet on its way up to the game thread
 	CNetQueue<CNetPacketEntry> m_InboundPackets;
 	// a packet on its way down to clients
 	CNetQueue<CNetPacketEntry> m_OutboundPackets;
-	// scratch for the network thread when it flushes m_OutboundPackets
-	array<CNetPacketEntry> m_Outbound;
 	// drops the game thread requested
 	CNetQueue<CNetPendingDrop> m_PendingDrops;
 
@@ -702,6 +701,10 @@ class CNetServer : public CNetBase
 	void RunThread();
 
 public:
+	// stop the thread so a transport that is torn down without Close() does
+	// not leave it running against freed memory
+	~CNetServer();
+
 	// true while the network thread is alive
 	bool ThreadRunning() const { return m_ThreadRunning; }
 
@@ -789,13 +792,13 @@ class CNetClient : public CNetBase
 	int m_Flags;
 
 	/*
-		The network thread, the same split as CNetServer: the socket and the
-		connection live here, and the game thread only sees decoded packets in
-		m_InboundPackets. Everything the game thread sends is queued in
-		m_OutboundPackets and written by this thread.
+		The network thread, split the same way as CNetServer: the socket and
+		the connection belong to this thread, and the game thread only sees
+		unpacked packets in m_InboundPackets. What the game thread sends is
+		queued in m_OutboundPackets and written by this thread.
 
-		Connection control (Connect/Disconnect) is forwarded too, so the
-		connection state machine is only ever advanced from this thread.
+		Connect and Disconnect are forwarded as well, so the connection state
+		machine is only advanced from this thread.
 	*/
 	void *m_pThread;
 	volatile bool m_ThreadShutdown;
@@ -808,7 +811,6 @@ class CNetClient : public CNetBase
 	// control requests the game thread made for the network thread to apply
 	CNetQueue<CNetPendingConnect> m_PendingConnects;
 	CNetQueue<CNetPendingDisconnect> m_PendingDisconnects;
-	array<CNetPacketEntry> m_Outbound;
 
 	void ThreadMain();
 	static void ThreadEntry(void *pUser);
@@ -819,6 +821,10 @@ class CNetClient : public CNetBase
 	bool IsGameThread() const { return m_pThread != 0 && !m_InNetworkThread; }
 
 public:
+	// stop the thread so a transport that is torn down without Close() does
+	// not leave it running against freed memory
+	~CNetClient();
+
 	// openness
 	bool Open(NETADDR BindAddr, class CConfig *pConfig, class IConsole *pConsole, class IEngine *pEngine, int Flags);
 	void Close();

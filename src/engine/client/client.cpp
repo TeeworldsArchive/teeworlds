@@ -1568,9 +1568,9 @@ void CClient::PumpNetwork()
 {
 	/*
 		The transport runs on its own thread, so the packets it decoded are
-		already waiting here and anything we send is queued back to it. The
-		connection state is read through CNetClient's accessors, which the
-		network thread keeps up to date.
+		already queued here and what this thread sends is queued back to it.
+		The connection state is read through CNetClient, which the network
+		thread keeps up to date.
 	*/
 	if(State() != IClient::STATE_DEMOPLAYBACK)
 	{

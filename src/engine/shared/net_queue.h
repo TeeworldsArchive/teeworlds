@@ -8,93 +8,105 @@
 #include <base/tl/threading.h>
 
 /*
-	The hand-off between the network thread and the game thread.
+	A queue that hands entries from the network thread to the game thread.
 
-	The network thread never touches game state and the game thread never
-	touches a connection or a socket: the two sides only meet in one of these
-	queues, which owns its own lock. This mirrors the way TWICE separates its
-	transport thread from its game thread.
+	The two threads never touch the same connection or socket, they only meet
+	in one of these queues, which owns its own lock.
+
+	The lock and the array are held behind pointers because CNetClient::Open
+	and CNetServer::Open wipe their whole object with mem_zero, which would
+	clobber an embedded array's heap pointer and leak it. Zeroing a pointer is
+	harmless: Setup() creates the two again after that, Destroy() releases
+	them.
 */
 template<typename T>
 class CNetQueue
 {
-	/*
-		The lock is held by pointer because CNetServer::Open zeroes its whole
-		object with mem_zero, which would destroy one embedded by value.
-		Setup() is called after that and creates it again; it is idempotent.
-	*/
 	lock *m_pLock;
-	array<T> m_Entries;
+	array<T> *m_pEntries;
 
 public:
 	CNetQueue() :
-		m_pLock(0)
+		m_pLock(0),
+		m_pEntries(0)
 	{
 	}
 
 	~CNetQueue()
 	{
-		delete m_pLock;
+		Destroy();
 	}
 
 	CNetQueue(const CNetQueue &) = delete;
 	CNetQueue &operator=(const CNetQueue &) = delete;
 
-	// (re)create the lock and drop anything queued
+	// (re)create the lock and the entry array, dropping anything queued
 	void Setup()
 	{
 		if(!m_pLock)
 			m_pLock = new lock();
-		m_Entries.clear();
+		if(!m_pEntries)
+			m_pEntries = new array<T>();
+		else
+			m_pEntries->clear();
+	}
+
+	// release everything; the queue is unusable until Setup() runs again
+	void Destroy()
+	{
+		delete m_pEntries;
+		m_pEntries = 0;
+		delete m_pLock;
+		m_pLock = 0;
 	}
 
 	// add one entry
 	void Push(const T &Entry)
 	{
-		if(!m_pLock)
+		if(!m_pLock || !m_pEntries)
 			return;
 		scope_lock Guard(m_pLock);
-		m_Entries.add(Entry);
+		m_pEntries->add(Entry);
 	}
 
 	// move everything queued into Out, oldest first
 	void Drain(array<T> &Out)
 	{
-		if(!m_pLock)
+		if(!m_pLock || !m_pEntries)
 			return;
 		scope_lock Guard(m_pLock);
-		for(int i = 0; i < m_Entries.size(); i++)
-			Out.add(m_Entries[i]);
-		m_Entries.clear();
+		for(int i = 0; i < m_pEntries->size(); i++)
+			Out.add((*m_pEntries)[i]);
+		m_pEntries->clear();
 	}
 
 	// take the oldest entry, returns false when the queue is empty
 	bool Pop(T &Out)
 	{
-		if(!m_pLock)
+		if(!m_pLock || !m_pEntries)
 			return false;
 		scope_lock Guard(m_pLock);
-		if(m_Entries.size() == 0)
+		if(m_pEntries->size() == 0)
 			return false;
-		Out = m_Entries[0];
-		m_Entries.remove_index(0);
+		Out = (*m_pEntries)[0];
+		m_pEntries->remove_index(0);
 		return true;
 	}
 
 	int NumEntries()
 	{
-		if(!m_pLock)
+		if(!m_pLock || !m_pEntries)
 			return 0;
 		scope_lock Guard(m_pLock);
-		return m_Entries.size();
+		return m_pEntries->size();
 	}
 
 	void Clear()
 	{
-		if(!m_pLock)
+		if(!m_pLock || !m_pEntries)
 			return;
 		scope_lock Guard(m_pLock);
-		m_Entries.clear();
+		m_pEntries->clear();
 	}
 };
 
