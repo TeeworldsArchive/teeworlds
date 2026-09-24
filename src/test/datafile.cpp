@@ -130,6 +130,106 @@ TEST(Datafile, RoundtripV5)
 	TestDatafileRoundtrip(CreateTestStorage(), 5);
 }
 
+TEST(Datafile, V5CompressesItemSection)
+{
+	CTestInfo Info;
+	char aFilenameV4[64];
+	char aFilenameV5[64];
+	Info.Filename(aFilenameV4, sizeof(aFilenameV4), ".v4.datafile");
+	Info.Filename(aFilenameV5, sizeof(aFilenameV5), ".v5.datafile");
+	IStorage *pStorage = CreateTestStorage();
+
+	// a highly compressible item payload; v4 stores it raw, v5 compresses it
+	enum
+	{
+		ITEM_SIZE = 64 * 1024
+	};
+	char *pItem = (char *) mem_alloc(ITEM_SIZE);
+	for(int i = 0; i < ITEM_SIZE; i++)
+		pItem[i] = (char) (i % 13);
+
+	for(int Version = 4; Version <= 5; Version++)
+	{
+		CDataFileWriter Writer;
+		ASSERT_TRUE(Writer.Open(pStorage, Version == 4 ? aFilenameV4 : aFilenameV5, Version));
+		Writer.AddItem(7, 11, ITEM_SIZE, pItem);
+		EXPECT_TRUE(Writer.Finish());
+	}
+
+	IOHANDLE V4File = pStorage->OpenFile(aFilenameV4, IOFLAG_READ, IStorage::TYPE_SAVE);
+	IOHANDLE V5File = pStorage->OpenFile(aFilenameV5, IOFLAG_READ, IStorage::TYPE_SAVE);
+	ASSERT_TRUE(V4File);
+	ASSERT_TRUE(V5File);
+	EXPECT_LT(io_length(V5File), io_length(V4File) / 4);
+	io_close(V4File);
+	io_close(V5File);
+
+	// the compressed item section still round-trips
+	CDataFileReader Reader;
+	ASSERT_TRUE(Reader.Open(pStorage, aFilenameV5, IStorage::TYPE_ALL));
+	ASSERT_EQ(Reader.NumItems(), 1);
+	int Type, ID;
+	void *pReadItem = Reader.GetItem(0, &Type, &ID);
+	EXPECT_EQ(Type, 7);
+	EXPECT_EQ(ID, 11);
+	EXPECT_EQ(Reader.GetItemSize(0), ITEM_SIZE);
+	EXPECT_EQ(mem_comp(pReadItem, pItem, ITEM_SIZE), 0);
+	ASSERT_TRUE(Reader.Close());
+
+	mem_free(pItem);
+
+	EXPECT_TRUE(pStorage->RemoveFile(aFilenameV4, IStorage::TYPE_SAVE));
+	EXPECT_TRUE(pStorage->RemoveFile(aFilenameV5, IStorage::TYPE_SAVE));
+}
+
+TEST(Datafile, V5MultipleItemTypes)
+{
+	CTestInfo Info;
+	char aFilename[64];
+	Info.Filename(aFilename, sizeof(aFilename), ".datafile");
+	IStorage *pStorage = CreateTestStorage();
+
+	enum
+	{
+		NUM_TYPES = 3,
+		ITEMS_PER_TYPE = 5
+	};
+
+	CDataFileWriter Writer;
+	ASSERT_TRUE(Writer.Open(pStorage, aFilename, 5));
+	for(int t = 0; t < NUM_TYPES; t++)
+	{
+		for(int i = 0; i < ITEMS_PER_TYPE; i++)
+		{
+			int aData[3] = {t, i, t * 100 + i};
+			Writer.AddItem(100 + t, 1000 + i, sizeof(aData), aData);
+		}
+	}
+	EXPECT_TRUE(Writer.Finish());
+
+	CDataFileReader Reader;
+	ASSERT_TRUE(Reader.Open(pStorage, aFilename, IStorage::TYPE_ALL));
+	ASSERT_EQ(Reader.NumItems(), NUM_TYPES * ITEMS_PER_TYPE);
+
+	for(int t = 0; t < NUM_TYPES; t++)
+	{
+		int Start, Num;
+		Reader.GetType(100 + t, &Start, &Num);
+		ASSERT_EQ(Num, ITEMS_PER_TYPE);
+		for(int i = 0; i < ITEMS_PER_TYPE; i++)
+		{
+			const int *pData = (const int *) Reader.FindItem(100 + t, 1000 + i);
+			ASSERT_TRUE(pData);
+			EXPECT_EQ(pData[0], t);
+			EXPECT_EQ(pData[1], i);
+			EXPECT_EQ(pData[2], t * 100 + i);
+		}
+	}
+	ASSERT_TRUE(Reader.Close());
+
+	EXPECT_TRUE(pStorage->RemoveFile(aFilename, IStorage::TYPE_SAVE));
+}
+
 TEST(Datafile, RejectUnknownVersion)
 {
 	CTestInfo Info;

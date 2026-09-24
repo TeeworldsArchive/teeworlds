@@ -135,13 +135,18 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	Size += (Header.m_NumItems + Header.m_NumRawData) * sizeof(int);
 	if(Header.m_Version >= 4)
 		Size += Header.m_NumRawData * sizeof(int); // v4/v5 have uncompressed data sizes aswell
-	Size += Header.m_ItemSize;
+	if(Header.m_Version >= 5)
+		Size += sizeof(int); // v5 stores the compressed size of the item section
+	else
+		Size += Header.m_ItemSize;
 
 	int64 AllocSize = Size;
+	if(Header.m_Version >= 5)
+		AllocSize += Header.m_ItemSize; // add space for the decompressed item section
 	AllocSize += sizeof(CDatafile); // add space for info structure
 	AllocSize += Header.m_NumRawData * sizeof(void *); // add space for data pointers
 	AllocSize += Header.m_NumRawData * sizeof(int); // add space for data sizes
-	if(Size > (int64(1) << 31) || Header.m_NumItemTypes < 0 || Header.m_NumItems < 0 || Header.m_NumRawData < 0 || Header.m_ItemSize < 0)
+	if(Size > (int64(1) << 31) || AllocSize > (int64(1) << 31) || Header.m_NumItemTypes < 0 || Header.m_NumItems < 0 || Header.m_NumRawData < 0 || Header.m_ItemSize < 0)
 	{
 		io_close(File);
 		dbg_msg("datafile", "unable to load file, invalid file information");
@@ -173,12 +178,53 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		return false;
 	}
 
+#if defined(CONF_ARCH_ENDIAN_BIG)
+	swap_endian(pTmpDataFile->m_pData, sizeof(int), minimum(static_cast<unsigned>(Header.m_Swaplen), static_cast<unsigned>(Size)) / sizeof(int));
+#endif
+
+	// v5 compresses the complete item section as one block. It is decompressed
+	// into the extra space allocated behind the part read above.
+	if(Header.m_Version >= 5)
+	{
+		int CompressedItemSize = ((int *) pTmpDataFile->m_pData)[Size / sizeof(int) - 1];
+		if(CompressedItemSize < 0 || (int64) CompressedItemSize > io_length(pTmpDataFile->m_File))
+		{
+			io_close(pTmpDataFile->m_File);
+			mem_free(pTmpDataFile);
+			dbg_msg("datafile", "invalid compressed item section size %d", CompressedItemSize);
+			return false;
+		}
+
+		pTmpDataFile->m_DataStartOffset = sizeof(CDatafileHeader) + Size + CompressedItemSize;
+		char *pItemData = (char *) pTmpDataFile->m_pData + Size;
+
+		void *pTemp = mem_alloc(CompressedItemSize ? CompressedItemSize : 1);
+		io_seek(pTmpDataFile->m_File, sizeof(CDatafileHeader) + Size, IOSEEK_START);
+		if(io_read(pTmpDataFile->m_File, pTemp, CompressedItemSize) != (unsigned) CompressedItemSize)
+		{
+			mem_free(pTemp);
+			io_close(pTmpDataFile->m_File);
+			mem_free(pTmpDataFile);
+			dbg_msg("datafile", "couldn't read the compressed item section");
+			return false;
+		}
+
+		size_t Result = ZSTD_decompress(pItemData, Header.m_ItemSize, pTemp, CompressedItemSize);
+		mem_free(pTemp);
+		if(ZSTD_isError(Result) || Result != (size_t) Header.m_ItemSize)
+		{
+			io_close(pTmpDataFile->m_File);
+			mem_free(pTmpDataFile);
+			dbg_msg("datafile", "zstd item decompress failed: %s", ZSTD_isError(Result) ? ZSTD_getErrorName(Result) : "size mismatch");
+			return false;
+		}
+#if defined(CONF_ARCH_ENDIAN_BIG)
+		swap_endian(pItemData, sizeof(int), Header.m_ItemSize / sizeof(int));
+#endif
+	}
+
 	Close();
 	m_pDataFile = pTmpDataFile;
-
-#if defined(CONF_ARCH_ENDIAN_BIG)
-	swap_endian(m_pDataFile->m_pData, sizeof(int), minimum(static_cast<unsigned>(Header.m_Swaplen), static_cast<unsigned>(Size)) / sizeof(int));
-#endif
 
 	// if(DEBUG)
 	{
@@ -193,7 +239,9 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	m_pDataFile->m_Info.m_pDataOffsets = (int *) &m_pDataFile->m_Info.m_pItemOffsets[m_pDataFile->m_Header.m_NumItems];
 	m_pDataFile->m_Info.m_pDataSizes = (int *) &m_pDataFile->m_Info.m_pDataOffsets[m_pDataFile->m_Header.m_NumRawData];
 
-	if(Header.m_Version >= 4)
+	if(Header.m_Version >= 5)
+		m_pDataFile->m_Info.m_pItemStart = m_pDataFile->m_pData + Size; // decompressed into the appended space
+	else if(Header.m_Version >= 4)
 		m_pDataFile->m_Info.m_pItemStart = (char *) &m_pDataFile->m_Info.m_pDataSizes[m_pDataFile->m_Header.m_NumRawData];
 	else
 		m_pDataFile->m_Info.m_pItemStart = (char *) &m_pDataFile->m_Info.m_pDataOffsets[m_pDataFile->m_Header.m_NumRawData];
@@ -540,7 +588,7 @@ CDataFileWriter::CDataFileWriter()
 {
 	m_File = 0;
 	m_Version = 5;
-	m_CompressLevel = ZSTD_CLEVEL_DEFAULT;
+	m_CompressLevel = 9;
 	m_pItemTypes = static_cast<CItemTypeInfo *>(mem_alloc(sizeof(CItemTypeInfo) * MAX_ITEM_TYPES));
 	m_pItems = static_cast<CItemInfo *>(mem_alloc(sizeof(CItemInfo) * MAX_ITEMS));
 	m_pDatas = static_cast<CDataInfo *>(mem_alloc(sizeof(CDataInfo) * MAX_DATAS));
@@ -704,11 +752,57 @@ int CDataFileWriter::Finish()
 	for(int i = 0; i < m_NumDatas; i++)
 		DataSize += m_pDatas[i].m_CompressedSize;
 
+	// v5 stores the whole item section as a single compressed block
+	int CompressedItemSize = 0;
+	void *pCompressedItems = 0;
+	if(m_Version >= 5)
+	{
+		char *pItemChunk = (char *) mem_alloc(ItemSize ? ItemSize : 1);
+		int Offset = 0;
+		for(int i = 0; i < 0xffff; i++)
+		{
+			if(!m_pItemTypes[i].m_Num)
+				continue;
+			int k = m_pItemTypes[i].m_First;
+			while(k != -1)
+			{
+				CDatafileItem Item;
+				Item.m_TypeAndID = (i << 16) | m_pItems[k].m_ID;
+				Item.m_Size = m_pItems[k].m_Size;
+#if defined(CONF_ARCH_ENDIAN_BIG)
+				swap_endian(&Item, sizeof(int), sizeof(Item) / sizeof(int));
+#endif
+				mem_copy(pItemChunk + Offset, &Item, sizeof(Item));
+				Offset += sizeof(Item);
+				mem_copy(pItemChunk + Offset, m_pItems[k].m_pData, m_pItems[k].m_Size);
+#if defined(CONF_ARCH_ENDIAN_BIG)
+				swap_endian(pItemChunk + Offset, sizeof(int), m_pItems[k].m_Size / sizeof(int));
+#endif
+				Offset += m_pItems[k].m_Size;
+
+				// next
+				k = m_pItems[k].m_Next;
+			}
+		}
+
+		size_t Bound = ZSTD_compressBound(ItemSize);
+		pCompressedItems = mem_alloc(Bound);
+		size_t Result = ZSTD_compress(pCompressedItems, Bound, pItemChunk, ItemSize, m_CompressLevel);
+		if(ZSTD_isError(Result))
+		{
+			dbg_msg("datafile", "item compression error %s", ZSTD_getErrorName(Result));
+			dbg_assert(0, "zstd error");
+		}
+		CompressedItemSize = (int) Result;
+		mem_free(pItemChunk);
+	}
+
 	// calculate the complete size
 	TypesSize = m_NumItemTypes * sizeof(CDatafileItemType);
 	HeaderSize = sizeof(CDatafileHeader);
 	OffsetSize = (m_NumItems + m_NumDatas + m_NumDatas) * sizeof(int); // ItemOffsets, DataOffsets, DataUncompressedSizes
-	FileSize = HeaderSize + TypesSize + OffsetSize + ItemSize + DataSize;
+	const int StoredItemSize = m_Version >= 5 ? CompressedItemSize + (int) sizeof(int) : ItemSize;
+	FileSize = HeaderSize + TypesSize + OffsetSize + StoredItemSize + DataSize;
 	SwapSize = FileSize - DataSize;
 
 	(void) SwapSize;
@@ -810,29 +904,43 @@ int CDataFileWriter::Finish()
 	}
 
 	// write m_pItems
-	for(int i = 0; i < 0xffff; i++)
+	if(m_Version >= 5)
 	{
-		if(m_pItemTypes[i].m_Num)
+		int Size = CompressedItemSize;
+#if defined(CONF_ARCH_ENDIAN_BIG)
+		swap_endian(&Size, sizeof(int), sizeof(Size) / sizeof(int));
+#endif
+		io_write(m_File, &Size, sizeof(Size));
+		io_write(m_File, pCompressedItems, CompressedItemSize);
+		mem_free(pCompressedItems);
+		pCompressedItems = 0;
+	}
+	else
+	{
+		for(int i = 0; i < 0xffff; i++)
 		{
-			// write all m_pItems in of this type
-			int k = m_pItemTypes[i].m_First;
-			while(k != -1)
+			if(m_pItemTypes[i].m_Num)
 			{
-				CDatafileItem Item;
-				Item.m_TypeAndID = (i << 16) | m_pItems[k].m_ID;
-				Item.m_Size = m_pItems[k].m_Size;
-				if(DEBUG)
-					dbg_msg("datafile", "writing item type=%x idx=%d id=%d size=%d", i, k, m_pItems[k].m_ID, m_pItems[k].m_Size);
+				// write all m_pItems in of this type
+				int k = m_pItemTypes[i].m_First;
+				while(k != -1)
+				{
+					CDatafileItem Item;
+					Item.m_TypeAndID = (i << 16) | m_pItems[k].m_ID;
+					Item.m_Size = m_pItems[k].m_Size;
+					if(DEBUG)
+						dbg_msg("datafile", "writing item type=%x idx=%d id=%d size=%d", i, k, m_pItems[k].m_ID, m_pItems[k].m_Size);
 
 #if defined(CONF_ARCH_ENDIAN_BIG)
-				swap_endian(&Item, sizeof(int), sizeof(Item) / sizeof(int));
-				swap_endian(m_pItems[k].m_pData, sizeof(int), m_pItems[k].m_Size / sizeof(int));
+					swap_endian(&Item, sizeof(int), sizeof(Item) / sizeof(int));
+					swap_endian(m_pItems[k].m_pData, sizeof(int), m_pItems[k].m_Size / sizeof(int));
 #endif
-				io_write(m_File, &Item, sizeof(Item));
-				io_write(m_File, m_pItems[k].m_pData, m_pItems[k].m_Size);
+					io_write(m_File, &Item, sizeof(Item));
+					io_write(m_File, m_pItems[k].m_pData, m_pItems[k].m_Size);
 
-				// next
-				k = m_pItems[k].m_Next;
+					// next
+					k = m_pItems[k].m_Next;
+				}
 			}
 		}
 	}
