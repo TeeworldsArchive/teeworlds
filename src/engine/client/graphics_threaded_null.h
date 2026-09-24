@@ -52,6 +52,7 @@ public:
 	// simple uncompressed RGBA loaders
 	virtual IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) { return CreateTextureHandle(0); };
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) { return 0; };
+	virtual int LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData, int Size, const char *pContext = "raw data") { return 0; };
 
 	virtual void TextureSet(CTextureHandle TextureID) {};
 
@@ -71,6 +72,7 @@ public:
 		float x2, float y2, float x3, float y3, int TextureIndex = -1) {};
 
 	virtual void QuadsDraw(CQuadItem *pArray, int Num) {};
+	virtual void SingleQuadDrawTL(const CQuadItem *pQuad) {};
 	virtual void QuadsDrawTL(const CQuadItem *pArray, int Num) {};
 	virtual void QuadsDrawFreeform(const CFreeformItem *pArray, int Num) {};
 	virtual void QuadsText(float x, float y, float Size, const char *pText) {};
