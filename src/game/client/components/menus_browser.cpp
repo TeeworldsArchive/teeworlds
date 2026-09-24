@@ -34,7 +34,6 @@ CMenus::CColumn CMenus::ms_aBrowserCols[] = {
 	{COL_BROWSER_PING, IServerBrowser::SORT_PING, "Ping", 1, 40.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
 };
 
-CServerFilterInfo CMenus::CBrowserFilter::ms_FilterStandard = {IServerBrowser::FILTER_IGNORE_UNKNOWN | IServerBrowser::FILTER_PURE | IServerBrowser::FILTER_PURE_MAP, 999, -1, 0, {{0}}, {0}, {0}};
 CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_IGNORE_UNKNOWN, 999, -1, 0, {{"Race"}}, {false}, {0}};
 CServerFilterInfo CMenus::CBrowserFilter::ms_FilterFavorites = {IServerBrowser::FILTER_IGNORE_UNKNOWN | IServerBrowser::FILTER_FAVORITE, 999, -1, 0, {{0}}, {0}, {0}};
 CServerFilterInfo CMenus::CBrowserFilter::ms_FilterAll = {IServerBrowser::FILTER_IGNORE_UNKNOWN, 999, -1, 0, {{0}}, {0}, {0}};
@@ -60,9 +59,6 @@ CMenus::CBrowserFilter::CBrowserFilter(int Custom, const char *pName, IServerBro
 	m_pServerBrowser = pServerBrowser;
 	switch(m_Custom)
 	{
-		case CBrowserFilter::FILTER_STANDARD:
-			m_Filter = m_pServerBrowser->AddFilter(&ms_FilterStandard);
-			break;
 		case CBrowserFilter::FILTER_RACE:
 			m_Filter = m_pServerBrowser->AddFilter(&ms_FilterRace);
 			break;
@@ -78,9 +74,6 @@ void CMenus::CBrowserFilter::Reset()
 {
 	switch(m_Custom)
 	{
-		case CBrowserFilter::FILTER_STANDARD:
-			SetFilter(&ms_FilterStandard);
-			break;
 		case CBrowserFilter::FILTER_RACE:
 			SetFilter(&ms_FilterRace);
 			break;
@@ -251,9 +244,7 @@ void CMenus::LoadFilters()
 
 		m_lFilters.add(CBrowserFilter(Type, pName, ServerBrowser()));
 
-		if(Type == CBrowserFilter::FILTER_STANDARD) // make sure the pure filter is enabled in the Teeworlds-filter
-			FilterInfo.m_SortHash |= IServerBrowser::FILTER_PURE;
-		else if(Type == CBrowserFilter::FILTER_RACE) // make sure Race gametype is included in Race-filter
+		if(Type == CBrowserFilter::FILTER_RACE) // make sure Race gametype is included in Race-filter
 		{
 			str_copy(FilterInfo.m_aGametype[0], "Race", sizeof(FilterInfo.m_aGametype[0]));
 			FilterInfo.m_aGametypeExclusive[0] = false;
@@ -397,13 +388,6 @@ void CMenus::InitDefaultFilters()
 
 	const bool UseDefaultFilters = Filters == 0;
 
-	if((Filters & (1 << CBrowserFilter::FILTER_STANDARD)) == 0)
-	{
-		m_lFilters.add(CBrowserFilter(CBrowserFilter::FILTER_STANDARD, "Teeworlds", ServerBrowser()));
-		for(int Pos = m_lFilters.size() - 1; Pos > 0; --Pos)
-			MoveFilter(true, Pos);
-	}
-
 	if((Filters & (1 << CBrowserFilter::FILTER_RACE)) == 0)
 	{
 		m_lFilters.add(CBrowserFilter(CBrowserFilter::FILTER_RACE, Localize("Race"), ServerBrowser()));
@@ -509,7 +493,7 @@ int CMenus::DoBrowserEntry(const void *pID, CUIRect View, const CServerInfo *pEn
 			}
 
 			Rect.VSplitLeft(Rect.h, &Icon, &Rect);
-			if(pEntry->m_Legacy)
+			if(pEntry->m_Flags & IServerBrowser::FLAG_LEGACY)
 			{
 				TextRender()->TextColor(1.0f, 0.3f, 0.3f, 1.0f);
 				UI()->DoLabel(&Icon, "\uECA1", IconSize, TEXTALIGN_MC);
@@ -1662,17 +1646,6 @@ void CMenus::RenderServerbrowserFilterTab(CUIRect View)
 		NewSortHash ^= IServerBrowser::FILTER_IGNORE_UNKNOWN;
 
 	ServerFilter.HSplitTop(LineSize, &Button, &ServerFilter);
-	const bool Locked = pFilter->Custom() == CBrowserFilter::FILTER_STANDARD;
-	static int s_BrFilterPure = 0;
-	if(DoButton_CheckBox(&s_BrFilterPure, Localize("Standard gametype"), FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE, &Button, Locked))
-		NewSortHash ^= IServerBrowser::FILTER_PURE;
-
-	ServerFilter.HSplitTop(LineSize, &Button, &ServerFilter);
-	static int s_BrFilterPureMap = 0;
-	if(DoButton_CheckBox(&s_BrFilterPureMap, Localize("Standard map"), FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE_MAP, &Button))
-		NewSortHash ^= IServerBrowser::FILTER_PURE_MAP;
-
-	ServerFilter.HSplitTop(LineSize, &Button, &ServerFilter);
 	static int s_BrFilterSortingLegacy = 0;
 	if(DoButton_CheckBox(&s_BrFilterSortingLegacy, Localize("Sorting legacy"), FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_LEGACY, &Button))
 		NewSortHash ^= IServerBrowser::FILTER_SORTING_LEGACY;
@@ -1965,7 +1938,7 @@ void CMenus::RenderDetailInfo(CUIRect View, const CServerInfo *pInfo, const vec4
 
 	CUIRect LeftColumn, RightColumn;
 	View.VMargin(2.0f, &View);
-	if(pInfo->m_Legacy)
+	if(pInfo->m_Flags & IServerBrowser::FLAG_LEGACY)
 	{
 		View.HSplitTop(3.0f * RowHeight, &Row, &View);
 		UI()->DoLabel(&Row, s_aLabels[0], FontSize, TEXTALIGN_LEFT, Row.w);
@@ -2131,7 +2104,7 @@ void CMenus::RenderServerbrowserServerDetail(CUIRect View, const CServerInfo *pI
 	CUIRect ServerHeader, ServerDetails, ServerScoreboard;
 
 	// split off a piece to use for scoreboard
-	View.HSplitTop(pInfo->m_Legacy ? 125.0f : 80.0f, &ServerDetails, &ServerScoreboard);
+	View.HSplitTop((pInfo->m_Flags & IServerBrowser::FLAG_LEGACY) ? 125.0f : 80.0f, &ServerDetails, &ServerScoreboard);
 
 	// server details
 	RenderDetailInfo(ServerDetails, pInfo, CUI::ms_DefaultTextColor, CUI::ms_DefaultTextOutlineColor);

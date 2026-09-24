@@ -60,7 +60,6 @@ public:
 	int m_Flags;
 	int m_ServerLevel;
 	bool m_Favorite;
-	bool m_Legacy;
 	int m_Latency; // in ms
 	char m_aGameType[16];
 	char m_aName[64];
@@ -141,9 +140,8 @@ public:
 		LAN_PORT_END = 8310,
 
 		FLAG_PASSWORD = 1,
-		FLAG_PURE = 2,
-		FLAG_PUREMAP = 4,
-		FLAG_TIMESCORE = 8,
+		FLAG_TIMESCORE = 2,
+		FLAG_LEGACY = 4,
 
 		FILTER_BOTS = 16,
 		FILTER_EMPTY = 32,
@@ -153,8 +151,8 @@ public:
 		FILTER_PW = 512,
 		FILTER_FAVORITE = 1024,
 		FILTER_IGNORE_UNKNOWN = 2048,
-		FILTER_PURE = 4096,
-		FILTER_PURE_MAP = 8192,
+		// FILTER_PURE = 4096,
+		// FILTER_PURE_MAP = 8192,
 		FILTER_COUNTRY = 16384,
 		FILTER_SORTING_LEGACY = 32768,
 	};

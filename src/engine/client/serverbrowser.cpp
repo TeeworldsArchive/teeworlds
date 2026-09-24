@@ -9,7 +9,6 @@
 #include <engine/shared/config.h>
 #include <engine/shared/jsonparser.h>
 #include <engine/shared/jsonwriter.h>
-#include <engine/shared/mapchecker.h>
 #include <engine/shared/memheap.h>
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
@@ -93,7 +92,6 @@ void CServerBrowser::Init(class CNetClient *pNetClient, const char *pNetVersion)
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pMasterServer = Kernel()->RequestInterface<IMasterServer>();
-	m_pMapChecker = Kernel()->RequestInterface<IMapChecker>();
 	m_pNetClient = pNetClient;
 
 	m_ServerBrowserFavorites.Init(pNetClient, m_pConsole, Kernel()->RequestInterface<IEngine>(), pConfigManager);
@@ -625,14 +623,9 @@ void CServerBrowser::SetInfo(int ServerlistType, CServerEntry *pEntry, const CSe
 	bool Fav = pEntry->m_Info.m_Favorite;
 	pEntry->m_Info = Info;
 	pEntry->m_Info.m_Flags &= FLAG_PASSWORD | FLAG_TIMESCORE;
-	if(str_comp(pEntry->m_Info.m_aGameType, "DM") == 0 || str_comp(pEntry->m_Info.m_aGameType, "TDM") == 0 || str_comp(pEntry->m_Info.m_aGameType, "CTF") == 0 ||
-		str_comp(pEntry->m_Info.m_aGameType, "LTS") == 0 || str_comp(pEntry->m_Info.m_aGameType, "LMS") == 0)
-		pEntry->m_Info.m_Flags |= FLAG_PURE;
 
-	if(m_pMapChecker->IsStandardMap(pEntry->m_Info.m_aMap))
-		pEntry->m_Info.m_Flags |= FLAG_PUREMAP;
-
-	pEntry->m_Info.m_Legacy = str_comp_num(pEntry->m_Info.m_aVersion, "0.8", 3) != 0;
+	if(str_comp_num(pEntry->m_Info.m_aVersion, "0.8", 3) != 0)
+		pEntry->m_Info.m_Flags &= FLAG_LEGACY;
 	pEntry->m_Info.m_Favorite = Fav;
 	pEntry->m_Info.m_NetAddr = pEntry->m_Addr;
 

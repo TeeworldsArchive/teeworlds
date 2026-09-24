@@ -1323,7 +1323,6 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   kernel.h
   keys.h
   map.h
-  mapchecker.h
   masterserver.h
   message.h
   server.h
@@ -1368,9 +1367,6 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   linereader.cpp
   linereader.h
   map.cpp
-  mapchecker.cpp
-  mapchecker.h
-  mapversions.h
   masterserver.cpp
   memheap.cpp
   memheap.h

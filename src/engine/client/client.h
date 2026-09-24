@@ -64,7 +64,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	IEngineTextRender *m_pTextRender;
 	IGameClient *m_pGameClient;
 	IEngineMap *m_pMap;
-	IMapChecker *m_pMapChecker;
 	IConfigManager *m_pConfigManager;
 	CConfig *m_pConfig;
 	IConsole *m_pConsole;

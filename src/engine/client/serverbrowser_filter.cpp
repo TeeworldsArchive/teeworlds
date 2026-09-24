@@ -134,10 +134,6 @@ void CServerBrowserFilter::CServerFilter::Filter()
 			Filtered = true;
 		else if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_FAVORITE && !m_pServerBrowserFilter->m_ppServerlist[i]->m_Info.m_Favorite)
 			Filtered = true;
-		else if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE && !(m_pServerBrowserFilter->m_ppServerlist[i]->m_Info.m_Flags & IServerBrowser::FLAG_PURE))
-			Filtered = true;
-		else if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE_MAP && !(m_pServerBrowserFilter->m_ppServerlist[i]->m_Info.m_Flags & IServerBrowser::FLAG_PUREMAP))
-			Filtered = true;
 		else if(m_FilterInfo.m_Ping < m_pServerBrowserFilter->m_ppServerlist[i]->m_Info.m_Latency)
 			Filtered = true;
 		else if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_IGNORE_UNKNOWN && m_pServerBrowserFilter->m_ppServerlist[i]->m_InfoState != CServerEntry::STATE_READY)
@@ -262,10 +258,6 @@ int CServerBrowserFilter::CServerFilter::GetSortHash() const
 		i |= 1 << 10;
 	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_IGNORE_UNKNOWN)
 		i |= 1 << 11;
-	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE)
-		i |= 1 << 12;
-	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_PURE_MAP)
-		i |= 1 << 13;
 	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_COUNTRY)
 		i |= 1 << 14;
 	if(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SORTING_LEGACY)
@@ -313,9 +305,9 @@ int CServerBrowserFilter::CServerFilter::SortCompareRecommended(int Index1, int 
 		return 0;
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
-	if(!a->m_Info.m_Legacy && b->m_Info.m_Legacy)
+	if(!(a->m_Info.m_Flags & IServerBrowser::FLAG_LEGACY) && (b->m_Info.m_Flags & IServerBrowser::FLAG_LEGACY))
 		return 1;
-	if(a->m_Info.m_Legacy && !b->m_Info.m_Legacy)
+	if((a->m_Info.m_Flags & IServerBrowser::FLAG_LEGACY) && !(b->m_Info.m_Flags & IServerBrowser::FLAG_LEGACY))
 		return -1;
 	return 0;
 }
@@ -334,15 +326,14 @@ bool CServerBrowserFilter::CServerFilter::SortCompareMap(int Index1, int Index2)
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
 	int Result = str_comp_nocase(a->m_Info.m_aMap, b->m_Info.m_aMap);
-	return Result < 0 || (Result == 0 && (a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && !(b->m_Info.m_Flags & IServerBrowser::FLAG_PURE));
+	return Result < 0;
 }
 
 bool CServerBrowserFilter::CServerFilter::SortComparePing(int Index1, int Index2) const
 {
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
-	return a->m_Info.m_Latency < b->m_Info.m_Latency ||
-	       (a->m_Info.m_Latency == b->m_Info.m_Latency && (a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && !(b->m_Info.m_Flags & IServerBrowser::FLAG_PURE));
+	return a->m_Info.m_Latency < b->m_Info.m_Latency;
 }
 
 bool CServerBrowserFilter::CServerFilter::SortCompareGametype(int Index1, int Index2) const
@@ -356,32 +347,28 @@ bool CServerBrowserFilter::CServerFilter::SortCompareNumPlayers(int Index1, int 
 {
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
-	return a->m_Info.m_NumPlayers < b->m_Info.m_NumPlayers ||
-	       (a->m_Info.m_NumPlayers == b->m_Info.m_NumPlayers && !(a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && (b->m_Info.m_Flags & IServerBrowser::FLAG_PURE));
+	return a->m_Info.m_NumPlayers < b->m_Info.m_NumPlayers;
 }
 
 bool CServerBrowserFilter::CServerFilter::SortCompareNumRealPlayers(int Index1, int Index2) const
 {
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
-	return (a->m_Info.m_NumPlayers - a->m_Info.m_NumBotPlayers) < (b->m_Info.m_NumPlayers - b->m_Info.m_NumBotPlayers) ||
-	       ((a->m_Info.m_NumPlayers - a->m_Info.m_NumBotPlayers) == (b->m_Info.m_NumPlayers - b->m_Info.m_NumBotPlayers) && !(a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && (b->m_Info.m_Flags & IServerBrowser::FLAG_PURE));
+	return (a->m_Info.m_NumPlayers - a->m_Info.m_NumBotPlayers) < (b->m_Info.m_NumPlayers - b->m_Info.m_NumBotPlayers);
 }
 
 bool CServerBrowserFilter::CServerFilter::SortCompareNumClients(int Index1, int Index2) const
 {
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
-	return a->m_Info.m_NumClients < b->m_Info.m_NumClients ||
-	       (a->m_Info.m_NumClients == b->m_Info.m_NumClients && !(a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && (b->m_Info.m_Flags & IServerBrowser::FLAG_PURE));
+	return a->m_Info.m_NumClients < b->m_Info.m_NumClients;
 }
 
 bool CServerBrowserFilter::CServerFilter::SortCompareNumRealClients(int Index1, int Index2) const
 {
 	CServerEntry *a = m_pServerBrowserFilter->m_ppServerlist[Index1];
 	CServerEntry *b = m_pServerBrowserFilter->m_ppServerlist[Index2];
-	return (a->m_Info.m_NumClients - a->m_Info.m_NumBotPlayers - a->m_Info.m_NumBotSpectators) < (b->m_Info.m_NumClients - b->m_Info.m_NumBotPlayers - b->m_Info.m_NumBotSpectators) ||
-	       ((a->m_Info.m_NumClients - a->m_Info.m_NumBotPlayers - a->m_Info.m_NumBotSpectators) == (b->m_Info.m_NumClients - b->m_Info.m_NumBotPlayers - b->m_Info.m_NumBotSpectators) && !(a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && (b->m_Info.m_Flags & IServerBrowser::FLAG_PURE));
+	return (a->m_Info.m_NumClients - a->m_Info.m_NumBotPlayers - a->m_Info.m_NumBotSpectators) < (b->m_Info.m_NumClients - b->m_Info.m_NumBotPlayers - b->m_Info.m_NumBotSpectators);
 }
 
 bool CServerBrowserFilter::CServerFilter::SortComparePlayersPing(int Index1, int Index2) const
@@ -409,9 +396,7 @@ bool CServerBrowserFilter::CServerFilter::SortComparePlayersPing(int Index1, int
 		}
 	}
 
-	if(Players1 != Players2)
-		return Config()->m_BrSortOrder ? Players1 < Players2 : Players1 > Players2;
-	return !(a->m_Info.m_Flags & IServerBrowser::FLAG_PURE) && (b->m_Info.m_Flags & IServerBrowser::FLAG_PURE);
+	return Config()->m_BrSortOrder ? Players1 < Players2 : Players1 > Players2;
 }
 
 //	CServerBrowserFilter
