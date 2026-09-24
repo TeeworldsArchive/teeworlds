@@ -625,7 +625,7 @@ void CServerBrowser::SetInfo(int ServerlistType, CServerEntry *pEntry, const CSe
 	pEntry->m_Info.m_Flags &= FLAG_PASSWORD | FLAG_TIMESCORE;
 
 	if(str_comp_num(pEntry->m_Info.m_aVersion, "0.8", 3) != 0)
-		pEntry->m_Info.m_Flags &= FLAG_LEGACY;
+		pEntry->m_Info.m_Flags |= FLAG_LEGACY;
 	pEntry->m_Info.m_Favorite = Fav;
 	pEntry->m_Info.m_NetAddr = pEntry->m_Addr;
 
