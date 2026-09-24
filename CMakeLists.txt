@@ -1370,6 +1370,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   map.cpp
   mapchecker.cpp
   mapchecker.h
+  mapversions.h
   masterserver.cpp
   memheap.cpp
   memheap.h
@@ -1704,20 +1705,15 @@ endif()
 ########################################################################
 
 set_src(MASTERSRV_SRC GLOB src/mastersrv mastersrv.cpp mastersrv.h)
-set_src(VERSIONSRV_SRC GLOB src/versionsrv mapversions.h versionsrv.cpp versionsrv.h)
-list(APPEND VERSIONSRV_SRC ${PROJECT_BINARY_DIR}/src/generated/nethash.cpp)
 
 set(TARGET_MASTERSRV mastersrv)
-set(TARGET_VERSIONSRV versionsrv)
 
 add_executable(${TARGET_MASTERSRV} EXCLUDE_FROM_ALL ${MASTERSRV_SRC} $<TARGET_OBJECTS:engine-shared> ${DEPS})
-add_executable(${TARGET_VERSIONSRV} EXCLUDE_FROM_ALL ${VERSIONSRV_SRC} $<TARGET_OBJECTS:engine-shared> ${DEPS})
 
 target_link_libraries(${TARGET_MASTERSRV} ${LIBS})
-target_link_libraries(${TARGET_VERSIONSRV} ${LIBS})
 
-list(APPEND TARGETS_OWN ${TARGET_MASTERSRV} ${TARGET_VERSIONSRV})
-list(APPEND TARGETS_LINK ${TARGET_MASTERSRV} ${TARGET_VERSIONSRV})
+list(APPEND TARGETS_OWN ${TARGET_MASTERSRV})
+list(APPEND TARGETS_LINK ${TARGET_MASTERSRV})
 
 set(TARGETS_TOOLS)
 set_src(TOOLS GLOB src/tools

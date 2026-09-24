@@ -161,10 +161,9 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 	-- Add requirements for Server & Client
 	BuildGameCommon(settings)
 
-	-- Master server, version server and tools
+	-- Master server and tools
 	BuildEngineCommon(settings)
 	BuildMasterserver(settings)
-	BuildVersionserver(settings)
 	BuildTools(settings)
 
 	-- Server
@@ -208,11 +207,10 @@ function GenerateLinuxSettings(settings, conf, arch, compiler)
 	-- Add requirements for Server & Client
 	BuildGameCommon(settings)
 
-	-- Master server, version server and tools
+	-- Master server and tools
 	BuildEngineCommon(settings)
 	BuildTools(settings)
 	BuildMasterserver(settings)
-	BuildVersionserver(settings)
 
 	-- Server
 	BuildServer(settings)
@@ -272,10 +270,9 @@ function GenerateWindowsSettings(settings, conf, target_arch, compiler)
 	-- Add requirements for Server & Client
 	BuildGameCommon(settings)
 
-	-- Master server, version server and tools
+	-- Master server and tools
 	BuildEngineCommon(settings)
 	BuildMasterserver(settings)
-	BuildVersionserver(settings)
 	BuildTools(settings)
 
 	-- Server
@@ -409,10 +406,6 @@ function BuildMasterserver(settings)
 	return Link(settings, "mastersrv", Compile(settings, Collect("src/mastersrv/*.cpp")), libs["md5"], libs["json"])
 end
 
-function BuildVersionserver(settings)
-	return Link(settings, "versionsrv", Compile(settings, Collect("src/versionsrv/*.cpp")), libs["md5"], libs["json"])
-end
-
 function BuildContent(settings, arch, conf)
 	local content = {}
 	table.insert(content, CopyToDir(settings.link.Output(settings, "data"), CollectRecursive(content_src_dir .. "*.png", content_src_dir .. "*.opus", content_src_dir .. "*.ttc", content_src_dir .. "*.ttf", content_src_dir .. "*.txt", content_src_dir .. "*.map", content_src_dir .. "*.rules", content_src_dir .. "*.json")))
@@ -539,7 +532,7 @@ else
 end
 
 targets = {client="ArchiveClient", server="ArchiveServer",
-           versionserver="versionsrv", masterserver="mastersrv",
+           masterserver="mastersrv",
            tools="pseudo_tools", content="content"}
 
 subtargets = {}

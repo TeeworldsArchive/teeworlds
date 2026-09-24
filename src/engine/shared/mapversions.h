@@ -1,7 +1,9 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#ifndef VERSIONSRV_MAPVERSIONS_H
-#define VERSIONSRV_MAPVERSIONS_H
+#ifndef ENGINE_SHARED_MAPVERSIONS_H
+#define ENGINE_SHARED_MAPVERSIONS_H
+
+#include <base/hash.h>
 
 struct CMapVersion
 {

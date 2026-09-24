@@ -34,7 +34,6 @@ ArchiveClient*
 !teeworlds.rc
 ArchiveServer*
 testrunner
-versionsrv*
 
 !map_version.cpp
 !map_version_legacy.cpp
