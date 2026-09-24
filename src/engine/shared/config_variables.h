@@ -65,6 +65,7 @@ MACRO_CONFIG_INT(GfxDisplayAllModes, gfx_display_all_modes, 0, 0, 0, CFGFLAG_SAV
 MACRO_CONFIG_INT(GfxHighdpi, gfx_highdpi, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Use high dpi mode if available")
 MACRO_CONFIG_INT(GfxHighDetail, gfx_high_detail, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "High detail")
 MACRO_CONFIG_INT(GfxTextureQuality, gfx_texture_quality, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Don't scale textures down")
+MACRO_CONFIG_INT(GfxQuadCulling, gfx_quad_culling, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Skip rendering map quads outside of the visible screen area")
 MACRO_CONFIG_INT(GfxFsaaSamples, gfx_fsaa_samples, 0, 0, 16, CFGFLAG_SAVE | CFGFLAG_CLIENT, "FSAA Samples")
 MACRO_CONFIG_INT(GfxFinish, gfx_finish, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Wait until the GPU has finished the current frame before starting the new one")
 MACRO_CONFIG_INT(GfxAsyncRender, gfx_asyncrender, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Render asynchronously")

@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <base/math.h>
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 #include <math.h>
 
 #include "render.h"
@@ -222,13 +223,84 @@ static void Rotate(const CPoint *pCenter, CPoint *pPoint, float Rotation)
 	pPoint->y = (int) (x * sinf(Rotation) + y * cosf(Rotation) + pCenter->y);
 }
 
+// Checks whether a quad lies completely outside of the visible screen area.
+// The quad is tested through a conservative axis-aligned bounding box in the
+// current screen coordinate space, so culling never removes visible geometry.
+static bool QuadIsOutsideScreen(const CQuad *q, float OffsetX, float OffsetY, float Rotation,
+	float ScreenMinX, float ScreenMinY, float ScreenMaxX, float ScreenMaxY)
+{
+	float MinX, MaxX, MinY, MaxY;
+
+	if(Rotation != 0.0f)
+	{
+		// A rotated quad is bounded by the circle around its rotation center.
+		const float CenterX = fx2f(q->m_aPoints[4].x);
+		const float CenterY = fx2f(q->m_aPoints[4].y);
+		float RadiusSq = 0.0f;
+		for(int k = 0; k < 4; k++)
+		{
+			const float dx = fx2f(q->m_aPoints[k].x) - CenterX;
+			const float dy = fx2f(q->m_aPoints[k].y) - CenterY;
+			RadiusSq = maximum(RadiusSq, dx * dx + dy * dy);
+		}
+		const float Radius = sqrtf(RadiusSq);
+		MinX = CenterX + OffsetX - Radius;
+		MaxX = CenterX + OffsetX + Radius;
+		MinY = CenterY + OffsetY - Radius;
+		MaxY = CenterY + OffsetY + Radius;
+	}
+	else
+	{
+		MinX = MaxX = fx2f(q->m_aPoints[0].x) + OffsetX;
+		MinY = MaxY = fx2f(q->m_aPoints[0].y) + OffsetY;
+		for(int k = 1; k < 4; k++)
+		{
+			const float x = fx2f(q->m_aPoints[k].x) + OffsetX;
+			const float y = fx2f(q->m_aPoints[k].y) + OffsetY;
+			MinX = minimum(MinX, x);
+			MaxX = maximum(MaxX, x);
+			MinY = minimum(MinY, y);
+			MaxY = maximum(MaxY, y);
+		}
+	}
+
+	return MaxX < ScreenMinX || MinX > ScreenMaxX || MaxY < ScreenMinY || MinY > ScreenMaxY;
+}
+
 void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlags, ENVELOPE_EVAL pfnEval, void *pUser)
 {
+	// visible area in the current screen coordinate space, used for culling
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const float ScreenMinX = minimum(ScreenX0, ScreenX1);
+	const float ScreenMaxX = maximum(ScreenX0, ScreenX1);
+	const float ScreenMinY = minimum(ScreenY0, ScreenY1);
+	const float ScreenMaxY = maximum(ScreenY0, ScreenY1);
+	const bool CullQuads = m_pConfig->m_GfxQuadCulling != 0;
+
 	Graphics()->QuadsBegin();
 	float Conv = 1 / 255.0f;
 	for(int i = 0; i < NumQuads; i++)
 	{
 		const CQuad *q = &pQuads[i];
+
+		float OffsetX = 0;
+		float OffsetY = 0;
+		float Rot = 0;
+
+		// TODO: fix this
+		if(q->m_PosEnv >= 0)
+		{
+			float aChannels[4];
+			pfnEval(q->m_PosEnvOffset / 1000.0f, q->m_PosEnv, aChannels, pUser);
+			OffsetX = aChannels[0];
+			OffsetY = aChannels[1];
+			Rot = aChannels[2] / 360.0f * pi * 2;
+		}
+
+		// skip quads that are completely outside of the visible screen area
+		if(CullQuads && QuadIsOutsideScreen(q, OffsetX, OffsetY, Rot, ScreenMinX, ScreenMinY, ScreenMaxX, ScreenMaxY))
+			continue;
 
 		float r = 1, g = 1, b = 1, a = 1;
 
@@ -264,20 +336,6 @@ void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlag
 			aTexCoords[1].x, aTexCoords[1].y,
 			aTexCoords[2].x, aTexCoords[2].y,
 			aTexCoords[3].x, aTexCoords[3].y);
-
-		float OffsetX = 0;
-		float OffsetY = 0;
-		float Rot = 0;
-
-		// TODO: fix this
-		if(q->m_PosEnv >= 0)
-		{
-			float aChannels[4];
-			pfnEval(q->m_PosEnvOffset / 1000.0f, q->m_PosEnv, aChannels, pUser);
-			OffsetX = aChannels[0];
-			OffsetY = aChannels[1];
-			Rot = aChannels[2] / 360.0f * pi * 2;
-		}
 
 		IGraphics::CColorVertex Array[4] = {
 			IGraphics::CColorVertex(0, q->m_aColors[0].r * Conv * r * q->m_aColors[0].a * Conv * a, q->m_aColors[0].g * Conv * g * q->m_aColors[0].a * Conv * a, q->m_aColors[0].b * Conv * b * q->m_aColors[0].a * Conv * a, q->m_aColors[0].a * Conv * a),
