@@ -3,6 +3,7 @@
 #include <base/system.h>
 
 #include "network.h"
+#include "protocol.h"
 
 bool CNetClient::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, int Flags)
 {
@@ -14,6 +15,13 @@ bool CNetClient::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IE
 
 	// clean it
 	mem_zero(this, sizeof(*this));
+
+	// the zeroing above wiped the queue locks, so create them again
+	m_InboundPackets.Setup();
+	m_OutboundPackets.Setup();
+	m_PendingConnects.Setup();
+	m_PendingDisconnects.Setup();
+	m_Outbound.clear();
 
 	// init
 	Init(Socket, pConfig, pConsole, pEngine);
@@ -27,8 +35,123 @@ bool CNetClient::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IE
 	return true;
 }
 
+void CNetClient::StartThread()
+{
+	if(m_pThread)
+		return;
+
+	m_ThreadShutdown = false;
+	m_ThreadRunning = false;
+	m_pThread = thread_init(CNetClient::ThreadEntry, this);
+
+	while(!m_ThreadRunning && !m_ThreadShutdown)
+		thread_sleep(1);
+}
+
+void CNetClient::StopThread()
+{
+	if(!m_pThread)
+		return;
+
+	m_ThreadShutdown = true;
+	thread_wait(m_pThread);
+	m_pThread = 0;
+
+	m_InboundPackets.Clear();
+	m_OutboundPackets.Clear();
+	m_PendingConnects.Clear();
+	m_PendingDisconnects.Clear();
+	m_Outbound.clear();
+}
+
+void CNetClient::ThreadEntry(void *pUser)
+{
+	((CNetClient *) pUser)->ThreadMain();
+}
+
+void CNetClient::ThreadMain()
+{
+	m_InNetworkThread = true;
+	m_ThreadRunning = true;
+
+	while(!m_ThreadShutdown)
+	{
+		// poll the socket; the wait keeps the thread from spinning
+		Wait(1000 / SERVER_TICK_SPEED / 4);
+		RunThread();
+	}
+
+	RunThread();
+
+	m_InNetworkThread = false;
+	m_ThreadRunning = false;
+}
+
+void CNetClient::ApplyPendingControl()
+{
+	CNetPendingConnect Connect;
+	if(m_PendingConnects.Pop(Connect) && Connect.m_Valid)
+	{
+		m_Connection.Connect(&Connect.m_Addr);
+		// drop any older connect that queued up behind this one
+		while(m_PendingConnects.Pop(Connect))
+			;
+	}
+}
+
+void CNetClient::ApplyPendingDisconnects()
+{
+	CNetPendingDisconnect Disconnect;
+	while(m_PendingDisconnects.Pop(Disconnect))
+	{
+		if(m_Connection.State() != NET_CONNSTATE_OFFLINE)
+			m_Connection.Disconnect(Disconnect.m_aReason);
+	}
+}
+
+void CNetClient::RunThread()
+{
+	ApplyPendingControl();
+	ApplyPendingDisconnects();
+
+	m_Connection.Update();
+	if(m_Connection.State() == NET_CONNSTATE_ERROR)
+		m_Connection.Disconnect(m_Connection.ErrorString());
+	m_TokenManager.Update();
+	m_TokenCache.Update();
+
+	// hand everything the socket produced to the game thread
+	CNetChunk Packet;
+	TOKEN ResponseToken;
+	while(Recv(&Packet, &ResponseToken))
+	{
+		CNetPacketEntry Entry;
+		Entry.Set(&Packet, ResponseToken);
+		m_InboundPackets.Push(Entry);
+	}
+
+	// and write back what the game thread produced
+	m_OutboundPackets.Drain(m_Outbound);
+	for(int i = 0; i < m_Outbound.size(); i++)
+		Send(&m_Outbound[i].m_Chunk, m_Outbound[i].m_ResponseToken);
+	m_Outbound.clear();
+}
+
+void CNetClient::DrainPackets(array<CNetPacketEntry> &Out)
+{
+	m_InboundPackets.Drain(Out);
+}
+
+void CNetClient::FreePacket(CNetPacketEntry &Entry)
+{
+	Entry.m_Chunk.m_pData = 0;
+	Entry.m_Chunk.m_DataSize = 0;
+}
+
 void CNetClient::Close()
 {
+	StopThread();
+
 	if(m_Connection.State() != NET_CONNSTATE_OFFLINE)
 		m_Connection.Disconnect("Client shutdown");
 	Shutdown();
@@ -36,6 +159,13 @@ void CNetClient::Close()
 
 int CNetClient::Disconnect(const char *pReason)
 {
+	// the connection belongs to the network thread
+	if(IsGameThread())
+	{
+		m_PendingDisconnects.Push(CNetPendingDisconnect(pReason));
+		return 0;
+	}
+
 	m_Connection.Disconnect(pReason);
 	return 0;
 }
@@ -52,6 +182,12 @@ int CNetClient::Update()
 
 int CNetClient::Connect(NETADDR *pAddr)
 {
+	if(IsGameThread())
+	{
+		m_PendingConnects.Push(CNetPendingConnect(pAddr));
+		return 0;
+	}
+
 	m_Connection.Connect(pAddr);
 	return 0;
 }
@@ -118,6 +254,20 @@ int CNetClient::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 
 int CNetClient::Send(CNetChunk *pChunk, TOKEN Token, CSendCBData *pCallbackData)
 {
+	/*
+		The game thread never touches the socket, so what it sends is queued and
+		written by the network thread. The network thread itself (control
+		messages, resends) keeps sending directly, which also guarantees the
+		queue never feeds back into itself.
+	*/
+	if(IsGameThread())
+	{
+		CNetPacketEntry Entry;
+		Entry.Set(pChunk, Token);
+		m_OutboundPackets.Push(Entry);
+		return 0;
+	}
+
 	if(pChunk->m_Flags & NETSENDFLAG_CONNLESS)
 	{
 		if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)

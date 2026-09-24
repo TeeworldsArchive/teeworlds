@@ -3,6 +3,8 @@
 #ifndef ENGINE_SHARED_NETWORK_H
 #define ENGINE_SHARED_NETWORK_H
 
+#include "net_queue.h"
+
 #include "huffman.h"
 #include "legacy/network7.h"
 #include "ringbuffer.h"
@@ -523,11 +525,128 @@ public:
 	int FetchChunk(CNetChunk *pChunk);
 };
 
+/*
+	One packet that crossed between the network thread and the game thread.
+
+	The payload is copied into the entry instead of pointing at the receive
+	buffer, so the network thread can keep using that buffer while the game
+	thread still holds the packet. m_pData points into m_aData.
+*/
+class CNetPacketEntry
+{
+public:
+	CNetChunk m_Chunk;
+	TOKEN m_ResponseToken;
+	unsigned char m_aData[NET_MAX_PACKETSIZE];
+
+	CNetPacketEntry()
+	{
+		mem_zero(&m_Chunk, sizeof(m_Chunk));
+		m_ResponseToken = NET_TOKEN_NONE;
+	}
+
+	CNetPacketEntry(const CNetPacketEntry &Other) { CopyFrom(Other); }
+	CNetPacketEntry &operator=(const CNetPacketEntry &Other)
+	{
+		if(this != &Other)
+			CopyFrom(Other);
+		return *this;
+	}
+	CNetPacketEntry(CNetPacketEntry &&Other) noexcept { CopyFrom(Other); }
+	CNetPacketEntry &operator=(CNetPacketEntry &&Other) noexcept
+	{
+		if(this != &Other)
+			CopyFrom(Other);
+		return *this;
+	}
+
+	// build an entry from a chunk, copying its payload
+	void Set(const CNetChunk *pChunk, TOKEN ResponseToken)
+	{
+		m_Chunk = *pChunk;
+		m_ResponseToken = ResponseToken;
+		if(pChunk->m_pData && pChunk->m_DataSize > 0 && pChunk->m_DataSize <= (int) sizeof(m_aData))
+		{
+			mem_copy(m_aData, pChunk->m_pData, pChunk->m_DataSize);
+			m_Chunk.m_pData = m_aData;
+		}
+		else
+		{
+			m_Chunk.m_pData = 0;
+			m_Chunk.m_DataSize = 0;
+		}
+	}
+
+private:
+	void CopyFrom(const CNetPacketEntry &Other)
+	{
+		m_Chunk = Other.m_Chunk;
+		m_ResponseToken = Other.m_ResponseToken;
+		if(Other.m_Chunk.m_pData == Other.m_aData)
+			m_Chunk.m_pData = m_aData;
+		if(Other.m_Chunk.m_pData && Other.m_Chunk.m_DataSize > 0 && Other.m_Chunk.m_DataSize <= (int) sizeof(m_aData))
+			mem_copy(m_aData, Other.m_aData, Other.m_Chunk.m_DataSize);
+	}
+};
+
+// a drop the game thread asked for, applied by the network thread
+class CNetPendingDrop
+{
+public:
+	int m_ClientID;
+	char m_aReason[128];
+
+	CNetPendingDrop() :
+		m_ClientID(-1)
+	{
+		m_aReason[0] = 0;
+	}
+	CNetPendingDrop(int ClientID, const char *pReason) :
+		m_ClientID(ClientID)
+	{
+		str_copy(m_aReason, pReason, sizeof(m_aReason));
+	}
+};
+
+// a connect the game thread asked for, applied by the network thread
+class CNetPendingConnect
+{
+public:
+	NETADDR m_Addr;
+	bool m_Valid;
+
+	CNetPendingConnect() :
+		m_Valid(false)
+	{
+		mem_zero(&m_Addr, sizeof(m_Addr));
+	}
+	CNetPendingConnect(const NETADDR *pAddr) :
+		m_Addr(*pAddr),
+		m_Valid(true)
+	{
+	}
+};
+
+// a disconnect the game thread asked for, applied by the network thread
+class CNetPendingDisconnect
+{
+public:
+	char m_aReason[256];
+
+	CNetPendingDisconnect()
+	{
+		m_aReason[0] = 0;
+	}
+	CNetPendingDisconnect(const char *pReason)
+	{
+		str_copy(m_aReason, pReason != 0 ? pReason : "", sizeof(m_aReason));
+	}
+};
+
 // server side
 class CNetServer : public CNetBase
 {
-	struct CSlot
-	{
+	struct CSlot	{
 	public:
 		CNetConnection m_Connection;
 	};
@@ -547,7 +666,57 @@ class CNetServer : public CNetBase
 	CNetTokenManager m_TokenManager;
 	CNetTokenCache m_TokenCache;
 
+	/*
+		The network thread.
+
+		The whole transport (socket, connections, resend queues, tokens) lives on
+		this thread. The game thread only ever sees fully unpacked packets, which
+		arrive through m_InboundPackets; packs are handed back with Send(), which
+		posts the chunk onto the network thread instead of touching the socket.
+
+		A packet that the game thread is done with must be released with
+		FreePacket(), because its payload points into the queue entry.
+	*/
+	void *m_pThread;
+	volatile bool m_ThreadShutdown;
+	volatile bool m_ThreadRunning;
+	// only true inside the network thread, so Send/Drop know which side they
+	// were called from without asking the OS for a thread id
+	volatile bool m_InNetworkThread;
+
+	// a packet on its way up to the game thread
+	CNetQueue<CNetPacketEntry> m_InboundPackets;
+	// a packet on its way down to clients
+	CNetQueue<CNetPacketEntry> m_OutboundPackets;
+	// scratch for the network thread when it flushes m_OutboundPackets
+	array<CNetPacketEntry> m_Outbound;
+	// drops the game thread requested
+	CNetQueue<CNetPendingDrop> m_PendingDrops;
+
+	// true when the caller is not the network thread
+	bool IsGameThread() const { return m_pThread != 0 && !m_InNetworkThread; }
+	void ApplyPendingDrops();
+
+	void ThreadMain();
+	static void ThreadEntry(void *pUser);
+	void RunThread();
+
 public:
+	// true while the network thread is alive
+	bool ThreadRunning() const { return m_ThreadRunning; }
+
+	// ---- game thread ----
+	// start the network thread after Open(); it takes over the socket
+	void StartThread();
+	// stop and join the network thread
+	void StopThread();
+
+	// the packets the network thread received since the last call, oldest
+	// first. The game thread owns them until it clears the array.
+	void DrainPackets(array<CNetPacketEntry> &Out);
+	// release a packet obtained from DrainPackets()
+	void FreePacket(CNetPacketEntry &Entry);
+
 	//
 	bool Open(NETADDR BindAddr, class CConfig *pConfig, class IConsole *pConsole, class IEngine *pEngine, class CNetBan *pNetBan,
 		int MaxClients, int MaxClientsPerIP, NETFUNC_NEWCLIENT pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser);
@@ -619,10 +788,48 @@ class CNetClient : public CNetBase
 
 	int m_Flags;
 
+	/*
+		The network thread, the same split as CNetServer: the socket and the
+		connection live here, and the game thread only sees decoded packets in
+		m_InboundPackets. Everything the game thread sends is queued in
+		m_OutboundPackets and written by this thread.
+
+		Connection control (Connect/Disconnect) is forwarded too, so the
+		connection state machine is only ever advanced from this thread.
+	*/
+	void *m_pThread;
+	volatile bool m_ThreadShutdown;
+	volatile bool m_ThreadRunning;
+	volatile bool m_InNetworkThread;
+
+	CNetQueue<CNetPacketEntry> m_InboundPackets;
+	CNetQueue<CNetPacketEntry> m_OutboundPackets;
+
+	// control requests the game thread made for the network thread to apply
+	CNetQueue<CNetPendingConnect> m_PendingConnects;
+	CNetQueue<CNetPendingDisconnect> m_PendingDisconnects;
+	array<CNetPacketEntry> m_Outbound;
+
+	void ThreadMain();
+	static void ThreadEntry(void *pUser);
+	void RunThread();
+	void ApplyPendingControl();
+	void ApplyPendingDisconnects();
+
+	bool IsGameThread() const { return m_pThread != 0 && !m_InNetworkThread; }
+
 public:
 	// openness
 	bool Open(NETADDR BindAddr, class CConfig *pConfig, class IConsole *pConsole, class IEngine *pEngine, int Flags);
 	void Close();
+
+	// ---- game thread ----
+	// start/stop the network thread; Open() must have succeeded first
+	void StartThread();
+	void StopThread();
+	// the packets the network thread received since the last call, oldest first
+	void DrainPackets(array<CNetPacketEntry> &Out);
+	void FreePacket(CNetPacketEntry &Entry);
 
 	// connection state
 	int Disconnect(const char *Reason);

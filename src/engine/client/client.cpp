@@ -1566,8 +1566,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 
 void CClient::PumpNetwork()
 {
-	m_NetClient.Update();
-
+	/*
+		The transport runs on its own thread, so the packets it decoded are
+		already waiting here and anything we send is queued back to it. The
+		connection state is read through CNetClient's accessors, which the
+		network thread keeps up to date.
+	*/
 	if(State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		// check for errors
@@ -1593,10 +1597,13 @@ void CClient::PumpNetwork()
 		}
 	}
 
-	// process non-connless packets
-	CNetChunk Packet;
-	while(m_NetClient.Recv(&Packet))
+	// process the packets the network thread handed over
+	m_aNetPackets.clear();
+	m_NetClient.DrainPackets(m_aNetPackets);
+	for(int i = 0; i < m_aNetPackets.size(); i++)
 	{
+		CNetChunk &Packet = m_aNetPackets[i].m_Chunk;
+
 		if(Packet.m_Flags & NETSENDFLAG_CONNLESS)
 			continue;
 
@@ -1606,14 +1613,15 @@ void CClient::PumpNetwork()
 			// reaches the normal message/snapshot path
 			CNetChunk aOut[legacy::CNetworkTranslator::MAX_OUT_CHUNKS];
 			const int NumOut = m_LegacyTranslator.TranslateServerChunk(Packet.m_pData, Packet.m_DataSize, aOut, legacy::CNetworkTranslator::MAX_OUT_CHUNKS);
-			for(int i = 0; i < NumOut; i++)
-				ProcessServerPacket(&aOut[i]);
+			for(int j = 0; j < NumOut; j++)
+				ProcessServerPacket(&aOut[j]);
 		}
 		else
 			ProcessServerPacket(&Packet);
 	}
 
 	// process connless packets data
+	CNetChunk Packet;
 	m_ContactClient.Update();
 	while(m_ContactClient.Recv(&Packet))
 	{
@@ -2096,6 +2104,10 @@ void CClient::Run()
 			dbg_msg("client", "couldn't open socket(net)");
 			return;
 		}
+
+		// the transport takes over the socket from here on
+		m_NetClient.StartThread();
+
 		BindAddr.port = 0;
 		if(!m_ContactClient.Open(BindAddr, Config(), Console(), Engine(), 0))
 		{
@@ -2288,6 +2300,10 @@ void CClient::Run()
 
 	GameClient()->OnShutdown();
 	Disconnect();
+
+	// stop the transport before the socket and the config go away
+	m_NetClient.StopThread();
+	m_NetClient.Close();
 
 	m_pInput->Shutdown();
 	m_pGraphics->Shutdown();

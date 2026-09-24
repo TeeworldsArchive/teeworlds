@@ -266,6 +266,10 @@ CServer::CServer() : m_DemoRecorder(&m_SnapshotDelta)
 	m_RconPasswordSet = 0;
 	m_GeneratedRconPassword = 0;
 
+	mem_zero(m_aPendingNewClient, sizeof(m_aPendingNewClient));
+	mem_zero(m_aPendingDelClient, sizeof(m_aPendingDelClient));
+	mem_zero(m_aaPendingDelReason, sizeof(m_aaPendingDelReason));
+
 	Init();
 }
 
@@ -640,61 +644,74 @@ void CServer::DoSnapshot()
 	GameServer()->OnPostSnap();
 }
 
+/*
+	The transport runs on the network thread, so these callbacks must not touch
+	the game. They only record what happened in per-slot flags that the game
+	thread picks up in PumpNetwork, where NewClient/DelClient below run.
+*/
 int CServer::NewClientCallback(int ClientID, void *pUser)
 {
 	CServer *pThis = (CServer *) pUser;
-
-	// Remove non human player on same slot
-	if(pThis->GameServer()->IsClientBot(ClientID))
-	{
-		pThis->GameServer()->OnClientDrop(ClientID, "removing dummy");
-	}
-
-	pThis->m_aClients[ClientID].m_State = CClient::STATE_AUTH;
-	pThis->m_aClients[ClientID].m_aName[0] = 0;
-	pThis->m_aClients[ClientID].m_aClan[0] = 0;
-	pThis->m_aClients[ClientID].m_Country = -1;
-	pThis->m_aClients[ClientID].m_Authed = AUTHED_NO;
-	pThis->m_aClients[ClientID].m_AuthTries = 0;
-	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
-	pThis->m_aClients[ClientID].m_MapListEntryToSend = -1;
-	pThis->m_aClients[ClientID].m_NoRconNote = false;
-	pThis->m_aClients[ClientID].m_Quitting = false;
-	pThis->m_aClients[ClientID].m_Latency = 0;
-	pThis->m_aClients[ClientID].Reset();
-
+	pThis->m_aPendingNewClient[ClientID] = true;
 	return 0;
 }
 
 int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 {
 	CServer *pThis = (CServer *) pUser;
+	pThis->m_aPendingDelClient[ClientID] = true;
+	str_copy(pThis->m_aaPendingDelReason[ClientID], pReason, sizeof(pThis->m_aaPendingDelReason[ClientID]));
+	return 0;
+}
 
-	char aAddrStr[NETADDR_MAXSTRSIZE];
-	net_addr_str(pThis->m_NetServer.ClientAddr(ClientID), aAddrStr, sizeof(aAddrStr), true);
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "client dropped. cid=%d addr=%s reason='%s'", ClientID, aAddrStr, pReason);
-	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-
-	// notify the mod about the drop
-	if(pThis->m_aClients[ClientID].m_State >= CClient::STATE_READY)
+void CServer::HandleNewClient(int ClientID)
+{
+	// Remove non human player on same slot
+	if(GameServer()->IsClientBot(ClientID))
 	{
-		pThis->m_aClients[ClientID].m_Quitting = true;
-		pThis->GameServer()->OnClientDrop(ClientID, pReason);
+		GameServer()->OnClientDrop(ClientID, "removing dummy");
 	}
 
-	pThis->m_aClients[ClientID].m_State = CClient::STATE_EMPTY;
-	pThis->m_aClients[ClientID].m_aName[0] = 0;
-	pThis->m_aClients[ClientID].m_aClan[0] = 0;
-	pThis->m_aClients[ClientID].m_Country = -1;
-	pThis->m_aClients[ClientID].m_Authed = AUTHED_NO;
-	pThis->m_aClients[ClientID].m_AuthTries = 0;
-	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
-	pThis->m_aClients[ClientID].m_MapListEntryToSend = -1;
-	pThis->m_aClients[ClientID].m_NoRconNote = false;
-	pThis->m_aClients[ClientID].m_Quitting = false;
-	pThis->m_aClients[ClientID].m_Snapshots.PurgeAll();
-	return 0;
+	m_aClients[ClientID].m_State = CClient::STATE_AUTH;
+	m_aClients[ClientID].m_aName[0] = 0;
+	m_aClients[ClientID].m_aClan[0] = 0;
+	m_aClients[ClientID].m_Country = -1;
+	m_aClients[ClientID].m_Authed = AUTHED_NO;
+	m_aClients[ClientID].m_AuthTries = 0;
+	m_aClients[ClientID].m_pRconCmdToSend = 0;
+	m_aClients[ClientID].m_MapListEntryToSend = -1;
+	m_aClients[ClientID].m_NoRconNote = false;
+	m_aClients[ClientID].m_Quitting = false;
+	m_aClients[ClientID].m_Latency = 0;
+	m_aClients[ClientID].Reset();
+}
+
+void CServer::HandleDelClient(int ClientID, const char *pReason)
+{
+	char aAddrStr[NETADDR_MAXSTRSIZE];
+	net_addr_str(m_NetServer.ClientAddr(ClientID), aAddrStr, sizeof(aAddrStr), true);
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "client dropped. cid=%d addr=%s reason='%s'", ClientID, aAddrStr, pReason);
+	Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+
+	// notify the mod about the drop
+	if(m_aClients[ClientID].m_State >= CClient::STATE_READY)
+	{
+		m_aClients[ClientID].m_Quitting = true;
+		GameServer()->OnClientDrop(ClientID, pReason);
+	}
+
+	m_aClients[ClientID].m_State = CClient::STATE_EMPTY;
+	m_aClients[ClientID].m_aName[0] = 0;
+	m_aClients[ClientID].m_aClan[0] = 0;
+	m_aClients[ClientID].m_Country = -1;
+	m_aClients[ClientID].m_Authed = AUTHED_NO;
+	m_aClients[ClientID].m_AuthTries = 0;
+	m_aClients[ClientID].m_pRconCmdToSend = 0;
+	m_aClients[ClientID].m_MapListEntryToSend = -1;
+	m_aClients[ClientID].m_NoRconNote = false;
+	m_aClients[ClientID].m_Quitting = false;
+	m_aClients[ClientID].m_Snapshots.PurgeAll();
 }
 
 void CServer::SendMap(int ClientID)
@@ -1177,68 +1194,96 @@ void CServer::SendServerInfo(int ClientID)
 
 void CServer::PumpNetwork()
 {
-	CNetChunk Packet;
-	TOKEN ResponseToken;
+	/*
+		The transport runs on its own thread: by the time we get here the
+		packets it decoded are already waiting in a queue, and anything we send
+		from this thread is queued back to it. No socket, connection or resend
+		buffer is touched from the game thread.
+	*/
+	m_aNetPackets.clear();
+	m_NetServer.DrainPackets(m_aNetPackets);
 
-	m_NetServer.Update();
-
-	// process packets
-	while(m_NetServer.Recv(&Packet, &ResponseToken))
+	/*
+		Slots that appeared or vanished on the network thread are folded into
+		the game's client state first, so a packet from a slot that just went
+		away is not applied to a stale client.
+	*/
+	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(Packet.m_Flags & NETSENDFLAG_CONNLESS)
+		if(m_aPendingNewClient[i])
 		{
-			if(m_Register.RegisterProcessPacket(&Packet, ResponseToken))
-				continue;
-			if(Packet.m_DataSize >= int(sizeof(SERVERBROWSE_GETINFO)) &&
-				mem_comp(Packet.m_pData, SERVERBROWSE_GETINFO, sizeof(SERVERBROWSE_GETINFO)) == 0)
-			{
-				CUnpacker Unpacker;
-				Unpacker.Reset((unsigned char *) Packet.m_pData + sizeof(SERVERBROWSE_GETINFO), Packet.m_DataSize - sizeof(SERVERBROWSE_GETINFO));
-				int SrvBrwsToken = Unpacker.GetInt();
-				int InfoVersion = Unpacker.GetIntOrDefault(SERVERINFO_VERSION_LEGACY);
-				if(Unpacker.Error())
-					continue;
-
-				CPacker Packer;
-				Packer.Reset();
-				Packer.AddRaw(SERVERBROWSE_INFO, sizeof(SERVERBROWSE_INFO));
-				Packer.AddInt(SrvBrwsToken);
-				GenerateServerInfo(&Packer, InfoVersion, true);
-
-				CNetChunk Response;
-				Response.m_ClientID = -1;
-				Response.m_Address = Packet.m_Address;
-				Response.m_Flags = NETSENDFLAG_CONNLESS;
-				Response.m_pData = Packer.Data();
-				Response.m_DataSize = Packer.Size();
-				m_NetServer.Send(&Response, ResponseToken);
-
-				if(InfoVersion == SERVERINFO_VERSION_LEGACY)
-					continue;
-
-				int Next = 0;
-				while(Next != -1)
-				{
-					Packer.Reset();
-					Packer.AddRaw(SERVERBROWSE_PLAYERSINFO, sizeof(SERVERBROWSE_PLAYERSINFO));
-					Packer.AddInt(SrvBrwsToken);
-					Next = GenerateServerInfoPlayers(&Packer, InfoVersion, Next);
-
-					Response.m_ClientID = -1;
-					Response.m_Address = Packet.m_Address;
-					Response.m_Flags = NETSENDFLAG_CONNLESS;
-					Response.m_pData = Packer.Data();
-					Response.m_DataSize = Packer.Size();
-					m_NetServer.Send(&Response, ResponseToken);
-				}
-			}
+			m_aPendingNewClient[i] = false;
+			HandleNewClient(i);
 		}
+		if(m_aPendingDelClient[i])
+		{
+			m_aPendingDelClient[i] = false;
+			HandleDelClient(i, m_aaPendingDelReason[i]);
+		}
+	}
+
+	for(int i = 0; i < m_aNetPackets.size(); i++)
+	{
+		CNetPacketEntry &Entry = m_aNetPackets[i];
+		CNetChunk &Packet = Entry.m_Chunk;
+
+		if(Packet.m_Flags & NETSENDFLAG_CONNLESS)
+			ProcessConnlessPacket(&Packet, Entry.m_ResponseToken);
 		else
 			ProcessClientPacket(&Packet);
 	}
 
 	m_ServerBan.Update();
 	m_Econ.Update();
+}
+
+void CServer::ProcessConnlessPacket(CNetChunk *pPacket, TOKEN ResponseToken)
+{
+	if(m_Register.RegisterProcessPacket(pPacket, ResponseToken))
+		return;
+	if(pPacket->m_DataSize >= int(sizeof(SERVERBROWSE_GETINFO)) &&
+		mem_comp(pPacket->m_pData, SERVERBROWSE_GETINFO, sizeof(SERVERBROWSE_GETINFO)) == 0)
+	{
+		CUnpacker Unpacker;
+		Unpacker.Reset((unsigned char *) pPacket->m_pData + sizeof(SERVERBROWSE_GETINFO), pPacket->m_DataSize - sizeof(SERVERBROWSE_GETINFO));
+		int SrvBrwsToken = Unpacker.GetInt();
+		int InfoVersion = Unpacker.GetIntOrDefault(SERVERINFO_VERSION_LEGACY);
+		if(Unpacker.Error())
+			return;
+
+		CPacker Packer;
+		Packer.Reset();
+		Packer.AddRaw(SERVERBROWSE_INFO, sizeof(SERVERBROWSE_INFO));
+		Packer.AddInt(SrvBrwsToken);
+		GenerateServerInfo(&Packer, InfoVersion, true);
+
+		CNetChunk Response;
+		Response.m_ClientID = -1;
+		Response.m_Address = pPacket->m_Address;
+		Response.m_Flags = NETSENDFLAG_CONNLESS;
+		Response.m_pData = Packer.Data();
+		Response.m_DataSize = Packer.Size();
+		m_NetServer.Send(&Response, ResponseToken);
+
+		if(InfoVersion == SERVERINFO_VERSION_LEGACY)
+			return;
+
+		int Next = 0;
+		while(Next != -1)
+		{
+			Packer.Reset();
+			Packer.AddRaw(SERVERBROWSE_PLAYERSINFO, sizeof(SERVERBROWSE_PLAYERSINFO));
+			Packer.AddInt(SrvBrwsToken);
+			Next = GenerateServerInfoPlayers(&Packer, InfoVersion, Next);
+
+			Response.m_ClientID = -1;
+			Response.m_Address = pPacket->m_Address;
+			Response.m_Flags = NETSENDFLAG_CONNLESS;
+			Response.m_pData = Packer.Data();
+			Response.m_DataSize = Packer.Size();
+			m_NetServer.Send(&Response, ResponseToken);
+		}
+	}
 }
 
 const char *CServer::GetMapName()
@@ -1358,6 +1403,9 @@ int CServer::Run()
 	}
 
 	m_Econ.Init(Config(), Console(), &m_ServerBan);
+
+	// the transport takes over the socket from here on
+	m_NetServer.StartThread();
 
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "server name is '%s'", Config()->m_SvName);

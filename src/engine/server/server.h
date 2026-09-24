@@ -152,6 +152,16 @@ public:
 	array<unsigned char> m_DemoSnapshotData;
 	CSnapIDPool m_IDPool;
 	CNetServer m_NetServer;
+	// packets handed over by the network thread for this tick's pump
+	array<CNetPacketEntry> m_aNetPackets;
+	/*
+		Connect/disconnect events the network thread recorded. They are turned
+		into game-side client state on the game thread, because the callbacks
+		themselves run on the network thread.
+	*/
+	bool m_aPendingNewClient[MAX_CLIENTS];
+	bool m_aPendingDelClient[MAX_CLIENTS];
+	char m_aaPendingDelReason[MAX_CLIENTS][128];
 	CEcon m_Econ;
 	CServerBan m_ServerBan;
 
@@ -244,6 +254,9 @@ public:
 	void UpdateClientMapListEntries();
 
 	void ProcessClientPacket(CNetChunk *pPacket);
+	void ProcessConnlessPacket(CNetChunk *pPacket, TOKEN ResponseToken);
+	void HandleNewClient(int ClientID);
+	void HandleDelClient(int ClientID, const char *pReason);
 
 	void SendServerInfo(int ClientID);
 	void GenerateServerInfo(CPacker *pPacker, int ServerInfoVersion, bool IncludeClientInfo);

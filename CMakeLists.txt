@@ -1370,6 +1370,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   masterserver.cpp
   memheap.cpp
   memheap.h
+  net_queue.h
   netban.cpp
   netban.h
   network.cpp

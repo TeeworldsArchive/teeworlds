@@ -77,6 +77,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	};
 
 	class CNetClient m_NetClient;
+	// packets the network thread handed over for this frame
+	array<CNetPacketEntry> m_aNetPackets;
 	class CNetClient m_ContactClient;
 	class CDemoPlayer m_DemoPlayer;
 	class CDemoRecorder m_DemoRecorder;

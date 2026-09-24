@@ -7,12 +7,20 @@
 
 #include "netban.h"
 #include "network.h"
+#include "config.h"
+#include "protocol.h"
 
 bool CNetServer::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, CNetBan *pNetBan,
 	int MaxClients, int MaxClientsPerIP, NETFUNC_NEWCLIENT pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser)
 {
 	// zero out the whole structure
 	mem_zero(this, sizeof(*this));
+
+	// the zeroing above wiped the queue locks, so create them again
+	m_InboundPackets.Setup();
+	m_OutboundPackets.Setup();
+	m_Outbound.clear();
+	m_PendingDrops.Setup();
 
 	// open socket
 	NETSOCKET Socket = net_udp_create(BindAddr, 0);
@@ -40,8 +48,118 @@ bool CNetServer::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IE
 	return true;
 }
 
+void CNetServer::StartThread()
+{
+	if(m_pThread)
+		return;
+
+	m_ThreadShutdown = false;
+	m_ThreadRunning = false;
+	m_pThread = thread_init(CNetServer::ThreadEntry, this);
+
+	// the thread owns the socket from here on; wait until it is up so a
+	// caller that immediately pumps the network does not race it
+	while(!m_ThreadRunning && !m_ThreadShutdown)
+		thread_sleep(1);
+}
+
+void CNetServer::StopThread()
+{
+	if(!m_pThread)
+		return;
+
+	m_ThreadShutdown = true;
+	thread_wait(m_pThread);
+	m_pThread = 0;
+
+	// the game thread will not drain them anymore
+	m_InboundPackets.Clear();
+	m_OutboundPackets.Clear();
+	m_PendingDrops.Clear();
+	m_Outbound.clear();
+}
+
+void CNetServer::ThreadEntry(void *pUser)
+{
+	((CNetServer *) pUser)->ThreadMain();
+}
+
+void CNetServer::ThreadMain()
+{
+	m_InNetworkThread = true;
+	m_ThreadRunning = true;
+
+	while(!m_ThreadShutdown)
+	{
+		// wait for a packet, but never longer than one tick so connection
+		// timeouts and resends stay on schedule
+		Wait(1000 / SERVER_TICK_SPEED / 2);
+		RunThread();
+	}
+
+	// send whatever the game thread queued before the shutdown
+	RunThread();
+
+	m_InNetworkThread = false;
+	m_ThreadRunning = false;
+}
+
+void CNetServer::ApplyPendingDrops()
+{
+	CNetPendingDrop Drop;
+	while(m_PendingDrops.Pop(Drop))
+	{
+		if(Drop.m_ClientID < 0 || Drop.m_ClientID >= NET_MAX_CLIENTS)
+			continue;
+		if(m_aSlots[Drop.m_ClientID].m_Connection.State() == NET_CONNSTATE_OFFLINE)
+			continue;
+
+		if(m_pfnDelClient)
+			m_pfnDelClient(Drop.m_ClientID, Drop.m_aReason, m_UserPtr);
+
+		m_aSlots[Drop.m_ClientID].m_Connection.Disconnect(Drop.m_aReason);
+		m_NumClients--;
+	}
+}
+
+void CNetServer::RunThread()
+{
+	ApplyPendingDrops();
+
+	Update();
+
+	// hand everything the socket produced to the game thread
+	CNetChunk Packet;
+	TOKEN ResponseToken;
+	while(Recv(&Packet, &ResponseToken))
+	{
+		CNetPacketEntry Entry;
+		Entry.Set(&Packet, ResponseToken);
+		m_InboundPackets.Push(Entry);
+	}
+
+	// and send back what the game thread produced
+	m_OutboundPackets.Drain(m_Outbound);
+	for(int i = 0; i < m_Outbound.size(); i++)
+		Send(&m_Outbound[i].m_Chunk, m_Outbound[i].m_ResponseToken);
+	m_Outbound.clear();
+}
+
+void CNetServer::DrainPackets(array<CNetPacketEntry> &Out)
+{
+	m_InboundPackets.Drain(Out);
+}
+
+void CNetServer::FreePacket(CNetPacketEntry &Entry)
+{
+	Entry.m_Chunk.m_pData = 0;
+	Entry.m_Chunk.m_DataSize = 0;
+}
+
 void CNetServer::Close(const char *pReason)
 {
+	StopThread();
+
 	for(int i = 0; i < NET_MAX_CLIENTS; i++)
 		Drop(i, pReason);
 
@@ -50,6 +168,18 @@ void CNetServer::Close(const char *pReason)
 
 void CNetServer::Drop(int ClientID, const char *pReason)
 {
+	/*
+		A drop from the game thread only records the request: the connection and
+		the DelClient callback belong to the network thread. Applying it on the
+		game thread would race the connection state and call the game back from
+		the wrong thread.
+	*/
+	if(IsGameThread())
+	{
+		m_PendingDrops.Push(CNetPendingDrop{ClientID, pReason != 0 ? pReason : "dropped"});
+		return;
+	}
+
 	if(ClientID < 0 || ClientID >= NET_MAX_CLIENTS || m_aSlots[ClientID].m_Connection.State() == NET_CONNSTATE_OFFLINE)
 		return;
 
@@ -243,6 +373,21 @@ int CNetServer::Recv(CNetChunk *pChunk, TOKEN *pResponseToken)
 
 int CNetServer::Send(CNetChunk *pChunk, TOKEN Token)
 {
+	/*
+		The game thread never touches the socket or a connection, so a send
+		from there is queued and performed by the network thread on its next
+		pass. The network thread itself (resends, control messages, connless
+		replies) keeps sending directly, which also guarantees the queue never
+		feeds back into itself.
+	*/
+	if(IsGameThread())
+	{
+		CNetPacketEntry Entry;
+		Entry.Set(pChunk, Token);
+		m_OutboundPackets.Push(Entry);
+		return 0;
+	}
+
 	if(pChunk->m_Flags & NETSENDFLAG_CONNLESS)
 	{
 		if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
