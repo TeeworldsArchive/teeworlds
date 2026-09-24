@@ -37,7 +37,7 @@ namespace legacy
 
 	unsigned char Net7ReadAcceptCapabilities(const unsigned char *pChunkData, int ChunkDataSize)
 	{
-		if(ChunkDataSize > NET7_CTRL_ACCEPT_CAPABILITY_OFFSET)
+		if(ChunkDataSize == NET7_CTRL_ACCEPT_CAPABILITY_OFFSET + 1)
 			return pChunkData[NET7_CTRL_ACCEPT_CAPABILITY_OFFSET];
 		return 0;
 	}
