@@ -19,5 +19,9 @@ jobs:
     - name: Delete Nightly Build
       if: github.ref_type != 'tag'
       run: |
-        gh release delete nightly --cleanup-tag --yes
+        if gh release view nightly >/dev/null 2>&1; then
+          gh release delete nightly --cleanup-tag --yes
+        else
+          echo "skip"
+        fi
       
