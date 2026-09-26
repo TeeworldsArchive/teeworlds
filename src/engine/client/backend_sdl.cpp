@@ -74,7 +74,7 @@ void main()
 )";
 
 static const char *s_pShaderVersionES = R"(
-#version 320 es
+#version 300 es
 precision highp float;
 precision highp int;
 #define PRECISION_TYPE highp
