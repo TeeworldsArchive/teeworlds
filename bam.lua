@@ -406,9 +406,41 @@ function BuildMasterserver(settings)
 	return Link(settings, "mastersrv", Compile(settings, Collect("src/mastersrv/*.cpp")), libs["md5"], libs["json"])
 end
 
+function CompileSPIRVShaders(settings)
+	local output = {}
+	local data_dir = settings.link.Output(settings, "data")
+
+	local compiler = nil
+	if ExecuteSilent("glslc --version") == 0 then
+		compiler = "glslc"
+	elseif ExecuteSilent("glslangValidator --version") == 0 then
+		compiler = "glslangValidator"
+	else
+		print("WARNING: neither glslc nor glslangValidator was found, SDL_GPU shaders will not be built")
+		return output
+	end
+
+	for filename in TableWalk({CollectRecursive(content_src_dir .. "shaders/vulkan/*.vert", content_src_dir .. "shaders/vulkan/*.frag")}) do
+		local name = PathFilename(filename)
+		local spv = PathJoin(PathJoin(data_dir, "shaders/vulkan"), name .. ".spv")
+		local cmd
+		if compiler == "glslc" then
+			cmd = "glslc --target-env=vulkan1.0 " .. filename .. " -o " .. spv
+		else
+			cmd = "glslangValidator -V " .. filename .. " -o " .. spv
+		end
+		AddJob(spv, "spirv " .. name, cmd)
+		AddDependency(spv, filename)
+		table.insert(output, spv)
+	end
+
+	return output
+end
+
 function BuildContent(settings, arch, conf)
 	local content = {}
-	table.insert(content, CopyToDir(settings.link.Output(settings, "data"), CollectRecursive(content_src_dir .. "*.png", content_src_dir .. "*.opus", content_src_dir .. "*.ttc", content_src_dir .. "*.ttf", content_src_dir .. "*.txt", content_src_dir .. "*.map", content_src_dir .. "*.rules", content_src_dir .. "*.json")))
+	table.insert(content, CopyToDir(settings.link.Output(settings, "data"), CollectRecursive(content_src_dir .. "*.png", content_src_dir .. "*.opus", content_src_dir .. "*.ttc", content_src_dir .. "*.ttf", content_src_dir .. "*.txt", content_src_dir .. "*.map", content_src_dir .. "*.rules", content_src_dir .. "*.json", content_src_dir .. "shaders/gles/*.vert", content_src_dir .. "shaders/gles/*.frag", content_src_dir .. "shaders/metal/*.msl")))
+	table.insert(content, CompileSPIRVShaders(settings))
 	PseudoTarget(settings.link.Output(settings, "content") .. settings.link.extension, content)
 end
 
