@@ -34,6 +34,36 @@ static CVideoMode g_aFakeModes[] = {
 	{1856, 1392}, {1920, 1080}, {1920, 1200},
 	{1920, 1440}, {1920, 2400}, {2048, 1536}};
 
+static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp)
+{
+	int Sum = 0;
+	for(int x = 0; x < ScaleW; x++)
+		for(int y = 0; y < ScaleH; y++)
+			Sum += pData[((v + y) * w + (u + x)) * Bpp + Offset];
+	return Sum / (ScaleW * ScaleH);
+}
+
+void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData)
+{
+	int ScaleW = Width / NewWidth;
+	int ScaleH = Height / NewHeight;
+
+	if(ScaleW == 1 && ScaleH == 1)
+		return (void *) pData;
+	int Bpp = 3;
+	if(Format == CCommandBuffer::TEXFORMAT_RGBA)
+		Bpp = 4;
+
+	unsigned char *pTmpData = (unsigned char *) mem_alloc(NewWidth * NewHeight * Bpp);
+
+	for(int y = 0; y < NewHeight; y++)
+		for(int x = 0; x < NewWidth; x++)
+			for(int b = 0; b < Bpp; b++)
+				pTmpData[(NewWidth * y + x) * Bpp + b] = Sample(Width, Height, pData, x * ScaleW, y * ScaleH, b, ScaleW, ScaleH, Bpp);
+
+	return pTmpData;
+}
+
 void CGraphics_Threaded::FlushVertices()
 {
 	if(m_NumVertices == 0)
@@ -892,8 +922,6 @@ int CGraphics_Threaded::IssueInit()
 		Flags |= IGraphicsBackend::INITFLAG_RESIZABLE;
 	if(m_pConfig->m_GfxUseX11XRandRWM)
 		Flags |= IGraphicsBackend::INITFLAG_X11XRANDR;
-	if(m_pConfig->m_GfxOpenGLES)
-		Flags |= IGraphicsBackend::INITFLAG_OPENGLES;
 
 	return m_pBackend->Init("Teeworlds: Archive", &m_pConfig->m_GfxScreen, &m_pConfig->m_GfxScreenWidth,
 		&m_pConfig->m_GfxScreenHeight, &m_ScreenWidth, &m_ScreenHeight, m_pConfig->m_GfxFsaaSamples,
@@ -904,22 +932,7 @@ int CGraphics_Threaded::InitWindow()
 {
 	if(IssueInit() == 0)
 		return 0;
-	// try using opengl es
-	if(m_pConfig->m_GfxOpenGLES != 1)
-	{
-		m_pConfig->m_GfxOpenGLES = 1;
-		dbg_msg("gfx", "using OpenGL ES and trying again");
-		if(IssueInit() == 0)
-			return 0;
-	}
-	// try using opengl
-	else
-	{
-		m_pConfig->m_GfxOpenGLES = 0;
-		dbg_msg("gfx", "using OpenGL and trying again");
-		if(IssueInit() == 0)
-			return 0;
-	}
+
 	// try disabling fsaa
 	while(m_pConfig->m_GfxFsaaSamples)
 	{
@@ -963,9 +976,21 @@ int CGraphics_Threaded::Init()
 		m_aTextureIndices[i] = i + 1;
 	m_aTextureIndices[MAX_TEXTURES - 1] = -1;
 
-	m_pBackend = CreateGraphicsBackend();
-	if(InitWindow() != 0)
-		return -1;
+	m_pBackend = CreateGraphicsBackend(m_pStorage, m_pConfig->m_GfxBackend == 1 ? 1 : 2);
+	// SDL_GPU has no fallback settings to retry with, so only try once
+	int InitResult = m_pConfig->m_GfxBackend == 1 ? InitWindow() : IssueInit();
+	if(InitResult != 0)
+	{
+		if(m_pConfig->m_GfxBackend == 0)
+		{
+			dbg_msg("gfx", "SDL_GPU backend failed, falling back to OpenGL ES");
+			delete m_pBackend;
+			m_pBackend = CreateGraphicsBackend(m_pStorage, 1);
+			InitResult = InitWindow();
+		}
+		if(InitResult != 0)
+			return -1;
+	}
 
 	m_ScreenHiDPIScale = m_ScreenWidth / (float) m_pConfig->m_GfxScreenWidth;
 	m_ScreenUIScale = (m_pConfig->m_GfxScreenHeight < 900.0f) ? 1.0f : (m_pConfig->m_GfxScreenHeight / 900.0f);

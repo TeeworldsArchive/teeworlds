@@ -1618,7 +1618,7 @@ int CMenus::DoAudioDevicesList(CUIRect *pRect, CListBox *pListBox, const array<C
 void CMenus::RenderSettingsGraphics(CUIRect MainView)
 {
 	static const int s_GfxFsaaSamples = Config()->m_GfxFsaaSamples;
-	static const int s_GfxOpenGLES = Config()->m_GfxOpenGLES;
+	static const int s_GfxBackend = Config()->m_GfxBackend;
 	static const int s_GfxTextureQuality = Config()->m_GfxTextureQuality;
 	static int s_GfxScreenWidth = Config()->m_GfxScreenWidth;
 	static int s_GfxScreenHeight = Config()->m_GfxScreenHeight;
@@ -1724,13 +1724,25 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		}
 	}
 
-	// OpenGL ES button
-	ScreenLeft.HSplitTop(Spacing, 0, &ScreenLeft);
-	ScreenLeft.HSplitTop(ButtonHeight, &Button, &ScreenLeft);
-	if(DoButton_CheckBox(&Config()->m_GfxOpenGLES, Localize("Enable OpenGL ES"), Config()->m_GfxOpenGLES, &Button))
+	// Renderer backend button
 	{
-		Config()->m_GfxOpenGLES ^= 1;
-		m_CheckVideoSettings = true;
+		static const char *s_apGfxBackendNames[] = {"Auto", "OpenGL ES", "SDL_GPU"};
+		ScreenLeft.HSplitTop(Spacing, 0, &ScreenLeft);
+		ScreenLeft.HSplitTop(ButtonHeight, &Button, &ScreenLeft);
+		Button.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
+		CUIRect Text;
+		Button.VSplitLeft(ButtonHeight + 5.0f, 0, &Button);
+		Button.VSplitLeft(100.0f, &Text, &Button);
+
+		UI()->DoLabel(&Text, Localize("Renderer:"), Text.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
+
+		Button.VSplitLeft(120.0f, &Button, 0);
+		static CButtonContainer s_ButtonGfxBackend;
+		if(DoButton_Menu(&s_ButtonGfxBackend, s_apGfxBackendNames[clamp(Config()->m_GfxBackend, 0, 2)], 0, &Button))
+		{
+			Config()->m_GfxBackend = (Config()->m_GfxBackend + 1) % 3;
+			m_CheckVideoSettings = true;
+		}
 	}
 
 	ScreenRight.HSplitTop(Spacing, 0, &ScreenRight);
@@ -1879,7 +1891,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		m_NeedRestartGraphics =
 			s_WindowResizeFailed ||
 			s_GfxFsaaSamples != Config()->m_GfxFsaaSamples ||
-			s_GfxOpenGLES != Config()->m_GfxOpenGLES ||
+			s_GfxBackend != Config()->m_GfxBackend ||
 			s_GfxTextureQuality != Config()->m_GfxTextureQuality;
 		m_CheckVideoSettings = false;
 	}
@@ -2073,7 +2085,7 @@ void CMenus::ResetSettingsGraphics()
 	Config()->m_GfxFsaaSamples = 0;
 	Config()->m_GfxTextureQuality = 1;
 	Config()->m_GfxHighDetail = 1;
-	Config()->m_GfxOpenGLES = 0;
+	Config()->m_GfxBackend = 0;
 
 	if(Config()->m_GfxDisplayAllModes)
 	{

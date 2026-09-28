@@ -1,0 +1,40 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentInput
+{
+    float3 TexCoord;
+    float4 Color;
+};
+
+// SDL_GPU fragment uniform slot 0
+struct Uniforms
+{
+    int UseTexture;
+    int IsAlphaOnly;
+    int IsStainedOnly;
+};
+
+fragment float4 main0(FragmentInput Input [[stage_in]],
+    texture2d_array<float> Texture [[texture(0)]],
+    sampler TextureSampler [[sampler(0)]],
+    constant Uniforms &Uniform [[buffer(0)]])
+{
+    if(Uniform.UseTexture == 0)
+        return Input.Color;
+
+    float4 TexColor = Texture.sample(TextureSampler, Input.TexCoord.xy, (uint)Input.TexCoord.z);
+    if(Uniform.IsAlphaOnly != 0)
+        return float4(Input.Color.rgb * TexColor.r * Input.Color.a, TexColor.r * Input.Color.a);
+
+    if(Uniform.IsStainedOnly != 0)
+    {
+        const float Epsilon = 0.2;
+        if(abs(TexColor.r - TexColor.g) < Epsilon && abs(TexColor.r - TexColor.b) < Epsilon)
+            return TexColor * float4(Input.Color.rgb * Input.Color.a, Input.Color.a);
+        return float4(TexColor.rgb, TexColor.a * Input.Color.a);
+    }
+
+    // Regular RGBA textures
+    return TexColor * Input.Color;
+}

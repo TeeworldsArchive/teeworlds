@@ -1,0 +1,31 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexInput
+{
+    float2 Position [[attribute(0)]];
+    float3 TexCoord [[attribute(1)]];
+    float4 Color [[attribute(2)]];
+};
+
+struct VertexOutput
+{
+    float4 Position [[position]];
+    float3 TexCoord;
+    float4 Color;
+};
+
+// SDL_GPU vertex uniform slot 0
+struct Uniforms
+{
+    float4x4 Projection;
+};
+
+vertex VertexOutput main0(VertexInput Input [[stage_in]], constant Uniforms &Uniform [[buffer(0)]])
+{
+    VertexOutput Output;
+    Output.Position = Uniform.Projection * float4(Input.Position, 0.0, 1.0);
+    Output.TexCoord = Input.TexCoord;
+    Output.Color = Input.Color;
+    return Output;
+}

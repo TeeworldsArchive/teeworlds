@@ -1212,6 +1212,67 @@ foreach(datafile ${DATA})
 endforeach()
 
 ########################################################################
+# SHADERS
+########################################################################
+
+# Shader sources live in datasrc/shaders. OpenGL ES ships GLSL ES as-is and
+# compiles it at runtime, SDL_GPU needs SPIR-V generated at build time.
+
+set(SHADER_SRC_DIR ${PROJECT_SOURCE_DIR}/datasrc/shaders)
+set(SHADER_OUT_DIR ${PROJECT_BINARY_DIR}/data/shaders)
+
+if(CLIENT)
+  # OpenGL ES shaders are shipped as source and compiled by the driver.
+  file(GLOB GLES_SHADERS ${SHADER_SRC_DIR}/gles/*.vert ${SHADER_SRC_DIR}/gles/*.frag)
+  foreach(shader ${GLES_SHADERS})
+    file(RELATIVE_PATH OUT ${SHADER_SRC_DIR} ${shader})
+    get_filename_component(DESTINATION ${SHADER_OUT_DIR}/${OUT} PATH)
+    file(MAKE_DIRECTORY ${DESTINATION})
+    file(COPY ${shader} DESTINATION ${DESTINATION})
+  endforeach()
+
+  # Metal shaders are shipped as MSL source and compiled by the driver.
+  file(GLOB METAL_SHADERS ${SHADER_SRC_DIR}/metal/*.msl)
+  foreach(shader ${METAL_SHADERS})
+    file(RELATIVE_PATH OUT ${SHADER_SRC_DIR} ${shader})
+    get_filename_component(DESTINATION ${SHADER_OUT_DIR}/${OUT} PATH)
+    file(MAKE_DIRECTORY ${DESTINATION})
+    file(COPY ${shader} DESTINATION ${DESTINATION})
+  endforeach()
+
+  # SDL_GPU shaders are compiled to SPIR-V; the sources themselves are not copied.
+  find_program(GLSLC glslc)
+  find_program(GLSLANG_VALIDATOR glslangValidator)
+  if(GLSLC OR GLSLANG_VALIDATOR)
+    file(GLOB VULKAN_SHADERS ${SHADER_SRC_DIR}/vulkan/*.vert ${SHADER_SRC_DIR}/vulkan/*.frag)
+    set(SHADER_OUTPUTS)
+    foreach(shader ${VULKAN_SHADERS})
+      get_filename_component(NAME ${shader} NAME)
+      set(OUTPUT ${SHADER_OUT_DIR}/vulkan/${NAME}.spv)
+      if(GLSLC)
+        add_custom_command(OUTPUT ${OUTPUT}
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUT_DIR}/vulkan
+          COMMAND ${GLSLC} --target-env=vulkan1.0 ${shader} -o ${OUTPUT}
+          DEPENDS ${shader}
+          COMMENT "Compiling shader ${NAME} to SPIR-V"
+          VERBATIM)
+      else()
+        add_custom_command(OUTPUT ${OUTPUT}
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUT_DIR}/vulkan
+          COMMAND ${GLSLANG_VALIDATOR} -V ${shader} -o ${OUTPUT}
+          DEPENDS ${shader}
+          COMMENT "Compiling shader ${NAME} to SPIR-V"
+          VERBATIM)
+      endif()
+      list(APPEND SHADER_OUTPUTS ${OUTPUT})
+    endforeach()
+    add_custom_target(shaders ALL DEPENDS ${SHADER_OUTPUTS})
+  else()
+    message(WARNING "Neither glslc nor glslangValidator was found; SDL_GPU shaders will not be built")
+  endif()
+endif()
+
+########################################################################
 # CODE GENERATION
 ########################################################################
 
@@ -1440,6 +1501,8 @@ if(CLIENT)
   set_src(ENGINE_CLIENT GLOB src/engine/client
     backend_sdl.cpp
     backend_sdl.h
+    backend_sdlgpu.cpp
+    backend_sdlgpu.h
     client.cpp
     client.h
     contacts.cpp

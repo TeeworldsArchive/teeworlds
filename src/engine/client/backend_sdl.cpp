@@ -3,86 +3,13 @@
 #include <base/detect.h>
 #include <base/tl/threading.h>
 
+#include <engine/storage.h>
+
 #include <engine/external/glad/gl.h>
 #include <SDL3/SDL.h>
 
 #include "backend_sdl.h"
 #include "graphics_threaded.h"
-
-static const char *s_pVertexShaderSource = R"(
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec3 aTexCoord;
-layout (location = 2) in vec4 aColor;
-
-out vec3 TexCoord;
-out vec4 Color;
-
-uniform mat4 projection;
-
-void main()
-{
-    gl_Position = projection * vec4(aPos, 0.0, 1.0);
-    TexCoord = aTexCoord;
-    Color = aColor;
-}
-)";
-
-static const char *s_pFragmentShaderSource = R"(
-out vec4 FragColor;
-
-in vec3 TexCoord;
-in vec4 Color;
-
-uniform PRECISION_TYPE sampler2DArray ourTexture;
-uniform bool useTexture;
-uniform bool IsAlphaOnly;
-uniform bool IsStainedOnly;
-
-void main()
-{
-    if(useTexture)
-    {
-		vec4 texColor = texture(ourTexture, TexCoord.xyz);
-       	if(IsAlphaOnly)
-        {
-            FragColor = vec4(Color.rgb * texColor.r * Color.a, texColor.r * Color.a);
-        }
-		else if(IsStainedOnly)
-		{
-			const float epsilon = 0.2;
-			if(abs(texColor.r - texColor.g) < epsilon && abs(texColor.r - texColor.b) < epsilon)
-			{
-				FragColor = texColor * vec4(Color.rgb * Color.a, Color.a);
-			}
-			else
-			{
-				FragColor = vec4(texColor.rgb, texColor.a * Color.a);
-			}
-		}
-        else
-        {
-            // Regular RGBA textures
-       		FragColor = texColor * Color;
-        }
-    }
-    else
-    {
-        // No texture, use vertex color directly
-        FragColor = Color;
-    }
-}
-)";
-
-static const char *s_pShaderVersionES = R"(
-#version 300 es
-precision highp float;
-precision highp int;
-#define PRECISION_TYPE highp
-)";
-static const char *s_pShaderVersion = R"(
-#version 330 core
-#define PRECISION_TYPE
-)";
 
 // ------------ CGraphicsBackend_Threaded
 
@@ -165,6 +92,162 @@ bool CCommandProcessorFragment_General::RunCommand(const CCommandBuffer::CComman
 	return true;
 }
 
+// ------------ CCommandProcessorFragment_Texture
+
+CCommandProcessorFragment_Texture::CCommandProcessorFragment_Texture()
+{
+	m_pTextureMemoryUsage = 0;
+	m_MaxTexSize = 0;
+}
+
+int CCommandProcessorFragment_Texture::GetPixelSize(int TexFormat)
+{
+	switch(TexFormat)
+	{
+		case CCommandBuffer::TEXFORMAT_RGB:
+			return 3;
+		case CCommandBuffer::TEXFORMAT_ALPHA:
+			return 1;
+		case CCommandBuffer::TEXFORMAT_RGBA:
+			return 4;
+		default:
+			return 4;
+	}
+}
+
+int CCommandProcessorFragment_Texture::NumMipLevels(int Width, int Height)
+{
+	int Levels = 1;
+	while(Width > 1 || Height > 1)
+	{
+		Width = maximum(1, Width >> 1);
+		Height = maximum(1, Height >> 1);
+		Levels++;
+	}
+	return Levels;
+}
+
+int CCommandProcessorFragment_Texture::WrapModeToSamplerType(int WrapModeU, int WrapModeV)
+{
+	int WrapSamplerType = SAMPLER2D_REPEAT_REPEAT;
+	switch(WrapModeU)
+	{
+		case IGraphics::WRAP_REPEAT:
+			switch(WrapModeV)
+			{
+				case IGraphics::WRAP_REPEAT: WrapSamplerType = SAMPLER2D_REPEAT_REPEAT; break;
+				case IGraphics::WRAP_CLAMP: WrapSamplerType = SAMPLER2D_REPEAT_CLAMP; break;
+				default: dbg_msg("render", "unknown wrapmode v %d", WrapModeV);
+			};
+			break;
+		case IGraphics::WRAP_CLAMP:
+			switch(WrapModeV)
+			{
+				case IGraphics::WRAP_REPEAT: WrapSamplerType = SAMPLER2D_CLAMP_REPEAT; break;
+				case IGraphics::WRAP_CLAMP: WrapSamplerType = SAMPLER2D_CLAMP_CLAMP; break;
+				default: dbg_msg("render", "unknown wrapmode v %d", WrapModeV);
+			};
+			break;
+		default: dbg_msg("render", "unknown wrapmode u %d", WrapModeU);
+	};
+	return WrapSamplerType;
+}
+
+void CCommandProcessorFragment_Texture::PremultiplyAlpha(unsigned char *pTexels, int NumPixels)
+{
+	for(int i = 0; i < NumPixels; ++i)
+	{
+		const float a = (pTexels[i * 4 + 3] / 255.0f);
+		pTexels[i * 4 + 0] = (unsigned char) (pTexels[i * 4 + 0] * a);
+		pTexels[i * 4 + 1] = (unsigned char) (pTexels[i * 4 + 1] * a);
+		pTexels[i * 4 + 2] = (unsigned char) (pTexels[i * 4 + 2] * a);
+	}
+}
+
+void CCommandProcessorFragment_Texture::ComputeOrthoMatrix(const CCommandBuffer::CState &State, float *pMatrix)
+{
+	const float aOrthoMatrix[16] = {
+		2.0f / (State.m_ScreenBR.x - State.m_ScreenTL.x), 0, 0, 0,
+		0, 2.0f / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 0,
+		0, 0, -1, 0,
+		-(State.m_ScreenBR.x + State.m_ScreenTL.x) / (State.m_ScreenBR.x - State.m_ScreenTL.x),
+		-(State.m_ScreenBR.y + State.m_ScreenTL.y) / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 1};
+	mem_copy(pMatrix, aOrthoMatrix, sizeof(aOrthoMatrix));
+}
+
+void CCommandProcessorFragment_Texture::BuildQuadIndexBuffer(unsigned int *pIndices, int NumIndices)
+{
+	int Primq = 0;
+	for(int i = 0; i < NumIndices; i += 6)
+	{
+		pIndices[i + 0] = Primq + 0;
+		pIndices[i + 1] = Primq + 1;
+		pIndices[i + 2] = Primq + 2;
+		pIndices[i + 3] = Primq + 0;
+		pIndices[i + 4] = Primq + 2;
+		pIndices[i + 5] = Primq + 3;
+		Primq += 4;
+	}
+}
+
+void *CCommandProcessorFragment_Texture::PrepareTextureData(const CCommandBuffer::CTextureCreateCommand *pCommand, int &Width, int &Height)
+{
+	Width = pCommand->m_Width;
+	Height = pCommand->m_Height;
+	const int Layers = pCommand->m_Layers;
+	void *pTexData = pCommand->m_pData;
+
+	// resample if needed
+	if(Layers == 1 && (pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA || pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB))
+	{
+		if(Width > m_MaxTexSize || Height > m_MaxTexSize)
+		{
+			do
+			{
+				Width >>= 1;
+				Height >>= 1;
+			} while(Width > m_MaxTexSize || Height > m_MaxTexSize);
+
+			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
+			if(pTexData != pCommand->m_pData)
+				mem_free(pTexData);
+			pTexData = pTmpData;
+		}
+		else if(Width > IGraphics::NUMTILES_DIMENSION && Height > IGraphics::NUMTILES_DIMENSION && (pCommand->m_Flags & CCommandBuffer::TEXFLAG_QUALITY) == 0)
+		{
+			Width >>= 1;
+			Height >>= 1;
+
+			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
+			if(pTexData != pCommand->m_pData)
+				mem_free(pTexData);
+			pTexData = pTmpData;
+		}
+	}
+
+	// use premultiplied alpha for rgba textures
+	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA)
+		PremultiplyAlpha((unsigned char *) pTexData, Width * Height * Layers);
+
+	return pTexData;
+}
+
+void CCommandProcessorFragment_Texture::CalcTextureMemSize(int Width, int Height, int Layers, int PixelSize, bool Mipmaps, int &MemSize)
+{
+	MemSize = Width * Height * Layers * PixelSize;
+	if(Mipmaps)
+	{
+		int TexWidth = Width;
+		int TexHeight = Height;
+		while(TexWidth > 1 && TexHeight > 1)
+		{
+			TexWidth >>= 1;
+			TexHeight >>= 1;
+			MemSize += TexWidth * TexHeight * Layers * PixelSize;
+		}
+	}
+}
+
 // ------------ CCommandProcessorFragment_OpenGL
 
 int CCommandProcessorFragment_OpenGL::TexFormatToOpenGLFormat(int TexFormat)
@@ -179,21 +262,6 @@ int CCommandProcessorFragment_OpenGL::TexFormatToOpenGLFormat(int TexFormat)
 			return GL_RGBA;
 		default:
 			return GL_RGBA;
-	}
-}
-
-int CCommandProcessorFragment_OpenGL::GetPixelSize(int TexFormat)
-{
-	switch(TexFormat)
-	{
-		case CCommandBuffer::TEXFORMAT_RGB:
-			return 3;
-		case CCommandBuffer::TEXFORMAT_ALPHA:
-			return 1;
-		case CCommandBuffer::TEXFORMAT_RGBA:
-			return 4;
-		default:
-			return 4;
 	}
 }
 
@@ -215,13 +283,10 @@ GLuint CCommandProcessorFragment_OpenGL::CompileShader(GLuint Type, const char *
 	return Shader;
 }
 
-GLuint CCommandProcessorFragment_OpenGL::CreateShaderProgram()
+GLuint CCommandProcessorFragment_OpenGL::CreateShaderProgram(const char *pVertexSource, const char *pFragmentSource)
 {
-	char aBuf[2048];
-	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_pShaderVersionES : s_pShaderVersion, s_pVertexShaderSource);
-	GLuint VertexShader = CompileShader(GL_VERTEX_SHADER, aBuf);
-	str_format(aBuf, sizeof(aBuf), "%s\n%s", m_IsOpenGLES ? s_pShaderVersionES : s_pShaderVersion, s_pFragmentShaderSource);
-	GLuint FragmentShader = CompileShader(GL_FRAGMENT_SHADER, aBuf);
+	GLuint VertexShader = CompileShader(GL_VERTEX_SHADER, pVertexSource);
+	GLuint FragmentShader = CompileShader(GL_FRAGMENT_SHADER, pFragmentSource);
 
 	GLuint ShaderProgram = glCreateProgram();
 	glAttachShader(ShaderProgram, VertexShader);
@@ -340,27 +405,7 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	// wrap mode - only set if we have a valid texture
 	if(HasValidTexture)
 	{
-		int WrapSamplerType = SAMPLER2D_REPEAT_REPEAT;
-		switch(State.m_WrapModeU)
-		{
-			case IGraphics::WRAP_REPEAT:
-				switch(State.m_WrapModeV)
-				{
-					case IGraphics::WRAP_REPEAT: WrapSamplerType = SAMPLER2D_REPEAT_REPEAT; break;
-					case IGraphics::WRAP_CLAMP: WrapSamplerType = SAMPLER2D_REPEAT_CLAMP; break;
-					default: dbg_msg("render", "unknown wrapmode v %d", State.m_WrapModeV);
-				};
-				break;
-			case IGraphics::WRAP_CLAMP:
-				switch(State.m_WrapModeV)
-				{
-					case IGraphics::WRAP_REPEAT: WrapSamplerType = SAMPLER2D_CLAMP_REPEAT; break;
-					case IGraphics::WRAP_CLAMP: WrapSamplerType = SAMPLER2D_CLAMP_CLAMP; break;
-					default: dbg_msg("render", "unknown wrapmode v %d", State.m_WrapModeV);
-				};
-				break;
-			default: dbg_msg("render", "unknown wrapmode u %d", State.m_WrapModeU);
-		};
+		int WrapSamplerType = WrapModeToSamplerType(State.m_WrapModeU, State.m_WrapModeV);
 		GLuint SamplerID = m_aaSampler2D[m_aTextures[State.m_Texture].m_BasicSamplerType][WrapSamplerType];
 		if(m_LastSampler != SamplerID)
 			glBindSampler(0, SamplerID);
@@ -368,12 +413,8 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	}
 
 	// screen mapping - Set projection matrix uniform
-	float aOrthoMatrix[16] = {
-		2.0f / (State.m_ScreenBR.x - State.m_ScreenTL.x), 0, 0, 0,
-		0, 2.0f / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 0,
-		0, 0, -1, 0,
-		-(State.m_ScreenBR.x + State.m_ScreenTL.x) / (State.m_ScreenBR.x - State.m_ScreenTL.x),
-		-(State.m_ScreenBR.y + State.m_ScreenTL.y) / (State.m_ScreenTL.y - State.m_ScreenBR.y), 0, 1};
+	float aOrthoMatrix[16];
+	ComputeOrthoMatrix(State, aOrthoMatrix);
 
 	if(m_RenderShader.m_ProjectionLoc != -1)
 		glUniformMatrix4fv(m_RenderShader.m_ProjectionLoc, 1, GL_FALSE, aOrthoMatrix);
@@ -382,9 +423,8 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 
 void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 {
-	m_IsOpenGLES = pCommand->m_IsOpenGLES;
 	// Create shader program
-	m_RenderShader.m_ShaderProgram = CreateShaderProgram();
+	m_RenderShader.m_ShaderProgram = CreateShaderProgram(pCommand->m_pVertexShaderSource, pCommand->m_pFragmentShaderSource);
 	m_LastSrcBlendMode = GL_NONE;
 	m_LastAlphaOnly = false;
 	m_LastStainedOnly = false;
@@ -459,17 +499,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_QuadDrawIndexBufferID);
 
 	unsigned int aIndices[CCommandBuffer::MAX_VERTICES / 4 * 6];
-	int Primq = 0;
-	for(int i = 0; i < CCommandBuffer::MAX_VERTICES / 4 * 6; i += 6)
-	{
-		aIndices[i] = Primq + 0;
-		aIndices[i + 1] = Primq + 1;
-		aIndices[i + 2] = Primq + 2;
-		aIndices[i + 3] = Primq;
-		aIndices[i + 4] = Primq + 2;
-		aIndices[i + 5] = Primq + 3;
-		Primq += 4;
-	}
+	BuildQuadIndexBuffer(aIndices, CCommandBuffer::MAX_VERTICES / 4 * 6);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * CCommandBuffer::MAX_VERTICES / 4 * 6, aIndices, GL_STATIC_DRAW);
 
 	m_pTextureMemoryUsage = pCommand->m_pTextureMemoryUsage;
@@ -503,16 +533,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_SetViewport(const CCommandBuffer::CWi
 void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::CTextureUpdateCommand *pCommand)
 {
 	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA)
-	{
-		unsigned char *pTexels = (unsigned char *) pCommand->m_pData;
-		for(int i = 0; i < pCommand->m_Width * pCommand->m_Height; ++i)
-		{
-			const float a = (pTexels[i * 4 + 3] / 255.0f);
-			pTexels[i * 4 + 0] = (unsigned char) (pTexels[i * 4 + 0] * a);
-			pTexels[i * 4 + 1] = (unsigned char) (pTexels[i * 4 + 1] * a);
-			pTexels[i * 4 + 2] = (unsigned char) (pTexels[i * 4 + 2] * a);
-		}
-	}
+		PremultiplyAlpha((unsigned char *) pCommand->m_pData, pCommand->m_Width * pCommand->m_Height);
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[pCommand->m_Slot].m_Texture);
 	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, pCommand->m_X, pCommand->m_Y, pCommand->m_Z,
@@ -533,51 +554,10 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Destroy(const CCommandBuffer:
 
 void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::CTextureCreateCommand *pCommand)
 {
-	int Width = pCommand->m_Width;
-	int Height = pCommand->m_Height;
-	int Layers = pCommand->m_Layers;
-	void *pTexData = pCommand->m_pData;
-
-	// resample if needed
-	if(Layers == 1 && (pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA || pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB))
-	{
-		if(Width > m_MaxTexSize || Height > m_MaxTexSize)
-		{
-			do
-			{
-				Width >>= 1;
-				Height >>= 1;
-			} while(Width > m_MaxTexSize || Height > m_MaxTexSize);
-
-			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
-			if(pTexData != pCommand->m_pData)
-				mem_free(pTexData);
-			pTexData = pTmpData;
-		}
-		else if(Width > IGraphics::NUMTILES_DIMENSION && Height > IGraphics::NUMTILES_DIMENSION && (pCommand->m_Flags & CCommandBuffer::TEXFLAG_QUALITY) == 0)
-		{
-			Width >>= 1;
-			Height >>= 1;
-
-			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
-			if(pTexData != pCommand->m_pData)
-				mem_free(pTexData);
-			pTexData = pTmpData;
-		}
-	}
-
-	// use premultiplied alpha for rgba textures
-	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA)
-	{
-		unsigned char *pTexels = (unsigned char *) pTexData;
-		for(int i = 0; i < Width * Height * Layers; ++i)
-		{
-			const float a = (pTexels[i * 4 + 3] / 255.0f);
-			pTexels[i * 4 + 0] = (unsigned char) (pTexels[i * 4 + 0] * a);
-			pTexels[i * 4 + 1] = (unsigned char) (pTexels[i * 4 + 1] * a);
-			pTexels[i * 4 + 2] = (unsigned char) (pTexels[i * 4 + 2] * a);
-		}
-	}
+	int Width;
+	int Height;
+	const int Layers = pCommand->m_Layers;
+	void *pTexData = PrepareTextureData(pCommand, Width, Height);
 	m_aTextures[pCommand->m_Slot].m_Format = pCommand->m_Format;
 
 	//
@@ -602,18 +582,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 	}
 
 	// calculate memory usage
-	m_aTextures[pCommand->m_Slot].m_MemSize = Width * Height * Layers * pCommand->m_PixelSize;
-	if(Mipmaps)
-	{
-		int TexWidth = Width;
-		int TexHeight = Height;
-		while(TexWidth > 1 && TexHeight > 1)
-		{
-			TexWidth >>= 1;
-			TexHeight >>= 1;
-			m_aTextures[pCommand->m_Slot].m_MemSize += TexWidth * TexHeight * Layers * pCommand->m_PixelSize;
-		}
-	}
+	CalcTextureMemSize(Width, Height, Layers, pCommand->m_PixelSize, Mipmaps, m_aTextures[pCommand->m_Slot].m_MemSize);
 
 	*m_pTextureMemoryUsage += m_aTextures[pCommand->m_Slot].m_MemSize;
 
@@ -660,7 +629,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Screenshot(const CCommandBuffer::CScr
 	int y = aViewport[3] - pCommand->m_Y - 1 - (h - 1);
 
 	// we allocate one more row to use when we are flipping the texture
-	const int Channels = m_IsOpenGLES ? 4 : 3;
+	const int Channels = 4;
 	unsigned char *pPixelData = (unsigned char *) mem_alloc(w * (h + 1) * Channels);
 	unsigned char *pTempRow = pPixelData + w * h * Channels;
 
@@ -668,7 +637,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Screenshot(const CCommandBuffer::CScr
 	GLint Alignment;
 	glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(x, y, w, h, m_IsOpenGLES ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pPixelData);
+	glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pPixelData);
 	glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
 
 	// flip the pixel because opengl works from bottom left corner
@@ -682,14 +651,13 @@ void CCommandProcessorFragment_OpenGL::Cmd_Screenshot(const CCommandBuffer::CScr
 	// fill in the information
 	pCommand->m_pImage->m_Width = w;
 	pCommand->m_pImage->m_Height = h;
-	pCommand->m_pImage->m_Format = m_IsOpenGLES ? CImageInfo::FORMAT_RGBA : CImageInfo::FORMAT_RGB;
+	pCommand->m_pImage->m_Format = CImageInfo::FORMAT_RGBA;
 	pCommand->m_pImage->m_pData = pPixelData;
 }
 
 CCommandProcessorFragment_OpenGL::CCommandProcessorFragment_OpenGL()
 {
 	mem_zero(m_aTextures, sizeof(m_aTextures));
-	m_pTextureMemoryUsage = 0;
 	mem_zero(&m_RenderShader, sizeof(m_RenderShader));
 }
 
@@ -757,16 +725,13 @@ bool CCommandProcessorFragment_SDL::RunCommand(const CCommandBuffer::CCommand *p
 	return true;
 }
 
-// ------------ CCommandProcessor_SDL_OpenGL
+// ------------ CCommandProcessor_SDL
 
-void CCommandProcessor_SDL_OpenGL::RunBuffer(CCommandBuffer *pBuffer)
+void CCommandProcessor_SDL::RunBuffer(CCommandBuffer *pBuffer)
 {
 	for(CCommandBuffer::CCommand *pCommand = pBuffer->Head(); pCommand; pCommand = pCommand->m_pNext)
 	{
-		if(m_OpenGL.RunCommand(pCommand))
-			continue;
-
-		if(m_SDL.RunCommand(pCommand))
+		if(RunBackendCommand(pCommand))
 			continue;
 
 		if(m_General.RunCommand(pCommand))
@@ -776,8 +741,28 @@ void CCommandProcessor_SDL_OpenGL::RunBuffer(CCommandBuffer *pBuffer)
 	}
 }
 
-// ------------ CGraphicsBackend_SDL_OpenGL
-int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight)
+// ------------ CCommandProcessor_SDL_OpenGL
+
+bool CCommandProcessor_SDL_OpenGL::RunBackendCommand(CCommandBuffer::CCommand *pCommand)
+{
+	if(m_OpenGL.RunCommand(pCommand))
+		return true;
+
+	return m_SDL.RunCommand(pCommand);
+}
+
+// ------------ CGraphicsBackend_SDL
+
+CGraphicsBackend_SDL::CGraphicsBackend_SDL(IStorage *pStorage)
+{
+	m_pWindow = 0;
+	m_pProcessor = 0;
+	m_TextureMemoryUsage = 0;
+	m_NumScreens = 0;
+	m_pStorage = pStorage;
+}
+
+int CGraphicsBackend_SDL::InitWindow(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int Flags, int *pDesktopWidth, int *pDesktopHeight, int ExtraSdlFlags)
 {
 	if(!SDL_WasInit(SDL_INIT_VIDEO))
 	{
@@ -825,7 +810,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	}
 
 	// set flags
-	int SdlFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+	int SdlFlags = SDL_WINDOW_RESIZABLE | ExtraSdlFlags;
 	if(Flags & IGraphicsBackend::INITFLAG_HIGHDPI)
 		SdlFlags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	if(Flags & IGraphicsBackend::INITFLAG_RESIZABLE)
@@ -841,33 +826,6 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 #ifdef CONF_PLATFORM_LINUX
 	SDL_SetHint(SDL_HINT_APP_ID, "Teeworlds Archive");
 #endif
-	// set gl attributes for OpenGL 3.3 Core Profile
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-	if(Flags & IGraphicsBackend::INITFLAG_OPENGLES)
-	{
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-	}
-	else
-	{
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-	}
-
-	if(FsaaSamples)
-	{
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, FsaaSamples);
-	}
-	else
-	{
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
-	}
 
 	// calculate centered position in windowed mode
 	int OffsetX = 0;
@@ -888,116 +846,55 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	SDL_SetWindowPosition(m_pWindow, ScreenPos.x + OffsetX, ScreenPos.y + OffsetY);
 	SDL_GetWindowSize(m_pWindow, pWindowWidth, pWindowHeight);
 
-	// create gl context
-	m_GLContext = SDL_GL_CreateContext(m_pWindow);
-	if(m_GLContext == NULL)
-	{
-		dbg_msg("gfx", "unable to create OpenGL context: %s", SDL_GetError());
-		return -1;
-	}
-
-	if(Flags & IGraphicsBackend::INITFLAG_OPENGLES)
-	{
-		if(!gladLoadGLES2((GLADloadfunc) SDL_GL_GetProcAddress))
-		{
-			dbg_msg("gfx", "failed to initialize GLAD");
-			return -1;
-		}
-		dbg_msg("gfx", "using %s (%s)", glGetString(GL_VERSION), glGetString(GL_VENDOR));
-	}
-	else
-	{
-		if(!gladLoadGL((GLADloadfunc) SDL_GL_GetProcAddress))
-		{
-			dbg_msg("gfx", "failed to initialize GLAD");
-			return -1;
-		}
-		dbg_msg("gfx", "using OpenGL %s (%s)", glGetString(GL_VERSION), glGetString(GL_VENDOR));
-	}
 	SDL_GetWindowSizeInPixels(m_pWindow, pScreenWidth, pScreenHeight); // drawable size may differ in high dpi mode
-
-	SDL_GL_SetSwapInterval(Flags & IGraphicsBackend::INITFLAG_VSYNC ? 1 : 0);
-
-	SDL_GL_MakeCurrent(NULL, NULL);
 
 	// print sdl version
 	int Version = SDL_GetVersion();
 	dbg_msg("gfx", "SDL version %d.%d.%d", SDL_VERSIONNUM_MAJOR(Version), SDL_VERSIONNUM_MINOR(Version), SDL_VERSIONNUM_MICRO(Version));
 
-	// start the command processor
-	m_pProcessor = new CCommandProcessor_SDL_OpenGL;
-	StartProcessor(m_pProcessor);
-
-	// issue init commands for OpenGL and SDL
-	CCommandBuffer CmdBuffer(1024, 512);
-	CCommandProcessorFragment_SDL::CInitCommand CmdSDL;
-	CmdSDL.m_pWindow = m_pWindow;
-	CmdSDL.m_GLContext = m_GLContext;
-	CmdBuffer.AddCommand(CmdSDL);
-	CCommandProcessorFragment_OpenGL::CInitCommand CmdOpenGL;
-	CmdOpenGL.m_pTextureMemoryUsage = &m_TextureMemoryUsage;
-	CmdOpenGL.m_IsOpenGLES = Flags & IGraphicsBackend::INITFLAG_OPENGLES;
-	CmdBuffer.AddCommand(CmdOpenGL);
-	RunBuffer(&CmdBuffer);
-	WaitForIdle();
-
 	return 0;
 }
 
-int CGraphicsBackend_SDL_OpenGL::Shutdown()
+void CGraphicsBackend_SDL::ShutdownWindow()
 {
-	// issue a shutdown command
-	{
-		CCommandBuffer CmdBuffer(1024, 512);
-		CCommandProcessorFragment_SDL::CShutdownCommand Cmd;
-		CmdBuffer.AddCommand(Cmd);
-		RunBuffer(&CmdBuffer);
-		WaitForIdle();
-	}
-	{
-		CCommandBuffer CmdBuffer(1024, 512);
-		CCommandProcessorFragment_OpenGL::CGLShutdownCommand Cmd;
-		CmdBuffer.AddCommand(Cmd);
-		RunBuffer(&CmdBuffer);
-		WaitForIdle();
-	}
-	// stop and delete the processor
+	SDL_DestroyWindow(m_pWindow);
+	m_pWindow = 0;
+	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+}
+
+void CGraphicsBackend_SDL::StopAndDeleteProcessor()
+{
 	StopProcessor();
 	delete m_pProcessor;
 	m_pProcessor = 0;
-
-	SDL_GL_DestroyContext(m_GLContext);
-	SDL_DestroyWindow(m_pWindow);
-	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	return 0;
 }
 
-int CGraphicsBackend_SDL_OpenGL::MemoryUsage() const
+int CGraphicsBackend_SDL::MemoryUsage() const
 {
 	return m_TextureMemoryUsage;
 }
 
-void CGraphicsBackend_SDL_OpenGL::Minimize()
+void CGraphicsBackend_SDL::Minimize()
 {
 	SDL_MinimizeWindow(m_pWindow);
 }
 
-void CGraphicsBackend_SDL_OpenGL::Maximize()
+void CGraphicsBackend_SDL::Maximize()
 {
 	SDL_MaximizeWindow(m_pWindow);
 }
 
-bool CGraphicsBackend_SDL_OpenGL::Fullscreen(bool State)
+bool CGraphicsBackend_SDL::Fullscreen(bool State)
 {
 	return SDL_SetWindowFullscreen(m_pWindow, State);
 }
 
-void CGraphicsBackend_SDL_OpenGL::SetWindowBordered(bool State)
+void CGraphicsBackend_SDL::SetWindowBordered(bool State)
 {
 	SDL_SetWindowBordered(m_pWindow, State);
 }
 
-bool CGraphicsBackend_SDL_OpenGL::SetWindowScreen(int Index)
+bool CGraphicsBackend_SDL::SetWindowScreen(int Index)
 {
 	if(Index >= 0 && Index < m_NumScreens)
 	{
@@ -1012,12 +909,12 @@ bool CGraphicsBackend_SDL_OpenGL::SetWindowScreen(int Index)
 	return false;
 }
 
-int CGraphicsBackend_SDL_OpenGL::GetWindowScreen()
+int CGraphicsBackend_SDL::GetWindowScreen()
 {
 	return SDL_GetDisplayForWindow(m_pWindow);
 }
 
-int CGraphicsBackend_SDL_OpenGL::GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen)
+int CGraphicsBackend_SDL::GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen)
 {
 	SDL_DisplayMode **ppModes;
 	int NumModes;
@@ -1057,7 +954,7 @@ int CGraphicsBackend_SDL_OpenGL::GetVideoModes(CVideoMode *pModes, int MaxModes,
 	return ModesCount;
 }
 
-bool CGraphicsBackend_SDL_OpenGL::GetDesktopResolution(int Index, int *pDesktopWidth, int *pDesktopHeight)
+bool CGraphicsBackend_SDL::GetDesktopResolution(int Index, int *pDesktopWidth, int *pDesktopHeight)
 {
 	const SDL_DisplayMode *pDisplayMode = SDL_GetDesktopDisplayMode(Index);
 	if(!pDisplayMode)
@@ -1068,24 +965,135 @@ bool CGraphicsBackend_SDL_OpenGL::GetDesktopResolution(int Index, int *pDesktopW
 	return true;
 }
 
-bool CGraphicsBackend_SDL_OpenGL::WindowActive()
+bool CGraphicsBackend_SDL::WindowActive()
 {
 	return SDL_GetWindowFlags(m_pWindow) & SDL_WINDOW_INPUT_FOCUS;
 }
 
-bool CGraphicsBackend_SDL_OpenGL::WindowOpen()
+bool CGraphicsBackend_SDL::WindowOpen()
 {
 	return !(SDL_GetWindowFlags(m_pWindow) & SDL_WINDOW_HIDDEN);
 }
 
-bool CGraphicsBackend_SDL_OpenGL::ResizeWindow(int Width, int Height)
+bool CGraphicsBackend_SDL::ResizeWindow(int Width, int Height)
 {
 	return SDL_SetWindowSize(m_pWindow, Width, Height);
 }
 
-void *CGraphicsBackend_SDL_OpenGL::GetWindowHandle()
+void *CGraphicsBackend_SDL::GetWindowHandle()
 {
 	return m_pWindow;
 }
 
-IGraphicsBackend *CreateGraphicsBackend() { return new CGraphicsBackend_SDL_OpenGL; }
+// ------------ CGraphicsBackend_SDL_OpenGL
+
+CGraphicsBackend_SDL_OpenGL::CGraphicsBackend_SDL_OpenGL(IStorage *pStorage) :
+	CGraphicsBackend_SDL(pStorage)
+{
+	m_GLContext = 0;
+	m_pVertexShaderSource = 0;
+	m_pFragmentShaderSource = 0;
+}
+
+int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight)
+{
+	// set gl attributes for OpenGL ES 3.0
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+
+	if(FsaaSamples)
+	{
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, FsaaSamples);
+	}
+	else
+	{
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+	}
+
+	if(InitWindow(pName, pScreen, pWindowWidth, pWindowHeight, pScreenWidth, pScreenHeight, Flags, pDesktopWidth, pDesktopHeight, SDL_WINDOW_OPENGL) != 0)
+		return -1;
+
+	// create gl context
+	m_GLContext = SDL_GL_CreateContext(m_pWindow);
+	if(m_GLContext == NULL)
+	{
+		dbg_msg("gfx", "unable to create OpenGL ES context: %s", SDL_GetError());
+		return -1;
+	}
+
+	if(!gladLoadGLES2((GLADloadfunc) SDL_GL_GetProcAddress))
+	{
+		dbg_msg("gfx", "failed to initialize GLAD");
+		return -1;
+	}
+	dbg_msg("gfx", "using %s (%s)", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+
+	SDL_GL_SetSwapInterval(Flags & IGraphicsBackend::INITFLAG_VSYNC ? 1 : 0);
+
+	SDL_GL_MakeCurrent(NULL, NULL);
+
+	// start the command processor
+	m_pProcessor = new CCommandProcessor_SDL_OpenGL;
+	StartProcessor(m_pProcessor);
+
+	// load the shader sources from the data directory
+	unsigned VertexShaderSize = 0;
+	unsigned FragmentShaderSize = 0;
+	if(!m_pStorage->ReadFile("shaders/gles/quad.vert", IStorage::TYPE_ALL, (void **) &m_pVertexShaderSource, &VertexShaderSize) ||
+		!m_pStorage->ReadFile("shaders/gles/quad.frag", IStorage::TYPE_ALL, (void **) &m_pFragmentShaderSource, &FragmentShaderSize))
+	{
+		dbg_msg("gfx", "unable to load OpenGL ES shaders");
+		return -1;
+	}
+
+	// issue init commands for OpenGL and SDL
+	CCommandBuffer CmdBuffer(1024, 512);
+	CCommandProcessorFragment_SDL::CInitCommand CmdSDL;
+	CmdSDL.m_pWindow = m_pWindow;
+	CmdSDL.m_GLContext = m_GLContext;
+	CmdBuffer.AddCommand(CmdSDL);
+	CCommandProcessorFragment_OpenGL::CInitCommand CmdOpenGL;
+	CmdOpenGL.m_pTextureMemoryUsage = &m_TextureMemoryUsage;
+	CmdOpenGL.m_pVertexShaderSource = m_pVertexShaderSource;
+	CmdOpenGL.m_pFragmentShaderSource = m_pFragmentShaderSource;
+	CmdBuffer.AddCommand(CmdOpenGL);
+	RunBuffer(&CmdBuffer);
+	WaitForIdle();
+
+	return 0;
+}
+
+int CGraphicsBackend_SDL_OpenGL::Shutdown()
+{
+	// issue a shutdown command
+	{
+		CCommandBuffer CmdBuffer(1024, 512);
+		CCommandProcessorFragment_SDL::CShutdownCommand Cmd;
+		CmdBuffer.AddCommand(Cmd);
+		RunBuffer(&CmdBuffer);
+		WaitForIdle();
+	}
+	{
+		CCommandBuffer CmdBuffer(1024, 512);
+		CCommandProcessorFragment_OpenGL::CGLShutdownCommand Cmd;
+		CmdBuffer.AddCommand(Cmd);
+		RunBuffer(&CmdBuffer);
+		WaitForIdle();
+	}
+	// stop and delete the processor
+	StopAndDeleteProcessor();
+
+	mem_free(m_pVertexShaderSource);
+	m_pVertexShaderSource = 0;
+	mem_free(m_pFragmentShaderSource);
+	m_pFragmentShaderSource = 0;
+
+	SDL_GL_DestroyContext(m_GLContext);
+	m_GLContext = 0;
+	ShutdownWindow();
+	return 0;
+}

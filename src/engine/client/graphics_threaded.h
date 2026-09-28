@@ -68,6 +68,7 @@ public:
 		CMDGROUP_CORE = 0, // commands that everyone has to implement
 		CMDGROUP_PLATFORM_OPENGL = 10000, // commands specific to a platform
 		CMDGROUP_PLATFORM_SDL = 20000,
+		CMDGROUP_PLATFORM_SDLGPU = 30000,
 
 		//
 		CMD_NOP = CMDGROUP_CORE,
@@ -329,7 +330,6 @@ public:
 		INITFLAG_BORDERLESS = 8,
 		INITFLAG_X11XRANDR = 16,
 		INITFLAG_HIGHDPI = 32,
-		INITFLAG_OPENGLES = 64,
 	};
 
 	virtual ~IGraphicsBackend() {}
@@ -508,36 +508,8 @@ public:
 	virtual void *GetWindowHandle();
 };
 
-static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp)
-{
-	int Sum = 0;
-	for(int x = 0; x < ScaleW; x++)
-		for(int y = 0; y < ScaleH; y++)
-			Sum += pData[((v + y) * w + (u + x)) * Bpp + Offset];
-	return Sum / (ScaleW * ScaleH);
-}
+void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 
-static void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData)
-{
-	int ScaleW = Width / NewWidth;
-	int ScaleH = Height / NewHeight;
-
-	if(ScaleW == 1 && ScaleH == 1)
-		return (void *) pData;
-	int Bpp = 3;
-	if(Format == CCommandBuffer::TEXFORMAT_RGBA)
-		Bpp = 4;
-
-	unsigned char *pTmpData = (unsigned char *) mem_alloc(NewWidth * NewHeight * Bpp);
-
-	for(int y = 0; y < NewHeight; y++)
-		for(int x = 0; x < NewWidth; x++)
-			for(int b = 0; b < Bpp; b++)
-				pTmpData[(NewWidth * y + x) * Bpp + b] = Sample(Width, Height, pData, x * ScaleW, y * ScaleH, b, ScaleW, ScaleH, Bpp);
-
-	return pTmpData;
-}
-
-extern IGraphicsBackend *CreateGraphicsBackend();
+extern IGraphicsBackend *CreateGraphicsBackend(class IStorage *pStorage, int Backend);
 
 #endif // ENGINE_CLIENT_GRAPHICS_THREADED_H

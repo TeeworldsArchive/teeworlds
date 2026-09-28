@@ -5,6 +5,10 @@
 
 #include "graphics_threaded.h"
 
+#include <engine/external/glad/gl.h>
+
+#include <SDL3/SDL.h>
+
 #if defined(CONF_PLATFORM_MACOS)
 #include <objc/objc-runtime.h>
 
@@ -73,8 +77,44 @@ public:
 	bool RunCommand(const CCommandBuffer::CCommand *pBaseCommand);
 };
 
-// takes care of opengl related rendering
-class CCommandProcessorFragment_OpenGL
+// takes care of texture handling shared by the rendering fragments
+class CCommandProcessorFragment_Texture
+{
+public:
+	enum
+	{
+		SAMPLER2D_NOMIPMAPS = 0,
+		SAMPLER2D_MIPMAPS,
+		SAMPLER2D_LINERMIPMAPS,
+		NUM_BASIC_SAMPLERS,
+
+		SAMPLER2D_REPEAT_REPEAT = 0,
+		SAMPLER2D_REPEAT_CLAMP,
+		SAMPLER2D_CLAMP_CLAMP,
+		SAMPLER2D_CLAMP_REPEAT,
+		NUM_WRAP_SAMPLERS,
+	};
+
+protected:
+	volatile int *m_pTextureMemoryUsage;
+	int m_MaxTexSize;
+
+	CCommandProcessorFragment_Texture();
+
+	static int GetPixelSize(int TexFormat);
+	static int NumMipLevels(int Width, int Height);
+	static int WrapModeToSamplerType(int WrapModeU, int WrapModeV);
+	static void PremultiplyAlpha(unsigned char *pTexels, int NumPixels);
+	static void ComputeOrthoMatrix(const CCommandBuffer::CState &State, float *pMatrix);
+	static void BuildQuadIndexBuffer(unsigned int *pIndices, int NumIndices);
+
+	// resamples and premultiplies texture data, caller frees the result with mem_free
+	void *PrepareTextureData(const CCommandBuffer::CTextureCreateCommand *pCommand, int &Width, int &Height);
+	void CalcTextureMemSize(int Width, int Height, int Layers, int PixelSize, bool Mipmaps, int &MemSize);
+};
+
+// takes care of OpenGL ES related rendering
+class CCommandProcessorFragment_OpenGL : public CCommandProcessorFragment_Texture
 {
 	GLuint m_PrimitiveDrawVertexID;
 	GLuint m_PrimitiveDrawBufferID;
@@ -99,8 +139,6 @@ class CCommandProcessorFragment_OpenGL
 		int m_BasicSamplerType;
 	};
 	CTexture m_aTextures[CCommandBuffer::MAX_TEXTURES];
-	volatile int *m_pTextureMemoryUsage;
-	int m_MaxTexSize;
 	int m_Max2DArrayLayers;
 	GLuint m_QuadDrawIndexBufferID;
 	int m_LastSrcBlendMode;
@@ -112,22 +150,7 @@ class CCommandProcessorFragment_OpenGL
 
 	bool m_LastClipEnable;
 
-	bool m_IsOpenGLES;
-
 	GLuint m_LastSampler;
-	enum
-	{
-		SAMPLER2D_NOMIPMAPS = 0,
-		SAMPLER2D_MIPMAPS,
-		SAMPLER2D_LINERMIPMAPS,
-		NUM_BASIC_SAMPLERS,
-
-		SAMPLER2D_REPEAT_REPEAT = 0,
-		SAMPLER2D_REPEAT_CLAMP,
-		SAMPLER2D_CLAMP_CLAMP,
-		SAMPLER2D_CLAMP_REPEAT,
-		NUM_WRAP_SAMPLERS,
-	};
 	GLuint m_aaSampler2D[NUM_BASIC_SAMPLERS][NUM_WRAP_SAMPLERS];
 
 public:
@@ -141,7 +164,9 @@ public:
 	{
 		CInitCommand() : CCommand(CMD_INIT) {}
 		volatile int *m_pTextureMemoryUsage;
-		bool m_IsOpenGLES;
+		// shader sources, must stay alive until the command is processed
+		const char *m_pVertexShaderSource;
+		const char *m_pFragmentShaderSource;
 	};
 
 	struct CGLShutdownCommand : public CCommandBuffer::CCommand
@@ -152,12 +177,11 @@ public:
 
 private:
 	static int TexFormatToOpenGLFormat(int TexFormat);
-	static int GetPixelSize(int TexFormat);
 
 	bool SetState(const CCommandBuffer::CState &State);
 
 	GLuint CompileShader(GLuint Type, const char *pSource);
-	GLuint CreateShaderProgram();
+	GLuint CreateShaderProgram(const char *pVertexSource, const char *pFragmentSource);
 
 	void Cmd_Init(const CInitCommand *pCommand);
 	void Cmd_Shutdown(const CGLShutdownCommand *pCommand);
@@ -213,29 +237,51 @@ public:
 	bool RunCommand(const CCommandBuffer::CCommand *pBaseCommand);
 };
 
-// command processor impelementation, uses the fragments to combine into one processor
-class CCommandProcessor_SDL_OpenGL : public CGraphicsBackend_Threaded::ICommandProcessor
+// combines the general fragment with the backend specific ones
+class CCommandProcessor_SDL : public CGraphicsBackend_Threaded::ICommandProcessor
 {
-	CCommandProcessorFragment_OpenGL m_OpenGL;
-	CCommandProcessorFragment_SDL m_SDL;
 	CCommandProcessorFragment_General m_General;
+
+protected:
+	// runs the backend specific fragments, false if none handled the command
+	virtual bool RunBackendCommand(CCommandBuffer::CCommand *pCommand) = 0;
 
 public:
 	virtual void RunBuffer(CCommandBuffer *pBuffer);
 };
 
-// graphics backend implemented with SDL and OpenGL
-class CGraphicsBackend_SDL_OpenGL : public CGraphicsBackend_Threaded
+// OpenGL ES command processor
+class CCommandProcessor_SDL_OpenGL : public CCommandProcessor_SDL
 {
+	CCommandProcessorFragment_OpenGL m_OpenGL;
+	CCommandProcessorFragment_SDL m_SDL;
+
+protected:
+	virtual bool RunBackendCommand(CCommandBuffer::CCommand *pCommand);
+};
+
+// shared SDL window handling for the SDL based graphics backends
+class CGraphicsBackend_SDL : public CGraphicsBackend_Threaded
+{
+protected:
 	SDL_Window *m_pWindow;
-	SDL_GLContext m_GLContext;
 	ICommandProcessor *m_pProcessor;
 	volatile int m_TextureMemoryUsage;
 	int m_NumScreens;
+	class IStorage *m_pStorage;
+
+	// creates the SDL window and initializes the shared screen parameters
+	int InitWindow(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight,
+		int *pScreenWidth, int *pScreenHeight, int Flags, int *pDesktopWidth,
+		int *pDesktopHeight, int ExtraSdlFlags);
+	// destroys the window and shuts the video subsystem down
+	void ShutdownWindow();
+	// stops the render thread and deletes the command processor
+	void StopAndDeleteProcessor();
 
 public:
-	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight);
-	virtual int Shutdown();
+	CGraphicsBackend_SDL(class IStorage *pStorage);
+	virtual ~CGraphicsBackend_SDL() {}
 
 	virtual int MemoryUsage() const;
 
@@ -254,6 +300,19 @@ public:
 
 	virtual bool ResizeWindow(int Width, int Height);
 	virtual void *GetWindowHandle();
+};
+
+// graphics backend implemented with SDL and OpenGL ES
+class CGraphicsBackend_SDL_OpenGL : public CGraphicsBackend_SDL
+{
+	SDL_GLContext m_GLContext;
+	char *m_pVertexShaderSource;
+	char *m_pFragmentShaderSource;
+
+public:
+	CGraphicsBackend_SDL_OpenGL(class IStorage *pStorage);
+	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight);
+	virtual int Shutdown();
 };
 
 #endif // ENGINE_CLIENT_BACKEND_SDL_H

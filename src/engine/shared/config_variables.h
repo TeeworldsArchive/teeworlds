@@ -72,7 +72,7 @@ MACRO_CONFIG_INT(GfxAsyncRender, gfx_asyncrender, 0, 0, 1, CFGFLAG_SAVE | CFGFLA
 MACRO_CONFIG_INT(GfxMaxFps, gfx_maxfps, 144, 30, 2000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Maximum FPS (when Limit FPS is enabled)")
 MACRO_CONFIG_INT(GfxLimitFps, gfx_limitfps, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Limit FPS")
 MACRO_CONFIG_INT(GfxUseX11XRandRWM, gfx_use_x11xrandr_wm, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Let SDL use the X11 XRandR window manager")
-MACRO_CONFIG_INT(GfxOpenGLES, gfx_opengl_es, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Let the client use OpenGL ES backend")
+MACRO_CONFIG_INT(GfxBackend, gfx_backend, 0, 0, 2, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Graphics backend (0 = auto, 1 = OpenGL ES, 2 = SDL_GPU)")
 MACRO_CONFIG_INT(GfxUIScale, gfx_ui_scale, 0, -1, 5, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Client UI Scale, -1 = auto, 0 = 100%, 1 = 120%, 5 = 200%")
 
 MACRO_CONFIG_INT(InpGrab, inp_grab, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Disable OS mouse settings such as mouse acceleration, use raw mouse input mode")
