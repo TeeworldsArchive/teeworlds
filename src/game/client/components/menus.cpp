@@ -57,6 +57,9 @@ CMenus::CMenus()
 	m_RefreshSkinSelector = true;
 	m_pSelectedSkin = 0;
 	m_MenuActive = true;
+	m_GalleryMode = false;
+	m_GalleryFade = 1.0f;
+	m_GalleryFadeLastTime = 0.0f;
 	m_aDemolistPreviousSelection[0] = '\0';
 	m_SeekBarActivatedTime = 0;
 	m_SeekBarActive = true;
@@ -1032,9 +1035,26 @@ void CMenus::RenderMenu(CUIRect Screen)
 	if(m_Popup == POPUP_NONE)
 	{
 		if(m_MenuPage == PAGE_START && Client()->State() == IClient::STATE_OFFLINE)
-			RenderStartMenu(Screen);
+		{
+			UpdateGalleryFade();
+
+			// gallery mode: fade the whole start menu out so only the
+			// background map and the gallery button remain
+			if(m_GalleryFade > 0.0f)
+			{
+				if(m_GalleryFade < 1.0f)
+					Graphics()->SetGlobalAlpha(m_GalleryFade);
+				RenderStartMenu(Screen);
+				Graphics()->SetGlobalAlpha(1.0f);
+			}
+			RenderGalleryButton(Screen);
+		}
 		else
 		{
+			// leaving the start menu always leaves gallery mode
+			m_GalleryMode = false;
+			m_GalleryFade = 1.0f;
+
 			// do tab bar
 			float BarHeight = 60.0f;
 			if(Client()->State() == IClient::STATE_ONLINE && m_GamePage == PAGE_SETTINGS)
@@ -1690,6 +1710,12 @@ bool CMenus::OnInput(IInput::CEvent e)
 	// special handle esc and enter for popup purposes
 	if(e.m_Flags & IInput::FLAG_PRESS && e.m_Key == KEY_ESCAPE)
 	{
+		// in gallery mode escape only leaves gallery mode
+		if(m_GalleryMode)
+		{
+			m_GalleryMode = false;
+			return true;
+		}
 		SetActive(!IsActive());
 		UI()->OnInput(e);
 		return true;
@@ -1885,12 +1911,48 @@ void CMenus::UpdateMusicState()
 		m_pClient->m_pSounds->Stop(SOUND_MENU);
 }
 
+void CMenus::UpdateGalleryFade()
+{
+	const float Now = Client()->LocalTime();
+	float Delta = Now - m_GalleryFadeLastTime;
+	m_GalleryFadeLastTime = Now;
+	Delta = clamp(Delta, 0.0f, 0.25f);
+
+	// fade duration of the menu elements
+	const float Speed = 1.0f / 0.1f;
+	if(m_GalleryMode)
+		m_GalleryFade = maximum(0.0f, m_GalleryFade - Delta * Speed);
+	else
+		m_GalleryFade = minimum(1.0f, m_GalleryFade + Delta * Speed);
+}
+
+void CMenus::RenderGalleryButton(CUIRect Screen)
+{
+	// single icon button in the bottom left corner
+	const float ButtonSize = 32.0f;
+	CUIRect Button = Screen;
+	Button.HSplitBottom(ButtonSize + 16.0f, 0, &Button);
+	Button.VSplitLeft(ButtonSize + 16.0f, &Button, 0);
+	Button.Margin(8.0f, &Button);
+
+	static CButtonContainer s_GalleryButton;
+	if(DoButton_Menu(&s_GalleryButton, "\uF443", m_GalleryMode, &Button, 0, CUIRect::CORNER_ALL, 5.0f))
+		m_GalleryMode = !m_GalleryMode;
+}
+
 void CMenus::SetMenuPage(int NewPage)
 {
 	if(NewPage == m_MenuPage)
 		return;
 
 	m_MenuPage = NewPage;
+
+	// leaving the start menu always leaves gallery mode
+	if(m_MenuPage != PAGE_START)
+	{
+		m_GalleryMode = false;
+		m_GalleryFade = 1.0f;
+	}
 
 	// update camera position
 	{

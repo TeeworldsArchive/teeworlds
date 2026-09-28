@@ -183,6 +183,7 @@ CGraphics_Threaded::CGraphics_Threaded()
 
 	m_Rotation = 0;
 	m_Drawing = 0;
+	m_GlobalAlpha = 1.0f;
 
 	m_TextureMemoryUsage = 0;
 
@@ -350,6 +351,7 @@ int CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
 
 	m_aTextureIndices[pIndex->Id()] = m_FirstFreeTexture;
 	m_FirstFreeTexture = pIndex->Id();
+	m_aTextureFormats[pIndex->Id()] = CCommandBuffer::TEXFORMAT_INVALID;
 
 	pIndex->Invalidate();
 	return 0;
@@ -379,6 +381,7 @@ int CGraphics_Threaded::LoadTextureRawSub(CTextureHandle TextureID, int x, int y
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 	Cmd.m_Format = ImageFormatToTexFormat(Format);
+	m_aTextureFormats[TextureID.Id()] = Cmd.m_Format;
 
 	// calculate memory usage
 	const int MemSize = Width * Height * CImageInfo::GetPixelSize(Format);
@@ -414,6 +417,7 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 	Cmd.m_PixelSize = CImageInfo::GetPixelSize(Format);
 	Cmd.m_Format = ImageFormatToTexFormat(Format);
 	Cmd.m_StoreFormat = ImageFormatToTexFormat(StoreFormat);
+	m_aTextureFormats[Tex] = Cmd.m_Format;
 
 	// flags
 	Cmd.m_Flags = 0;
@@ -726,12 +730,22 @@ void CGraphics_Threaded::SetColorVertex(const CColorVertex *pArray, int Num)
 {
 	dbg_assert(m_Drawing != 0, "called Graphics()->SetColorVertex without begin");
 
+	// The backends premultiply RGBA textures and the shader outputs premultiplied
+	// fragments, so a global fade has to scale the color channels as well, otherwise
+	// the textures would brighten while fading. Alpha-only and RGB textures are the
+	// exception: their shader/blend path already applies the vertex alpha to the
+	// color, so only the alpha channel may be scaled there.
+	const int Texture = m_State.m_Texture;
+	const int TextureFormat = (Texture >= 0 && Texture < MAX_TEXTURES) ? m_aTextureFormats[Texture] : CCommandBuffer::TEXFORMAT_INVALID;
+	const bool AlphaAffectsColor = TextureFormat == CCommandBuffer::TEXFORMAT_ALPHA || TextureFormat == CCommandBuffer::TEXFORMAT_RGB;
+	const float ColorScale = AlphaAffectsColor ? 1.0f : m_GlobalAlpha;
+
 	for(int i = 0; i < Num; ++i)
 	{
-		m_aColor[pArray[i].m_Index].r = pArray[i].m_R;
-		m_aColor[pArray[i].m_Index].g = pArray[i].m_G;
-		m_aColor[pArray[i].m_Index].b = pArray[i].m_B;
-		m_aColor[pArray[i].m_Index].a = pArray[i].m_A;
+		m_aColor[pArray[i].m_Index].r = pArray[i].m_R * ColorScale;
+		m_aColor[pArray[i].m_Index].g = pArray[i].m_G * ColorScale;
+		m_aColor[pArray[i].m_Index].b = pArray[i].m_B * ColorScale;
+		m_aColor[pArray[i].m_Index].a = pArray[i].m_A * m_GlobalAlpha;
 	}
 }
 
@@ -755,6 +769,16 @@ void CGraphics_Threaded::SetColor4(const vec4 &TopLeft, const vec4 &TopRight, co
 		CColorVertex(2, BottomRight.r, BottomRight.g, BottomRight.b, BottomRight.a),
 		CColorVertex(3, BottomLeft.r, BottomLeft.g, BottomLeft.b, BottomLeft.a)};
 	SetColorVertex(Array, 4);
+}
+
+void CGraphics_Threaded::SetGlobalAlpha(float Alpha)
+{
+	m_GlobalAlpha = clamp(Alpha, 0.0f, 1.0f);
+}
+
+float CGraphics_Threaded::GetGlobalAlpha() const
+{
+	return m_GlobalAlpha;
 }
 
 void CGraphics_Threaded::QuadsSetSubset(float TlU, float TlV, float BrU, float BrV, int TextureIndex)
@@ -973,6 +997,8 @@ int CGraphics_Threaded::Init()
 	for(int i = 0; i < MAX_TEXTURES - 1; i++)
 		m_aTextureIndices[i] = i + 1;
 	m_aTextureIndices[MAX_TEXTURES - 1] = -1;
+	for(int i = 0; i < MAX_TEXTURES; i++)
+		m_aTextureFormats[i] = CCommandBuffer::TEXFORMAT_INVALID;
 
 	m_pBackend = CreateGraphicsBackend(m_pStorage, m_pConfig->m_GfxBackend == 1 ? 1 : 2);
 	// SDL_GPU has no fallback settings to retry with, so only try once

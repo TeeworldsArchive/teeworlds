@@ -195,6 +195,12 @@ public:
 	inline void SetColor(const vec4 &Color) { SetColor(Color.r, Color.g, Color.b, Color.a); }
 	virtual void SetColor4(const vec4 &TopLeft, const vec4 &TopRight, const vec4 &BottomLeft, const vec4 &BottomRight) = 0;
 
+	// Multiplies every color set through the SetColor* functions by a global alpha,
+	// fading whole groups of UI elements in and out at once. The color channels are
+	// scaled as well so that premultiplied-alpha textures do not brighten while fading.
+	virtual void SetGlobalAlpha(float Alpha) = 0;
+	virtual float GetGlobalAlpha() const = 0;
+
 	virtual void ReadBackbuffer(unsigned char **ppPixels, int x, int y, int w, int h) = 0;
 	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, void *pUser) = 0;
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;

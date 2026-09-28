@@ -107,6 +107,9 @@ private:
 	int m_MenuPage;
 	int m_MenuPageOld;
 	bool m_MenuActive;
+	bool m_GalleryMode;
+	float m_GalleryFade;
+	float m_GalleryFadeLastTime;
 	vec2 m_MousePos;
 	vec2 m_PrevMousePos;
 	int m_ActiveListBox;
@@ -540,6 +543,8 @@ private:
 	void RenderMenubar(CUIRect r);
 	void RenderNews(CUIRect MainView);
 	void RenderBackButton(CUIRect MainView);
+	void UpdateGalleryFade();
+	void RenderGalleryButton(CUIRect Screen);
 	static void ConchainUpdateMusicState(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	void UpdateMusicState();
 

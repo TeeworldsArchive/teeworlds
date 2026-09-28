@@ -158,6 +158,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 					Graphics()->TextureSet(s->m_Texture);
 					Graphics()->WrapClamp();
 					Graphics()->QuadsBegin();
+					Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 					IGraphics::CQuadItem QuadItem(Item.m_Rect.Center().x - FinalWidth / 2.0f, Item.m_Rect.Center().y - FinalHeight / 2.0f - 10.0f, FinalWidth, FinalHeight);
 					Graphics()->SingleQuadDrawTL(&QuadItem);
 					Graphics()->QuadsEnd();
