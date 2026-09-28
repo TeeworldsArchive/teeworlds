@@ -584,25 +584,25 @@ void CHud::RenderVoting()
 	char aBuf[512];
 	int SecondsLeft = m_pClient->m_pVoting->SecondsLeft();
 	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), SecondsLeft);
-	static CTextCursor s_TimerCursor(6.0f, 105.0f, 60.0f);
+	static CTextCursor s_TimerCursor(6.0f, 105.0f, 66.0f);
 	s_TimerCursor.m_Align = TEXTALIGN_RIGHT;
 	s_TimerCursor.Reset(((int64) g_Localization.Version()) << 32 | SecondsLeft);
 	TextRender()->TextOutlined(&s_TimerCursor, aBuf, -1);
 
-	static CTextCursor s_DescriptionCursor(6.0f, 5.0f, 60.0f, TEXTFLAG_ELLIPSIS);
+	static CTextCursor s_DescriptionCursor(6.0f, 5.0f, 66.0f, TEXTFLAG_ELLIPSIS);
 	s_DescriptionCursor.m_MaxWidth = 100.0f - s_TimerCursor.Width();
 	s_DescriptionCursor.m_MaxLines = 3;
 	s_DescriptionCursor.Reset();
 	TextRender()->TextOutlined(&s_DescriptionCursor, m_pClient->m_pVoting->VoteDescription(), -1);
 
 	// reason
-	static CTextCursor s_ReasonCursor(6.0f, 5.0f, 79.0f, TEXTFLAG_ELLIPSIS);
+	static CTextCursor s_ReasonCursor(6.0f, 5.0f, 85.0f, TEXTFLAG_ELLIPSIS);
 	str_format(aBuf, sizeof(aBuf), "%s %s", Localize("Reason:"), m_pClient->m_pVoting->VoteReason());
 	s_ReasonCursor.m_MaxWidth = 100.0f;
 	s_ReasonCursor.Reset();
 	TextRender()->TextOutlined(&s_ReasonCursor, aBuf, -1);
 
-	CUIRect Base = {5, 88, 100, 4};
+	CUIRect Base = {5, 94, 100, 4};
 	m_pClient->m_pVoting->RenderBars(Base);
 
 	char aBufYes[64], aBufNo[64];
