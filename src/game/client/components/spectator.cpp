@@ -209,7 +209,7 @@ void CSpectator::OnRender()
 	const float FontSize = 20.0f;
 
 	// draw free-view selection
-	if(m_pClient->m_LocalClientID == -1 || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team == TEAM_SPECTATORS)
+	// if(m_pClient->m_LocalClientID == -1 || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team == TEAM_SPECTATORS)
 	{
 		CUIRect FreeViewRect;
 		FreeViewRect.x = CenterOffset.x - 280.0f * ScaleX;
