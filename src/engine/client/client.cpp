@@ -607,7 +607,8 @@ void CClient::DisconnectWithReason(const char *pReason)
 	m_pConsole->DeregisterTempMapAll();
 	m_NetClient.Disconnect(pReason);
 	SetState(IClient::STATE_OFFLINE);
-	m_pMap->Unload();
+	// The map is not unloaded here: the game client keeps it loaded to fade it
+	// out and calls IClient::UnloadMap() when done.
 
 	// disable all downloads
 	m_MapdownloadChunk = 0;
@@ -809,11 +810,23 @@ void CClient::Render()
 	DebugRender();
 }
 
+void CClient::UnloadMap()
+{
+	if(!m_pMap->IsLoaded())
+		return;
+
+	m_pMap->Unload();
+	GameClient()->OnMapUnload();
+}
+
 const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc)
 {
 	static char aErrorMsg[512];
 
 	SetState(IClient::STATE_LOADING);
+
+	// the previous map may still be loaded while it fades out
+	UnloadMap();
 
 	if(!m_pMap->Load(pFilename))
 	{
@@ -829,7 +842,7 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA
 		sha256_str(*pWantedSha256, aWantedSha256, sizeof(aWantedSha256));
 		str_format(aErrorMsg, sizeof(aErrorMsg), "map differs from the server. found = %s wanted = %s", aSha256, aWantedSha256);
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aErrorMsg);
-		m_pMap->Unload();
+		UnloadMap();
 		return aErrorMsg;
 	}
 
@@ -838,7 +851,7 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA
 	{
 		str_format(aErrorMsg, sizeof(aErrorMsg), "map differs from the server. found = %08x wanted = %08x", m_pMap->Crc(), WantedCrc);
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aErrorMsg);
-		m_pMap->Unload();
+		UnloadMap();
 		return aErrorMsg;
 	}
 

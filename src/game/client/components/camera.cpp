@@ -18,6 +18,22 @@ CCamera::CCamera()
 	m_Center = vec2(0.0f, 0.0f);
 	m_PrevCenter = vec2(0.0f, 0.0f);
 	m_MenuCenter = vec2(0.0f, 0.0f);
+	m_MenuZoom = 0.7f;
+	m_GameCenter = vec2(0.0f, 0.0f);
+	m_GameZoom = 1.0f;
+
+	m_EnteringGame = false;
+	m_JoinTransitionActive = false;
+	m_JoinTransitionTime = 0.0f;
+	m_JoinTransitionStartCenter = vec2(0.0f, 0.0f);
+	m_JoinTransitionStartZoom = 1.0f;
+
+	m_PrevFollowPos = vec2(0.0f, 0.0f);
+	m_PositionJumpActive = false;
+	m_PositionJumpTime = 0.0f;
+	m_PositionJumpStartCenter = vec2(0.0f, 0.0f);
+
+	m_Zoom = 0.7f;
 
 	m_Positions[POS_START] = vec2(500.0f, 500.0f);
 	m_Positions[POS_INTERNET] = vec2(1000.0f, 1000.0f);
@@ -38,7 +54,7 @@ void CCamera::OnRender()
 {
 	if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
-		m_Zoom = 1.0f;
+		vec2 TargetCenter;
 
 		// update camera center
 		if(m_pClient->m_Snap.m_SpecInfo.m_Active && !m_pClient->m_Snap.m_SpecInfo.m_UsePosition &&
@@ -50,7 +66,7 @@ void CCamera::OnRender()
 				m_pClient->m_pControls->ClampMousePos();
 				m_CamType = CAMTYPE_SPEC;
 			}
-			m_Center = m_pClient->m_pControls->m_MousePos;
+			TargetCenter = m_pClient->m_pControls->m_MousePos;
 		}
 		else
 		{
@@ -100,9 +116,48 @@ void CCamera::OnRender()
 				s_CurrentCameraOffset = TargetCameraOffset;
 
 			if(m_pClient->m_Snap.m_SpecInfo.m_Active)
-				m_Center = m_pClient->m_Snap.m_SpecInfo.m_Position + s_CurrentCameraOffset;
+				TargetCenter = m_pClient->m_Snap.m_SpecInfo.m_Position + s_CurrentCameraOffset;
 			else
-				m_Center = m_pClient->m_LocalCharacterPos + s_CurrentCameraOffset;
+				TargetCenter = m_pClient->m_LocalCharacterPos + s_CurrentCameraOffset;
+		}
+
+		// A jump the current velocity cannot explain is a respawn, a teleport
+		// or a switch of the spectated tee: smooth it out instead of snapping.
+		const float Ticks = maximum(Client()->RenderFrameTime() * Client()->GameTickSpeed(), 1.0f);
+		const float MaxStep = maximum(FollowedVelocity() * 4.0f, POSITION_JUMP_MIN_DISTANCE) * Ticks;
+		if(!m_JoinTransitionActive && distance(m_pClient->m_LocalCharacterPos, m_PrevFollowPos) > MaxStep)
+		{
+			m_PositionJumpActive = true;
+			m_PositionJumpTime = 0.0f;
+			m_PositionJumpStartCenter = m_PrevCenter;
+		}
+		m_PrevFollowPos = m_pClient->m_LocalCharacterPos;
+
+		// when joining a game the camera flies in from where the menu was
+		if(m_JoinTransitionActive)
+		{
+			m_JoinTransitionTime += Client()->RenderFrameTime();
+			const float T = clamp(m_JoinTransitionTime * 1000.0f / JOIN_TRANSITION_TIME, 0.0f, 1.0f);
+			const float Eased = 1.0f - powf(1.0f - T, 3.0f);
+			m_Center = mix(m_JoinTransitionStartCenter, TargetCenter, Eased);
+			m_Zoom = mix(m_JoinTransitionStartZoom, 1.0f, Eased);
+			if(T >= 1.0f)
+				m_JoinTransitionActive = false;
+		}
+		else if(m_PositionJumpActive)
+		{
+			m_PositionJumpTime += Client()->RenderFrameTime();
+			const float T = clamp(m_PositionJumpTime * 1000.0f / POSITION_JUMP_TRANSITION_TIME, 0.0f, 1.0f);
+			const float Eased = 1.0f - powf(1.0f - T, 3.0f);
+			m_Center = mix(m_PositionJumpStartCenter, TargetCenter, Eased);
+			m_Zoom = 1.0f;
+			if(T >= 1.0f)
+				m_PositionJumpActive = false;
+		}
+		else
+		{
+			m_Center = TargetCenter;
+			m_Zoom = 1.0f;
 		}
 	}
 	else
@@ -170,7 +225,54 @@ void CCamera::OnConsoleInit()
 void CCamera::OnStateChange(int NewState, int OldState)
 {
 	if(OldState == IClient::STATE_OFFLINE)
+	{
 		m_MenuCenter = m_Center;
-	else if(NewState != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		m_MenuZoom = m_Zoom;
+		// we are leaving the menu, a game might follow
+		m_EnteringGame = true;
+	}
+	else if(OldState >= IClient::STATE_ONLINE && NewState < IClient::STATE_ONLINE)
+	{
+		// remember where the game was last rendered so its map can fade out in place
+		m_GameCenter = m_Center;
+		m_GameZoom = m_Zoom;
+		m_EnteringGame = false;
+	}
+
+	if(NewState >= IClient::STATE_ONLINE && OldState < IClient::STATE_ONLINE && m_EnteringGame)
+	{
+		// fly from the menu camera to the player camera instead of snapping
+		m_JoinTransitionActive = true;
+		m_JoinTransitionTime = 0.0f;
+		m_JoinTransitionStartCenter = m_Center;
+		m_JoinTransitionStartZoom = m_Zoom;
+		m_EnteringGame = false;
+	}
+	else if(NewState < IClient::STATE_ONLINE)
+	{
+		m_JoinTransitionActive = false;
+		m_PositionJumpActive = false;
+	}
+
+	// the first frame in a game must not look like the position jumped
+	if(NewState >= IClient::STATE_ONLINE && OldState < IClient::STATE_ONLINE)
+		m_PrevFollowPos = m_pClient->m_LocalCharacterPos;
+
+	if(OldState != IClient::STATE_OFFLINE && NewState != IClient::STATE_ONLINE && NewState != IClient::STATE_DEMOPLAYBACK)
 		m_Center = m_MenuCenter;
+}
+
+float CCamera::FollowedVelocity() const
+{
+	const CGameClient::CSnapState &Snap = m_pClient->m_Snap;
+	const CNetObj_Character *pCharacter = 0;
+
+	if(Snap.m_pLocalCharacter)
+		pCharacter = Snap.m_pLocalCharacter;
+	else if(Snap.m_SpecInfo.m_Active && Snap.m_SpecInfo.m_SpectatorID >= 0 && Snap.m_SpecInfo.m_SpectatorID < MAX_CLIENTS && Snap.m_aCharacters[Snap.m_SpecInfo.m_SpectatorID].m_Active)
+		pCharacter = &Snap.m_aCharacters[Snap.m_SpecInfo.m_SpectatorID].m_Cur;
+
+	if(!pCharacter)
+		return 0.0f;
+	return length(vec2(pCharacter->m_VelX / 256.0f, pCharacter->m_VelY / 256.0f));
 }

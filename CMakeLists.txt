@@ -1568,6 +1568,8 @@ if(CLIENT)
     components/infomessages.h
     components/items.cpp
     components/items.h
+    components/map.cpp
+    components/map.h
     components/mapimages.cpp
     components/mapimages.h
     components/maplayers.cpp

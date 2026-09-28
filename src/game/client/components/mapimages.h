@@ -6,14 +6,18 @@
 
 class CMapImages : public CComponent
 {
+public:
 	enum
 	{
 		MAX_TEXTURES = 64,
 
 		MAP_TYPE_GAME = 0,
-		MAP_TYPE_MENU,
+		MAP_TYPE_MENU, // first menu map slot (cross-fade)
+		MAP_TYPE_MENU_B, // second menu map slot (cross-fade)
 		NUM_MAP_TYPES
 	};
+
+private:
 	struct
 	{
 		struct
@@ -32,11 +36,13 @@ class CMapImages : public CComponent
 public:
 	CMapImages();
 
-	IGraphics::CTextureHandle Get(int Index, bool IsQuads) const;
+	IGraphics::CTextureHandle Get(int Index, bool IsQuads, int MapType = -1) const;
 	int Num() const;
 
 	virtual void OnMapLoad();
-	void OnMenuMapLoad(class IMap *pMap);
+	virtual void OnMapUnload();
+	void OnMenuMapLoad(class IMap *pMap, int MapType = MAP_TYPE_MENU);
+	void UnloadMap(int MapType);
 
 	IGraphics::CTextureHandle GetEasterTexture();
 };

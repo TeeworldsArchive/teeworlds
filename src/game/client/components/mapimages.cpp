@@ -10,8 +10,8 @@
 
 CMapImages::CMapImages()
 {
-	m_Info[MAP_TYPE_GAME].m_Count = 0;
-	m_Info[MAP_TYPE_MENU].m_Count = 0;
+	for(int i = 0; i < NUM_MAP_TYPES; i++)
+		m_Info[i].m_Count = 0;
 
 	m_EasterIsLoaded = false;
 }
@@ -22,12 +22,7 @@ void CMapImages::LoadMapImages(IMap *pMap, class CLayers *pLayers, int MapType)
 		return;
 
 	// unload all textures
-	for(int i = 0; i < m_Info[MapType].m_Count; i++)
-	{
-		Graphics()->UnloadTexture(&(m_Info[MapType].m_aTextures[i].m_Quads));
-		Graphics()->UnloadTexture(&(m_Info[MapType].m_aTextures[i].m_Tilemap));
-	}
-	m_Info[MapType].m_Count = 0;
+	UnloadMap(MapType);
 
 	int Start;
 	pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &m_Info[MapType].m_Count);
@@ -79,11 +74,29 @@ void CMapImages::OnMapLoad()
 	LoadMapImages(Kernel()->RequestInterface<IMap>(), Layers(), MAP_TYPE_GAME);
 }
 
-void CMapImages::OnMenuMapLoad(IMap *pMap)
+void CMapImages::OnMapUnload()
+{
+	UnloadMap(MAP_TYPE_GAME);
+}
+
+void CMapImages::OnMenuMapLoad(IMap *pMap, int MapType)
 {
 	CLayers MenuLayers;
 	MenuLayers.Init(Kernel(), pMap);
-	LoadMapImages(pMap, &MenuLayers, MAP_TYPE_MENU);
+	LoadMapImages(pMap, &MenuLayers, MapType);
+}
+
+void CMapImages::UnloadMap(int MapType)
+{
+	if(MapType < 0 || MapType >= NUM_MAP_TYPES)
+		return;
+
+	for(int i = 0; i < m_Info[MapType].m_Count; i++)
+	{
+		Graphics()->UnloadTexture(&(m_Info[MapType].m_aTextures[i].m_Quads));
+		Graphics()->UnloadTexture(&(m_Info[MapType].m_aTextures[i].m_Tilemap));
+	}
+	m_Info[MapType].m_Count = 0;
 }
 
 IGraphics::CTextureHandle CMapImages::GetEasterTexture()
@@ -98,11 +111,12 @@ IGraphics::CTextureHandle CMapImages::GetEasterTexture()
 	return m_EasterTexture;
 }
 
-IGraphics::CTextureHandle CMapImages::Get(int Index, bool IsQuads) const
+IGraphics::CTextureHandle CMapImages::Get(int Index, bool IsQuads, int MapType) const
 {
-	if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
-		return IsQuads ? m_Info[MAP_TYPE_GAME].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_GAME].m_Count)].m_Quads : m_Info[MAP_TYPE_GAME].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_GAME].m_Count)].m_Tilemap;
-	return IsQuads ? m_Info[MAP_TYPE_MENU].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_MENU].m_Count)].m_Quads : m_Info[MAP_TYPE_MENU].m_aTextures[clamp(Index, 0, m_Info[MAP_TYPE_MENU].m_Count)].m_Tilemap;
+	if(MapType < 0)
+		MapType = (Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK) ? MAP_TYPE_GAME : MAP_TYPE_MENU;
+	MapType = clamp(MapType, 0, (int) NUM_MAP_TYPES - 1);
+	return IsQuads ? m_Info[MapType].m_aTextures[clamp(Index, 0, m_Info[MapType].m_Count)].m_Quads : m_Info[MapType].m_aTextures[clamp(Index, 0, m_Info[MapType].m_Count)].m_Tilemap;
 }
 
 int CMapImages::Num() const

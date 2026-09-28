@@ -43,6 +43,7 @@ public:
 	virtual void OnRender() {}
 	virtual void OnRelease() {}
 	virtual void OnMapLoad() {}
+	virtual void OnMapUnload() {}
 	virtual void OnSoundLoaded() {};
 	virtual void OnMessage(int Msg, void *pRawMsg) {}
 	virtual bool OnCursorMove(float x, float y, int CursorType) { return false; }

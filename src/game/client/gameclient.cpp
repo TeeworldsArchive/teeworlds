@@ -37,6 +37,7 @@
 #include "components/hud.h"
 #include "components/infomessages.h"
 #include "components/items.h"
+#include "components/map.h"
 #include "components/mapimages.h"
 #include "components/maplayers.h"
 #include "components/mapsounds.h"
@@ -117,12 +118,8 @@ static CStats gs_Stats;
 static CTees gs_Tees;
 static CNamePlates gs_NamePlates;
 static CItems gs_Items;
-static CMapImages gs_MapImages;
 
-static CMapLayers gs_MapLayersBackGround(CMapLayers::TYPE_BACKGROUND);
-static CMapLayers gs_MapLayersForeGround(CMapLayers::TYPE_FOREGROUND);
-
-static CMapSounds gs_MapSounds;
+static CMapComponent gs_MapComponent;
 
 CGameClient::CStack::CStack() { m_Num = 0; }
 void CGameClient::CStack::Add(class CComponent *pComponent) { m_apComponents[m_Num++] = pComponent; }
@@ -251,22 +248,20 @@ void CGameClient::OnConsoleInit()
 	m_pSounds = &::gs_Sounds;
 	m_pMotd = &::gs_Motd;
 	m_pDamageind = &::gsDamageInd;
-	m_pMapimages = &::gs_MapImages;
+	m_pMapComponent = &::gs_MapComponent;
 	m_pVoting = &::gs_Voting;
 	m_pScoreboard = &::gs_Scoreboard;
 	m_pItems = &::gs_Items;
-	m_pMapLayersBackGround = &::gs_MapLayersBackGround;
-	m_pMapLayersForeGround = &::gs_MapLayersForeGround;
-	m_pMapSounds = &::gs_MapSounds;
 	m_pStats = &::gs_Stats;
 
 	// make a list of all the systems, make sure to add them in the corrent render order
+	m_All.Add(m_pMapComponent); // owns the map resources and their lifetime
 	m_All.Add(m_pSkins);
 	m_All.Add(m_pCountryFlags);
-	m_All.Add(m_pMapimages);
+	m_All.Add(m_pMapComponent->Images());
 	m_All.Add(m_pEffects); // doesn't render anything, just updates effects
 	m_All.Add(m_pParticles); // doesn't render anything, just updates all the particles
-	m_All.Add(m_pMapSounds);
+	m_All.Add(m_pMapComponent->Sounds());
 	m_All.Add(m_pBinds);
 	m_All.Add(&m_pBinds->m_SpecialBinds);
 	m_All.Add(m_pControls);
@@ -274,11 +269,11 @@ void CGameClient::OnConsoleInit()
 	m_All.Add(m_pSounds);
 	m_All.Add(m_pVoting);
 
-	m_All.Add(&gs_MapLayersBackGround); // first to render
+	m_All.Add(m_pMapComponent->LayersBackground()); // first to render
 	m_All.Add(&m_pParticles->m_RenderTrail);
 	m_All.Add(m_pItems);
 	m_All.Add(&gs_Tees);
-	m_All.Add(&gs_MapLayersForeGround);
+	m_All.Add(m_pMapComponent->LayersForeground());
 	m_All.Add(&m_pParticles->m_RenderExplosions);
 	m_All.Add(&gs_NamePlates);
 	m_All.Add(&m_pParticles->m_RenderGeneral);
@@ -942,6 +937,12 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 	// then change the state
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_apComponents[i]->OnStateChange(NewState, OldState);
+}
+
+void CGameClient::OnMapUnload()
+{
+	for(int i = 0; i < m_All.m_Num; i++)
+		m_All.m_apComponents[i]->OnMapUnload();
 }
 
 void CGameClient::OnShutdown()

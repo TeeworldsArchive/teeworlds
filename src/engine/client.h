@@ -100,6 +100,10 @@ public:
 	//
 	virtual const char *GetCurrentMapName() const = 0;
 	virtual const char *GetCurrentMapPath() const = 0;
+
+	// Unloads the current map and notifies the game client (OnMapUnload). The
+	// game client decides when to call this, e.g. after fading the map out.
+	virtual void UnloadMap() = 0;
 	virtual const char *MapDownloadName() const = 0;
 	virtual int MapDownloadAmount() const = 0;
 	virtual int MapDownloadTotalsize() const = 0;
@@ -177,6 +181,7 @@ public:
 	virtual void OnUpdate() = 0;
 	virtual void OnStateChange(int NewState, int OldState) = 0;
 	virtual void OnConnected() = 0;
+	virtual void OnMapUnload() = 0;
 	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker) = 0;
 	virtual void OnPredict() = 0;
 	virtual void OnDemoRecorderStart() = 0;

@@ -15,6 +15,7 @@
 #include <game/layers.h>
 
 #include "camera.h"
+#include "map.h"
 #include "mapimages.h"
 #include "maplayers.h"
 #include "menus.h"
@@ -22,19 +23,53 @@
 CMapLayers::CMapLayers(int Type)
 {
 	m_Type = Type;
-	m_pMenuMap = 0;
-	m_pMenuLayers = 0;
 	m_OnlineStartTime = 0;
+
+	for(int i = 0; i < MAX_MENU_MAP_SLOTS; i++)
+	{
+		m_aMenuMaps[i].m_pMap = 0;
+		m_aMenuMaps[i].m_pLayers = 0;
+		m_aMenuMaps[i].m_ImageType = CMapImages::MAP_TYPE_MENU + i;
+		m_aMenuMaps[i].m_Alpha = 0.0f;
+		m_aMenuMaps[i].m_Loaded = false;
+	}
+	m_CurrentMenuMap = -1;
+	m_PrevMenuMap = -1;
+	m_MenuMapFadeIn = false;
+
+	m_pEnvEvalLayers = 0;
+	m_pEnvEvalPoints = 0;
+	m_EnvEvalIsMenuMap = false;
 }
 
 void CMapLayers::OnStateChange(int NewState, int OldState)
 {
 	if(NewState == IClient::STATE_ONLINE)
 		m_OnlineStartTime = Client()->LocalTime(); // reset time for non-scynchronized envelopes
+
+	if(m_Type != TYPE_BACKGROUND || m_CurrentMenuMap < 0)
+		return;
+
+	// The menu map is the base layer of both transitions: joining fades the
+	// game map in over it, disconnecting restores it and fades the game map
+	// out on top of it.
+	if(NewState >= IClient::STATE_ONLINE && OldState < IClient::STATE_ONLINE)
+	{
+		m_MenuMapFadeIn = false;
+		m_aMenuMaps[m_CurrentMenuMap].m_Alpha = 1.0f;
+	}
+	else if(NewState == IClient::STATE_OFFLINE && OldState >= IClient::STATE_ONLINE)
+	{
+		m_MenuMapFadeIn = false;
+		m_aMenuMaps[m_CurrentMenuMap].m_Alpha = 1.0f;
+	}
 }
 
-void CMapLayers::LoadBackgroundMap()
+bool CMapLayers::LoadMenuMap(int Slot)
 {
+	if(Slot < 0 || Slot >= MAX_MENU_MAP_SLOTS)
+		return false;
+
 	const char *pMenuMap = Config()->m_ClMenuMap;
 	if(str_comp(pMenuMap, "auto") == 0)
 	{
@@ -61,22 +96,24 @@ void CMapLayers::LoadBackgroundMap()
 	const int HourOfTheDay = time_houroftheday();
 	const bool IsDaytime = HourOfTheDay >= 6 && HourOfTheDay < 18;
 
+	IEngineMap *pMap = m_aMenuMaps[Slot].m_pMap;
+
 	char aBuf[128];
 	// check for the appropriate day/night map
 	str_format(aBuf, sizeof(aBuf), "ui/themes/%s_%s.map", pMenuMap, IsDaytime ? "day" : "night");
-	if(!m_pMenuMap->Load(aBuf, m_pClient->Storage()))
+	if(!pMap->Load(aBuf, m_pClient->Storage()))
 	{
 		// fall back on generic map
 		str_format(aBuf, sizeof(aBuf), "ui/themes/%s.map", pMenuMap);
-		if(!m_pMenuMap->Load(aBuf, m_pClient->Storage()))
+		if(!pMap->Load(aBuf, m_pClient->Storage()))
 		{
 			// fall back on day/night alternative map
 			str_format(aBuf, sizeof(aBuf), "ui/themes/%s_%s.map", pMenuMap, IsDaytime ? "night" : "day");
-			if(!m_pMenuMap->Load(aBuf, m_pClient->Storage()))
+			if(!pMap->Load(aBuf, m_pClient->Storage()))
 			{
 				str_format(aBuf, sizeof(aBuf), "map '%s' not found", pMenuMap);
 				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
-				return;
+				return false;
 			}
 		}
 	}
@@ -84,9 +121,64 @@ void CMapLayers::LoadBackgroundMap()
 	str_format(aBuf, sizeof(aBuf), "loaded map '%s'", pMenuMap);
 	Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
 
-	m_pMenuLayers->Init(Kernel(), m_pMenuMap);
-	m_pClient->m_pMapimages->OnMenuMapLoad(m_pMenuMap);
-	LoadEnvPoints(m_pMenuLayers, m_lEnvPointsMenu);
+	m_aMenuMaps[Slot].m_pLayers->Init(Kernel(), pMap);
+	m_pClient->m_pMapComponent->Images()->OnMenuMapLoad(pMap, m_aMenuMaps[Slot].m_ImageType);
+	LoadEnvPoints(m_aMenuMaps[Slot].m_pLayers, m_aMenuMaps[Slot].m_lEnvPoints);
+	m_aMenuMaps[Slot].m_Loaded = true;
+	return true;
+}
+
+void CMapLayers::UnloadMenuMap(int Slot)
+{
+	if(Slot < 0 || Slot >= MAX_MENU_MAP_SLOTS)
+		return;
+
+	if(m_aMenuMaps[Slot].m_pMap)
+		m_aMenuMaps[Slot].m_pMap->Unload();
+	m_pClient->m_pMapComponent->Images()->UnloadMap(m_aMenuMaps[Slot].m_ImageType);
+	m_aMenuMaps[Slot].m_lEnvPoints.clear();
+	m_aMenuMaps[Slot].m_Loaded = false;
+	m_aMenuMaps[Slot].m_Alpha = 0.0f;
+}
+
+void CMapLayers::FinalizeMenuMapFade()
+{
+	if(m_PrevMenuMap >= 0)
+	{
+		UnloadMenuMap(m_PrevMenuMap);
+		m_PrevMenuMap = -1;
+	}
+}
+
+void CMapLayers::UpdateMenuMapFade()
+{
+	const float Delta = clamp(Client()->RenderFrameTime(), 0.0f, 0.1f);
+	const float Speed = 1000.0f / MENU_MAP_FADE_TIME; // cross-fade duration
+	const bool Online = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
+
+	// while a game is running the menu map fades out over the game map. The
+	// alpha is set back to 1 by OnStateChange when the transition starts.
+	if(m_CurrentMenuMap >= 0)
+	{
+		float &Alpha = m_aMenuMaps[m_CurrentMenuMap].m_Alpha;
+		if(Online)
+			Alpha = maximum(0.0f, Alpha - Delta * Speed);
+		else if(m_MenuMapFadeIn)
+		{
+			// switching from no map: fade in over the animated background
+			Alpha = minimum(1.0f, Alpha + Delta * Speed);
+			if(Alpha >= 1.0f)
+				m_MenuMapFadeIn = false;
+		}
+	}
+
+	// the previous menu map fades out during a theme switch
+	if(m_PrevMenuMap >= 0)
+	{
+		m_aMenuMaps[m_PrevMenuMap].m_Alpha = maximum(0.0f, m_aMenuMaps[m_PrevMenuMap].m_Alpha - Delta * Speed);
+		if(m_aMenuMaps[m_PrevMenuMap].m_Alpha <= 0.0f)
+			FinalizeMenuMapFade();
+	}
 }
 
 int CMapLayers::GetInitAmount() const
@@ -100,12 +192,20 @@ void CMapLayers::OnInit()
 {
 	if(m_Type == TYPE_BACKGROUND)
 	{
-		m_pMenuLayers = new CLayers;
-		m_pMenuMap = CreateEngineMap();
+		for(int i = 0; i < MAX_MENU_MAP_SLOTS; i++)
+		{
+			m_aMenuMaps[i].m_pLayers = new CLayers;
+			m_aMenuMaps[i].m_pMap = CreateEngineMap();
+		}
+
 		m_pClient->m_pMenus->RenderLoading(1);
 		if(Config()->m_ClShowMenuMap)
 		{
-			LoadBackgroundMap();
+			if(LoadMenuMap(0))
+			{
+				m_CurrentMenuMap = 0;
+				m_aMenuMaps[0].m_Alpha = 1.0f;
+			}
 			m_pClient->m_pMenus->RenderLoading(14);
 		}
 	}
@@ -122,6 +222,17 @@ void CMapLayers::OnMapLoad()
 		// easter time, place eggs
 		if(m_pClient->IsEaster())
 			PlaceEasterEggs(Layers());
+	}
+}
+
+void CMapLayers::OnMapUnload()
+{
+	// the envelope points and the easter eggs point into the map data
+	m_lEnvPoints.clear();
+	if(m_pEggTiles)
+	{
+		mem_free(m_pEggTiles);
+		m_pEggTiles = 0;
 	}
 }
 
@@ -200,18 +311,26 @@ void CMapLayers::EnvelopeEval(float TimeOffset, int Env, float *pChannels, void 
 	pChannels[2] = 0;
 	pChannels[3] = 0;
 
-	CEnvPoint *pPoints = 0;
-	CLayers *pLayers = 0;
-	if(pThis->Client()->State() == IClient::STATE_ONLINE || pThis->Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	// these are set while a map is rendered, so that the same component can
+	// render both the game map and a menu map
+	CLayers *pLayers = pThis->m_pEnvEvalLayers;
+	array<CEnvPoint> *pEnvPoints = pThis->m_pEnvEvalPoints;
+	bool IsMenuMap = pThis->m_EnvEvalIsMenuMap;
+
+	if(!pLayers)
 	{
+		// called outside of a render pass, e.g. by the map sounds
 		pLayers = pThis->Layers();
-		pPoints = pThis->m_lEnvPoints.base_ptr();
+		pEnvPoints = &pThis->m_lEnvPoints;
+		IsMenuMap = false;
 	}
-	else
-	{
-		pLayers = pThis->m_pMenuLayers;
-		pPoints = pThis->m_lEnvPointsMenu.base_ptr();
-	}
+
+	if(!pLayers || !pEnvPoints)
+		return;
+
+	CEnvPoint *pPoints = pEnvPoints->base_ptr();
+	if(!pPoints)
+		return;
 
 	int Start, Num;
 	pLayers->Map()->GetType(MAPITEMTYPE_ENVELOPE, &Start, &Num);
@@ -224,7 +343,7 @@ void CMapLayers::EnvelopeEval(float TimeOffset, int Env, float *pChannels, void 
 
 	static float s_Time = 0.0f;
 	float EnvalopTicks = (pItemPoints[pItem->m_NumPoints - 1].m_Time - pItemPoints[0].m_Time) / 1000.0f * pThis->Client()->GameTickSpeed();
-	if(pThis->Client()->State() == IClient::STATE_ONLINE || pThis->Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	if(!IsMenuMap && (pThis->Client()->State() == IClient::STATE_ONLINE || pThis->Client()->State() == IClient::STATE_DEMOPLAYBACK))
 	{
 		if(pThis->m_pClient->m_Snap.m_pGameData && !pThis->m_pClient->IsWorldPaused())
 		{
@@ -247,25 +366,25 @@ void CMapLayers::EnvelopeEval(float TimeOffset, int Env, float *pChannels, void 
 	CRenderTools::RenderEvalEnvelope(pItemPoints, pItem->m_NumPoints, 4, s_Time + TimeOffset, pChannels);
 }
 
-void CMapLayers::OnRender()
+void CMapLayers::RenderLayers(CLayers *pLayers, array<CEnvPoint> *pEnvPoints, int ImageType, bool IsMenuMap, const vec2 &Center, float Zoom, float Alpha, bool LeaveScreenMapped)
 {
-	CLayers *pLayers = 0;
-	if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
-		pLayers = Layers();
-	else if(m_pMenuMap && m_pMenuMap->IsLoaded())
-		pLayers = m_pMenuLayers;
-
-	if(!pLayers)
+	if(!pLayers || !pLayers->Map())
 		return;
+
+	m_pEnvEvalLayers = pLayers;
+	m_pEnvEvalPoints = pEnvPoints;
+	m_EnvEvalIsMenuMap = IsMenuMap;
 
 	CUIRect Screen;
 	Graphics()->GetScreen(&Screen.x, &Screen.y, &Screen.w, &Screen.h);
 
-	vec2 Center = *m_pClient->m_pCamera->GetCenter();
+	if(Alpha < 1.0f)
+		Graphics()->SetGlobalAlpha(Alpha);
 
 	bool PassedGameLayer = false;
+	bool Stop = false;
 
-	for(int g = 0; g < pLayers->NumGroups(); g++)
+	for(int g = 0; g < pLayers->NumGroups() && !Stop; g++)
 	{
 		CMapItemGroup *pGroup = pLayers->GetGroup(g);
 
@@ -273,7 +392,7 @@ void CMapLayers::OnRender()
 		{
 			// set clipping
 			float Points[4];
-			RenderTools()->MapScreenToGroup(Center.x, Center.y, pLayers->GameGroup(), m_pClient->m_pCamera->GetZoom());
+			RenderTools()->MapScreenToGroup(Center.x, Center.y, pLayers->GameGroup(), Zoom);
 			Graphics()->GetScreen(&Points[0], &Points[1], &Points[2], &Points[3]);
 			float x0 = (pGroup->m_ClipX - Points[0]) / (Points[2] - Points[0]);
 			float y0 = (pGroup->m_ClipY - Points[1]) / (Points[3] - Points[1]);
@@ -287,7 +406,7 @@ void CMapLayers::OnRender()
 				(int) ((x1 - x0) * Graphics()->ScreenWidth()), (int) ((y1 - y0) * Graphics()->ScreenHeight()));
 		}
 
-		RenderTools()->MapScreenToGroup(Center.x, Center.y, pGroup, m_pClient->m_pCamera->GetZoom());
+		RenderTools()->MapScreenToGroup(Center.x, Center.y, pGroup, Zoom);
 
 		for(int l = 0; l < pGroup->m_NumLayers; l++)
 		{
@@ -305,8 +424,13 @@ void CMapLayers::OnRender()
 				Render = true;
 			else if(m_Type == 0)
 			{
-				if(PassedGameLayer && (Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK))
-					return;
+				// menu maps are rendered completely by the background instance,
+				// the game map is split into a background and a foreground part
+				if(!IsMenuMap && PassedGameLayer)
+				{
+					Stop = true;
+					break;
+				}
 				Render = true;
 			}
 			else
@@ -319,7 +443,7 @@ void CMapLayers::OnRender()
 				continue;
 
 			// skip rendering if detail layers is not wanted
-			if(!(pLayer->m_Flags & LAYERFLAG_DETAIL && !Config()->m_GfxHighDetail && !IsGameLayer && (Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)))
+			if(!(pLayer->m_Flags & LAYERFLAG_DETAIL && !Config()->m_GfxHighDetail && !IsGameLayer && !IsMenuMap))
 			{
 				if(pLayer->m_Type == LAYERTYPE_TILES && Input()->KeyIsPressed(KEY_LCTRL) && Input()->KeyIsPressed(KEY_LSHIFT) && UI()->KeyPress(KEY_KP_0))
 				{
@@ -350,10 +474,14 @@ void CMapLayers::OnRender()
 						if(pTMap->m_Image == -1)
 							Graphics()->TextureClear();
 						else
-							Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pTMap->m_Image, false));
+							Graphics()->TextureSet(m_pClient->m_pMapComponent->Images()->Get(pTMap->m_Image, false, ImageType));
 
 						CTile *pTiles = (CTile *) pLayers->Map()->GetData(pTMap->m_Data);
-						Graphics()->BlendNone();
+						// opaque layers use BlendNone, but a fading map has to blend
+						if(Alpha < 1.0f)
+							Graphics()->BlendNormal();
+						else
+							Graphics()->BlendNone();
 						vec4 Color = vec4(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f);
 						RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND | LAYERRENDERFLAG_OPAQUE,
 							EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
@@ -367,7 +495,7 @@ void CMapLayers::OnRender()
 						if(pQLayer->m_Image == -1)
 							Graphics()->TextureClear();
 						else
-							Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pQLayer->m_Image, true));
+							Graphics()->TextureSet(m_pClient->m_pMapComponent->Images()->Get(pQLayer->m_Image, true, ImageType));
 
 						CQuad *pQuads = (CQuad *) pLayers->Map()->GetDataSwapped(pQLayer->m_Data);
 
@@ -385,7 +513,7 @@ void CMapLayers::OnRender()
 				CMapItemLayer *pNextLayer = pLayers->GetLayer(pGroup->m_StartLayer + l + 1);
 				if(m_pEggTiles && (l + 1) < pGroup->m_NumLayers && pNextLayer == (CMapItemLayer *) pLayers->GameLayer())
 				{
-					Graphics()->TextureSet(m_pClient->m_pMapimages->GetEasterTexture());
+					Graphics()->TextureSet(m_pClient->m_pMapComponent->Images()->GetEasterTexture());
 					Graphics()->BlendNormal();
 					RenderTools()->RenderTilemap(m_pEggTiles, m_EggLayerWidth, m_EggLayerHeight, 32.0f, vec4(1, 1, 1, 1), LAYERRENDERFLAG_TRANSPARENT, EnvelopeEval, this, -1, 0);
 				}
@@ -398,8 +526,79 @@ void CMapLayers::OnRender()
 	if(!Config()->m_GfxNoclip)
 		Graphics()->ClipDisable();
 
-	// reset the screen like it was before
-	Graphics()->MapScreen(Screen.x, Screen.y, Screen.w, Screen.h);
+	Graphics()->SetGlobalAlpha(1.0f);
+
+	// the game map leaves the screen mapped to the game group, the entity renderers
+	// rely on that, so only restore it for everything else
+	if(!LeaveScreenMapped)
+		Graphics()->MapScreen(Screen.x, Screen.y, Screen.w, Screen.h);
+
+	m_pEnvEvalLayers = 0;
+	m_pEnvEvalPoints = 0;
+}
+
+void CMapLayers::RenderMenuMap(int Slot)
+{
+	SMenuMapSlot &Map = m_aMenuMaps[Slot];
+	if(!Map.m_Loaded || Map.m_Alpha <= 0.0f)
+		return;
+
+	const bool Online = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
+	const vec2 Center = Online ? *m_pClient->m_pCamera->GetMenuCenter() : *m_pClient->m_pCamera->GetCenter();
+	const float Zoom = Online ? m_pClient->m_pCamera->GetMenuZoom() : m_pClient->m_pCamera->GetZoom();
+	RenderLayers(Map.m_pLayers, &Map.m_lEnvPoints, Map.m_ImageType, true, Center, Zoom, Map.m_Alpha, false);
+}
+
+void CMapLayers::RenderGameMap(float Alpha)
+{
+	// the camera is already back at the menu position, so the game map has to
+	// be rendered with the camera it was last seen with
+	RenderLayers(Layers(), &m_lEnvPoints, CMapImages::MAP_TYPE_GAME, false, *m_pClient->m_pCamera->GetGameCenter(), m_pClient->m_pCamera->GetGameZoom(), Alpha, false);
+}
+
+void CMapLayers::OnRender()
+{
+	CMapComponent *pMap = m_pClient->m_pMapComponent;
+
+	if(m_Type == TYPE_BACKGROUND)
+		UpdateMenuMapFade();
+
+	const bool Online = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
+
+	if(Online)
+	{
+		// game map first, it must leave the screen mapped to the game group
+		RenderLayers(Layers(), &m_lEnvPoints, CMapImages::MAP_TYPE_GAME, false, *m_pClient->m_pCamera->GetCenter(), m_pClient->m_pCamera->GetZoom(), 1.0f, m_Type == TYPE_BACKGROUND);
+
+		// the menu map is still visible while it fades out over the game map
+		if(m_Type == TYPE_BACKGROUND)
+		{
+			if(m_CurrentMenuMap >= 0)
+				RenderMenuMap(m_CurrentMenuMap);
+			if(m_PrevMenuMap >= 0)
+				RenderMenuMap(m_PrevMenuMap);
+		}
+		return;
+	}
+
+	if(m_Type != TYPE_BACKGROUND)
+	{
+		// the foreground part of the game map also fades out on top of the menu map
+		if(pMap->GameMapVisible())
+			RenderGameMap(pMap->GameMapAlpha());
+		return;
+	}
+
+	// offline: the menu map or the animated background is the base layer and
+	// the map of the game we just left fades out on top of it
+	if(!MenuMapOpaque())
+		pMap->RenderBackground(Client()->LocalTime());
+	if(m_CurrentMenuMap >= 0)
+		RenderMenuMap(m_CurrentMenuMap);
+	if(m_PrevMenuMap >= 0)
+		RenderMenuMap(m_PrevMenuMap);
+	if(pMap->GameMapVisible())
+		RenderGameMap(pMap->GameMapAlpha());
 }
 
 void CMapLayers::ConchainBackgroundMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -417,12 +616,48 @@ void CMapLayers::OnConsoleInit()
 
 void CMapLayers::BackgroundMapUpdate()
 {
-	if(m_Type == TYPE_BACKGROUND && m_pMenuMap)
+	if(m_Type != TYPE_BACKGROUND || !m_aMenuMaps[0].m_pMap)
+		return;
+
+	const bool Online = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
+	if(Online)
 	{
-		// unload map
-		m_pMenuMap->Unload();
-		if(Config()->m_ClShowMenuMap)
-			LoadBackgroundMap();
+		// not visible while playing, reload in place
+		if(m_CurrentMenuMap < 0)
+			m_CurrentMenuMap = 0;
+		UnloadMenuMap(m_CurrentMenuMap);
+		if(Config()->m_ClShowMenuMap && LoadMenuMap(m_CurrentMenuMap))
+			m_aMenuMaps[m_CurrentMenuMap].m_Alpha = 0.0f;
+		else
+			m_CurrentMenuMap = -1;
+		return;
+	}
+
+	// cross-fade: load the new map into the free slot and let the old one fade out
+	FinalizeMenuMapFade();
+
+	const int OldSlot = m_CurrentMenuMap;
+	const int NewSlot = m_CurrentMenuMap == 0 ? 1 : 0;
+	UnloadMenuMap(NewSlot);
+
+	if(Config()->m_ClShowMenuMap && LoadMenuMap(NewSlot))
+	{
+		// fade in over the animated background when there is no old map to fade out
+		m_MenuMapFadeIn = OldSlot < 0;
+		m_aMenuMaps[NewSlot].m_Alpha = m_MenuMapFadeIn ? 0.0f : 1.0f;
+		m_CurrentMenuMap = NewSlot;
+	}
+	else
+	{
+		// switching to no map: the animated background becomes the base layer
+		// and the old map fades out on top of it
+		m_CurrentMenuMap = -1;
+	}
+
+	if(OldSlot >= 0 && m_aMenuMaps[OldSlot].m_Loaded)
+	{
+		m_aMenuMaps[OldSlot].m_Alpha = 1.0f;
+		m_PrevMenuMap = OldSlot;
 	}
 }
 

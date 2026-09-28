@@ -37,6 +37,7 @@ public:
 	void PlayAt(int Channel, int SoundId, vec2 Position);
 
 	virtual void OnMapLoad();
+	virtual void OnMapUnload();
 	virtual void OnRender();
 	virtual void OnStateChange(int NewState, int OldState);
 };

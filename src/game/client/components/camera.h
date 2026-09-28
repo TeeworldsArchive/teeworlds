@@ -7,6 +7,20 @@
 
 class CCamera : public CComponent
 {
+	enum
+	{
+		// duration of the camera flying from the menu into the game in ms
+		JOIN_TRANSITION_TIME = 500,
+
+		// duration of the camera catching up with a jump of the followed
+		// position (respawn, teleport, ...) in ms
+		POSITION_JUMP_TRANSITION_TIME = 250,
+	};
+
+	// jumps smaller than this are normal movement and are applied right away,
+	// in world units
+	static constexpr float POSITION_JUMP_MIN_DISTANCE = 32.0f;
+
 public:
 	enum
 	{
@@ -30,6 +44,14 @@ public:
 	void ChangePosition(int PositionNumber);
 	int GetCurrentPosition() const { return m_CurrentPosition; }
 	const vec2 *GetCenter() const { return &m_Center; }
+	// camera center the menu was using when the game was joined, so that a menu
+	// map can still be rendered correctly while it fades over the game map
+	const vec2 *GetMenuCenter() const { return &m_MenuCenter; }
+	float GetMenuZoom() const { return m_MenuZoom; }
+	// camera the game was last rendered with, so that the game map can still be
+	// rendered correctly while it fades out after a disconnect
+	const vec2 *GetGameCenter() const { return &m_GameCenter; }
+	float GetGameZoom() const { return m_GameZoom; }
 	float GetZoom() const { return m_Zoom; }
 
 	static void ConSetPosition(IConsole::IResult *pResult, void *pUserData);
@@ -45,8 +67,28 @@ private:
 		CAMTYPE_PLAYER,
 	};
 
+	// velocity of the tee the camera follows, in units per tick
+	float FollowedVelocity() const;
+
 	vec2 m_Center;
 	vec2 m_MenuCenter;
+	float m_MenuZoom;
+	vec2 m_GameCenter;
+	float m_GameZoom;
+
+	// camera transition from the menu into the game
+	bool m_EnteringGame;
+	bool m_JoinTransitionActive;
+	float m_JoinTransitionTime;
+	vec2 m_JoinTransitionStartCenter;
+	float m_JoinTransitionStartZoom;
+
+	// camera transition when the followed position jumps (respawn, teleport)
+	vec2 m_PrevFollowPos;
+	bool m_PositionJumpActive;
+	float m_PositionJumpTime;
+	vec2 m_PositionJumpStartCenter;
+
 	vec2 m_RotationCenter;
 	float m_Zoom;
 	int m_CamType;

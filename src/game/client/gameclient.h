@@ -320,6 +320,7 @@ public:
 	virtual void OnInit();
 	virtual void OnConsoleInit();
 	virtual void OnStateChange(int NewState, int OldState);
+	virtual void OnMapUnload();
 	virtual void OnMessage(int MsgId, CUnpacker *pUnpacker);
 	virtual void OnNewSnapshot();
 	virtual void OnDemoRecSnap();
@@ -386,14 +387,11 @@ public:
 	class CEffects *m_pEffects;
 	class CSounds *m_pSounds;
 	class CMotd *m_pMotd;
-	class CMapImages *m_pMapimages;
+	class CMapComponent *m_pMapComponent;
 	class CVoting *m_pVoting;
 	class CScoreboard *m_pScoreboard;
 	class CStats *m_pStats;
 	class CItems *m_pItems;
-	class CMapLayers *m_pMapLayersBackGround;
-	class CMapLayers *m_pMapLayersForeGround;
-	class CMapSounds *m_pMapSounds;
 };
 
 void FormatTime(char *pBuf, int Size, int Time, int Precision);

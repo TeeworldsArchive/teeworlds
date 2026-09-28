@@ -274,6 +274,7 @@ public:
 
 	const char *GetCurrentMapName() const { return m_aCurrentMap; }
 	const char *GetCurrentMapPath() const { return m_aCurrentMapPath; }
+	virtual void UnloadMap();
 	virtual const char *MapDownloadName() const { return m_aMapdownloadName; }
 	virtual int MapDownloadAmount() const { return m_MapdownloadAmount; }
 	virtual int MapDownloadTotalsize() const { return m_MapdownloadTotalsize; }

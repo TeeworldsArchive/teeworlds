@@ -18,6 +18,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/animstate.h>
+#include <game/client/components/map.h>
 #include <game/client/components/maplayers.h>
 #include <game/client/components/sounds.h>
 #include <game/client/components/stats.h>
@@ -823,7 +824,7 @@ void CMenus::RenderThemeSelection(CUIRect MainView, bool Header)
 		m_ActiveListBox = ACTLB_THEME;
 		str_copy(Config()->m_ClMenuMap, m_lThemes[SelectedTheme].m_Name, sizeof(Config()->m_ClMenuMap));
 		Config()->m_ClShowMenuMap = m_lThemes[SelectedTheme].m_Name[0] ? 1 : 0;
-		m_pClient->m_pMapLayersBackGround->BackgroundMapUpdate();
+		m_pClient->m_pMapComponent->LayersBackground()->BackgroundMapUpdate();
 	}
 }
 

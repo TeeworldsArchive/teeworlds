@@ -1,3 +1,4 @@
+#include "map.h"
 #include "mapsounds.h"
 
 #include <engine/demo.h>
@@ -202,7 +203,7 @@ void CMapSounds::OnRender()
 		if(pSource->m_pSource->m_PosEnv >= 0)
 		{
 			float aChannels[4];
-			CMapLayers::EnvelopeEval(pSource->m_pSource->m_PosEnvOffset, pSource->m_pSource->m_PosEnv, aChannels, m_pClient->m_pMapLayersBackGround);
+			CMapLayers::EnvelopeEval(pSource->m_pSource->m_PosEnvOffset, pSource->m_pSource->m_PosEnv, aChannels, m_pClient->m_pMapComponent->LayersBackground());
 			OffsetX = aChannels[0];
 			OffsetY = aChannels[1];
 		}
@@ -220,7 +221,7 @@ void CMapSounds::OnRender()
 		if(pSource->m_pSource->m_SoundEnv >= 0)
 		{
 			float aChannels[4];
-			CMapLayers::EnvelopeEval(pSource->m_pSource->m_SoundEnvOffset / 1000.0f, pSource->m_pSource->m_SoundEnv, aChannels, m_pClient->m_pMapLayersBackGround);
+			CMapLayers::EnvelopeEval(pSource->m_pSource->m_SoundEnvOffset / 1000.0f, pSource->m_pSource->m_SoundEnv, aChannels, m_pClient->m_pMapComponent->LayersBackground());
 			Sound()->SetVoiceVolume(pSource->m_Voice, clamp(aChannels[0], 0.0f, 1.0f));
 		}
 	}
@@ -241,4 +242,9 @@ void CMapSounds::OnStateChange(int NewState, int OldState)
 {
 	if(NewState < IClient::STATE_ONLINE)
 		Clear();
+}
+
+void CMapSounds::OnMapUnload()
+{
+	Clear();
 }

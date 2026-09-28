@@ -29,6 +29,7 @@
 
 #include "chat.h"
 #include "countryflags.h"
+#include "map.h"
 #include "maplayers.h"
 #include "menus.h"
 #include "skins.h"
@@ -1020,9 +1021,7 @@ void CMenus::RenderMenu(CUIRect Screen)
 		}
 	}
 
-	// render background only if needed
-	if(IsBackgroundNeeded())
-		RenderBackground(Client()->LocalTime());
+	// the animated background is drawn by the map component, below the menu map
 
 	static bool s_SoundCheck = false;
 	if(!s_SoundCheck && m_Popup == POPUP_NONE)
@@ -1847,39 +1846,12 @@ bool CMenus::CheckHotKey(int Key) const
 
 bool CMenus::IsBackgroundNeeded() const
 {
-	return !m_pClient->m_InitComplete || (Client()->State() != IClient::STATE_ONLINE && !m_pClient->m_pMapLayersBackGround->MenuMapLoaded());
+	return !m_pClient->m_InitComplete || (Client()->State() != IClient::STATE_ONLINE && !m_pClient->m_pMapComponent->LayersBackground()->MenuMapOpaque());
 }
 
 void CMenus::RenderBackground(float Time)
 {
-	const float ScreenHeight = 300.0f * Graphics()->ScreenUIScale();
-	const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
-	Graphics()->MapScreen(0, 0, ScreenWidth, ScreenHeight);
-
-	// render the tiles
-	Graphics()->TextureClear();
-	Graphics()->QuadsBegin();
-	const float Size = 15.0f;
-	const float OffsetTime = fmod(Time * 0.15f, 2.0f);
-	for(int y = -2; y < (int) (ScreenWidth / Size); y++)
-		for(int x = -2; x < (int) (ScreenHeight / Size); x++)
-		{
-			Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.045f);
-			IGraphics::CQuadItem QuadItem((x - OffsetTime) * Size * 2 + (y & 1) * Size, (y + OffsetTime) * Size, Size, Size);
-			Graphics()->SingleQuadDrawTL(&QuadItem);
-		}
-	Graphics()->QuadsEnd();
-
-	// render border fade
-	static IGraphics::CTextureHandle s_TextureBlob = Graphics()->LoadTexture("ui/blob.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	Graphics()->TextureSet(s_TextureBlob);
-	Graphics()->QuadsBegin();
-	Graphics()->SetColor(0, 0, 0, 0.5f);
-	IGraphics::CQuadItem QuadItem = IGraphics::CQuadItem(-100, -100, ScreenWidth + 200, ScreenHeight + 200);
-	Graphics()->SingleQuadDrawTL(&QuadItem);
-	Graphics()->QuadsEnd();
-
-	UI()->MapScreen();
+	m_pClient->m_pMapComponent->RenderBackground(Time);
 }
 
 void CMenus::RenderBackgroundShadow(const CUIRect *pRect, bool TopToBottom, float Rounding)
