@@ -2243,7 +2243,7 @@ int CMenus::GameIconScan(const char *pName, int IsDir, int DirType, void *pUser)
 		mem_free(Info.m_pData);
 		GameIcon.m_IconIndex = 0;
 		Info.m_pData = pData;
-		pSelf->m_GameIconTexture = pSelf->Graphics()->LoadTextureRaw(CGameIcon::GAMEICON_SIZE, CGameIcon::GAMEICON_SIZE, MAX_GAMEICONS, CImageInfo::FORMAT_RGBA, Info.m_pData, CImageInfo::FORMAT_RGBA, IGraphics::TEXLOAD_LINEARMIPMAPS);
+		pSelf->m_GameIconTexture = pSelf->Graphics()->LoadTextureRaw(CGameIcon::GAMEICON_SIZE, CGameIcon::GAMEICON_SIZE, MAX_GAMEICONS, CImageInfo::FORMAT_RGBA, Info.m_pData, CImageInfo::FORMAT_RGBA, IGraphics::TEXLOAD_NOMIPMAPS);
 	}
 	mem_free(Info.m_pData);
 	pSelf->m_aGameIcons[pSelf->m_NumGameIcon++] = GameIcon;

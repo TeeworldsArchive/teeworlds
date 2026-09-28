@@ -445,8 +445,6 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_NOMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_MIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glSamplerParameteri(m_aaSampler2D[SAMPLER2D_LINERMIPMAPS][i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
 	for(int i = 0; i < NUM_BASIC_SAMPLERS; i++)
@@ -576,7 +574,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 	}
 	else
 	{
-		m_aTextures[pCommand->m_Slot].m_BasicSamplerType = (pCommand->m_Flags & CCommandBuffer::TEXFLAG_LINEARMIPMAPS) ? SAMPLER2D_LINERMIPMAPS : SAMPLER2D_MIPMAPS;
+		m_aTextures[pCommand->m_Slot].m_BasicSamplerType = SAMPLER2D_MIPMAPS;
 		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, StoreOglformat, Width, Height, Layers, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
 		glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
 	}

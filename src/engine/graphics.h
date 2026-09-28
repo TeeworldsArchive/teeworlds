@@ -84,8 +84,7 @@ public:
 	{
 		TEXLOAD_NORESAMPLE = 1,
 		TEXLOAD_NOMIPMAPS = 2,
-		TEXLOAD_LINEARMIPMAPS = 4,
-		TEXLOAD_TILEMAP = 8,
+		TEXLOAD_TILEMAP = 4,
 
 		NUMTILES_DIMENSION = 16, // number of tiles in each dimension within a texture
 	};

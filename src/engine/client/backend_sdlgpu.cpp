@@ -475,7 +475,7 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 			SamplerInfo.mag_filter = SDL_GPU_FILTER_LINEAR;
 			SamplerInfo.mipmap_mode = i == SAMPLER2D_MIPMAPS ? SDL_GPU_SAMPLERMIPMAPMODE_LINEAR : SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
 			SamplerInfo.min_lod = 0.0f;
-			SamplerInfo.max_lod = i == SAMPLER2D_NOMIPMAPS ? 0.0f : 1000.0f;
+			SamplerInfo.max_lod = i == SAMPLER2D_MIPMAPS ? 1000.0f : 0.0f;
 
 			switch(j)
 			{
@@ -973,7 +973,7 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Texture_Create(const CCommandBuffer::
 	m_aTextures[pCommand->m_Slot].m_Valid = pTexture != 0;
 	m_aTextures[pCommand->m_Slot].m_BasicSamplerType = SAMPLER2D_NOMIPMAPS;
 	if(Mipmaps)
-		m_aTextures[pCommand->m_Slot].m_BasicSamplerType = (pCommand->m_Flags & CCommandBuffer::TEXFLAG_LINEARMIPMAPS) ? SAMPLER2D_LINERMIPMAPS : SAMPLER2D_MIPMAPS;
+		m_aTextures[pCommand->m_Slot].m_BasicSamplerType = SAMPLER2D_MIPMAPS;
 
 	void *pUploadData = pTexData;
 	int BytesPerPixel = GetPixelSize(pCommand->m_Format);

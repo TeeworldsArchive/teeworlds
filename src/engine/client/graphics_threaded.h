@@ -107,7 +107,6 @@ public:
 
 		TEXFLAG_NOMIPMAPS = 1,
 		TEXFLAG_QUALITY = 2,
-		TEXFLAG_LINEARMIPMAPS = 4,
 	};
 
 	enum

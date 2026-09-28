@@ -421,8 +421,6 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_NOMIPMAPS;
 	if(m_pConfig->m_GfxTextureQuality || Flags & TEXLOAD_NORESAMPLE)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_QUALITY;
-	if(Flags & IGraphics::TEXLOAD_LINEARMIPMAPS)
-		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_LINEARMIPMAPS;
 	// copy texture data
 	int MemSize = Width * Height * Layers * Cmd.m_PixelSize;
 	unsigned char *pTmpData = (unsigned char *) mem_alloc(MemSize);
