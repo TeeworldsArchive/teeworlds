@@ -62,7 +62,8 @@ generated
 .ninja_deps
 .ninja_log
 .install_deps.cmake
-install_manifest_portable.txt
+install_manifest_data.txt
+InstallRuntimeDeps.cmake
 CMakeCache.txt
 CMakeFiles
 CMakeSettings*
