@@ -1196,8 +1196,16 @@ void CChat::OnRender()
 		float Delta = (Now - pLine->m_Time) / (float) TimeFreq;
 		const float HighlightBlend = 1.0f - clamp(Delta - HlTimeFull, 0.0f, HlTimeFade) / HlTimeFade;
 
+		// fade in and slide in newly added lines from the left
+		const float SlideInDuration = 0.3f;
+		const float SlideInDistance = 20.0f;
+		float SlideInBlend = clamp(Delta / SlideInDuration, 0.0f, 1.0f);
+		SlideInBlend = 1.0f - (1.0f - SlideInBlend) * (1.0f - SlideInBlend); // ease out
+		Blend *= SlideInBlend;
+		const float LineBegin = Begin + (SlideInBlend - 1.0f) * SlideInDistance;
+
 		// reset the cursor
-		s_ChatCursor.MoveTo(Begin, y);
+		s_ChatCursor.MoveTo(LineBegin, y);
 		s_ChatCursor.Reset();
 
 		const vec2 ShadowOffset(0.8f, 1.5f);
@@ -1275,7 +1283,7 @@ void CChat::OnRender()
 
 			const float qw = 10.0f;
 			const float qh = 5.0f;
-			const float qx = Begin + 1.0f;
+			const float qx = LineBegin + 1.0f;
 			const float qy = LineBaseY - qh - 0.5f;
 
 			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CHATWHISPER].m_Id);
