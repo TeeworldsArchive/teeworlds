@@ -108,6 +108,7 @@ private:
 	int m_MenuPageOld;
 	bool m_MenuActive;
 	bool m_GalleryMode;
+	bool m_GalleryDragging;
 	float m_GalleryFade;
 	float m_GalleryFadeLastTime;
 	vec2 m_MousePos;

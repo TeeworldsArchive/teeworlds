@@ -611,6 +611,24 @@ void CMapLayers::RenderGameMap(float Alpha)
 	RenderLayers(Layers(), &m_lEnvPoints, CMapImages::MAP_TYPE_GAME, false, *m_pClient->m_pCamera->GetGameCenter(), m_pClient->m_pCamera->GetGameZoom(), Alpha, false);
 }
 
+bool CMapLayers::GetMenuMapGameBounds(vec2 *pMin, vec2 *pMax) const
+{
+	if(m_CurrentMenuMap < 0)
+		return false;
+
+	const SMenuMapSlot &Map = m_aMenuMaps[m_CurrentMenuMap];
+	if(!Map.m_Loaded || !Map.m_pLayers)
+		return false;
+
+	const CMapItemLayerTilemap *pGameLayer = Map.m_pLayers->GameLayer();
+	if(!pGameLayer)
+		return false;
+
+	*pMin = vec2(0.0f, 0.0f);
+	*pMax = vec2(pGameLayer->m_Width * 32.0f, pGameLayer->m_Height * 32.0f);
+	return true;
+}
+
 void CMapLayers::OnRender()
 {
 	CMapComponent *pMap = m_pClient->m_pMapComponent;

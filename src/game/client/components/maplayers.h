@@ -85,6 +85,10 @@ public:
 	// does not have to be rendered underneath it
 	bool MenuMapOpaque() const { return m_CurrentMenuMap >= 0 && m_aMenuMaps[m_CurrentMenuMap].m_Loaded && m_aMenuMaps[m_CurrentMenuMap].m_Alpha >= 1.0f; }
 
+	// world space bounds of the game layer of the currently visible menu map,
+	// returns false if no menu map is loaded
+	bool GetMenuMapGameBounds(vec2 *pMin, vec2 *pMax) const;
+
 	static void EnvelopeEval(float TimeOffset, int Env, float *pChannels, void *pUser);
 };
 

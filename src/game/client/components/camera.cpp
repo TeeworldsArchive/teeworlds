@@ -19,6 +19,11 @@ CCamera::CCamera()
 	m_PrevCenter = vec2(0.0f, 0.0f);
 	m_MenuCenter = vec2(0.0f, 0.0f);
 	m_MenuZoom = 0.7f;
+	m_MenuPan = vec2(0.0f, 0.0f);
+	m_MenuPanTarget = vec2(0.0f, 0.0f);
+	m_MenuPanBoundsMin = vec2(0.0f, 0.0f);
+	m_MenuPanBoundsMax = vec2(0.0f, 0.0f);
+	m_MenuPanBoundsSet = false;
 	m_GameCenter = vec2(0.0f, 0.0f);
 	m_GameZoom = 1.0f;
 
@@ -165,7 +170,11 @@ void CCamera::OnRender()
 		m_Zoom = 0.7f;
 		static vec2 s_Dir = vec2(1.0f, 0.0f);
 
-		if(distance(m_Center, m_RotationCenter) <= (float) Config()->m_ClRotationRadius + 0.5f)
+		// the gallery pan is applied on top of the menu camera, the rotation
+		// and the position animation always work with the un-panned center
+		const vec2 BaseCenter = m_Center - m_MenuPan;
+
+		if(distance(BaseCenter, m_RotationCenter) <= (float) Config()->m_ClRotationRadius + 0.5f)
 		{
 			// do little rotation
 			float RotPerTick = 360.0f / (float) Config()->m_ClRotationSpeed * Client()->RenderFrameTime();
@@ -186,6 +195,26 @@ void CCamera::OnRender()
 
 			m_Center = TargetPos + s_Dir * (XVal * Distance);
 		}
+
+		// ease the gallery pan back to the menu origin once gallery mode is left
+		if(distance(m_MenuPan, m_MenuPanTarget) > 0.25f)
+			m_MenuPan += (m_MenuPanTarget - m_MenuPan) * minimum(Client()->RenderFrameTime() * 10.0f, 1.0f);
+		else
+			m_MenuPan = m_MenuPanTarget;
+
+		// keep the gallery pan inside the map, but never fight the regular menu
+		// camera: the un-panned center is always allowed
+		if(m_MenuPanBoundsSet)
+		{
+			const vec2 Lo = vec2(minimum(BaseCenter.x, m_MenuPanBoundsMin.x), minimum(BaseCenter.y, m_MenuPanBoundsMin.y));
+			const vec2 Hi = vec2(maximum(BaseCenter.x, m_MenuPanBoundsMax.x), maximum(BaseCenter.y, m_MenuPanBoundsMax.y));
+			const vec2 PanMin = Lo - BaseCenter;
+			const vec2 PanMax = Hi - BaseCenter;
+			m_MenuPan = vec2(clamp(m_MenuPan.x, PanMin.x, PanMax.x), clamp(m_MenuPan.y, PanMin.y, PanMax.y));
+			m_MenuPanTarget = vec2(clamp(m_MenuPanTarget.x, PanMin.x, PanMax.x), clamp(m_MenuPanTarget.y, PanMin.y, PanMax.y));
+		}
+
+		m_Center += m_MenuPan;
 	}
 
 	m_PrevCenter = m_Center;
@@ -199,7 +228,7 @@ void CCamera::ChangePosition(int PositionNumber)
 	if(PositionNumber < 0 || PositionNumber > NUM_POS - 1)
 		return;
 
-	m_AnimationStartPos = m_Center;
+	m_AnimationStartPos = m_Center - m_MenuPan;
 	m_RotationCenter = m_Positions[PositionNumber];
 	m_CurrentPosition = PositionNumber;
 	m_MoveTime = 0.0f;

@@ -43,6 +43,24 @@ public:
 
 	void ChangePosition(int PositionNumber);
 	int GetCurrentPosition() const { return m_CurrentPosition; }
+
+	// gallery mode: offset the menu camera by a free pan the player dragged
+	void PanMenu(const vec2 &Delta)
+	{
+		m_MenuPan += Delta;
+		m_MenuPanTarget += Delta;
+	}
+	// ease the menu camera pan back to its origin
+	void ResetMenuPan() { m_MenuPanTarget = vec2(0.0f, 0.0f); }
+	// limit the gallery pan to this world space rectangle (camera center bounds)
+	void SetMenuPanBounds(const vec2 &Min, const vec2 &Max)
+	{
+		m_MenuPanBoundsMin = Min;
+		m_MenuPanBoundsMax = Max;
+		m_MenuPanBoundsSet = true;
+	}
+	void ClearMenuPanBounds() { m_MenuPanBoundsSet = false; }
+
 	const vec2 *GetCenter() const { return &m_Center; }
 	// camera center the menu was using when the game was joined, so that a menu
 	// map can still be rendered correctly while it fades over the game map
@@ -90,6 +108,11 @@ private:
 	vec2 m_PositionJumpStartCenter;
 
 	vec2 m_RotationCenter;
+	vec2 m_MenuPan;
+	vec2 m_MenuPanTarget;
+	vec2 m_MenuPanBoundsMin;
+	vec2 m_MenuPanBoundsMax;
+	bool m_MenuPanBoundsSet;
 	float m_Zoom;
 	int m_CamType;
 	vec2 m_PrevCenter;

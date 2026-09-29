@@ -59,6 +59,7 @@ CMenus::CMenus()
 	m_pSelectedSkin = 0;
 	m_MenuActive = true;
 	m_GalleryMode = false;
+	m_GalleryDragging = false;
 	m_GalleryFade = 1.0f;
 	m_GalleryFadeLastTime = 0.0f;
 	m_aDemolistPreviousSelection[0] = '\0';
@@ -1023,6 +1024,14 @@ void CMenus::RenderMenu(CUIRect Screen)
 
 	// the animated background is drawn by the map component, below the menu map
 
+	// leaving gallery mode stops any drag and returns the menu camera to its origin
+	if(!(m_GalleryMode && m_MenuPage == PAGE_START && Client()->State() == IClient::STATE_OFFLINE))
+	{
+		m_GalleryDragging = false;
+		m_pClient->m_pCamera->ResetMenuPan();
+		m_pClient->m_pCamera->ClearMenuPanBounds();
+	}
+
 	static bool s_SoundCheck = false;
 	if(!s_SoundCheck && m_Popup == POPUP_NONE)
 	{
@@ -1036,6 +1045,31 @@ void CMenus::RenderMenu(CUIRect Screen)
 		if(m_MenuPage == PAGE_START && Client()->State() == IClient::STATE_OFFLINE)
 		{
 			UpdateGalleryFade();
+
+			// gallery mode: keep the view inside the game layer of the menu map
+			if(m_GalleryMode)
+			{
+				vec2 MapMin, MapMax;
+				if(m_pClient->m_pMapComponent->LayersBackground()->GetMenuMapGameBounds(&MapMin, &MapMax))
+				{
+					float aPoints[4];
+					RenderTools()->MapScreenToWorld(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+						Graphics()->ScreenAspect(), m_pClient->m_pCamera->GetZoom(), aPoints);
+					const vec2 ViewSize = vec2(aPoints[2] - aPoints[0], aPoints[3] - aPoints[1]);
+					const vec2 MapCenter = (MapMin + MapMax) * 0.5f;
+					const bool SmallX = MapMax.x - MapMin.x <= ViewSize.x;
+					const bool SmallY = MapMax.y - MapMin.y <= ViewSize.y;
+					const vec2 CenterMin = vec2(
+						SmallX ? MapCenter.x : MapMin.x + ViewSize.x * 0.5f,
+						SmallY ? MapCenter.y : MapMin.y + ViewSize.y * 0.5f);
+					const vec2 CenterMax = vec2(
+						SmallX ? MapCenter.x : MapMax.x - ViewSize.x * 0.5f,
+						SmallY ? MapCenter.y : MapMax.y - ViewSize.y * 0.5f);
+					m_pClient->m_pCamera->SetMenuPanBounds(CenterMin, CenterMax);
+				}
+				else
+					m_pClient->m_pCamera->ClearMenuPanBounds();
+			}
 
 			// gallery mode: fade the whole start menu out so only the
 			// background map and the gallery button remain
@@ -1699,6 +1733,16 @@ bool CMenus::OnCursorMove(float x, float y, int CursorType)
 	if(m_MousePos.y > Graphics()->ScreenHeight())
 		m_MousePos.y = Graphics()->ScreenHeight();
 
+	// gallery mode: drag the menu camera with the middle mouse button
+	if(m_GalleryDragging && m_GalleryMode)
+	{
+		float aPoints[4];
+		RenderTools()->MapScreenToWorld(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+			Graphics()->ScreenAspect(), m_pClient->m_pCamera->GetZoom(), aPoints);
+		const float WorldPerPixel = (aPoints[2] - aPoints[0]) / maximum((float) Graphics()->ScreenWidth(), 1.0f);
+		m_pClient->m_pCamera->PanMenu(vec2(-x, -y) * WorldPerPixel);
+	}
+
 	return true;
 }
 
@@ -1713,11 +1757,21 @@ bool CMenus::OnInput(IInput::CEvent e)
 		if(m_GalleryMode)
 		{
 			m_GalleryMode = false;
+			m_GalleryDragging = false;
 			return true;
 		}
 		SetActive(!IsActive());
 		UI()->OnInput(e);
 		return true;
+	}
+
+	// gallery mode: the middle mouse button drags the menu camera around
+	if(m_GalleryMode && e.m_Key == KEY_MOUSE_3)
+	{
+		if(e.m_Flags & IInput::FLAG_PRESS)
+			m_GalleryDragging = true;
+		else if(e.m_Flags & IInput::FLAG_RELEASE)
+			m_GalleryDragging = false;
 	}
 	if(IsActive())
 	{
