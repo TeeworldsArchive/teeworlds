@@ -32,6 +32,8 @@ public:
 		unsigned m_VertexShaderSize;
 		const unsigned char *m_pFragmentShaderCode;
 		unsigned m_FragmentShaderSize;
+		const unsigned char *m_pTilemapFragmentShaderCode;
+		unsigned m_TilemapFragmentShaderSize;
 	};
 
 	struct CShutdownCommand : public CCommandBuffer::CCommand
@@ -50,6 +52,10 @@ public:
 		PIPELINE_LINES_ALPHA_PREMULTIPLIED,
 		PIPELINE_LINES_ALPHA,
 		NUM_PIPELINES,
+
+		PIPELINE_TILEMAP_NONE = 0,
+		PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED,
+		NUM_TILEMAP_PIPELINES,
 	};
 
 	class CTexture
@@ -70,6 +76,13 @@ public:
 		unsigned m_PrimCount;
 		unsigned m_VertexOffset; // byte offset into the frame vertex buffer
 		unsigned m_NumVertices;
+		bool m_IsTilemap;
+		int m_TileData;
+		int m_TilemapLayer;
+		int m_TilemapWidth;
+		int m_TilemapHeight;
+		int m_TilemapPassMode;
+		int m_TilemapColorOpaque;
 	};
 
 	class CDeferredRelease
@@ -87,7 +100,9 @@ private:
 
 	SDL_GPUShader *m_pVertexShader;
 	SDL_GPUShader *m_pFragmentShader;
+	SDL_GPUShader *m_pTilemapFragmentShader;
 	SDL_GPUGraphicsPipeline *m_apPipelines[NUM_PIPELINES];
+	SDL_GPUGraphicsPipeline *m_apTilemapPipelines[NUM_TILEMAP_PIPELINES];
 	SDL_GPUBuffer *m_pIndexBuffer;
 	int m_IndexBufferNumIndices;
 	SDL_GPUTextureFormat m_FrameFormat;
@@ -95,6 +110,8 @@ private:
 
 	CTexture m_aTextures[CCommandBuffer::MAX_TEXTURES];
 	SDL_GPUSampler *m_aaSamplers[NUM_BASIC_SAMPLERS][NUM_WRAP_SAMPLERS];
+	// tile data is read with texelFetch, so it uses exact (nearest) sampling
+	SDL_GPUSampler *m_pTileDataSampler;
 
 	// current frame state
 	SDL_GPUCommandBuffer *m_pCommandBuffer;
@@ -135,6 +152,7 @@ private:
 	SDL_GPUGraphicsPipeline *m_pLastPipeline;
 	SDL_GPUTexture *m_pLastTexture;
 	SDL_GPUSampler *m_pLastSampler;
+	SDL_GPUTexture *m_pLastTileDataTexture;
 	bool m_BuffersBound;
 	bool m_LastScissorValid;
 	SDL_Rect m_LastScissor;
@@ -159,6 +177,7 @@ private:
 	void ReleaseDeferred();
 	bool UploadTexture(SDL_GPUTexture *pTexture, int X, int Y, int Z, int Width, int Height, int Layers, const void *pData, SDL_GPUTextureFormat Format, int BytesPerPixel);
 	bool CreatePipeline(int Index, SDL_GPUPrimitiveType PrimType, int BlendVariant);
+	bool CreateTilemapPipeline(int Index, int BlendVariant);
 
 	static SDL_GPUTextureFormat TexFormatToSDLGPUFormat(int TexFormat);
 
@@ -169,6 +188,7 @@ private:
 	void Cmd_Texture_Create(const CCommandBuffer::CTextureCreateCommand *pCommand);
 	void Cmd_Clear(const CCommandBuffer::CClearCommand *pCommand);
 	void Cmd_Render(const CCommandBuffer::CRenderCommand *pCommand);
+	void Cmd_RenderTilemapTexture(const CCommandBuffer::CRenderTilemapTextureCommand *pCommand);
 	void Cmd_Screenshot(const CCommandBuffer::CScreenshotCommand *pCommand);
 	void Cmd_Swap(const CCommandBuffer::CSwapCommand *pCommand);
 	void Cmd_VSync(const CCommandBuffer::CVSyncCommand *pCommand);
@@ -197,6 +217,8 @@ class CGraphicsBackend_SDL_GPU : public CGraphicsBackend_SDL
 	unsigned m_VertexShaderSize;
 	unsigned char *m_pFragmentShaderCode;
 	unsigned m_FragmentShaderSize;
+	unsigned char *m_pTilemapFragmentShaderCode;
+	unsigned m_TilemapFragmentShaderSize;
 
 public:
 	CGraphicsBackend_SDL_GPU(class IStorage *pStorage);

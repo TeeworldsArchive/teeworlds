@@ -53,6 +53,8 @@ void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Forma
 	int Bpp = 3;
 	if(Format == CCommandBuffer::TEXFORMAT_RGBA)
 		Bpp = 4;
+	else if(Format == CCommandBuffer::TEXFORMAT_RG)
+		Bpp = 2;
 
 	unsigned char *pTmpData = (unsigned char *) mem_alloc(NewWidth * NewHeight * Bpp);
 
@@ -365,6 +367,8 @@ static int ImageFormatToTexFormat(int Format)
 		return CCommandBuffer::TEXFORMAT_RGBA;
 	if(Format == CImageInfo::FORMAT_ALPHA)
 		return CCommandBuffer::TEXFORMAT_ALPHA;
+	if(Format == CImageInfo::FORMAT_RG)
+		return CCommandBuffer::TEXFORMAT_RG;
 	return CCommandBuffer::TEXFORMAT_RGBA;
 }
 
@@ -396,6 +400,59 @@ int CGraphics_Threaded::LoadTextureRawSub(CTextureHandle TextureID, int x, int y
 	return 0;
 }
 
+bool CGraphics_Threaded::TilemapShaderEnabled() const
+{
+	return true;
+}
+
+void CGraphics_Threaded::RenderTilemapTexture(CTextureHandle TileData, int Layer, int Width, int Height, int PassMode, bool ColorOpaque, const vec4 &Color)
+{
+	if(!TileData.IsValid() || Width <= 0 || Height <= 0)
+		return;
+
+	// the tilemap draw is its own command, so anything batched before it has to go out first
+	FlushPendingVerticesOnStateChange();
+
+	CCommandBuffer::CRenderTilemapTextureCommand Cmd;
+	Cmd.m_State = m_State;
+	Cmd.m_TileData = TileData.Id();
+	Cmd.m_Layer = Layer;
+	Cmd.m_Width = Width;
+	Cmd.m_Height = Height;
+	Cmd.m_PassMode = PassMode;
+	Cmd.m_ColorOpaque = ColorOpaque;
+	Cmd.m_Color.r = Color.r;
+	Cmd.m_Color.g = Color.g;
+	Cmd.m_Color.b = Color.b;
+	Cmd.m_Color.a = Color.a;
+
+	// the quad covers the screen; texcoords carry tile units for the fragment shader
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const float Scale = 32.0f;
+	const float aPos[8] = {ScreenX0, ScreenY0, ScreenX1, ScreenY0, ScreenX1, ScreenY1, ScreenX0, ScreenY1};
+	const float aUV[8] = {ScreenX0 / Scale, ScreenY0 / Scale, ScreenX1 / Scale, ScreenY0 / Scale, ScreenX1 / Scale, ScreenY1 / Scale, ScreenX0 / Scale, ScreenY1 / Scale};
+	for(int i = 0; i < 4; i++)
+	{
+		Cmd.m_aVertices[i].m_Pos.x = aPos[i * 2 + 0];
+		Cmd.m_aVertices[i].m_Pos.y = aPos[i * 2 + 1];
+		Cmd.m_aVertices[i].m_Tex.u = aUV[i * 2 + 0];
+		Cmd.m_aVertices[i].m_Tex.v = aUV[i * 2 + 1];
+		Cmd.m_aVertices[i].m_Tex.i = 0.0f;
+		Cmd.m_aVertices[i].m_Color.r = Color.r;
+		Cmd.m_aVertices[i].m_Color.g = Color.g;
+		Cmd.m_aVertices[i].m_Color.b = Color.b;
+		Cmd.m_aVertices[i].m_Color.a = Color.a;
+	}
+
+	if(!m_pCommandBuffer->AddCommand(Cmd))
+	{
+		KickCommandBuffer();
+		if(!m_pCommandBuffer->AddCommand(Cmd))
+			dbg_msg("graphics", "failed to allocate memory for tilemap render command");
+	}
+}
+
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Height, int Layers, int Format, const void *pData, int StoreFormat, int Flags)
 {
 	// don't waste memory on texture if we are stress testing
@@ -406,6 +463,11 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 
 	// grab texture
 	int Tex = m_FirstFreeTexture;
+	if(Tex < 0 || Tex >= MAX_TEXTURES)
+	{
+		dbg_msg("graphics", "texture pool exhausted, cannot allocate a %dx%dx%d texture", Width, Height, Layers);
+		return IGraphics::CTextureHandle();
+	}
 	m_FirstFreeTexture = m_aTextureIndices[Tex];
 	m_aTextureIndices[Tex] = -1;
 
@@ -425,6 +487,8 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_NOMIPMAPS;
 	if(m_pConfig->m_GfxTextureQuality || Flags & TEXLOAD_NORESAMPLE)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_QUALITY;
+	if(Flags & TEXLOAD_NORESAMPLE)
+		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_NORESAMPLE;
 	// copy texture data
 	int MemSize = Width * Height * Layers * Cmd.m_PixelSize;
 	unsigned char *pTmpData = (unsigned char *) mem_alloc(MemSize);

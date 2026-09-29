@@ -43,6 +43,111 @@ void CMapComponent::OnMapUnload()
 	m_GameMapLoaded = false;
 	m_GameMapFading = false;
 	m_GameMapAlpha = 0.0f;
+	ClearTilemapTextures();
+}
+
+IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayers, const CMapItemLayerTilemap *pLayer, int *pLayerIndex)
+{
+	*pLayerIndex = -1;
+	// a layer without tile data can never be in the array, so bail out before building
+	if(!pLayers || !pLayers->Map() || !pLayer || pLayer->m_Data < 0)
+		return IGraphics::CTextureHandle();
+
+	// look for the array that already contains this layer
+	for(int i = 0; i < m_lTilemapTextures.size(); i++)
+	{
+		STilemapTexture &Tex = m_lTilemapTextures[i];
+		if(Tex.m_pLayers != pLayers || Tex.m_Width != pLayer->m_Width || Tex.m_Height != pLayer->m_Height)
+			continue;
+		for(int l = 0; l < Tex.m_lLayers.size(); l++)
+		{
+			if(Tex.m_lLayers[l] == pLayer)
+			{
+				*pLayerIndex = l;
+				return Tex.m_Texture;
+			}
+		}
+	}
+
+	// build a new array with every tile layer of the same size
+	STilemapTexture Tex;
+	Tex.m_pLayers = pLayers;
+	Tex.m_Width = pLayer->m_Width;
+	Tex.m_Height = pLayer->m_Height;
+
+	for(int g = 0; g < pLayers->NumGroups(); g++)
+	{
+		CMapItemGroup *pGroup = pLayers->GetGroup(g);
+		for(int l = 0; l < pGroup->m_NumLayers; l++)
+		{
+			CMapItemLayer *pCandidate = pLayers->GetLayer(pGroup->m_StartLayer + l);
+			if(pCandidate->m_Type != LAYERTYPE_TILES)
+				continue;
+			CMapItemLayerTilemap *pTilemap = (CMapItemLayerTilemap *)pCandidate;
+			if(pTilemap->m_Width != Tex.m_Width || pTilemap->m_Height != Tex.m_Height || pTilemap->m_Data < 0)
+				continue;
+			Tex.m_lLayers.add(pTilemap);
+		}
+	}
+
+	const int NumLayers = Tex.m_lLayers.size();
+	if(NumLayers <= 0)
+		return IGraphics::CTextureHandle();
+
+	// CTile's first two bytes are the index and flags, uploaded as R8G8 (SDL_GPU
+	// has no RGB8). TEXLOAD_NORESAMPLE keeps them from being averaged.
+	const size_t LayerSize = (size_t)Tex.m_Width * Tex.m_Height * 2;
+	unsigned char *pData = (unsigned char *)mem_alloc(LayerSize * NumLayers);
+	if(!pData)
+		return IGraphics::CTextureHandle();
+
+	for(int l = 0; l < NumLayers; l++)
+	{
+		const CTile *pTiles = (const CTile *)pLayers->Map()->GetData(Tex.m_lLayers[l]->m_Data);
+		unsigned char *pOut = pData + l * LayerSize;
+		const int NumTiles = Tex.m_Width * Tex.m_Height;
+		for(int t = 0; t < NumTiles; t++)
+		{
+			pOut[t * 2 + 0] = pTiles ? pTiles[t].m_Index : 0;
+			pOut[t * 2 + 1] = pTiles ? pTiles[t].m_Flags : 0;
+		}
+	}
+
+	Tex.m_Texture = Graphics()->LoadTextureRaw(Tex.m_Width, Tex.m_Height, NumLayers, CImageInfo::FORMAT_RG, pData, CImageInfo::FORMAT_RG, IGraphics::TEXLOAD_NOMIPMAPS | IGraphics::TEXLOAD_NORESAMPLE);
+	mem_free(pData);
+
+	if(!Tex.m_Texture.IsValid())
+		return IGraphics::CTextureHandle();
+
+	// the requested layer must be in the array, otherwise drop the texture instead of caching it
+	int LayerIndex = -1;
+	for(int l = 0; l < Tex.m_lLayers.size(); l++)
+	{
+		if(Tex.m_lLayers[l] == pLayer)
+		{
+			LayerIndex = l;
+			break;
+		}
+	}
+	if(LayerIndex < 0)
+	{
+		Graphics()->UnloadTexture(&Tex.m_Texture);
+		return IGraphics::CTextureHandle();
+	}
+
+	m_lTilemapTextures.add(Tex);
+	*pLayerIndex = LayerIndex;
+	return Tex.m_Texture;
+}
+
+void CMapComponent::ClearTilemapTextures()
+{
+	for(int i = 0; i < m_lTilemapTextures.size(); i++)
+	{
+		if(m_lTilemapTextures[i].m_Texture.IsValid())
+			Graphics()->UnloadTexture(&m_lTilemapTextures[i].m_Texture);
+	}
+	m_lTilemapTextures.clear();
 }
 
 void CMapComponent::OnStateChange(int NewState, int OldState)

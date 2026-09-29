@@ -88,6 +88,9 @@ public:
 		CMD_CLEAR,
 		CMD_RENDER,
 
+		// tile map rendering
+		CMD_RENDER_TILEMAP_TEXTURE,
+
 		// swap
 		CMD_SWAP,
 
@@ -104,9 +107,13 @@ public:
 		TEXFORMAT_RGB,
 		TEXFORMAT_RGBA,
 		TEXFORMAT_ALPHA,
+		// two channel tile data (index/flags), maps to R8G8_UNORM / GL_RG
+		TEXFORMAT_RG,
 
 		TEXFLAG_NOMIPMAPS = 1,
 		TEXFLAG_QUALITY = 2,
+		// texels are data, upload verbatim: never resampled or premultiplied
+		TEXFLAG_NORESAMPLE = 4,
 	};
 
 	enum
@@ -198,6 +205,21 @@ public:
 		unsigned m_PrimType;
 		unsigned m_PrimCount;
 		CVertex *m_pVertices; // you should use the command buffer data to allocate vertices for this command
+	};
+
+	struct CRenderTilemapTextureCommand : public CCommand
+	{
+		CRenderTilemapTextureCommand() : CCommand(CMD_RENDER_TILEMAP_TEXTURE) {}
+		CState m_State;
+		int m_TileData; // texture slot of the tile data 2D array
+		int m_Layer; // array layer of this tile map
+		int m_Width;
+		int m_Height;
+		int m_PassMode;
+		// mirrors the CPU path: unblended opaque pass only when the layer color is opaque
+		bool m_ColorOpaque;
+		CColor m_Color; // premultiplied layer color
+		CVertex m_aVertices[4];
 	};
 
 	struct CScreenshotCommand : public CCommand
@@ -446,6 +468,9 @@ public:
 	virtual int UnloadTexture(IGraphics::CTextureHandle *pIndex);
 	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Layers, int Format, const void *pData, int StoreFormat, int Flags);
 	virtual int LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData);
+
+	virtual bool TilemapShaderEnabled() const;
+	virtual void RenderTilemapTexture(CTextureHandle TileData, int Layer, int Width, int Height, int PassMode, bool ColorOpaque, const vec4 &Color);
 
 	// simple uncompressed RGBA loaders
 	virtual IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);

@@ -1,0 +1,50 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentInput
+{
+    float3 TexCoord; // xy is the layer space position in tile units
+    float4 Color;    // premultiplied layer color
+};
+
+// SDL_GPU fragment uniform slot 0
+struct Uniforms
+{
+    float4 MapSizeTileSize;
+    int4 Params;
+};
+
+fragment float4 main0(FragmentInput Input [[stage_in]],
+    texture2d_array<float> Texture [[texture(0)]],
+    texture2d_array<float> TileData [[texture(1)]],
+    sampler TextureSampler [[sampler(0)]],
+    constant Uniforms &Uniform [[buffer(0)]])
+{
+    int2 Tile = clamp(int2(floor(Input.TexCoord.xy)), int2(0), int2(Uniform.MapSizeTileSize.xy) - 1);
+    float4 Data = TileData.read(uint2(Tile), (uint)Uniform.Params.y, 0);
+    if(Uniform.Params.x == 3) // TILEMAP_PASS_DATA_DEBUG
+    {
+        return float4(Data.r, Data.g, 0.0, 1.0);
+    }
+    // round() avoids the .5 tie of uint(x + 0.5), which some drivers round up to even
+    uint Index = uint(round(Data.r * 255.0));
+    if(Index == 0u)
+        discard_fragment();
+
+    uint Flags = uint(round(Data.g * 255.0));
+    // an opaque tile only takes the unblended pass when the layer color is opaque too
+    bool ColorOpaque = Uniform.Params.z != 0;
+    bool Opaque = (Flags & 4u) != 0u && ColorOpaque;
+    if(Uniform.Params.x == 0 && !Opaque)
+        discard_fragment();
+    if(Uniform.Params.x == 1 && Opaque)
+        discard_fragment();
+
+    float2 UV = fract(Input.TexCoord.xy);
+    // same flag order as the CPU path: rotate first, then flip
+    if((Flags & 8u) != 0u) UV = float2(UV.y, 1.0 - UV.x); // TILEFLAG_ROTATE
+    if((Flags & 1u) != 0u) UV.x = 1.0 - UV.x;          // TILEFLAG_VFLIP
+    if((Flags & 2u) != 0u) UV.y = 1.0 - UV.y;          // TILEFLAG_HFLIP
+
+    return Texture.sample(TextureSampler, UV, (uint)Index) * Input.Color;
+}

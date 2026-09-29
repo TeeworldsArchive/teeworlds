@@ -16,6 +16,8 @@ public:
 		FORMAT_RGB = 0,
 		FORMAT_RGBA = 1,
 		FORMAT_ALPHA = 2,
+		// two channel tile data (index/flags); SDL_GPU has no RGB8, so use this
+		FORMAT_RG = 3,
 	};
 
 	/* Variable: width
@@ -41,6 +43,7 @@ public:
 			case FORMAT_RGB: return 3;
 			case FORMAT_RGBA: return 4;
 			case FORMAT_ALPHA: return 1;
+			case FORMAT_RG: return 2;
 		}
 		return 0;
 	}
@@ -191,6 +194,23 @@ public:
 		CColorVertex(int i, float r, float g, float b, float a) : m_Index(i), m_R(r), m_G(g), m_B(b), m_A(a) {}
 	};
 	virtual void SetColorVertex(const CColorVertex *pArray, int Num) = 0;
+
+	// Tile map rendering: the tile data is uploaded as one 2D array layer per tile
+	// map and sampled by a dedicated shader, so the CPU never builds tile geometry.
+	enum
+	{
+		TILEMAP_PASS_OPAQUE = 0, // only tiles marked TILEFLAG_OPAQUE
+		TILEMAP_PASS_TRANSPARENT = 1, // only tiles that are not opaque
+		TILEMAP_PASS_ALL = 2, // every tile, always blended
+		TILEMAP_PASS_DATA_DEBUG = 3, // draw the raw tile data texture (red = index, green = flags)
+	};
+
+	// Whether the backend implements RenderTilemapTexture.
+	virtual bool TilemapShaderEnabled() const { return false; }
+	// TileData holds one array layer per tile map and Color is premultiplied.
+	// ColorOpaque lets the shader skip the tile pass split just like the CPU path.
+	virtual void RenderTilemapTexture(CTextureHandle TileData, int Layer, int Width, int Height, int PassMode, bool ColorOpaque, const vec4 &Color) = 0;
+
 	virtual void SetColor(float r, float g, float b, float a) = 0;
 	inline void SetColor(const vec4 &Color) { SetColor(Color.r, Color.g, Color.b, Color.a); }
 	virtual void SetColor4(const vec4 &TopLeft, const vec4 &TopRight, const vec4 &BottomLeft, const vec4 &BottomRight) = 0;

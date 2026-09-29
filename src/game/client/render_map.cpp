@@ -371,6 +371,58 @@ void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlag
 	Graphics()->QuadsEnd();
 }
 
+// Fills a tile's corner texcoords, applying the flip/rotate flags like RenderTilemap.
+static void TilemapQuadTexCoords(unsigned char Flags, float aUV[8])
+{
+	float x0 = 0;
+	float y0 = 0;
+	float x1 = 1;
+	float y1 = 0;
+	float x2 = 1;
+	float y2 = 1;
+	float x3 = 0;
+	float y3 = 1;
+
+	if(Flags & TILEFLAG_VFLIP)
+	{
+		x0 = x2;
+		x1 = x3;
+		x2 = x3;
+		x3 = x0;
+	}
+
+	if(Flags & TILEFLAG_HFLIP)
+	{
+		y0 = y3;
+		y2 = y1;
+		y3 = y1;
+		y1 = y0;
+	}
+
+	if(Flags & TILEFLAG_ROTATE)
+	{
+		float Tmp = x0;
+		x0 = x3;
+		x3 = x2;
+		x2 = x1;
+		x1 = Tmp;
+		Tmp = y0;
+		y0 = y3;
+		y3 = y2;
+		y2 = y1;
+		y1 = Tmp;
+	}
+
+	aUV[0] = x0;
+	aUV[1] = y0;
+	aUV[2] = x1;
+	aUV[3] = y1;
+	aUV[4] = x2;
+	aUV[5] = y2;
+	aUV[6] = x3;
+	aUV[7] = y3;
+}
+
 void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale, vec4 Color, int RenderFlags,
 	ENVELOPE_EVAL pfnEval, void *pUser, int ColorEnv, int ColorEnvOffset)
 {
@@ -429,46 +481,9 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 
 				if(Render)
 				{
-					float x0 = 0;
-					float y0 = 0;
-					float x1 = 1;
-					float y1 = 0;
-					float x2 = 1;
-					float y2 = 1;
-					float x3 = 0;
-					float y3 = 1;
-
-					if(Flags & TILEFLAG_VFLIP)
-					{
-						x0 = x2;
-						x1 = x3;
-						x2 = x3;
-						x3 = x0;
-					}
-
-					if(Flags & TILEFLAG_HFLIP)
-					{
-						y0 = y3;
-						y2 = y1;
-						y3 = y1;
-						y1 = y0;
-					}
-
-					if(Flags & TILEFLAG_ROTATE)
-					{
-						float Tmp = x0;
-						x0 = x3;
-						x3 = x2;
-						x2 = x1;
-						x1 = Tmp;
-						Tmp = y0;
-						y0 = y3;
-						y3 = y2;
-						y2 = y1;
-						y1 = Tmp;
-					}
-
-					Graphics()->QuadsSetSubsetFree(x0, y0, x1, y1, x2, y2, x3, y3, Index);
+					float aUV[8];
+					TilemapQuadTexCoords(Flags, aUV);
+					Graphics()->QuadsSetSubsetFree(aUV[0], aUV[1], aUV[2], aUV[3], aUV[4], aUV[5], aUV[6], aUV[7], Index);
 					IGraphics::CQuadItem QuadItem(x * Scale, y * Scale, Scale, Scale);
 					Graphics()->SingleQuadDrawTL(&QuadItem);
 				}

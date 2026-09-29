@@ -108,6 +108,8 @@ int CCommandProcessorFragment_Texture::GetPixelSize(int TexFormat)
 			return 3;
 		case CCommandBuffer::TEXFORMAT_ALPHA:
 			return 1;
+		case CCommandBuffer::TEXFORMAT_RG:
+			return 2;
 		case CCommandBuffer::TEXFORMAT_RGBA:
 			return 4;
 		default:
@@ -197,8 +199,8 @@ void *CCommandProcessorFragment_Texture::PrepareTextureData(const CCommandBuffer
 	const int Layers = pCommand->m_Layers;
 	void *pTexData = pCommand->m_pData;
 
-	// resample if needed
-	if(Layers == 1 && (pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA || pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB))
+	// resample if needed, unless the texels are data (tile index/flag) and must stay verbatim
+	if(Layers == 1 && (pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA || pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB) && (pCommand->m_Flags & CCommandBuffer::TEXFLAG_NORESAMPLE) == 0)
 	{
 		if(Width > m_MaxTexSize || Height > m_MaxTexSize)
 		{
@@ -258,6 +260,8 @@ int CCommandProcessorFragment_OpenGL::TexFormatToOpenGLFormat(int TexFormat)
 			return GL_RGB;
 		case CCommandBuffer::TEXFORMAT_ALPHA:
 			return GL_RED;
+		case CCommandBuffer::TEXFORMAT_RG:
+			return GL_RG;
 		case CCommandBuffer::TEXFORMAT_RGBA:
 			return GL_RGBA;
 		default:
@@ -432,6 +436,22 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	m_LastTextureID = -1;
 	m_LastSampler = 0;
 
+	// dedicated tile map shader
+	mem_zero(&m_TilemapShader, sizeof(m_TilemapShader));
+	m_TilemapShader.m_ShaderProgram = CreateShaderProgram(pCommand->m_pVertexShaderSource, pCommand->m_pTilemapFragmentShaderSource);
+	m_TilemapShader.m_OurTextureLoc = glGetUniformLocation(m_TilemapShader.m_ShaderProgram, "ourTexture");
+	m_TilemapShader.m_TileDataLoc = glGetUniformLocation(m_TilemapShader.m_ShaderProgram, "tileData");
+	m_TilemapShader.m_MapSizeLoc = glGetUniformLocation(m_TilemapShader.m_ShaderProgram, "MapSize");
+	m_TilemapShader.m_PassModeLoc = glGetUniformLocation(m_TilemapShader.m_ShaderProgram, "PassMode");
+	m_TilemapShader.m_LayerIndexLoc = glGetUniformLocation(m_TilemapShader.m_ShaderProgram, "LayerIndex");
+	m_TilemapShader.m_ColorOpaqueLoc = glGetUniformLocation(m_TilemapShader.m_ShaderProgram, "ColorOpaque");
+	m_TilemapShader.m_ProjectionLoc = glGetUniformLocation(m_TilemapShader.m_ShaderProgram, "projection");
+	glUseProgram(m_TilemapShader.m_ShaderProgram);
+	glUniform1i(m_TilemapShader.m_OurTextureLoc, 0);
+	glUniform1i(m_TilemapShader.m_TileDataLoc, 1);
+
+	glUseProgram(m_RenderShader.m_ShaderProgram);
+
 	glEnable(GL_BLEND);
 
 	// set some default settings
@@ -520,6 +540,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const CGLShutdownCommand *pC
 	glDeleteBuffers(1, &m_QuadDrawIndexBufferID);
 	glDeleteVertexArrays(1, &m_PrimitiveDrawVertexID);
 	glDeleteShader(m_RenderShader.m_ShaderProgram);
+	glDeleteShader(m_TilemapShader.m_ShaderProgram);
 	glDeleteSamplers(NUM_BASIC_SAMPLERS * NUM_WRAP_SAMPLERS, (GLuint *) m_aaSampler2D);
 }
 
@@ -599,6 +620,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Render(const CCommandBuffer::CRenderC
 	if(!SetState(pCommand->m_State))
 		return;
 
+	glBindBuffer(GL_ARRAY_BUFFER, m_PrimitiveDrawBufferID);
 	glBufferData(GL_ARRAY_BUFFER, pCommand->m_PrimCount * 4 * sizeof(CCommandBuffer::CVertex), nullptr, GL_STREAM_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, pCommand->m_PrimCount * 4 * sizeof(CCommandBuffer::CVertex), pCommand->m_pVertices);
 
@@ -613,6 +635,74 @@ void CCommandProcessorFragment_OpenGL::Cmd_Render(const CCommandBuffer::CRenderC
 		default:
 			dbg_msg("render", "unknown primtype %d", pCommand->m_PrimType);
 	};
+}
+
+void CCommandProcessorFragment_OpenGL::Cmd_RenderTilemapTexture(const CCommandBuffer::CRenderTilemapTextureCommand *pCommand)
+{
+	if(pCommand->m_TileData < 0 || pCommand->m_TileData >= CCommandBuffer::MAX_TEXTURES || !m_aTextures[pCommand->m_TileData].m_Valid)
+		return;
+	if(pCommand->m_State.m_Texture < 0 || pCommand->m_State.m_Texture >= CCommandBuffer::MAX_TEXTURES || !m_aTextures[pCommand->m_State.m_Texture].m_Valid)
+		return;
+
+	// scissor
+	if(pCommand->m_State.m_ClipEnable)
+	{
+		glScissor(pCommand->m_State.m_ClipX, pCommand->m_State.m_ClipY, pCommand->m_State.m_ClipW, pCommand->m_State.m_ClipH);
+		glEnable(GL_SCISSOR_TEST);
+	}
+	else
+	{
+		glDisable(GL_SCISSOR_TEST);
+	}
+
+	glUseProgram(m_TilemapShader.m_ShaderProgram);
+
+	// the tilemap output is premultiplied; the opaque pass has alpha 1, so no blend
+	if(pCommand->m_State.m_BlendMode == CCommandBuffer::BLEND_NONE)
+	{
+		glDisable(GL_BLEND);
+	}
+	else
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	}
+
+	float aOrthoMatrix[16];
+	ComputeOrthoMatrix(pCommand->m_State, aOrthoMatrix);
+	glUniformMatrix4fv(m_TilemapShader.m_ProjectionLoc, 1, GL_FALSE, aOrthoMatrix);
+	glUniform2f(m_TilemapShader.m_MapSizeLoc, (float)pCommand->m_Width, (float)pCommand->m_Height);
+	glUniform1i(m_TilemapShader.m_PassModeLoc, pCommand->m_PassMode);
+	glUniform1i(m_TilemapShader.m_LayerIndexLoc, pCommand->m_Layer);
+	glUniform1i(m_TilemapShader.m_ColorOpaqueLoc, pCommand->m_ColorOpaque ? 1 : 0);
+	// the layer color comes in through the vertex color attribute, not a uniform
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[pCommand->m_State.m_Texture].m_Texture);
+	glBindSampler(0, m_aaSampler2D[m_aTextures[pCommand->m_State.m_Texture].m_BasicSamplerType][SAMPLER2D_CLAMP_CLAMP]);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, m_aTextures[pCommand->m_TileData].m_Texture);
+	glBindSampler(1, m_aaSampler2D[SAMPLER2D_NOMIPMAPS][SAMPLER2D_CLAMP_CLAMP]);
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindVertexArray(m_PrimitiveDrawVertexID);
+	glBindBuffer(GL_ARRAY_BUFFER, m_PrimitiveDrawBufferID);
+	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(CCommandBuffer::CVertex), nullptr, GL_STREAM_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sizeof(CCommandBuffer::CVertex), pCommand->m_aVertices);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	// the tilemap path bypasses SetState, so drop its caches to force a full reconfigure
+	glUseProgram(m_RenderShader.m_ShaderProgram);
+	glBindSampler(1, 0);
+	glDisable(GL_SCISSOR_TEST);
+	glEnable(GL_BLEND);
+	m_LastSrcBlendMode = GL_NONE;
+	m_LastAlphaOnly = false;
+	m_LastStainedOnly = false;
+	m_LastUseTexture = false;
+	m_LastTextureID = -1;
+	m_LastSampler = 0;
+	m_LastClipEnable = false;
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_Screenshot(const CCommandBuffer::CScreenshotCommand *pCommand)
@@ -671,6 +761,7 @@ bool CCommandProcessorFragment_OpenGL::RunCommand(const CCommandBuffer::CCommand
 		case CCommandBuffer::CMD_TEXTURE_UPDATE: Cmd_Texture_Update(static_cast<const CCommandBuffer::CTextureUpdateCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_CLEAR: Cmd_Clear(static_cast<const CCommandBuffer::CClearCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_RENDER: Cmd_Render(static_cast<const CCommandBuffer::CRenderCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_RENDER_TILEMAP_TEXTURE: Cmd_RenderTilemapTexture(static_cast<const CCommandBuffer::CRenderTilemapTextureCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_SCREENSHOT: Cmd_Screenshot(static_cast<const CCommandBuffer::CScreenshotCommand *>(pBaseCommand)); break;
 		default: return false;
 	}
@@ -991,6 +1082,7 @@ CGraphicsBackend_SDL_OpenGL::CGraphicsBackend_SDL_OpenGL(IStorage *pStorage) :
 	m_GLContext = 0;
 	m_pVertexShaderSource = 0;
 	m_pFragmentShaderSource = 0;
+	m_pTilemapFragmentShaderSource = 0;
 }
 
 int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight)
@@ -1041,8 +1133,10 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	// load the shader sources from the data directory
 	unsigned VertexShaderSize = 0;
 	unsigned FragmentShaderSize = 0;
+	unsigned TilemapFragmentShaderSize = 0;
 	if(!m_pStorage->ReadFile("shaders/gles/quad.vert", IStorage::TYPE_ALL, (void **) &m_pVertexShaderSource, &VertexShaderSize) ||
-		!m_pStorage->ReadFile("shaders/gles/quad.frag", IStorage::TYPE_ALL, (void **) &m_pFragmentShaderSource, &FragmentShaderSize))
+		!m_pStorage->ReadFile("shaders/gles/quad.frag", IStorage::TYPE_ALL, (void **) &m_pFragmentShaderSource, &FragmentShaderSize) ||
+		!m_pStorage->ReadFile("shaders/gles/tilemap.frag", IStorage::TYPE_ALL, (void **) &m_pTilemapFragmentShaderSource, &TilemapFragmentShaderSize))
 	{
 		dbg_msg("gfx", "unable to load OpenGL ES shaders");
 		return -1;
@@ -1058,6 +1152,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	CmdOpenGL.m_pTextureMemoryUsage = &m_TextureMemoryUsage;
 	CmdOpenGL.m_pVertexShaderSource = m_pVertexShaderSource;
 	CmdOpenGL.m_pFragmentShaderSource = m_pFragmentShaderSource;
+	CmdOpenGL.m_pTilemapFragmentShaderSource = m_pTilemapFragmentShaderSource;
 	CmdBuffer.AddCommand(CmdOpenGL);
 	RunBuffer(&CmdBuffer);
 	WaitForIdle();
@@ -1089,6 +1184,8 @@ int CGraphicsBackend_SDL_OpenGL::Shutdown()
 	m_pVertexShaderSource = 0;
 	mem_free(m_pFragmentShaderSource);
 	m_pFragmentShaderSource = 0;
+	mem_free(m_pTilemapFragmentShaderSource);
+	m_pTilemapFragmentShaderSource = 0;
 
 	SDL_GL_DestroyContext(m_GLContext);
 	m_GLContext = 0;

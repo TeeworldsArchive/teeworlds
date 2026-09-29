@@ -58,6 +58,8 @@ CCommandProcessorFragment_SDLGPU::CCommandProcessorFragment_SDLGPU()
 	m_pWindow = 0;
 	m_pVertexShader = 0;
 	m_pFragmentShader = 0;
+	m_pTilemapFragmentShader = 0;
+	m_pTileDataSampler = 0;
 	m_pIndexBuffer = 0;
 	m_IndexBufferNumIndices = 0;
 	m_FrameFormat = SDL_GPU_TEXTUREFORMAT_INVALID;
@@ -89,6 +91,7 @@ CCommandProcessorFragment_SDLGPU::CCommandProcessorFragment_SDLGPU()
 	m_pLastPipeline = 0;
 	m_pLastTexture = 0;
 	m_pLastSampler = 0;
+	m_pLastTileDataTexture = 0;
 	m_BuffersBound = false;
 	m_LastScissorValid = false;
 	mem_zero(&m_LastScissor, sizeof(m_LastScissor));
@@ -101,6 +104,7 @@ CCommandProcessorFragment_SDLGPU::CCommandProcessorFragment_SDLGPU()
 	m_ClearColor.b = 0.0f;
 	m_ClearColor.a = 1.0f;
 	mem_zero(m_apPipelines, sizeof(m_apPipelines));
+	mem_zero(m_apTilemapPipelines, sizeof(m_apTilemapPipelines));
 	mem_zero(m_aTextures, sizeof(m_aTextures));
 	mem_zero(m_aaSamplers, sizeof(m_aaSamplers));
 }
@@ -111,6 +115,8 @@ SDL_GPUTextureFormat CCommandProcessorFragment_SDLGPU::TexFormatToSDLGPUFormat(i
 	{
 	case CCommandBuffer::TEXFORMAT_ALPHA:
 		return SDL_GPU_TEXTUREFORMAT_R8_UNORM;
+	case CCommandBuffer::TEXFORMAT_RG:
+		return SDL_GPU_TEXTUREFORMAT_R8G8_UNORM;
 	case CCommandBuffer::TEXFORMAT_RGB:
 	case CCommandBuffer::TEXFORMAT_RGBA:
 	default:
@@ -276,6 +282,7 @@ void CCommandProcessorFragment_SDLGPU::ResetRenderStateCache()
 	m_pLastPipeline = 0;
 	m_pLastTexture = 0;
 	m_pLastSampler = 0;
+	m_pLastTileDataTexture = 0;
 	m_BuffersBound = false;
 	m_LastScissorValid = false;
 	m_LastOrthoMatrixValid = false;
@@ -310,8 +317,9 @@ bool CCommandProcessorFragment_SDLGPU::UploadTexture(SDL_GPUTexture *pTexture, i
 	SDL_GPUTextureTransferInfo Src;
 	mem_zero(&Src, sizeof(Src));
 	Src.transfer_buffer = pTransferBuffer;
-	Src.pixels_per_row = Width;
-	Src.rows_per_layer = Height;
+	// tightly packed data, so spell out the row/layer strides or later layers desync
+	Src.pixels_per_row = (Uint32)Width;
+	Src.rows_per_layer = (Uint32)Height;
 
 	SDL_GPUTextureRegion Dst;
 	mem_zero(&Dst, sizeof(Dst));
@@ -336,6 +344,94 @@ bool CCommandProcessorFragment_SDLGPU::UploadTexture(SDL_GPUTexture *pTexture, i
 
 	AddDeferredTransferBuffer(pTransferBuffer);
 	return true;
+}
+
+bool CCommandProcessorFragment_SDLGPU::CreateTilemapPipeline(int Index, int BlendVariant)
+{
+	SDL_GPUVertexBufferDescription VertexBufferDesc;
+	mem_zero(&VertexBufferDesc, sizeof(VertexBufferDesc));
+	VertexBufferDesc.slot = 0;
+	VertexBufferDesc.pitch = sizeof(CCommandBuffer::CVertex);
+	VertexBufferDesc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+	VertexBufferDesc.instance_step_rate = 0;
+
+	SDL_GPUVertexAttribute aAttributes[3];
+	mem_zero(aAttributes, sizeof(aAttributes));
+	aAttributes[0].location = 0;
+	aAttributes[0].buffer_slot = 0;
+	aAttributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+	aAttributes[0].offset = 0;
+	aAttributes[1].location = 1;
+	aAttributes[1].buffer_slot = 0;
+	aAttributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+	aAttributes[1].offset = sizeof(float) * 2;
+	aAttributes[2].location = 2;
+	aAttributes[2].buffer_slot = 0;
+	aAttributes[2].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+	aAttributes[2].offset = sizeof(float) * 5;
+
+	SDL_GPUVertexInputState VertexInputState;
+	mem_zero(&VertexInputState, sizeof(VertexInputState));
+	VertexInputState.vertex_buffer_descriptions = &VertexBufferDesc;
+	VertexInputState.num_vertex_buffers = 1;
+	VertexInputState.vertex_attributes = aAttributes;
+	VertexInputState.num_vertex_attributes = 3;
+
+	SDL_GPURasterizerState RasterizerState;
+	mem_zero(&RasterizerState, sizeof(RasterizerState));
+	RasterizerState.fill_mode = SDL_GPU_FILLMODE_FILL;
+	RasterizerState.cull_mode = SDL_GPU_CULLMODE_NONE;
+	RasterizerState.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+	RasterizerState.enable_depth_clip = false;
+
+	SDL_GPUMultisampleState MultisampleState;
+	mem_zero(&MultisampleState, sizeof(MultisampleState));
+	MultisampleState.sample_count = SDL_GPU_SAMPLECOUNT_1;
+
+	SDL_GPUDepthStencilState DepthStencilState;
+	mem_zero(&DepthStencilState, sizeof(DepthStencilState));
+	DepthStencilState.enable_depth_test = false;
+	DepthStencilState.enable_depth_write = false;
+
+	SDL_GPUColorTargetBlendState BlendState;
+	mem_zero(&BlendState, sizeof(BlendState));
+	// the opaque pass has alpha 1 and premultiplied color, so it needs no blend
+	BlendState.enable_blend = BlendVariant != PIPELINE_TILEMAP_NONE;
+	BlendState.src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+	BlendState.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	BlendState.color_blend_op = SDL_GPU_BLENDOP_ADD;
+	BlendState.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+	BlendState.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	BlendState.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+	BlendState.color_write_mask = SDL_GPU_COLORCOMPONENT_R | SDL_GPU_COLORCOMPONENT_G | SDL_GPU_COLORCOMPONENT_B | SDL_GPU_COLORCOMPONENT_A;
+	BlendState.enable_color_write_mask = false;
+
+	SDL_GPUColorTargetDescription ColorTarget;
+	mem_zero(&ColorTarget, sizeof(ColorTarget));
+	ColorTarget.format = m_FrameFormat;
+	ColorTarget.blend_state = BlendState;
+
+	SDL_GPUGraphicsPipelineTargetInfo TargetInfo;
+	mem_zero(&TargetInfo, sizeof(TargetInfo));
+	TargetInfo.color_target_descriptions = &ColorTarget;
+	TargetInfo.num_color_targets = 1;
+	TargetInfo.has_depth_stencil_target = false;
+
+	SDL_GPUGraphicsPipelineCreateInfo PipelineInfo;
+	mem_zero(&PipelineInfo, sizeof(PipelineInfo));
+	PipelineInfo.vertex_shader = m_pVertexShader;
+	PipelineInfo.fragment_shader = m_pTilemapFragmentShader;
+	PipelineInfo.vertex_input_state = VertexInputState;
+	PipelineInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+	PipelineInfo.rasterizer_state = RasterizerState;
+	PipelineInfo.multisample_state = MultisampleState;
+	PipelineInfo.depth_stencil_state = DepthStencilState;
+	PipelineInfo.target_info = TargetInfo;
+
+	m_apTilemapPipelines[Index] = SDL_CreateGPUGraphicsPipeline(m_pDevice, &PipelineInfo);
+	if(!m_apTilemapPipelines[Index])
+		dbg_msg("gfx", "failed to create tilemap graphics pipeline: %s", SDL_GetError());
+	return m_apTilemapPipelines[Index] != 0;
 }
 
 bool CCommandProcessorFragment_SDLGPU::CreatePipeline(int Index, SDL_GPUPrimitiveType PrimType, int BlendVariant)
@@ -461,7 +557,18 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 	ShaderInfo.num_samplers = 1;
 	ShaderInfo.num_uniform_buffers = 1;
 	m_pFragmentShader = SDL_CreateGPUShader(m_pDevice, &ShaderInfo);
-	if(!m_pVertexShader || !m_pFragmentShader)
+
+	// the tilemap shader samples the tile data texture in addition to the tileset
+	mem_zero(&ShaderInfo, sizeof(ShaderInfo));
+	ShaderInfo.code_size = pCommand->m_TilemapFragmentShaderSize;
+	ShaderInfo.code = pCommand->m_pTilemapFragmentShaderCode;
+	ShaderInfo.entrypoint = pEntrypoint;
+	ShaderInfo.format = pCommand->m_ShaderFormat;
+	ShaderInfo.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+	ShaderInfo.num_samplers = 2;
+	ShaderInfo.num_uniform_buffers = 1;
+	m_pTilemapFragmentShader = SDL_CreateGPUShader(m_pDevice, &ShaderInfo);
+	if(!m_pVertexShader || !m_pFragmentShader || !m_pTilemapFragmentShader)
 		dbg_msg("gfx", "failed to create SDL_GPU shaders: %s", SDL_GetError());
 
 	// samplers
@@ -503,6 +610,21 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 		}
 	}
 
+	// tile data is read with texelFetch, so bind an exact (nearest) sampler
+	{
+		SDL_GPUSamplerCreateInfo SamplerInfo;
+		mem_zero(&SamplerInfo, sizeof(SamplerInfo));
+		SamplerInfo.min_filter = SDL_GPU_FILTER_NEAREST;
+		SamplerInfo.mag_filter = SDL_GPU_FILTER_NEAREST;
+		SamplerInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+		SamplerInfo.min_lod = 0.0f;
+		SamplerInfo.max_lod = 0.0f;
+		SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+		SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+		SamplerInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+		m_pTileDataSampler = SDL_CreateGPUSampler(m_pDevice, &SamplerInfo);
+	}
+
 	// pipelines
 	CreatePipeline(PIPELINE_QUADS_NONE, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 0);
 	CreatePipeline(PIPELINE_QUADS_ALPHA_PREMULTIPLIED, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 1);
@@ -510,6 +632,9 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 	CreatePipeline(PIPELINE_LINES_NONE, SDL_GPU_PRIMITIVETYPE_LINELIST, 0);
 	CreatePipeline(PIPELINE_LINES_ALPHA_PREMULTIPLIED, SDL_GPU_PRIMITIVETYPE_LINELIST, 1);
 	CreatePipeline(PIPELINE_LINES_ALPHA, SDL_GPU_PRIMITIVETYPE_LINELIST, 2);
+
+	CreateTilemapPipeline(PIPELINE_TILEMAP_NONE, PIPELINE_TILEMAP_NONE);
+	CreateTilemapPipeline(PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED, PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED);
 
 	// static quad index buffer
 	m_IndexBufferNumIndices = CCommandBuffer::MAX_VERTICES / 4 * 6;
@@ -582,12 +707,21 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Shutdown(const CShutdownCommand *pCom
 			SDL_ReleaseGPUGraphicsPipeline(m_pDevice, m_apPipelines[i]);
 		m_apPipelines[i] = 0;
 	}
+	for(int i = 0; i < NUM_TILEMAP_PIPELINES; i++)
+	{
+		if(m_apTilemapPipelines[i])
+			SDL_ReleaseGPUGraphicsPipeline(m_pDevice, m_apTilemapPipelines[i]);
+		m_apTilemapPipelines[i] = 0;
+	}
 	if(m_pVertexShader)
 		SDL_ReleaseGPUShader(m_pDevice, m_pVertexShader);
 	m_pVertexShader = 0;
 	if(m_pFragmentShader)
 		SDL_ReleaseGPUShader(m_pDevice, m_pFragmentShader);
 	m_pFragmentShader = 0;
+	if(m_pTilemapFragmentShader)
+		SDL_ReleaseGPUShader(m_pDevice, m_pTilemapFragmentShader);
+	m_pTilemapFragmentShader = 0;
 	for(int i = 0; i < NUM_BASIC_SAMPLERS; i++)
 		for(int j = 0; j < NUM_WRAP_SAMPLERS; j++)
 		{
@@ -595,6 +729,9 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Shutdown(const CShutdownCommand *pCom
 				SDL_ReleaseGPUSampler(m_pDevice, m_aaSamplers[i][j]);
 			m_aaSamplers[i][j] = 0;
 		}
+	if(m_pTileDataSampler)
+		SDL_ReleaseGPUSampler(m_pDevice, m_pTileDataSampler);
+	m_pTileDataSampler = 0;
 	if(m_pIndexBuffer)
 		SDL_ReleaseGPUBuffer(m_pDevice, m_pIndexBuffer);
 	m_pIndexBuffer = 0;
@@ -712,9 +849,20 @@ void CCommandProcessorFragment_SDLGPU::ApplyDraw(SDL_GPURenderPass *pPass, const
 	if(!pTexture || !pSampler)
 		return;
 
+	SDL_GPUTexture *pTileData = 0;
+	if(pDraw->m_IsTilemap)
+	{
+		if(pDraw->m_TileData < 0 || pDraw->m_TileData >= CCommandBuffer::MAX_TEXTURES || !m_aTextures[pDraw->m_TileData].m_Valid)
+			return;
+		pTileData = m_aTextures[pDraw->m_TileData].m_pTexture;
+	}
+
 	const int BlendVariant = State.m_BlendMode == CCommandBuffer::BLEND_NONE ? 0 : (SrcIsAlpha ? 2 : 1);
-	const int PrimIndex = pDraw->m_PrimType == CCommandBuffer::PRIMTYPE_LINES ? 1 : 0;
-	SDL_GPUGraphicsPipeline *pPipeline = m_apPipelines[PrimIndex * 3 + BlendVariant];
+	SDL_GPUGraphicsPipeline *pPipeline;
+	if(pDraw->m_IsTilemap)
+		pPipeline = m_apTilemapPipelines[State.m_BlendMode == CCommandBuffer::BLEND_NONE ? PIPELINE_TILEMAP_NONE : PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED];
+	else
+		pPipeline = m_apPipelines[(pDraw->m_PrimType == CCommandBuffer::PRIMTYPE_LINES ? 1 : 0) * 3 + BlendVariant];
 	if(pPipeline != m_pLastPipeline)
 	{
 		SDL_BindGPUGraphicsPipeline(pPass, pPipeline);
@@ -751,25 +899,58 @@ void CCommandProcessorFragment_SDLGPU::ApplyDraw(SDL_GPURenderPass *pPass, const
 		m_LastOrthoMatrixValid = true;
 	}
 
-	const int aFlags[3] = {HasTexture ? 1 : 0, IsAlphaOnly ? 1 : 0, State.m_IsStainedOnly ? 1 : 0};
-	bool FlagsChanged = !m_LastFragmentFlagsValid;
-	for(int i = 0; !FlagsChanged && i < 3; i++)
-		FlagsChanged = aFlags[i] != m_LastFragmentFlags[i];
-	if(FlagsChanged)
+	if(pDraw->m_IsTilemap)
 	{
-		SDL_PushGPUFragmentUniformData(m_pCommandBuffer, 0, aFlags, sizeof(aFlags));
-		mem_copy(m_LastFragmentFlags, aFlags, sizeof(aFlags));
-		m_LastFragmentFlagsValid = true;
-	}
+		struct STilemapUniforms
+		{
+			float m_MapSizeTileSize[4];
+			int m_Params[4];
+		} Uniforms;
+		Uniforms.m_MapSizeTileSize[0] = (float)pDraw->m_TilemapWidth;
+		Uniforms.m_MapSizeTileSize[1] = (float)pDraw->m_TilemapHeight;
+		Uniforms.m_MapSizeTileSize[2] = 32.0f;
+		Uniforms.m_MapSizeTileSize[3] = 0.0f;
+		Uniforms.m_Params[0] = pDraw->m_TilemapPassMode;
+		Uniforms.m_Params[1] = pDraw->m_TilemapLayer;
+		Uniforms.m_Params[2] = pDraw->m_TilemapColorOpaque ? 1 : 0;
+		Uniforms.m_Params[3] = 0;
+		SDL_PushGPUFragmentUniformData(m_pCommandBuffer, 0, &Uniforms, sizeof(Uniforms));
+		// the quad shader uses the same slot, so force it to be pushed again
+		m_LastFragmentFlagsValid = false;
 
-	if(pTexture != m_pLastTexture || pSampler != m_pLastSampler)
-	{
-		SDL_GPUTextureSamplerBinding TextureSamplerBinding;
-		TextureSamplerBinding.texture = pTexture;
-		TextureSamplerBinding.sampler = pSampler;
-		SDL_BindGPUFragmentSamplers(pPass, 0, &TextureSamplerBinding, 1);
+		SDL_GPUTextureSamplerBinding aBindings[2];
+		aBindings[0].texture = pTexture;
+		aBindings[0].sampler = pSampler;
+		aBindings[1].texture = pTileData;
+		aBindings[1].sampler = m_pTileDataSampler ? m_pTileDataSampler : m_aaSamplers[SAMPLER2D_NOMIPMAPS][SAMPLER2D_CLAMP_CLAMP];
+		SDL_BindGPUFragmentSamplers(pPass, 0, aBindings, 2);
 		m_pLastTexture = pTexture;
 		m_pLastSampler = pSampler;
+		m_pLastTileDataTexture = pTileData;
+	}
+	else
+	{
+		const int aFlags[3] = {HasTexture ? 1 : 0, IsAlphaOnly ? 1 : 0, State.m_IsStainedOnly ? 1 : 0};
+		bool FlagsChanged = !m_LastFragmentFlagsValid;
+		for(int i = 0; !FlagsChanged && i < 3; i++)
+			FlagsChanged = aFlags[i] != m_LastFragmentFlags[i];
+		if(FlagsChanged)
+		{
+			SDL_PushGPUFragmentUniformData(m_pCommandBuffer, 0, aFlags, sizeof(aFlags));
+			mem_copy(m_LastFragmentFlags, aFlags, sizeof(m_LastFragmentFlags));
+			m_LastFragmentFlagsValid = true;
+		}
+
+		if(pTexture != m_pLastTexture || pSampler != m_pLastSampler)
+		{
+			SDL_GPUTextureSamplerBinding TextureSamplerBinding;
+			TextureSamplerBinding.texture = pTexture;
+			TextureSamplerBinding.sampler = pSampler;
+			SDL_BindGPUFragmentSamplers(pPass, 0, &TextureSamplerBinding, 1);
+			m_pLastTexture = pTexture;
+			m_pLastSampler = pSampler;
+		}
+		m_pLastTileDataTexture = 0;
 	}
 
 	SDL_Rect Scissor;
@@ -797,7 +978,13 @@ void CCommandProcessorFragment_SDLGPU::ApplyDraw(SDL_GPURenderPass *pPass, const
 	}
 
 	const unsigned BaseVertex = pDraw->m_VertexOffset / sizeof(CCommandBuffer::CVertex);
-	if(pDraw->m_PrimType == CCommandBuffer::PRIMTYPE_QUADS)
+	if(pDraw->m_IsTilemap)
+	{
+		if(!m_pIndexBuffer)
+			return;
+		SDL_DrawGPUIndexedPrimitives(pPass, 6, 1, 0, (Sint32)BaseVertex, 0);
+	}
+	else if(pDraw->m_PrimType == CCommandBuffer::PRIMTYPE_QUADS)
 	{
 		if(!m_pIndexBuffer)
 			return;
@@ -1041,8 +1228,38 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Render(const CCommandBuffer::CRenderC
 	pDraw->m_PrimCount = pCommand->m_PrimCount;
 	pDraw->m_NumVertices = NumVertices;
 	pDraw->m_VertexOffset = m_StagingUsed;
+	pDraw->m_IsTilemap = false;
 
 	mem_copy(m_pStagingData + m_StagingUsed, pCommand->m_pVertices, Bytes);
+	m_StagingUsed += Bytes;
+}
+
+void CCommandProcessorFragment_SDLGPU::Cmd_RenderTilemapTexture(const CCommandBuffer::CRenderTilemapTextureCommand *pCommand)
+{
+	if(pCommand->m_TileData < 0 || pCommand->m_TileData >= CCommandBuffer::MAX_TEXTURES || !m_aTextures[pCommand->m_TileData].m_Valid)
+		return;
+	if(pCommand->m_State.m_Texture < 0 || pCommand->m_State.m_Texture >= CCommandBuffer::MAX_TEXTURES || !m_aTextures[pCommand->m_State.m_Texture].m_Valid)
+		return;
+
+	const unsigned Bytes = 4 * sizeof(CCommandBuffer::CVertex);
+	if(!EnsureStagingCapacity(m_StagingUsed + Bytes) || !EnsurePendingDrawCapacity(m_PendingDrawCount + 1))
+		return;
+
+	CPendingDraw *pDraw = &m_pPendingDraws[m_PendingDrawCount++];
+	pDraw->m_State = pCommand->m_State;
+	pDraw->m_PrimType = CCommandBuffer::PRIMTYPE_QUADS;
+	pDraw->m_PrimCount = 1;
+	pDraw->m_NumVertices = 4;
+	pDraw->m_VertexOffset = m_StagingUsed;
+	pDraw->m_IsTilemap = true;
+	pDraw->m_TileData = pCommand->m_TileData;
+	pDraw->m_TilemapLayer = pCommand->m_Layer;
+	pDraw->m_TilemapWidth = pCommand->m_Width;
+	pDraw->m_TilemapHeight = pCommand->m_Height;
+	pDraw->m_TilemapPassMode = pCommand->m_PassMode;
+	pDraw->m_TilemapColorOpaque = pCommand->m_ColorOpaque ? 1 : 0;
+
+	mem_copy(m_pStagingData + m_StagingUsed, pCommand->m_aVertices, Bytes);
 	m_StagingUsed += Bytes;
 }
 
@@ -1281,6 +1498,7 @@ bool CCommandProcessorFragment_SDLGPU::RunCommand(const CCommandBuffer::CCommand
 	case CCommandBuffer::CMD_TEXTURE_UPDATE: Cmd_Texture_Update(static_cast<const CCommandBuffer::CTextureUpdateCommand *>(pBaseCommand)); break;
 	case CCommandBuffer::CMD_CLEAR: Cmd_Clear(static_cast<const CCommandBuffer::CClearCommand *>(pBaseCommand)); break;
 	case CCommandBuffer::CMD_RENDER: Cmd_Render(static_cast<const CCommandBuffer::CRenderCommand *>(pBaseCommand)); break;
+	case CCommandBuffer::CMD_RENDER_TILEMAP_TEXTURE: Cmd_RenderTilemapTexture(static_cast<const CCommandBuffer::CRenderTilemapTextureCommand *>(pBaseCommand)); break;
 	case CCommandBuffer::CMD_SCREENSHOT: Cmd_Screenshot(static_cast<const CCommandBuffer::CScreenshotCommand *>(pBaseCommand)); break;
 	case CCommandBuffer::CMD_SWAP: Cmd_Swap(static_cast<const CCommandBuffer::CSwapCommand *>(pBaseCommand)); break;
 	case CCommandBuffer::CMD_VSYNC: Cmd_VSync(static_cast<const CCommandBuffer::CVSyncCommand *>(pBaseCommand)); break;
@@ -1306,6 +1524,8 @@ CGraphicsBackend_SDL_GPU::CGraphicsBackend_SDL_GPU(IStorage *pStorage) :
 	m_VertexShaderSize = 0;
 	m_pFragmentShaderCode = 0;
 	m_FragmentShaderSize = 0;
+	m_pTilemapFragmentShaderCode = 0;
+	m_TilemapFragmentShaderSize = 0;
 }
 
 int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight)
@@ -1332,17 +1552,20 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 	SDL_GPUShaderFormat ShaderFormat;
 	const char *pVertexShaderFile;
 	const char *pFragmentShaderFile;
+	const char *pTilemapFragmentShaderFile;
 	if(SDL_GetGPUShaderFormats(m_pDevice) & SDL_GPU_SHADERFORMAT_MSL)
 	{
 		ShaderFormat = SDL_GPU_SHADERFORMAT_MSL;
 		pVertexShaderFile = "shaders/metal/quad.vert.msl";
 		pFragmentShaderFile = "shaders/metal/quad.frag.msl";
+		pTilemapFragmentShaderFile = "shaders/metal/tilemap.frag.msl";
 	}
 	else
 	{
 		ShaderFormat = SDL_GPU_SHADERFORMAT_SPIRV;
 		pVertexShaderFile = "shaders/vulkan/quad.vert.spv";
 		pFragmentShaderFile = "shaders/vulkan/quad.frag.spv";
+		pTilemapFragmentShaderFile = "shaders/vulkan/tilemap.frag.spv";
 	}
 
 	// three images in flight, two is not enough slack to keep the pacing smooth
@@ -1369,7 +1592,8 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 
 	// load the shaders from the data directory
 	if(!m_pStorage->ReadFile(pVertexShaderFile, IStorage::TYPE_ALL, (void **)&m_pVertexShaderCode, &m_VertexShaderSize) ||
-		!m_pStorage->ReadFile(pFragmentShaderFile, IStorage::TYPE_ALL, (void **)&m_pFragmentShaderCode, &m_FragmentShaderSize))
+		!m_pStorage->ReadFile(pFragmentShaderFile, IStorage::TYPE_ALL, (void **)&m_pFragmentShaderCode, &m_FragmentShaderSize) ||
+		!m_pStorage->ReadFile(pTilemapFragmentShaderFile, IStorage::TYPE_ALL, (void **)&m_pTilemapFragmentShaderCode, &m_TilemapFragmentShaderSize))
 	{
 		dbg_msg("gfx", "unable to load SDL_GPU shaders");
 		SDL_ReleaseWindowFromGPUDevice(m_pDevice, m_pWindow);
@@ -1394,6 +1618,8 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 	Cmd.m_VertexShaderSize = m_VertexShaderSize;
 	Cmd.m_pFragmentShaderCode = m_pFragmentShaderCode;
 	Cmd.m_FragmentShaderSize = m_FragmentShaderSize;
+	Cmd.m_pTilemapFragmentShaderCode = m_pTilemapFragmentShaderCode;
+	Cmd.m_TilemapFragmentShaderSize = m_TilemapFragmentShaderSize;
 	CmdBuffer.AddCommand(Cmd);
 	RunBuffer(&CmdBuffer);
 	WaitForIdle();
@@ -1417,6 +1643,8 @@ int CGraphicsBackend_SDL_GPU::Shutdown()
 	m_pVertexShaderCode = 0;
 	mem_free(m_pFragmentShaderCode);
 	m_pFragmentShaderCode = 0;
+	mem_free(m_pTilemapFragmentShaderCode);
+	m_pTilemapFragmentShaderCode = 0;
 
 	if(m_pDevice)
 	{

@@ -4,6 +4,7 @@
 #define GAME_CLIENT_COMPONENTS_MAPLAYERS_H
 #include <base/tl/array.h>
 #include <game/client/component.h>
+#include <game/mapitems.h>
 
 class CMapLayers : public CComponent
 {
@@ -74,6 +75,7 @@ public:
 	virtual void OnMapUnload();
 
 	static void ConchainBackgroundMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainTileBuffering(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	virtual void OnConsoleInit();
 

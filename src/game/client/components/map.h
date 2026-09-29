@@ -28,10 +28,25 @@ class CMapComponent : public CComponent
 	bool m_GameMapFading;
 	float m_GameMapAlpha;
 
+	// tile data: one 2D array per (width, height), one layer per tile layer
+	struct STilemapTexture
+	{
+		const CLayers *m_pLayers;
+		int m_Width;
+		int m_Height;
+		IGraphics::CTextureHandle m_Texture;
+		array<const CMapItemLayerTilemap *> m_lLayers;
+	};
+	array<STilemapTexture> m_lTilemapTextures;
+
 	void ReleaseGameMap();
 
 public:
 	CMapComponent();
+
+	// returns the tile data texture for the layer and writes its array layer index
+	IGraphics::CTextureHandle GetTilemapTexture(const CLayers *pLayers, const CMapItemLayerTilemap *pLayer, int *pLayerIndex);
+	void ClearTilemapTextures();
 
 	CMapImages *Images() { return &m_Images; }
 	CMapLayers *LayersBackground() { return &m_LayersBackground; }

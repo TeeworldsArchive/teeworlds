@@ -128,6 +128,19 @@ class CCommandProcessorFragment_OpenGL : public CCommandProcessorFragment_Textur
 		int m_ProjectionLoc;
 	} m_RenderShader;
 
+	// dedicated tile map shader, it samples a tile data texture in addition to the tileset
+	struct CTilemapShader
+	{
+		GLuint m_ShaderProgram;
+		int m_OurTextureLoc;
+		int m_TileDataLoc;
+		int m_MapSizeLoc;
+		int m_PassModeLoc;
+		int m_LayerIndexLoc;
+		int m_ColorOpaqueLoc;
+		int m_ProjectionLoc;
+	} m_TilemapShader;
+
 	class CTexture
 	{
 	public:
@@ -166,6 +179,7 @@ public:
 		// shader sources, must stay alive until the command is processed
 		const char *m_pVertexShaderSource;
 		const char *m_pFragmentShaderSource;
+		const char *m_pTilemapFragmentShaderSource;
 	};
 
 	struct CGLShutdownCommand : public CCommandBuffer::CCommand
@@ -190,6 +204,7 @@ private:
 	void Cmd_Texture_Create(const CCommandBuffer::CTextureCreateCommand *pCommand);
 	void Cmd_Clear(const CCommandBuffer::CClearCommand *pCommand);
 	void Cmd_Render(const CCommandBuffer::CRenderCommand *pCommand);
+	void Cmd_RenderTilemapTexture(const CCommandBuffer::CRenderTilemapTextureCommand *pCommand);
 	void Cmd_Screenshot(const CCommandBuffer::CScreenshotCommand *pCommand);
 
 public:
@@ -307,6 +322,7 @@ class CGraphicsBackend_SDL_OpenGL : public CGraphicsBackend_SDL
 	SDL_GLContext m_GLContext;
 	char *m_pVertexShaderSource;
 	char *m_pFragmentShaderSource;
+	char *m_pTilemapFragmentShaderSource;
 
 public:
 	CGraphicsBackend_SDL_OpenGL(class IStorage *pStorage);

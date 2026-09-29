@@ -139,6 +139,8 @@ void CMapLayers::UnloadMenuMap(int Slot)
 	m_aMenuMaps[Slot].m_lEnvPoints.clear();
 	m_aMenuMaps[Slot].m_Loaded = false;
 	m_aMenuMaps[Slot].m_Alpha = 0.0f;
+	// the cached tile data textures may reference the unloaded map data
+	m_pClient->m_pMapComponent->ClearTilemapTextures();
 }
 
 void CMapLayers::FinalizeMenuMapFade()
@@ -476,18 +478,71 @@ void CMapLayers::RenderLayers(CLayers *pLayers, array<CEnvPoint> *pEnvPoints, in
 						else
 							Graphics()->TextureSet(m_pClient->m_pMapComponent->Images()->Get(pTMap->m_Image, false, ImageType));
 
-						CTile *pTiles = (CTile *) pLayers->Map()->GetData(pTMap->m_Data);
-						// opaque layers use BlendNone, but a fading map has to blend
-						if(Alpha < 1.0f)
-							Graphics()->BlendNormal();
+						// evaluate the layer color, the tilemap shader expects it premultiplied
+						float r = 1, g = 1, b = 1, a = 1;
+						if(pTMap->m_ColorEnv >= 0)
+						{
+							float aChannels[4];
+							EnvelopeEval(pTMap->m_ColorEnvOffset / 1000.0f, pTMap->m_ColorEnv, aChannels, this);
+							r = aChannels[0];
+							g = aChannels[1];
+							b = aChannels[2];
+							a = aChannels[3];
+						}
+						const float ColA = (pTMap->m_Color.a / 255.0f) * a;
+						const float Fade = Alpha;
+						const vec4 Color = vec4(
+							(pTMap->m_Color.r / 255.0f) * r * ColA * Fade,
+							(pTMap->m_Color.g / 255.0f) * g * ColA * Fade,
+							(pTMap->m_Color.b / 255.0f) * b * ColA * Fade,
+							ColA * Fade);
+						const bool ColorOpaque = ColA > 254.0f / 255.0f;
+						// blending has to stay on while the whole map fades
+						const bool OpaquePass = ColorOpaque && Fade >= 1.0f && Config()->m_GfxTileOpaquePass;
+
+						int LayerIndex = -1;
+						IGraphics::CTextureHandle TileData;
+						// layers without a tileset or without tile data are drawn as solid color by the CPU path
+						if(pTMap->m_Image != -1 && pTMap->m_Data >= 0 && Config()->m_GfxTileBuffering && Graphics()->TilemapShaderEnabled())
+							TileData = m_pClient->m_pMapComponent->GetTilemapTexture(pLayers, pTMap, &LayerIndex);
+
+						if(TileData.IsValid() && LayerIndex >= 0)
+						{
+							Graphics()->WrapClamp();
+							if(Config()->m_GfxTileDebug)
+							{
+								Graphics()->BlendNone();
+								Graphics()->RenderTilemapTexture(TileData, LayerIndex, pTMap->m_Width, pTMap->m_Height, IGraphics::TILEMAP_PASS_DATA_DEBUG, true, vec4(1, 1, 1, 1));
+							}
+							else if(OpaquePass)
+							{
+								Graphics()->BlendNone();
+								Graphics()->RenderTilemapTexture(TileData, LayerIndex, pTMap->m_Width, pTMap->m_Height, IGraphics::TILEMAP_PASS_OPAQUE, ColorOpaque, Color);
+								Graphics()->BlendNormal();
+								Graphics()->RenderTilemapTexture(TileData, LayerIndex, pTMap->m_Width, pTMap->m_Height, IGraphics::TILEMAP_PASS_TRANSPARENT, ColorOpaque, Color);
+							}
+							else
+							{
+								Graphics()->BlendNormal();
+								Graphics()->RenderTilemapTexture(TileData, LayerIndex, pTMap->m_Width, pTMap->m_Height, IGraphics::TILEMAP_PASS_ALL, ColorOpaque, Color);
+							}
+							Graphics()->WrapNormal();
+						}
 						else
-							Graphics()->BlendNone();
-						vec4 Color = vec4(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f);
-						RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND | LAYERRENDERFLAG_OPAQUE,
-							EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
-						Graphics()->BlendNormal();
-						RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND | LAYERRENDERFLAG_TRANSPARENT,
-							EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
+						{
+							// CPU fallback for backends without the tilemap shader
+							CTile *pTiles = (CTile *) pLayers->Map()->GetData(pTMap->m_Data);
+							vec4 BaseColor = vec4(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f);
+							if(Fade < 1.0f)
+								Graphics()->BlendNormal();
+							else
+								Graphics()->BlendNone();
+							RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, BaseColor, TILERENDERFLAG_EXTEND | LAYERRENDERFLAG_OPAQUE,
+								EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
+							Graphics()->BlendNormal();
+							RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, BaseColor, TILERENDERFLAG_EXTEND | LAYERRENDERFLAG_TRANSPARENT,
+								EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
+						}
 					}
 					else if(pLayer->m_Type == LAYERTYPE_QUADS)
 					{
@@ -608,10 +663,21 @@ void CMapLayers::ConchainBackgroundMap(IConsole::IResult *pResult, void *pUserDa
 		((CMapLayers *) pUserData)->BackgroundMapUpdate();
 }
 
+void CMapLayers::ConchainTileBuffering(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	pfnCallback(pResult, pCallbackUserData);
+	if(pResult->NumArguments())
+	{
+		CMapLayers *pSelf = (CMapLayers *) pUserData;
+		pSelf->m_pClient->m_pMapComponent->ClearTilemapTextures();
+	}
+}
+
 void CMapLayers::OnConsoleInit()
 {
 	Console()->Chain("cl_menu_map", ConchainBackgroundMap, this);
 	Console()->Chain("cl_show_menu_map", ConchainBackgroundMap, this);
+	Console()->Chain("gfx_tile_buffering", ConchainTileBuffering, this);
 }
 
 void CMapLayers::BackgroundMapUpdate()

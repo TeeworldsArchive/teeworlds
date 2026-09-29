@@ -79,6 +79,9 @@ MACRO_CONFIG_INT(UiJoystickSens, ui_joystick_sens, 100, 1, 100000, CFGFLAG_SAVE 
 MACRO_CONFIG_INT(UiAutoswitchInfotab, ui_autoswitch_infotab, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Switch to the info tab when clicking on a server")
 
 MACRO_CONFIG_INT(GfxNoclip, gfx_noclip, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Disable clipping")
+MACRO_CONFIG_INT(GfxTileBuffering, gfx_tile_buffering, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep tile layer geometry on the GPU")
+MACRO_CONFIG_INT(GfxTileOpaquePass, gfx_tile_opaque_pass, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Split tile map rendering into an opaque and a transparent pass")
+MACRO_CONFIG_INT(GfxTileDebug, gfx_tile_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the raw tile data texture (red = tile index, green = flags)")
 
 MACRO_CONFIG_STR(ClMenuMap, cl_menu_map, 64, "auto", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Background map in the menu, auto = automatic based on season")
 MACRO_CONFIG_INT(ClShowMenuMap, cl_show_menu_map, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Display background map in the menu")
