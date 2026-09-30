@@ -1965,9 +1965,19 @@ void CTextRender::MakeSDFParams(const CTextCursor *pCursor, int StartGlyph, bool
 			SecondaryColor = pCursor->m_SecondaryColors[ColorIndex];
 	}
 
+	int OutlineThickness = 0;
 	if(Outline)
 	{
-		const int OutlineThickness = AdjustOutlineThicknessToFontSize(1, PixelSize);
+		OutlineThickness = AdjustOutlineThicknessToFontSize(1, PixelSize);
+		// the field only reaches SDF_SPREAD texels outside the glyph, so a wider
+		// outline would smear over the whole quad instead of forming a ring
+		const int MaxThickness = (int) ((SDF_SPREAD - 0.25f) * Scale - 0.5f);
+		if(OutlineThickness > MaxThickness)
+			OutlineThickness = MaxThickness;
+	}
+
+	if(OutlineThickness > 0)
+	{
 		pParams->m_OutlineOffset = OutlineThickness * 128.0f / (255.0f * SDF_SPREAD * Scale);
 		pParams->m_OutlineColor = SecondaryColor;
 	}

@@ -37,7 +37,8 @@ enum
 {
 	// reference size the distance field is rasterized at
 	SDF_BASE_SIZE = 64,
-	SDF_SPREAD = 8,
+	// padding in reference texels; bounds how thick an outline can be drawn
+	SDF_SPREAD = 10,
 
 	// the field is derived from a supersampled coverage bitmap, so the outline is
 	// located to a fraction of a texel
