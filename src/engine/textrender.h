@@ -59,8 +59,9 @@ public:
 	int m_NumChars;
 	int m_Line;
 	vec2 m_Advance;
-	vec4 m_TextColor;
-	vec4 m_SecondaryColor;
+	// indices into the cursor's color pool, so repeated colors are stored once
+	int m_TextColorIndex;
+	int m_SecondaryColorIndex;
 };
 
 struct CTextBoundingBox
@@ -88,8 +89,39 @@ class CTextCursor
 	vec2 m_Advance;
 	bool m_SkipTextRender;
 	float m_NextLineAdvanceY;
+	// physical pixel size the current layout was built for; the SDF scale is
+	// derived from it instead of querying the graphics screen
+	int m_PixelSize = 0;
 	array<CScaledGlyph> m_Glyphs;
+	// color pool shared by all glyphs of this cursor
+	array<vec4> m_TextColors;
+	array<vec4> m_SecondaryColors;
 	int64 m_StringVersion;
+
+	// installed by the text renderer to drop the glyph cache references held by
+	// m_Glyphs, without this header knowing about the glyph cache
+	typedef void (*FGlyphReleaseFn)(void *pUser, CScaledGlyph *pGlyphs, int NumGlyphs);
+	FGlyphReleaseFn m_pfnReleaseGlyphs = NULL;
+	void *m_pReleaseGlyphsUser = NULL;
+
+	void ReleaseGlyphs()
+	{
+		if(m_pfnReleaseGlyphs && m_Glyphs.size() > 0)
+			m_pfnReleaseGlyphs(m_pReleaseGlyphsUser, m_Glyphs.base_ptr(), m_Glyphs.size());
+		m_pfnReleaseGlyphs = NULL;
+	}
+
+	// Returns the index of Color in the pool, adding it if necessary.
+	static int ColorIndex(array<vec4> &Pool, const vec4 &Color)
+	{
+		for(int i = 0; i < Pool.size(); ++i)
+		{
+			if(Pool[i] == Color)
+				return i;
+		}
+		Pool.add(Color);
+		return Pool.size() - 1;
+	}
 
 	CTextBoundingBox AlignedBoundingBox() const
 	{
@@ -137,6 +169,7 @@ public:
 	{
 		if(StringVersion < 0 || m_StringVersion != StringVersion)
 		{
+			ReleaseGlyphs();
 			m_Width = 0;
 			m_Height = 0;
 			m_NextLineAdvanceY = 0;
@@ -147,6 +180,8 @@ public:
 			m_Truncated = false;
 			m_StartOfLine = true;
 			m_Glyphs.clear_size();
+			m_TextColors.clear_size();
+			m_SecondaryColors.clear_size();
 			m_StringVersion = StringVersion;
 			m_SkipTextRender = false;
 		}
@@ -154,6 +189,17 @@ public:
 		{
 			m_SkipTextRender = true;
 		}
+	}
+
+	// resets the layout statistics and configuration to their defaults, for
+	// cursors shared between unrelated call sites
+	void ResetLayout(int64 StringVersion = -1)
+	{
+		m_MaxLines = 1;
+		m_MaxWidth = -1.0f;
+		m_LineSpacing = 0.0f;
+		m_Align = 0; // Top Left
+		Reset(StringVersion);
 	}
 
 	void MoveTo(float x, float y) { m_CursorPos = vec2(x, y); }
@@ -184,6 +230,10 @@ public:
 		Set(FontSize, x, y, Flags);
 		Reset();
 	}
+	~CTextCursor()
+	{
+		ReleaseGlyphs();
+	}
 
 	// Exposed Bounding Box, converted to screen coord.
 	CTextBoundingBox BoundingBox() const
@@ -209,6 +259,9 @@ public:
 
 	virtual float TextWidth(float FontSize, const char *pText, int Length) = 0;
 	virtual void TextDeferred(CTextCursor *pCursor, const char *pText, int Length) = 0;
+	// like TextDeferred, but caches the layout; must be the only layout call for
+	// the cursor
+	virtual void TextDeferredCached(CTextCursor *pCursor, const char *pText, int Length) = 0;
 	virtual void TextNewline(CTextCursor *pCursor) = 0;
 	virtual void TextAdvance(CTextCursor *pCursor, float AdvanceX) = 0;
 	virtual void TextPlain(CTextCursor *pCursor, const char *pText, int Length) = 0;

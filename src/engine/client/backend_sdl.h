@@ -52,6 +52,17 @@ public:
 	virtual bool IsIdle() const;
 	virtual void WaitForIdle();
 
+	// conservative default, overridden once the device has been created
+	virtual int MaxTextureSize() const { return 2048; }
+
+	// time the render thread spent inside RunBuffer() since the last call
+	virtual int64 TakeRenderThreadTime()
+	{
+		const int64 Time = m_RenderThreadTime;
+		m_RenderThreadTime = 0;
+		return Time;
+	}
+
 protected:
 	void StartProcessor(ICommandProcessor *pProcessor);
 	void StopProcessor();
@@ -59,6 +70,7 @@ protected:
 private:
 	ICommandProcessor *m_pProcessor;
 	CCommandBuffer *volatile m_pBuffer;
+	int64 volatile m_RenderThreadTime;
 	volatile bool m_Shutdown;
 	semaphore m_Activity;
 	semaphore m_BufferDone;
@@ -124,6 +136,10 @@ class CCommandProcessorFragment_OpenGL : public CCommandProcessorFragment_Textur
 		int m_UseTextureLoc;
 		int m_IsAlphaOnlyLoc;
 		int m_IsStainedOnlyLoc;
+		int m_IsSDFLoc;
+		int m_SDFGainLoc;
+		int m_SDFOutlineOffsetLoc;
+		int m_SDFOutlineColorLoc;
 		int m_OurTextureLoc;
 		int m_ProjectionLoc;
 	} m_RenderShader;
@@ -160,6 +176,10 @@ class CCommandProcessorFragment_OpenGL : public CCommandProcessorFragment_Textur
 	bool m_LastUseTexture;
 	GLuint m_LastTextureID;
 
+	// cached SDF uniforms so redundant glUniform calls are skipped
+	bool m_LastSDFValid;
+	IGraphics::CTextSDFParams m_LastSDFParams;
+
 	bool m_LastClipEnable;
 
 	GLuint m_LastSampler;
@@ -176,6 +196,8 @@ public:
 	{
 		CInitCommand() : CCommand(CMD_INIT) {}
 		volatile int *m_pTextureMemoryUsage;
+		// receives the GL_MAX_TEXTURE_SIZE queried during init
+		volatile int *m_pMaxTextureSize;
 		// shader sources, must stay alive until the command is processed
 		const char *m_pVertexShaderSource;
 		const char *m_pFragmentShaderSource;
@@ -281,6 +303,8 @@ protected:
 	SDL_Window *m_pWindow;
 	ICommandProcessor *m_pProcessor;
 	volatile int m_TextureMemoryUsage;
+	// reported by the render thread during init, else stays at the default
+	volatile int m_MaxTextureSize;
 	int m_NumScreens;
 	class IStorage *m_pStorage;
 
@@ -298,6 +322,8 @@ public:
 	virtual ~CGraphicsBackend_SDL() {}
 
 	virtual int MemoryUsage() const;
+
+	virtual int MaxTextureSize() const { return m_MaxTextureSize; }
 
 	virtual int GetNumScreens() const { return m_NumScreens; }
 

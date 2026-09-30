@@ -139,7 +139,34 @@ public:
 	virtual void WrapMode(int WrapU, int WrapV) = 0;
 	virtual int MemoryUsage() const = 0;
 
+	// largest texture the active device can create, used to size the glyph atlas
+	virtual int MaxTextureSize() const { return 2048; }
+
+	// render commands emitted since the previous call, and resets the counter
+	virtual int TakeRenderCommandCount() { return 0; }
+
+	// frames presented since the previous call, and resets the counter
+	virtual int TakeRenderedFrameCount() { return 0; }
+
+	// render thread time since the previous call, in time_get() units
+	virtual int64 TakeRenderThreadTime() { return 0; }
+
 	virtual void StainedOnly(bool Flag) = 0;
+
+	// signed distance field text: the shader rebuilds the glyph coverage (and
+	// optionally an outline) from a distance field texture
+	struct CTextSDFParams
+	{
+		bool m_Enable;
+		float m_Gain; // maps the normalized distance value onto a screen-space alpha ramp
+		float m_OutlineOffset; // distance-value offset of the outline edge, 0 disables it
+		vec4 m_OutlineColor;
+
+		CTextSDFParams() :
+			m_Enable(false), m_Gain(1.0f), m_OutlineOffset(0.0f),
+			m_OutlineColor(0.0f, 0.0f, 0.0f, 0.0f) {}
+	};
+	virtual void SetTextSDF(const CTextSDFParams &Params) = 0;
 
 	virtual int LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData, int Size, const char *pContext = "raw data") = 0;
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) = 0;
@@ -176,6 +203,10 @@ public:
 	virtual void QuadsDraw(CQuadItem *pArray, int Num) = 0;
 	virtual void SingleQuadDrawTL(const CQuadItem *pQuad) = 0;
 	virtual void QuadsDrawTL(const CQuadItem *pArray, int Num) = 0;
+
+	// draws top-left anchored quads with a per-quad texture subset, without the
+	// per-quad state change of QuadsSetSubset + QuadsDrawTL
+	virtual void QuadsDrawTLWithUV(const CQuadItem *pArray, const vec4 *pUV, int Num, int TextureIndex = -1) = 0;
 
 	struct CFreeformItem
 	{

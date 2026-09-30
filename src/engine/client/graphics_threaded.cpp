@@ -75,20 +75,24 @@ void CGraphics_Threaded::FlushVertices()
 	m_NumVertices = 0;
 
 	CCommandBuffer::CRenderCommand Cmd;
-	Cmd.m_State = m_State;
+	// the vertices were recorded under this state, not necessarily the current one
+	Cmd.m_State = m_PendingState;
 
-	if(m_Drawing == DRAWING_QUADS)
+	if(m_PendingPrimType == DRAWING_QUADS)
 	{
 		Cmd.m_PrimType = CCommandBuffer::PRIMTYPE_QUADS;
 		Cmd.m_PrimCount = NumVerts / 4;
 	}
-	else if(m_Drawing == DRAWING_LINES)
+	else if(m_PendingPrimType == DRAWING_LINES)
 	{
 		Cmd.m_PrimType = CCommandBuffer::PRIMTYPE_LINES;
 		Cmd.m_PrimCount = NumVerts / 2;
 	}
 	else
+	{
+		dbg_assert(0, "flushing vertices without a pending primitive type");
 		return;
+	}
 
 	Cmd.m_pVertices = (CCommandBuffer::CVertex *) m_pCommandBuffer->AllocData(sizeof(CCommandBuffer::CVertex) * NumVerts);
 	if(Cmd.m_pVertices == 0x0)
@@ -125,19 +129,49 @@ void CGraphics_Threaded::FlushVertices()
 	}
 
 	mem_copy(Cmd.m_pVertices, m_aVertices, sizeof(CCommandBuffer::CVertex) * NumVerts);
+	m_RenderCommandCount++;
+}
+
+void CGraphics_Threaded::ReserveVertices(int Count)
+{
+	if(m_NumVertices + Count > CCommandBuffer::MAX_VERTICES)
+		FlushVertices();
+
+	// the first vertices of a batch fix the state it will be flushed with
+	if(m_NumVertices == 0)
+		m_PendingState = m_State;
 }
 
 void CGraphics_Threaded::AddVertices(int Count)
 {
 	m_NumVertices += Count;
-	if((m_NumVertices + Count) >= CCommandBuffer::MAX_VERTICES)
+	dbg_assert(m_NumVertices <= CCommandBuffer::MAX_VERTICES, "vertex buffer overflow");
+	if(m_NumVertices >= CCommandBuffer::MAX_VERTICES)
 		FlushVertices();
 }
 
 void CGraphics_Threaded::FlushPendingVerticesOnStateChange()
 {
-	if(m_Drawing != 0 && m_NumVertices > 0)
+	if(m_NumVertices > 0)
 		FlushVertices();
+}
+
+void CGraphics_Threaded::FlushPendingVertices()
+{
+	if(m_NumVertices > 0)
+		FlushVertices();
+}
+
+void CGraphics_Threaded::ClearTextSDF()
+{
+	if(!m_State.m_IsSDF)
+		return;
+
+	FlushPendingVerticesOnStateChange();
+	m_State.m_IsSDF = false;
+	m_State.m_SDFGain = 1.0f;
+	m_State.m_SDFOutlineOffset = 0.0f;
+	mem_zero(&m_State.m_SDFOutlineColor, sizeof(m_State.m_SDFOutlineColor));
 }
 
 void CGraphics_Threaded::Rotate4(const CCommandBuffer::CPoint &rCenter, CCommandBuffer::CVertex *pPoints)
@@ -173,12 +207,21 @@ CGraphics_Threaded::CGraphics_Threaded()
 	m_State.m_WrapModeV = WRAP_REPEAT;
 	m_State.m_IsStainedOnly = false;
 
+	m_State.m_IsSDF = false;
+	m_State.m_SDFGain = 1.0f;
+	m_State.m_SDFOutlineOffset = 0.0f;
+	mem_zero(&m_State.m_SDFOutlineColor, sizeof(m_State.m_SDFOutlineColor));
+
 	m_CurrentCommandBuffer = 0;
 	m_pCommandBuffer = 0x0;
 	m_apCommandBuffers[0] = 0x0;
 	m_apCommandBuffers[1] = 0x0;
 
 	m_NumVertices = 0;
+	m_PendingPrimType = 0;
+	m_SDFArmed = false;
+	m_RenderCommandCount = 0;
+	m_RenderedFrameCount = 0;
 
 	m_ScreenWidth = -1;
 	m_ScreenHeight = -1;
@@ -270,6 +313,30 @@ int CGraphics_Threaded::MemoryUsage() const
 	return m_pBackend->MemoryUsage();
 }
 
+int CGraphics_Threaded::MaxTextureSize() const
+{
+	return m_pBackend->MaxTextureSize();
+}
+
+int CGraphics_Threaded::TakeRenderCommandCount()
+{
+	const int Count = m_RenderCommandCount;
+	m_RenderCommandCount = 0;
+	return Count;
+}
+
+int CGraphics_Threaded::TakeRenderedFrameCount()
+{
+	const int Count = m_RenderedFrameCount;
+	m_RenderedFrameCount = 0;
+	return Count;
+}
+
+int64 CGraphics_Threaded::TakeRenderThreadTime()
+{
+	return m_pBackend->TakeRenderThreadTime();
+}
+
 void CGraphics_Threaded::StainedOnly(bool Flag)
 {
 	if(m_State.m_IsStainedOnly == Flag)
@@ -277,6 +344,34 @@ void CGraphics_Threaded::StainedOnly(bool Flag)
 
 	FlushPendingVerticesOnStateChange();
 	m_State.m_IsStainedOnly = Flag;
+}
+
+void CGraphics_Threaded::SetTextSDF(const CTextSDFParams &Params)
+{
+	// re-issuing parameters already in effect must not split the batch
+	if(m_State.m_IsSDF == Params.m_Enable &&
+		m_State.m_SDFGain == Params.m_Gain &&
+		m_State.m_SDFOutlineOffset == Params.m_OutlineOffset &&
+		m_State.m_SDFOutlineColor.r == Params.m_OutlineColor.r &&
+		m_State.m_SDFOutlineColor.g == Params.m_OutlineColor.g &&
+		m_State.m_SDFOutlineColor.b == Params.m_OutlineColor.b &&
+		m_State.m_SDFOutlineColor.a == Params.m_OutlineColor.a)
+	{
+		m_SDFArmed = Params.m_Enable;
+		return;
+	}
+
+	FlushPendingVerticesOnStateChange();
+
+	m_State.m_IsSDF = Params.m_Enable;
+	m_State.m_SDFGain = Params.m_Gain;
+	m_State.m_SDFOutlineOffset = Params.m_OutlineOffset;
+	m_State.m_SDFOutlineColor.r = Params.m_OutlineColor.r;
+	m_State.m_SDFOutlineColor.g = Params.m_OutlineColor.g;
+	m_State.m_SDFOutlineColor.b = Params.m_OutlineColor.b;
+	m_State.m_SDFOutlineColor.a = Params.m_OutlineColor.a;
+
+	m_SDFArmed = Params.m_Enable;
 }
 
 float CGraphics_Threaded::ScreenUIScale() const
@@ -308,20 +403,33 @@ void CGraphics_Threaded::GetScreen(float *pTopLeftX, float *pTopLeftY, float *pB
 void CGraphics_Threaded::LinesBegin()
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->LinesBegin twice");
+
+	// switching primitive type cannot be expressed in a single render command
+	if(m_NumVertices > 0 && m_PendingPrimType != DRAWING_LINES)
+		FlushVertices();
+
 	m_Drawing = DRAWING_LINES;
+	m_PendingPrimType = DRAWING_LINES;
+
+	// lines never use the glyph shader path
+	ClearTextSDF();
+	m_SDFArmed = false;
+
 	SetColor(1, 1, 1, 1);
 }
 
 void CGraphics_Threaded::LinesEnd()
 {
 	dbg_assert(m_Drawing == DRAWING_LINES, "called Graphics()->LinesEnd without begin");
-	FlushVertices();
+	// see QuadsEnd(): the batch is kept alive until something changes
 	m_Drawing = 0;
 }
 
 void CGraphics_Threaded::LinesDraw(const CLineItem *pArray, int Num)
 {
 	dbg_assert(m_Drawing == DRAWING_LINES, "called Graphics()->LinesDraw without begin");
+
+	ReserveVertices(2 * Num);
 
 	for(int i = 0; i < Num; ++i)
 	{
@@ -346,6 +454,8 @@ int CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
 
 	if(!pIndex->IsValid())
 		return 0;
+
+	FlushPendingVertices();
 
 	CCommandBuffer::CTextureDestroyCommand Cmd;
 	Cmd.m_Slot = pIndex->Id();
@@ -376,6 +486,8 @@ int CGraphics_Threaded::LoadTextureRawSub(CTextureHandle TextureID, int x, int y
 {
 	if(!TextureID.IsValid())
 		return 0;
+
+	FlushPendingVertices();
 
 	CCommandBuffer::CTextureUpdateCommand Cmd;
 	Cmd.m_Slot = TextureID.Id();
@@ -411,7 +523,10 @@ void CGraphics_Threaded::RenderTilemapTexture(CTextureHandle TileData, int Layer
 		return;
 
 	// the tilemap draw is its own command, so anything batched before it has to go out first
-	FlushPendingVerticesOnStateChange();
+	FlushPendingVertices();
+	// and it does not use the glyph shader path
+	ClearTextSDF();
+	m_SDFArmed = false;
 
 	CCommandBuffer::CRenderTilemapTextureCommand Cmd;
 	Cmd.m_State = m_State;
@@ -470,6 +585,8 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 	}
 	m_FirstFreeTexture = m_aTextureIndices[Tex];
 	m_aTextureIndices[Tex] = -1;
+
+	FlushPendingVertices();
 
 	CCommandBuffer::CTextureCreateCommand Cmd;
 	Cmd.m_Slot = Tex;
@@ -642,6 +759,8 @@ void CGraphics_Threaded::KickCommandBuffer()
 
 void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pThumbnail)
 {
+	FlushPendingVertices();
+
 	// add swap command
 	CImageInfo Image;
 	mem_zero(&Image, sizeof(Image));
@@ -752,12 +871,18 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 void CGraphics_Threaded::TextureSet(CTextureHandle TextureID)
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->TextureSet within begin");
+	// re-binding the same texture must not end the pending batch
+	if(m_State.m_Texture == TextureID.Id())
+		return;
+
 	FlushPendingVerticesOnStateChange();
 	m_State.m_Texture = TextureID.Id();
 }
 
 void CGraphics_Threaded::Clear(float r, float g, float b)
 {
+	FlushPendingVertices();
+
 	CCommandBuffer::CClearCommand Cmd;
 	Cmd.m_Color.r = r;
 	Cmd.m_Color.g = g;
@@ -769,18 +894,29 @@ void CGraphics_Threaded::Clear(float r, float g, float b)
 void CGraphics_Threaded::QuadsBegin()
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->QuadsBegin twice");
+
+	// switching primitive type cannot be expressed in a single render command
+	if(m_NumVertices > 0 && m_PendingPrimType != DRAWING_QUADS)
+		FlushVertices();
+
 	m_Drawing = DRAWING_QUADS;
+	m_PendingPrimType = DRAWING_QUADS;
 
 	QuadsSetSubset(0, 0, 1, 1, -1);
 	QuadsSetRotation(0);
 	StainedOnly(false);
 	SetColor(1, 1, 1, 1);
+
+	// the SDF path is re-armed per begin block, so it cannot leak into other quads
+	if(!m_SDFArmed)
+		ClearTextSDF();
+	m_SDFArmed = false;
 }
 
 void CGraphics_Threaded::QuadsEnd()
 {
 	dbg_assert(m_Drawing == DRAWING_QUADS, "called Graphics()->QuadsEnd without begin");
-	FlushVertices();
+	// keep the vertices buffered so consecutive draws with the same state batch
 	m_Drawing = 0;
 }
 
@@ -900,6 +1036,8 @@ void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 
 	dbg_assert(m_Drawing == DRAWING_QUADS, "called Graphics()->QuadsDrawTL without begin");
 
+	ReserveVertices(4 * Num);
+
 	for(int i = 0; i < Num; ++i)
 	{
 		m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pArray[i].m_X;
@@ -934,9 +1072,66 @@ void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 	AddVertices(4 * Num);
 }
 
+void CGraphics_Threaded::QuadsDrawTLWithUV(const CQuadItem *pArray, const vec4 *pUV, int Num, int TextureIndex)
+{
+	CCommandBuffer::CPoint Center;
+
+	dbg_assert(m_Drawing == DRAWING_QUADS, "called Graphics()->QuadsDrawTLWithUV without begin");
+
+	ReserveVertices(4 * Num);
+
+	const float Layer = (float) TextureIndex;
+
+	for(int i = 0; i < Num; ++i)
+	{
+		CCommandBuffer::CVertex *pVertices = &m_aVertices[m_NumVertices + 4 * i];
+		const vec4 &rUV = pUV[i];
+
+		pVertices[0].m_Pos.x = pArray[i].m_X;
+		pVertices[0].m_Pos.y = pArray[i].m_Y;
+		pVertices[0].m_Tex.u = rUV.x;
+		pVertices[0].m_Tex.v = rUV.y;
+		pVertices[0].m_Tex.i = Layer;
+		pVertices[0].m_Color = m_aColor[0];
+
+		pVertices[1].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
+		pVertices[1].m_Pos.y = pArray[i].m_Y;
+		pVertices[1].m_Tex.u = rUV.z;
+		pVertices[1].m_Tex.v = rUV.y;
+		pVertices[1].m_Tex.i = Layer;
+		pVertices[1].m_Color = m_aColor[1];
+
+		pVertices[2].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
+		pVertices[2].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
+		pVertices[2].m_Tex.u = rUV.z;
+		pVertices[2].m_Tex.v = rUV.w;
+		pVertices[2].m_Tex.i = Layer;
+		pVertices[2].m_Color = m_aColor[2];
+
+		pVertices[3].m_Pos.x = pArray[i].m_X;
+		pVertices[3].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
+		pVertices[3].m_Tex.u = rUV.x;
+		pVertices[3].m_Tex.v = rUV.w;
+		pVertices[3].m_Tex.i = Layer;
+		pVertices[3].m_Color = m_aColor[3];
+
+		if(m_Rotation != 0)
+		{
+			Center.x = pArray[i].m_X + pArray[i].m_Width / 2;
+			Center.y = pArray[i].m_Y + pArray[i].m_Height / 2;
+
+			Rotate4(Center, pVertices);
+		}
+	}
+
+	AddVertices(4 * Num);
+}
+
 void CGraphics_Threaded::QuadsDrawFreeform(const CFreeformItem *pArray, int Num)
 {
 	dbg_assert(m_Drawing == DRAWING_QUADS, "called Graphics()->QuadsDrawFreeform without begin");
+
+	ReserveVertices(4 * Num);
 
 	for(int i = 0; i < Num; ++i)
 	{
@@ -1198,6 +1393,8 @@ void CGraphics_Threaded::ReadBackbuffer(unsigned char **ppPixels, int x, int y, 
 	if(!ppPixels)
 		return;
 
+	FlushPendingVertices();
+
 	// add swap command
 	CImageInfo Image;
 	mem_zero(&Image, sizeof(Image));
@@ -1231,6 +1428,9 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallba
 
 void CGraphics_Threaded::Swap()
 {
+	// pending vertices must reach the command buffer before the swap command
+	FlushPendingVertices();
+
 	// TODO: screenshot support
 	if(m_DoScreenshot)
 	{
@@ -1243,6 +1443,7 @@ void CGraphics_Threaded::Swap()
 	CCommandBuffer::CSwapCommand Cmd;
 	Cmd.m_Finish = m_pConfig->m_GfxFinish;
 	m_pCommandBuffer->AddCommand(Cmd);
+	m_RenderedFrameCount++;
 
 	// kick the command buffer
 	KickCommandBuffer();
@@ -1250,6 +1451,8 @@ void CGraphics_Threaded::Swap()
 
 bool CGraphics_Threaded::SetVSync(bool State)
 {
+	FlushPendingVertices();
+
 	// add vsnc command
 	bool RetOk = 0;
 	CCommandBuffer::CVSyncCommand Cmd;
@@ -1266,6 +1469,8 @@ bool CGraphics_Threaded::SetVSync(bool State)
 // syncronization
 void CGraphics_Threaded::InsertSignal(semaphore *pSemaphore)
 {
+	FlushPendingVertices();
+
 	CCommandBuffer::CSignalCommand Cmd;
 	Cmd.m_pSemaphore = pSemaphore;
 	m_pCommandBuffer->AddCommand(Cmd);
@@ -1298,6 +1503,8 @@ void CGraphics_Threaded::OnWindowResized(int Width, int Height)
 	m_pConfig->m_GfxScreenWidth = Width;
 	m_pConfig->m_GfxScreenHeight = Height;
 	m_ScreenUIScale = (m_pConfig->m_GfxScreenHeight < 900.0f) ? 1.0f : (m_pConfig->m_GfxScreenHeight / 900.0f);
+
+	FlushPendingVertices();
 
 	// add window resize command
 	CCommandBuffer::CWindowResizedCommand Cmd;

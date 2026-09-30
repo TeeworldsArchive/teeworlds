@@ -29,6 +29,7 @@ public:
 	virtual int MemoryUsage() const { return 0; };
 
 	virtual void StainedOnly(bool Flag) {};
+	virtual void SetTextSDF(const CTextSDFParams &Params) {};
 
 	virtual float ScreenUIScale() const { return 1.0f; };
 
@@ -76,8 +77,12 @@ public:
 	virtual void QuadsDraw(CQuadItem *pArray, int Num) {};
 	virtual void SingleQuadDrawTL(const CQuadItem *pQuad) {};
 	virtual void QuadsDrawTL(const CQuadItem *pArray, int Num) {};
+	virtual void QuadsDrawTLWithUV(const CQuadItem *pArray, const vec4 *pUV, int Num, int TextureIndex = -1) {};
 	virtual void QuadsDrawFreeform(const CFreeformItem *pArray, int Num) {};
 	virtual void QuadsText(float x, float y, float Size, const char *pText) {};
+
+	// the null backend does not implement the GPU tilemap path
+	virtual void RenderTilemapTexture(CTextureHandle TileData, int Layer, int Width, int Height, int PassMode, bool ColorOpaque, const vec4 &Color) {};
 
 	virtual int GetNumScreens() const { return 0; };
 	virtual void Minimize() {};

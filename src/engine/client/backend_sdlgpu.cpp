@@ -98,7 +98,7 @@ CCommandProcessorFragment_SDLGPU::CCommandProcessorFragment_SDLGPU()
 	m_LastOrthoMatrixValid = false;
 	mem_zero(m_LastOrthoMatrix, sizeof(m_LastOrthoMatrix));
 	m_LastFragmentFlagsValid = false;
-	mem_zero(m_LastFragmentFlags, sizeof(m_LastFragmentFlags));
+	mem_zero(&m_LastFragmentUniforms, sizeof(m_LastFragmentUniforms));
 	m_ClearColor.r = 0.0f;
 	m_ClearColor.g = 0.0f;
 	m_ClearColor.b = 0.0f;
@@ -930,14 +930,25 @@ void CCommandProcessorFragment_SDLGPU::ApplyDraw(SDL_GPURenderPass *pPass, const
 	}
 	else
 	{
-		const int aFlags[3] = {HasTexture ? 1 : 0, IsAlphaOnly ? 1 : 0, State.m_IsStainedOnly ? 1 : 0};
+		CQuadFragmentUniforms Uniforms = {};
+		Uniforms.m_UseTexture = HasTexture ? 1 : 0;
+		Uniforms.m_IsAlphaOnly = IsAlphaOnly ? 1 : 0;
+		Uniforms.m_IsStainedOnly = State.m_IsStainedOnly ? 1 : 0;
+		Uniforms.m_IsSDF = State.m_IsSDF ? 1 : 0;
+		Uniforms.m_SDFGain = State.m_SDFGain;
+		Uniforms.m_SDFOutlineOffset = State.m_SDFOutlineOffset;
+		Uniforms.m_SDFOutlineColor[0] = State.m_SDFOutlineColor.r;
+		Uniforms.m_SDFOutlineColor[1] = State.m_SDFOutlineColor.g;
+		Uniforms.m_SDFOutlineColor[2] = State.m_SDFOutlineColor.b;
+		Uniforms.m_SDFOutlineColor[3] = State.m_SDFOutlineColor.a;
+
 		bool FlagsChanged = !m_LastFragmentFlagsValid;
-		for(int i = 0; !FlagsChanged && i < 3; i++)
-			FlagsChanged = aFlags[i] != m_LastFragmentFlags[i];
+		if(!FlagsChanged)
+			FlagsChanged = mem_comp(&Uniforms, &m_LastFragmentUniforms, sizeof(Uniforms)) != 0;
 		if(FlagsChanged)
 		{
-			SDL_PushGPUFragmentUniformData(m_pCommandBuffer, 0, aFlags, sizeof(aFlags));
-			mem_copy(m_LastFragmentFlags, aFlags, sizeof(m_LastFragmentFlags));
+			SDL_PushGPUFragmentUniformData(m_pCommandBuffer, 0, &Uniforms, sizeof(Uniforms));
+			mem_copy(&m_LastFragmentUniforms, &Uniforms, sizeof(Uniforms));
 			m_LastFragmentFlagsValid = true;
 		}
 
@@ -1605,6 +1616,9 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 
 	m_pProcessor = new CCommandProcessor_SDL_GPU;
 	StartProcessor(m_pProcessor);
+
+	// Vulkan/D3D12/Metal all guarantee at least a 4096x4096 2D texture
+	m_MaxTextureSize = 4096;
 
 	CCommandBuffer CmdBuffer(1024, 512);
 	CCommandProcessorFragment_SDLGPU::CInitCommand Cmd;

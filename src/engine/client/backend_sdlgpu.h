@@ -8,6 +8,21 @@
 
 #include <SDL3/SDL.h>
 
+// Fragment shader uniform block of the quad shader. Must match the UBO in the
+// vulkan/gles/metal quad fragment shaders (48 bytes).
+struct CQuadFragmentUniforms
+{
+	int m_UseTexture;
+	int m_IsAlphaOnly;
+	int m_IsStainedOnly;
+	int m_IsSDF;
+	float m_SDFGain;
+	float m_SDFOutlineOffset;
+	float m_SDFPadding0;
+	float m_SDFPadding1;
+	float m_SDFOutlineColor[4];
+};
+
 // takes care of SDL_GPU related rendering
 class CCommandProcessorFragment_SDLGPU : public CCommandProcessorFragment_Texture
 {
@@ -159,7 +174,7 @@ private:
 	bool m_LastOrthoMatrixValid;
 	float m_LastOrthoMatrix[16];
 	bool m_LastFragmentFlagsValid;
-	int m_LastFragmentFlags[3];
+	CQuadFragmentUniforms m_LastFragmentUniforms;
 
 	bool EnsureCommandBuffer();
 	bool EnsureFrameTexture();

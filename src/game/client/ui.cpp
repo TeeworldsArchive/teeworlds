@@ -369,7 +369,8 @@ void CUI::DoLabel(const CUIRect *pRect, const char *pText, float FontSize, int A
 	s_Cursor.m_Flags = MultiLine ? TEXTFLAG_WORD_WRAP : 0;
 	ApplyCursorAlign(&s_Cursor, pRect, Align);
 
-	TextRender()->TextOutlined(&s_Cursor, pText, -1);
+	TextRender()->TextDeferredCached(&s_Cursor, pText, -1);
+	TextRender()->DrawTextOutlined(&s_Cursor);
 }
 
 void CUI::DoLabelColor(const CUIRect *pRect, const vec4 &TextColor, const char *pText, float FontSize, int Align, float LineWidth, bool MultiLine)

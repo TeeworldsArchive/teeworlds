@@ -1230,22 +1230,38 @@ set(SHADER_SRC_DIR ${PROJECT_SOURCE_DIR}/datasrc/shaders)
 set(SHADER_OUT_DIR ${PROJECT_BINARY_DIR}/data/shaders)
 
 if(CLIENT)
+  # Every shader output is produced by a build-time custom command so that
+  # editing a shader source is always picked up by an incremental build. (The
+  # GLES and Metal sources used to be copied with file(COPY), which only runs
+  # when CMake configures, so stale shaders survived normal rebuilds.)
+  set(SHADER_OUTPUTS)
+
   # OpenGL ES shaders are shipped as source and compiled by the driver.
   file(GLOB GLES_SHADERS ${SHADER_SRC_DIR}/gles/*.vert ${SHADER_SRC_DIR}/gles/*.frag)
   foreach(shader ${GLES_SHADERS})
     file(RELATIVE_PATH OUT ${SHADER_SRC_DIR} ${shader})
-    get_filename_component(DESTINATION ${SHADER_OUT_DIR}/${OUT} PATH)
-    file(MAKE_DIRECTORY ${DESTINATION})
-    file(COPY ${shader} DESTINATION ${DESTINATION})
+    set(OUTPUT ${SHADER_OUT_DIR}/${OUT})
+    add_custom_command(OUTPUT ${OUTPUT}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUT_DIR}/gles
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${shader} ${OUTPUT}
+      DEPENDS ${shader}
+      COMMENT "Copying shader ${OUT}"
+      VERBATIM)
+    list(APPEND SHADER_OUTPUTS ${OUTPUT})
   endforeach()
 
   # Metal shaders are shipped as MSL source and compiled by the driver.
   file(GLOB METAL_SHADERS ${SHADER_SRC_DIR}/metal/*.msl)
   foreach(shader ${METAL_SHADERS})
     file(RELATIVE_PATH OUT ${SHADER_SRC_DIR} ${shader})
-    get_filename_component(DESTINATION ${SHADER_OUT_DIR}/${OUT} PATH)
-    file(MAKE_DIRECTORY ${DESTINATION})
-    file(COPY ${shader} DESTINATION ${DESTINATION})
+    set(OUTPUT ${SHADER_OUT_DIR}/${OUT})
+    add_custom_command(OUTPUT ${OUTPUT}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUT_DIR}/metal
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${shader} ${OUTPUT}
+      DEPENDS ${shader}
+      COMMENT "Copying shader ${OUT}"
+      VERBATIM)
+    list(APPEND SHADER_OUTPUTS ${OUTPUT})
   endforeach()
 
   # SDL_GPU shaders are compiled to SPIR-V; the sources themselves are not copied.
@@ -1253,7 +1269,6 @@ if(CLIENT)
   find_program(GLSLANG_VALIDATOR glslangValidator)
   if(GLSLC OR GLSLANG_VALIDATOR)
     file(GLOB VULKAN_SHADERS ${SHADER_SRC_DIR}/vulkan/*.vert ${SHADER_SRC_DIR}/vulkan/*.frag)
-    set(SHADER_OUTPUTS)
     foreach(shader ${VULKAN_SHADERS})
       get_filename_component(NAME ${shader} NAME)
       set(OUTPUT ${SHADER_OUT_DIR}/vulkan/${NAME}.spv)
@@ -1274,9 +1289,12 @@ if(CLIENT)
       endif()
       list(APPEND SHADER_OUTPUTS ${OUTPUT})
     endforeach()
-    add_custom_target(shaders ALL DEPENDS ${SHADER_OUTPUTS})
   else()
     message(WARNING "Neither glslc nor glslangValidator was found; SDL_GPU shaders will not be built")
+  endif()
+
+  if(SHADER_OUTPUTS)
+    add_custom_target(shaders ALL DEPENDS ${SHADER_OUTPUTS})
   endif()
 endif()
 

@@ -275,7 +275,8 @@ void CStats::OnRender()
 	s_Cursor.m_Align = TEXTALIGN_ML;
 	s_Cursor.Reset();
 	s_Cursor.MoveTo(x + 10, y + HeaderHeight / 2.0f);
-	TextRender()->TextOutlined(&s_Cursor, Localize("Name"), -1);
+	TextRender()->TextDeferredCached(&s_Cursor, Localize("Name"), -1);
+	TextRender()->DrawTextOutlined(&s_Cursor);
 	const char *apHeaders[] = {"K", "D", Localize("Suicides"), Localize("Ratio"), Localize("Net", "Net score"), Localize("KPM"), Localize("Spree"), Localize("Best spree"), Localize("Grabs", "Flag grabs")};
 	s_Cursor.m_Align = TEXTALIGN_MR;
 	for(int i = 0; i < 9; i++)
@@ -306,7 +307,8 @@ void CStats::OnRender()
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + HeaderHeight / 2.0f);
 
-			TextRender()->TextOutlined(&s_Cursor, pText, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, pText, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 	}
@@ -376,7 +378,9 @@ void CStats::OnRender()
 
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + 64, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, "⋅⋅⋅ ", -1);
+			TextRender()->TextDeferredCached(&s_Cursor, "⋅⋅⋅ ", -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
+			// depends on the advance left by the call above, so it cannot be cached
 			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
 			break;
 		}
@@ -407,7 +411,8 @@ void CStats::OnRender()
 			s_Cursor.Reset();
 			s_Cursor.m_FontSize = HeaderFontSize;
 			s_Cursor.MoveTo(Rect.x + 20.0f, Rect.y + Rect.h / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, pTeamName, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, pTeamName, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			s_Cursor.m_FontSize = FontSize;
 
 			y += TeamHeadlineHeight;
@@ -433,7 +438,8 @@ void CStats::OnRender()
 		s_Cursor.Reset();
 		s_Cursor.m_MaxWidth = 220;
 		s_Cursor.MoveTo(x + 64, y + LineHeight / 2.0f);
-		TextRender()->TextOutlined(&s_Cursor, m_pClient->m_aClients[aPlayers[j]].m_aName, -1);
+		TextRender()->TextDeferredCached(&s_Cursor, m_pClient->m_aClients[aPlayers[j]].m_aName, -1);
+		TextRender()->DrawTextOutlined(&s_Cursor);
 
 		s_Cursor.m_MaxWidth = -1;
 		s_Cursor.m_Align = TEXTALIGN_MR;
@@ -450,7 +456,8 @@ void CStats::OnRender()
 
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		else if(Config()->m_ClStatboardInfos & TC_STATS_DEATHS)
@@ -458,7 +465,8 @@ void CStats::OnRender()
 			str_format(aBuf, sizeof(aBuf), "%d", pStats->m_Deaths);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		if(Config()->m_ClStatboardInfos & TC_STATS_SUICIDES)
@@ -466,7 +474,8 @@ void CStats::OnRender()
 			str_format(aBuf, sizeof(aBuf), "%d", pStats->m_Suicides);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		if(Config()->m_ClStatboardInfos & TC_STATS_RATIO)
@@ -477,7 +486,8 @@ void CStats::OnRender()
 				str_format(aBuf, sizeof(aBuf), "%.2f", (float) (pStats->m_Kills) / pStats->m_Deaths);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		if(Config()->m_ClStatboardInfos & TC_STATS_NET)
@@ -485,7 +495,8 @@ void CStats::OnRender()
 			str_format(aBuf, sizeof(aBuf), "%+d", pStats->m_Kills - pStats->m_Deaths);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		if(Config()->m_ClStatboardInfos & TC_STATS_KPM)
@@ -494,7 +505,8 @@ void CStats::OnRender()
 			str_format(aBuf, sizeof(aBuf), "%.1f", KPM);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		if(Config()->m_ClStatboardInfos & TC_STATS_SPREE)
@@ -508,7 +520,8 @@ void CStats::OnRender()
 				str_format(aBuf, sizeof(aBuf), "%d", pStats->m_CurrentSpree);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		else if(Config()->m_ClStatboardInfos & TC_STATS_BESTSPREE)
@@ -517,7 +530,8 @@ void CStats::OnRender()
 			str_format(aBuf, sizeof(aBuf), "%d", pStats->m_BestSpree);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		if(m_pClient->m_Snap.m_pGameData && m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_FLAGS && Config()->m_ClStatboardInfos & TC_STATS_FLAGGRABS)
@@ -525,7 +539,8 @@ void CStats::OnRender()
 			str_format(aBuf, sizeof(aBuf), "%d", pStats->m_FlagGrabs);
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
-			TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+			TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+			TextRender()->DrawTextOutlined(&s_Cursor);
 			px += 100;
 		}
 		px -= 40;
@@ -570,7 +585,8 @@ void CStats::OnRender()
 				s_Cursor.Reset();
 				s_Cursor.MoveTo(x + px, y + LineHeight / 2.0f);
 				s_Cursor.m_Align = TEXTALIGN_MC;
-				TextRender()->TextOutlined(&s_Cursor, "—", -1);
+				TextRender()->TextDeferredCached(&s_Cursor, "—", -1);
+				TextRender()->DrawTextOutlined(&s_Cursor);
 			}
 			else
 			{
@@ -600,7 +616,8 @@ void CStats::OnRender()
 					s_Cursor.Reset();
 					s_Cursor.MoveTo(x + TempX, y + LineHeight / 2.0f);
 					s_Cursor.m_Align = TEXTALIGN_ML;
-					TextRender()->TextOutlined(&s_Cursor, aBuf, -1);
+					TextRender()->TextDeferredCached(&s_Cursor, aBuf, -1);
+					TextRender()->DrawTextOutlined(&s_Cursor);
 				}
 			}
 		}

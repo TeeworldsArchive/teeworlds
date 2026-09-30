@@ -8,12 +8,28 @@ struct FragmentInput
 };
 
 // SDL_GPU fragment uniform slot 0
+// Layout must match CQuadFragmentUniforms in backend_sdlgpu.h.
 struct Uniforms
 {
     int UseTexture;
     int IsAlphaOnly;
     int IsStainedOnly;
+    int IsSDF;
+    float SDFGain;
+    float SDFOutlineOffset;
+    // keeps SDFOutlineColor 16 byte aligned, matching the C++ mirror
+    float SDFPadding0;
+    float SDFPadding1;
+    float4 SDFOutlineColor;
 };
+
+// FreeType encodes the signed distance as 128 * (d / spread + 1).
+constant float SDFEdge = 128.0 / 255.0;
+
+static float SDFCoverage(float Value, constant Uniforms &Uniform)
+{
+    return clamp(0.5 + (Value - SDFEdge) * Uniform.SDFGain, 0.0, 1.0);
+}
 
 fragment float4 main0(FragmentInput Input [[stage_in]],
     texture2d_array<float> Texture [[texture(0)]],
@@ -22,6 +38,28 @@ fragment float4 main0(FragmentInput Input [[stage_in]],
 {
     if(Uniform.UseTexture == 0)
         return Input.Color;
+
+    if(Uniform.IsSDF != 0)
+    {
+        uint Layer = (uint)Input.TexCoord.z;
+        float Distance = Texture.sample(TextureSampler, Input.TexCoord.xy, Layer).r;
+        float Glyph = SDFCoverage(Distance, Uniform);
+
+        // moving the edge towards lower values grows the glyph outwards
+        float Outline = SDFCoverage(Distance + Uniform.SDFOutlineOffset, Uniform);
+
+        // the outline fades with the text alpha
+        float OutlineAlpha = Uniform.SDFOutlineColor.a * Input.Color.a * Outline;
+        float3 Rgb = Uniform.SDFOutlineColor.rgb * OutlineAlpha;
+        float Alpha = OutlineAlpha;
+
+        float GlyphAlpha = Input.Color.a * Glyph;
+        Rgb = Input.Color.rgb * GlyphAlpha + Rgb * (1.0 - GlyphAlpha);
+        Alpha = GlyphAlpha + Alpha * (1.0 - GlyphAlpha);
+
+        // premultiplied output, matching the other alpha paths
+        return float4(Rgb, Alpha);
+    }
 
     float4 TexColor = Texture.sample(TextureSampler, Input.TexCoord.xy, (uint)Input.TexCoord.z);
     if(Uniform.IsAlphaOnly != 0)

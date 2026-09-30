@@ -25,8 +25,10 @@ void CGraphicsBackend_Threaded::ThreadFunc(void *pUser)
 #ifdef CONF_PLATFORM_MACOS
 			CAutoreleasePool AutoreleasePool;
 #endif
+			const int64 RenderStart = time_get();
 			pThis->m_pProcessor->RunBuffer(pThis->m_pBuffer);
 			sync_barrier();
+			pThis->m_RenderThreadTime += time_get() - RenderStart;
 			pThis->m_pBuffer = 0x0;
 			pThis->m_BufferDone.signal();
 		}
@@ -38,6 +40,7 @@ CGraphicsBackend_Threaded::CGraphicsBackend_Threaded()
 	m_pBuffer = 0x0;
 	m_pProcessor = 0x0;
 	m_pThread = 0x0;
+	m_RenderThreadTime = 0;
 }
 
 void CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor)
@@ -339,6 +342,30 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 		m_LastStainedOnly = State.m_IsStainedOnly;
 	}
 
+	const bool SDFChanged = !m_LastSDFValid ||
+		m_LastSDFParams.m_Enable != State.m_IsSDF ||
+		m_LastSDFParams.m_Gain != State.m_SDFGain ||
+		m_LastSDFParams.m_OutlineOffset != State.m_SDFOutlineOffset ||
+		m_LastSDFParams.m_OutlineColor.r != State.m_SDFOutlineColor.r ||
+		m_LastSDFParams.m_OutlineColor.g != State.m_SDFOutlineColor.g ||
+		m_LastSDFParams.m_OutlineColor.b != State.m_SDFOutlineColor.b ||
+		m_LastSDFParams.m_OutlineColor.a != State.m_SDFOutlineColor.a;
+	if(SDFChanged)
+	{
+		glUniform1i(m_RenderShader.m_IsSDFLoc, State.m_IsSDF ? 1 : 0);
+		glUniform1f(m_RenderShader.m_SDFGainLoc, State.m_SDFGain);
+		glUniform1f(m_RenderShader.m_SDFOutlineOffsetLoc, State.m_SDFOutlineOffset);
+		glUniform4f(m_RenderShader.m_SDFOutlineColorLoc,
+			State.m_SDFOutlineColor.r, State.m_SDFOutlineColor.g,
+			State.m_SDFOutlineColor.b, State.m_SDFOutlineColor.a);
+
+		m_LastSDFParams.m_Enable = State.m_IsSDF;
+		m_LastSDFParams.m_Gain = State.m_SDFGain;
+		m_LastSDFParams.m_OutlineOffset = State.m_SDFOutlineOffset;
+		m_LastSDFParams.m_OutlineColor = vec4(State.m_SDFOutlineColor.r, State.m_SDFOutlineColor.g, State.m_SDFOutlineColor.b, State.m_SDFOutlineColor.a);
+		m_LastSDFValid = true;
+	}
+
 	if(State.m_Texture >= 0 && State.m_Texture < CCommandBuffer::MAX_TEXTURES)
 	{
 		bool IsAlphaOnly = m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_ALPHA;
@@ -435,6 +462,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	m_LastUseTexture = false;
 	m_LastTextureID = -1;
 	m_LastSampler = 0;
+	m_LastSDFValid = false;
+	m_LastSDFParams = IGraphics::CTextSDFParams();
 
 	// dedicated tile map shader
 	mem_zero(&m_TilemapShader, sizeof(m_TilemapShader));
@@ -491,6 +520,10 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	m_RenderShader.m_UseTextureLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "useTexture");
 	m_RenderShader.m_IsAlphaOnlyLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "IsAlphaOnly");
 	m_RenderShader.m_IsStainedOnlyLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "IsStainedOnly");
+	m_RenderShader.m_IsSDFLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "IsSDF");
+	m_RenderShader.m_SDFGainLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "SDFGain");
+	m_RenderShader.m_SDFOutlineOffsetLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "SDFOutlineOffset");
+	m_RenderShader.m_SDFOutlineColorLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "SDFOutlineColor");
 	m_RenderShader.m_OurTextureLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "ourTexture");
 	m_RenderShader.m_ProjectionLoc = glGetUniformLocation(m_RenderShader.m_ShaderProgram, "projection");
 
@@ -524,6 +557,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	*m_pTextureMemoryUsage = 0;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m_MaxTexSize);
 	glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &m_Max2DArrayLayers);
+	if(pCommand->m_pMaxTextureSize)
+		*pCommand->m_pMaxTextureSize = m_MaxTexSize;
 	dbg_msg("render", "opengl max texture sizes: %d, max array texture layers: %d", m_MaxTexSize, m_Max2DArrayLayers);
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -691,17 +726,18 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTilemapTexture(const CCommandBu
 	glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sizeof(CCommandBuffer::CVertex), pCommand->m_aVertices);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-	// the tilemap path bypasses SetState, so drop its caches to force a full reconfigure
+	// The tilemap path uses its own program, so the render program's uniforms
+	// are still valid. The fragment flag caches must not be reset here, or the
+	// next untextured draw would skip its "useTexture = 0" update.
 	glUseProgram(m_RenderShader.m_ShaderProgram);
 	glBindSampler(1, 0);
 	glDisable(GL_SCISSOR_TEST);
 	glEnable(GL_BLEND);
 	m_LastSrcBlendMode = GL_NONE;
-	m_LastAlphaOnly = false;
-	m_LastStainedOnly = false;
-	m_LastUseTexture = false;
 	m_LastTextureID = -1;
 	m_LastSampler = 0;
+	m_LastSDFValid = false;
+	m_LastSDFParams = IGraphics::CTextSDFParams();
 	m_LastClipEnable = false;
 }
 
@@ -847,6 +883,7 @@ CGraphicsBackend_SDL::CGraphicsBackend_SDL(IStorage *pStorage)
 	m_pWindow = 0;
 	m_pProcessor = 0;
 	m_TextureMemoryUsage = 0;
+	m_MaxTextureSize = 2048;
 	m_NumScreens = 0;
 	m_pStorage = pStorage;
 }
@@ -1150,6 +1187,7 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 	CmdBuffer.AddCommand(CmdSDL);
 	CCommandProcessorFragment_OpenGL::CInitCommand CmdOpenGL;
 	CmdOpenGL.m_pTextureMemoryUsage = &m_TextureMemoryUsage;
+	CmdOpenGL.m_pMaxTextureSize = &m_MaxTextureSize;
 	CmdOpenGL.m_pVertexShaderSource = m_pVertexShaderSource;
 	CmdOpenGL.m_pFragmentShaderSource = m_pFragmentShaderSource;
 	CmdOpenGL.m_pTilemapFragmentShaderSource = m_pTilemapFragmentShaderSource;

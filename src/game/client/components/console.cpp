@@ -632,7 +632,7 @@ void CGameConsole::OnRender()
 				s_Cursor.Reset();
 				if(pEntry->m_Highlighted)
 					TextRender()->TextColor(1.0f, 0.75f, 0.75f, 1.0f);
-				TextRender()->TextDeferred(&s_Cursor, pEntry->m_aText, -1);
+				TextRender()->TextDeferredCached(&s_Cursor, pEntry->m_aText, -1);
 				TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 				// get y offset (calculate it if we haven't yet)

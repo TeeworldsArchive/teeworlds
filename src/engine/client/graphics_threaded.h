@@ -178,6 +178,12 @@ public:
 		int m_ClipH;
 
 		bool m_IsStainedOnly;
+
+		// signed distance field text state
+		bool m_IsSDF;
+		float m_SDFGain;
+		float m_SDFOutlineOffset;
+		CColor m_SDFOutlineColor;
 	};
 
 	struct CClearCommand : public CCommand
@@ -360,6 +366,12 @@ public:
 
 	virtual int MemoryUsage() const = 0;
 
+	// largest texture the device supports, reported by the backend after init
+	virtual int MaxTextureSize() const = 0;
+
+	// time the render thread spent processing command buffers, in time_get() units
+	virtual int64 TakeRenderThreadTime() { return 0; }
+
 	virtual int GetNumScreens() const = 0;
 
 	virtual void Minimize() = 0;
@@ -407,6 +419,15 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	CCommandBuffer::CVertex m_aVertices[CCommandBuffer::MAX_VERTICES];
 	int m_NumVertices;
+	// state/primitive type the buffered vertices were recorded with; the batch
+	// is flushed with this snapshot instead of the live state
+	CCommandBuffer::CState m_PendingState;
+	int m_PendingPrimType;
+
+	// render commands emitted since the last TakeRenderCommandCount()
+	int m_RenderCommandCount;
+	// frames presented since the last TakeRenderedFrameCount()
+	int m_RenderedFrameCount;
 
 	CCommandBuffer::CColor m_aColor[4];
 	CCommandBuffer::CTexCoord m_aTexture[4];
@@ -416,6 +437,8 @@ class CGraphics_Threaded : public IEngineGraphics
 	float m_GlobalAlpha;
 	float m_Rotation;
 	int m_Drawing;
+	// set by SetTextSDF(), consumed by the next QuadsBegin()/LinesBegin()
+	bool m_SDFArmed;
 	bool m_DoScreenshot;
 	char m_aScreenshotName[128];
 	char m_aThumbnailName[128];
@@ -431,10 +454,17 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	void FlushVertices();
 	void AddVertices(int Count);
+	// flushes if Count more vertices would not fit; call before writing to m_aVertices
+	void ReserveVertices(int Count);
 	void Rotate4(const CCommandBuffer::CPoint &rCenter, CCommandBuffer::CVertex *pPoints);
 
 	void KickCommandBuffer();
+	// flushes because the draw state is about to change
 	void FlushPendingVerticesOnStateChange();
+	// flushes before a command that is not part of the vertex batch
+	void FlushPendingVertices();
+	// clears the SDF fields of m_State so the glyph path cannot leak into other draws
+	void ClearTextSDF();
 
 	int IssueInit();
 	int InitWindow();
@@ -453,8 +483,14 @@ public:
 	virtual void WrapMode(int WrapU, int WrapV);
 
 	virtual int MemoryUsage() const;
+	virtual int MaxTextureSize() const;
+	virtual int TakeRenderCommandCount();
+	virtual int TakeRenderedFrameCount();
+	virtual int64 TakeRenderThreadTime();
 
 	virtual void StainedOnly(bool Flag);
+
+	virtual void SetTextSDF(const CTextSDFParams &Params);
 
 	virtual float ScreenUIScale() const;
 
@@ -501,6 +537,7 @@ public:
 	virtual void QuadsDraw(CQuadItem *pArray, int Num);
 	virtual void SingleQuadDrawTL(const CQuadItem *pQuad);
 	virtual void QuadsDrawTL(const CQuadItem *pArray, int Num);
+	virtual void QuadsDrawTLWithUV(const CQuadItem *pArray, const vec4 *pUV, int Num, int TextureIndex = -1);
 	virtual void QuadsDrawFreeform(const CFreeformItem *pArray, int Num);
 	virtual void QuadsText(float x, float y, float Size, const char *pText);
 
