@@ -1,4 +1,6 @@
-// these parts are from DDNet codes which is under zlib license. see their license.txt
+/* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
+/* Portions from DDNet (zlib license) - https://github.com/ddnet/ddnet                       */
+/* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef GAME_CLIENT_COMPONENTS_MAPSOUNDS_H
 #define GAME_CLIENT_COMPONENTS_MAPSOUNDS_H
 

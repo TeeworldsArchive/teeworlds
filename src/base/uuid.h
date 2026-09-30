@@ -1,3 +1,6 @@
+/* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
+/* Portions from DDNet (zlib license) - https://github.com/ddnet/ddnet                       */
+/* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef BASE_UUID_H
 #define BASE_UUID_H
 

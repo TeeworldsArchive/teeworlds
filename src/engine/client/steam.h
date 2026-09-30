@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #ifndef ENGINE_CLIENT_STEAM_H
 #define ENGINE_CLIENT_STEAM_H
 

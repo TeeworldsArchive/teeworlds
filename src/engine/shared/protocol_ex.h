@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #ifndef ENGINE_SHARED_PROTOCOL_EX_H
 #define ENGINE_SHARED_PROTOCOL_EX_H
 

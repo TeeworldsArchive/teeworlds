@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <base/system.h>
 
 #include "zstd_dict.h"

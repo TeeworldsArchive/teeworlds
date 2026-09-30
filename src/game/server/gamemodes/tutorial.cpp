@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <engine/console.h>
 #include <game/server/entities/character.h>
 #include <game/server/entities/flag.h>

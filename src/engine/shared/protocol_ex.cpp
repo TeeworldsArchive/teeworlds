@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include "protocol_ex.h"
 
 #include "config.h"

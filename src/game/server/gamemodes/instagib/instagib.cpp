@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <engine/shared/config.h>
 #include <game/server/gamemodes/vanilla/ctf.h>
 #include <game/server/gamemodes/vanilla/dm.h>

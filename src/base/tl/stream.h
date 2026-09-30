@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #ifndef BASE_TL_STREAM_H
 #define BASE_TL_STREAM_H
 

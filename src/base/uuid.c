@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <base/hash_ctxt.h>
 #include <base/system.h>
 

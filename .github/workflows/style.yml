@@ -23,6 +23,8 @@ jobs:
         sudo apt-get install jq -y
     - name: Check header guards
       run: scripts/check_header_guards.py
+    - name: Check license headers
+      run: scripts/check_license_headers.py
     - name: Lint JSON
       run: |
         while read -r json;

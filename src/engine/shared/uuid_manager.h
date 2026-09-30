@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #ifndef ENGINE_SHARED_UUID_MANAGER_H
 #define ENGINE_SHARED_UUID_MANAGER_H
 

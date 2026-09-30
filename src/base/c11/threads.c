@@ -1,3 +1,6 @@
+/* Third-party code: tinycthread by Marcus Geelnard and Evan Nemerson.                       */
+/* Licensed under the zlib license; the full notice is reproduced below.                     */
+/* Modified for the Teeworlds Archive Project - see license.txt for details.                 */
 #include "threads.h"
 #ifndef USE_SYSTEM_THREADS_H
 /* -*- mode: c; tab-width: 2; indent-tabs-mode: nil; -*-

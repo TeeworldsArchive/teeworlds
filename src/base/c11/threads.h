@@ -1,3 +1,6 @@
+/* Third-party code: tinycthread by Marcus Geelnard and Evan Nemerson.                       */
+/* Licensed under the zlib license; the full notice is reproduced below.                     */
+/* Modified for the Teeworlds Archive Project - see license.txt for details.                 */
 #ifndef BASE_C11_THREADS_H
 #define BASE_C11_THREADS_H
 

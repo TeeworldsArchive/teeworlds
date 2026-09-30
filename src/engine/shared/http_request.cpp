@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <base/math.h>
 #include <base/system.h>
 #include <engine/engine.h>

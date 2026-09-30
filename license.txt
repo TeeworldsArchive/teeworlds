@@ -31,7 +31,29 @@ Note: All audio files have been converted from WavePack (.wv) to Opus format.
 This constitutes a modification under the terms of the CC-BY-SA 3.0 license.
 The resulting Opus files are therefore licensed under the same terms (CC-BY-SA 3.0).
 
+Note: The maps under 'datasrc/maps' (a submodule) and the theme maps under
+'datasrc/ui/themes' have been re-saved in datafile format v5. This constitutes
+a modification under the terms of the CC-BY-SA 3.0 license. The resulting maps
+are therefore licensed under the same terms (CC-BY-SA 3.0).
+
 Teeworlds Archive Project Resources Authors: Bamcane, Pointer31
+
+Resources added or modified by the Teeworlds Archive Project:
+
+  autumn_day.map, autumn_night.map (and the autumn theme icon)
+      The original 'autumn' theme was contributed by ChillerDragon
+      (upstream Teeworlds, PR #2668) and is itself derived from the
+      'heavens' theme maps (heavens_day.map, heavens_night.map).
+      Bamcane further modified it for this fork.
+      Distributed under CC-BY-SA 3.0 as a modified work.
+
+  Gametype icons (datasrc/ui/gametypes/)
+      The original icons are by Zatline and Sonix- (upstream Teeworlds).
+      Additional icons were contributed by Pointer31.
+      Collected, adjusted and committed by Bamcane.
+
+  All other new or adjusted resources under 'data' and 'datasrc'
+      Contributed and committed by Bamcane.
 
 ------------------------------------------------------------------------
 

@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <game/server/entities/character.h>
 #include <game/server/entities/laser.h>
 #include <game/server/entities/projectile.h>

@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #ifndef GAME_SERVER_GAMEMODES_TUTORIAL_H
 #define GAME_SERVER_GAMEMODES_TUTORIAL_H
 #include <game/server/gamecontroller.h>

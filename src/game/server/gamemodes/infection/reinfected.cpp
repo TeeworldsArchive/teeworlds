@@ -1,3 +1,4 @@
+/* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <base/color.h>
 #include <base/tl/inplace_array.h>
 #include <engine/shared/config.h>
