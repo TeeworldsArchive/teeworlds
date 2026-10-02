@@ -10,6 +10,11 @@
 
 #include <engine/shared/memheap.h>
 
+#include "font_download.h"
+
+struct _json_value;
+typedef struct _json_value json_value;
+
 class CConfig;
 
 // ft2 texture
@@ -181,6 +186,8 @@ class CGlyphMap
 
 	FT_Face m_DefaultFace;
 	FT_Face m_VariantFace;
+	// wins over the default face for every codepoint it covers, replacing the text face's own emoji
+	FT_Face m_EmojiFace;
 	FT_Face m_aFallbackFaces[MAX_FACES];
 	int m_NumFallbackFaces;
 
@@ -221,6 +228,7 @@ public:
 	void SetDefaultFaceByName(const char *pFamilyName);
 	void AddFallbackFaceByName(const char *pFamilyName);
 	void SetVariantFaceByName(const char *pFamilyName);
+	bool SetEmojiFaceByName(const char *pFamilyName);
 
 	bool RenderGlyph(CGlyph *pGlyph, bool Render);
 	CGlyph *GetGlyph(int Chr, bool Render);
@@ -272,6 +280,12 @@ class CTextRender : public IEngineTextRender
 
 	CGlyphMap *m_pGlyphMap;
 	void *m_apFontData[MAX_FACES];
+
+	// runtime-fetched fonts, started by LoadFontsAsync() and finished before the loading screen closes
+	CFontDownloader m_Downloader;
+	int m_NumLoadedFaces;
+	// which entries of "font files" are already in the glyph map
+	bool m_aLoadedFonts[MAX_FACES];
 
 	// support regional variant fonts
 	int m_NumVariants;
@@ -389,6 +403,19 @@ public:
 
 	void LoadFonts(IStorage *pStorage, IConsole *pConsole);
 	void SetFontLanguageVariant(const char *pLanguageFile);
+
+	// loads local fonts and starts the downloads in fonts/index.json; false while one is in flight
+	bool LoadFontsAsync(IStorage *pStorage, IConsole *pConsole);
+	// advances the downloads and loads whatever finished; never blocks
+	void PollFontDownloads(IStorage *pStorage, IConsole *pConsole);
+	// one last poll so results arriving at the deadline are still picked up
+	void FinishFontDownloads(IStorage *pStorage, IConsole *pConsole);
+	bool FontsPending() const;
+	float FontDownloadProgress() const;
+
+	// loads every font in the parsed index and returns the number of faces added;
+	// AlreadyLoaded marks the entries to skip
+	int LoadFontFiles(IStorage *pStorage, IConsole *pConsole, const json_value *pJsonData, bool AlreadyLoaded[MAX_FACES]);
 
 	void TextColor(const vec4 &Color) { m_TextColor = Color; }
 	void TextSecondaryColor(const vec4 &Color) { m_TextSecondaryColor = Color; }

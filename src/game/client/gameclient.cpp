@@ -380,9 +380,41 @@ void CGameClient::OnInit()
 	m_pMenus->InitLoading(TotalWorkAmount);
 	m_pMenus->RenderLoading(4);
 
-	m_pTextRender->LoadFonts(Storage(), Console());
+	// load local fonts first, then fetch the index's downloads
+	m_pTextRender->LoadFontsAsync(Storage(), Console());
 	m_pTextRender->SetFontLanguageVariant(Config()->m_ClLanguagefile);
 	m_pMenus->RenderLoading(1);
+
+	// Wait on the loading screen until the fonts are there, pumping frames so the
+	// window stays responsive and shows progress. A failed download only costs
+	// this one startup; the next run retries.
+	if(m_pTextRender->FontsPending())
+	{
+		const int64 DownloadStart = time_get();
+		const double Freq = (double) time_freq();
+		// generous for the CJK font on a slow line; the request's own timeout is the hard stop
+		const double Budget = 300.0;
+
+		while(m_pTextRender->FontsPending())
+		{
+			const double Elapsed = (double) (time_get() - DownloadStart) / Freq;
+			if(Elapsed > Budget)
+			{
+				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "fontdownload",
+					"font download budget exhausted, continuing without it");
+				break;
+			}
+
+			m_pTextRender->PollFontDownloads(Storage(), Console());
+
+			m_pMenus->RenderLoadingProgress(m_pTextRender->FontDownloadProgress(), "Downloading...");
+
+			// RenderLoadingProgress swaps a frame per iteration; just do not spin at full speed
+			thread_sleep(5);
+		}
+
+		m_pTextRender->FinishFontDownloads(Storage(), Console());
+	}
 
 	// set the language
 	g_Localization.Load(Config()->m_ClLanguagefile, Storage(), Console(), false);

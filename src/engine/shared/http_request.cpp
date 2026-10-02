@@ -44,10 +44,13 @@ CHttpRequest::CHttpRequest(const char *pRequest, const char *pUrl, long TimeoutS
 	m_IsChecked = false;
 	m_TimeoutSeconds = TimeoutSeconds;
 	m_PostData.clear();
+	m_ReceivedData.clear();
 }
 
 void CHttpRequest::PostData(const unsigned char *pPost, int Size)
 {
+	// memory_stream no longer resets its buffer, so clear it to replace the body
+	m_PostData.clear();
 	memory_stream<unsigned char> Stream(&m_PostData);
 	Stream.write(pPost, Size);
 }

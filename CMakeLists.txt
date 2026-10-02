@@ -916,8 +916,9 @@ set(EXPECTED_DATA
   deadtee.png
   emoticons.png
   fonts/DejaVuSans.ttf
-  fonts/SourceHanSans.ttc
+  fonts/NotoEmoji-Bold.ttf
   fonts/index.json
+  fonts/license.txt
   fonts/remixicon.ttf
   game.png
   languages/belarusian.json
@@ -1207,6 +1208,10 @@ if(NOT EXISTS ${PROJECT_SOURCE_DIR}/datasrc/maps/dm1.map)
 endif()
 
 set_glob(DATA GLOB_RECURSE "json;map;png;rules;ttc;ttf;txt;opus" datasrc ${EXPECTED_DATA})
+
+# file(COPY) below runs at configure time only; make datasrc changes trigger a
+# reconfigure so data/ is not served stale.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${DATA})
 
 ########################################################################
 # COPY DATA AND DLLS
@@ -1533,6 +1538,8 @@ if(CLIENT)
     client.h
     contacts.cpp
     contacts.h
+    font_download.cpp
+    font_download.h
     graphics_threaded.cpp
     graphics_threaded.h
     graphics_threaded_null.h

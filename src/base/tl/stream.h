@@ -83,13 +83,14 @@ public:
 	memory_stream(array<T> *buffer)
 	{
 		mem_buffer = buffer;
-		buffer->clear();
 	}
 
 	virtual unsigned write(const unsigned char *buffer, unsigned size)
 	{
-		unsigned start = mem_buffer->size();
-		mem_buffer->set_size(start + size);
+		const int start = mem_buffer->size();
+		// append() grows geometrically; set_size() reallocates and copies the
+		// whole buffer on every write, making chunked writes O(n^2)
+		mem_buffer->append((int) size);
 		inplace_memory_stream stream((unsigned char *) mem_buffer->base_ptr() + start, size);
 		return stream.write(buffer, size);
 	}

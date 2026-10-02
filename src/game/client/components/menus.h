@@ -652,6 +652,8 @@ private:
 public:
 	void InitLoading(int TotalWorkAmount);
 	void RenderLoading(int WorkedAmount = 0);
+	// draws the loading frame with an explicit progress fraction while a font download blocks
+	void RenderLoadingProgress(float Progress, const char *pLabel);
 	bool IsBackgroundNeeded() const;
 
 	struct CSwitchTeamInfo

@@ -8,11 +8,13 @@
 
 #include <engine/graphics.h>
 #include <engine/textrender.h>
+#include <engine/engine.h>
 
 #include <engine/shared/jsonparser.h>
 #include <engine/shared/config.h>
 
 #include "textrender.h"
+#include "font_download.h"
 
 // false once the glyph map is gone; static cursors may still be destroyed later
 static bool g_GlyphsAlive = false;
@@ -619,6 +621,10 @@ bool CGlyphMap::SetFaceByName(FT_Face *pFace, const char *pFamilyName)
 		*pFace = Face;
 		return true;
 	}
+
+	// a name that matches nothing used to fail silently, hiding a typo or a missing font file
+	if(pFamilyName != NULL && pFamilyName[0] != 0)
+		dbg_msg("textrender", "font family '%s' is not provided by any loaded font file", pFamilyName);
 	return false;
 }
 
@@ -629,6 +635,7 @@ CGlyphMap::CGlyphMap(IGraphics *pGraphics, FT_Library FtLibrary)
 
 	m_DefaultFace = NULL;
 	m_VariantFace = NULL;
+	m_EmojiFace = NULL;
 
 	mem_zero(m_aFallbackFaces, sizeof(m_aFallbackFaces));
 	mem_zero(m_aFtFaces, sizeof(m_aFtFaces));
@@ -733,6 +740,19 @@ int CGlyphMap::GetCharGlyph(int Chr, FT_Face *pFace)
 	if(!m_DefaultFace)
 		return 0;
 
+	// The emoji face wins over the default face for every codepoint it covers,
+	// overriding the emoji shapes DejaVu carries itself. ASCII stays with the
+	// text face: Noto Emoji maps space, '#', '*' and the digits as keycap bases.
+	if(m_EmojiFace && Chr > 0x7F)
+	{
+		const int EmojiGlyph = FT_Get_Char_Index(m_EmojiFace, (FT_ULong) Chr);
+		if(EmojiGlyph)
+		{
+			*pFace = m_EmojiFace;
+			return EmojiGlyph;
+		}
+	}
+
 	int GlyphIndex = FT_Get_Char_Index(m_DefaultFace, (FT_ULong) Chr);
 	if(GlyphIndex)
 		return GlyphIndex;
@@ -801,6 +821,18 @@ void CGlyphMap::SetVariantFaceByName(const char *pFamilyName)
 		m_VariantFace = Face;
 		InitTexture(m_TextureSize, m_TextureSize);
 	}
+}
+
+bool CGlyphMap::SetEmojiFaceByName(const char *pFamilyName)
+{
+	FT_Face Face = NULL;
+	bool Found = false;
+	if(pFamilyName && pFamilyName[0])
+		Found = SetFaceByName(&Face, pFamilyName);
+
+	// resolved before any text is laid out; a change later only affects glyphs created from then on
+	m_EmojiFace = Face;
+	return Found;
 }
 
 bool CGlyphMap::LoadGlyphMetrics(CGlyph *pGlyph)
@@ -1241,8 +1273,10 @@ CTextRender::CTextRender()
 	m_NumVariants = 0;
 	m_CurrentVariant = -1;
 	m_pVariants = 0;
+	m_NumLoadedFaces = 0;
 
 	mem_zero(m_apFontData, sizeof(m_apFontData));
+	mem_zero(m_aLoadedFonts, sizeof(m_aLoadedFonts));
 
 	mem_zero(m_aLayoutCache, sizeof(m_aLayoutCache));
 	m_LayoutCacheTick = 0;
@@ -1365,15 +1399,9 @@ void CTextRender::Shutdown()
 			mem_free(m_apFontData[i]);
 }
 
-void CTextRender::LoadFonts(IStorage *pStorage, IConsole *pConsole)
+int CTextRender::LoadFontFiles(IStorage *pStorage, IConsole *pConsole, const json_value *pJsonData, bool AlreadyLoaded[MAX_FACES])
 {
-	CJsonParser JsonParser;
-	const json_value *pJsonData = JsonParser.ParseFile("fonts/index.json", pStorage);
-	if(pJsonData == 0)
-	{
-		pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "textrender", JsonParser.Error());
-		return;
-	}
+	int NumFaces = 0;
 
 	// extract font file definitions
 	const json_value &rFiles = (*pJsonData)["font files"];
@@ -1381,6 +1409,10 @@ void CTextRender::LoadFonts(IStorage *pStorage, IConsole *pConsole)
 	{
 		for(unsigned i = 0; i < rFiles.u.array.length && i < MAX_FACES; ++i)
 		{
+			// the glyph map owns the FT_Face, so an already registered face must not be loaded twice
+			if(AlreadyLoaded && AlreadyLoaded[i])
+				continue;
+
 			char aFontName[IO_MAX_PATH_LENGTH];
 			str_format(aFontName, sizeof(aFontName), "fonts/%s", (const char *) rFiles[i]);
 			unsigned FileSize;
@@ -1391,6 +1423,14 @@ void CTextRender::LoadFonts(IStorage *pStorage, IConsole *pConsole)
 					char aBuf[256];
 					str_format(aBuf, sizeof(aBuf), "failed to load font. filename='%s'", aFontName);
 					pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "textrender", aBuf);
+					mem_free(m_apFontData[i]);
+					m_apFontData[i] = 0;
+				}
+				else
+				{
+					NumFaces++;
+					if(AlreadyLoaded)
+						AlreadyLoaded[i] = true;
 				}
 			}
 		}
@@ -1410,6 +1450,25 @@ void CTextRender::LoadFonts(IStorage *pStorage, IConsole *pConsole)
 		for(unsigned i = 0; i < rFallbackFaces.u.array.length; ++i)
 		{
 			m_pGlyphMap->AddFallbackFaceByName((const char *) rFallbackFaces[i]);
+		}
+	}
+
+	// extract the emoji family name; its face wins for every codepoint it covers
+	const json_value &rEmojiFace = (*pJsonData)["emoji"];
+	if(rEmojiFace.type == json_string)
+	{
+		const char *pEmojiFamily = (const char *) rEmojiFace;
+		char aBuf[256];
+		if(m_pGlyphMap->SetEmojiFaceByName(pEmojiFamily))
+		{
+			str_format(aBuf, sizeof(aBuf), "emoji family '%s' is active", pEmojiFamily);
+			pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "textrender", aBuf);
+		}
+		else
+		{
+			// otherwise the only symptom is emoji silently missing from the UI
+			str_format(aBuf, sizeof(aBuf), "emoji family '%s' not found, emoji stay on the text font", pEmojiFamily);
+			pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "textrender", aBuf);
 		}
 	}
 
@@ -1433,6 +1492,139 @@ void CTextRender::LoadFonts(IStorage *pStorage, IConsole *pConsole)
 				m_pVariants[i].m_aFamilyName[0] = 0;
 		}
 	}
+
+	return NumFaces;
+}
+
+void CTextRender::LoadFonts(IStorage *pStorage, IConsole *pConsole)
+{
+	CJsonParser JsonParser;
+	const json_value *pJsonData = JsonParser.ParseFile("fonts/index.json", pStorage);
+	if(pJsonData == 0)
+	{
+		pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "textrender", JsonParser.Error());
+		return;
+	}
+
+	m_NumLoadedFaces = LoadFontFiles(pStorage, pConsole, pJsonData, 0);
+}
+
+bool CTextRender::LoadFontsAsync(IStorage *pStorage, IConsole *pConsole)
+{
+	m_Downloader.Clear();
+	mem_zero(m_aLoadedFonts, sizeof(m_aLoadedFonts));
+
+	CJsonParser JsonParser;
+	const json_value *pJsonData = JsonParser.ParseFile("fonts/index.json", pStorage);
+	if(pJsonData == 0)
+	{
+		pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "textrender", JsonParser.Error());
+		return true;
+	}
+
+	// queue every font that has to be fetched; one already present in storage costs no request
+	const json_value &rDownloads = (*pJsonData)["downloads"];
+	if(rDownloads.type == json_array)
+	{
+		for(unsigned i = 0; i < rDownloads.u.array.length; ++i)
+		{
+			const json_value &rEntry = rDownloads[i];
+			if(rEntry.type != json_object)
+				continue;
+
+			const json_value &rName = rEntry["name"];
+			const json_value &rUrl = rEntry["url"];
+			if(rName.type != json_string || rUrl.type != json_string)
+				continue;
+
+			const json_value &rLicense = rEntry["license"];
+			const json_value &rSha256 = rEntry["sha256"];
+			const json_value &rSize = rEntry["size"];
+
+			CFontDownload *pDownload = m_Downloader.Add();
+			pDownload->Init(
+				(const char *) rName,
+				(const char *) rUrl,
+				rLicense.type == json_string ? (const char *) rLicense : "",
+				rSha256.type == json_string ? (const char *) rSha256 : "",
+				rSize.type == json_integer ? (unsigned) rSize.u.integer : 0);
+		}
+	}
+
+	// load what is available right away so the UI has a usable font during the download
+	m_NumLoadedFaces = LoadFontFiles(pStorage, pConsole, pJsonData, m_aLoadedFonts);
+
+	IEngine *pEngine = Kernel()->RequestInterface<IEngine>();
+	for(int i = 0; i < m_Downloader.NumDownloads(); ++i)
+		m_Downloader.Get(i)->Start(pEngine, pStorage, pConsole);
+
+	return !m_Downloader.AnyRunning();
+}
+
+void CTextRender::PollFontDownloads(IStorage *pStorage, IConsole *pConsole)
+{
+	if(m_Downloader.NumDownloads() == 0)
+		return;
+
+	// advance in-flight requests; the caller renders between polls, so this never blocks
+	bool AnyFinished = false;
+	for(int i = 0; i < m_Downloader.NumDownloads(); ++i)
+	{
+		CFontDownload *pDownload = m_Downloader.Get(i);
+		if(pDownload->State() == CFontDownload::STATE_RUNNING && pDownload->Update(pStorage, pConsole))
+			AnyFinished = true;
+	}
+
+	if(!AnyFinished)
+		return;
+
+	// pick up what the downloads produced; already registered faces are skipped
+	const int Before = m_NumLoadedFaces;
+
+	CJsonParser JsonParser;
+	const json_value *pJsonData = JsonParser.ParseFile("fonts/index.json", pStorage);
+	if(pJsonData == 0)
+	{
+		pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "textrender", JsonParser.Error());
+		return;
+	}
+
+	m_NumLoadedFaces += LoadFontFiles(pStorage, pConsole, pJsonData, m_aLoadedFonts);
+
+	if(m_NumLoadedFaces != Before)
+	{
+		// make the new faces reachable through the families the index names
+		const json_value &rDefaultFace = (*pJsonData)["default"];
+		if(rDefaultFace.type == json_string)
+			m_pGlyphMap->SetDefaultFaceByName((const char *) rDefaultFace);
+
+		const json_value &rFallbackFaces = (*pJsonData)["fallbacks"];
+		if(rFallbackFaces.type == json_array)
+			for(unsigned i = 0; i < rFallbackFaces.u.array.length; ++i)
+				m_pGlyphMap->AddFallbackFaceByName((const char *) rFallbackFaces[i]);
+
+		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "textrender", "downloaded fonts are now active");
+	}
+}
+
+void CTextRender::FinishFontDownloads(IStorage *pStorage, IConsole *pConsole)
+{
+	// the requests are already done; this loads the results once the caller stops waiting
+	PollFontDownloads(pStorage, pConsole);
+}
+
+bool CTextRender::FontsPending() const
+{
+	return m_Downloader.AnyRunning();
+}
+
+float CTextRender::FontDownloadProgress() const
+{
+	const unsigned Expected = m_Downloader.TotalExpectedBytes();
+	if(Expected == 0)
+		return 1.0f;
+	const float Progress = (float) m_Downloader.TotalDownloadedBytes() / (float) Expected;
+	return Progress > 1.0f ? 1.0f : Progress;
 }
 
 void CTextRender::SetFontLanguageVariant(const char *pLanguageFile)

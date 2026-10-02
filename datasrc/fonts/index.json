@@ -2,17 +2,28 @@
     "font files": [
         "DejaVuSans.ttf",
         "SourceHanSans.ttc",
+        "NotoEmoji-Bold.ttf",
         "remixicon.ttf"
     ],
     "default": "DejaVu Sans",
+    "emoji": "Noto Emoji",
     "language variants": {
         "japanese": "Source Han Sans",
         "korean": "Source Han Sans K",
-        "simplified_chinese": "Source Han Sans SC", 
+        "simplified_chinese": "Source Han Sans SC",
         "traditional_chinese": "Source Han Sans TC"
     },
     "fallbacks": [
         "Source Han Sans",
         "remixicon"
+    ],
+    "downloads": [
+        {
+            "name": "SourceHanSans.ttc",
+            "url": "https://archive.teeworlds.wiki/game/fonts/cjk/SourceHanSans.ttc",
+            "license": "https://archive.teeworlds.wiki/game/fonts/cjk/LICENSE",
+            "sha256": "a6c02f75f3b56f36938bcc662eff728d6808d852db4d65835a47b489f042c5f7",
+            "size": 19573856
+        }
     ]
 }

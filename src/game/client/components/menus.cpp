@@ -740,6 +740,71 @@ void CMenus::RenderLoading(int WorkedAmount)
 	Graphics()->Swap();
 }
 
+void CMenus::RenderLoadingProgress(float Progress, const char *pLabel)
+{
+	static int64 s_LoadingStart = 0;
+	const int64 Now = time_get();
+	if(s_LoadingStart == 0)
+		s_LoadingStart = Now;
+
+	if(Progress < 0.0f)
+		Progress = 0.0f;
+	if(Progress > 1.0f)
+		Progress = 1.0f;
+
+	m_pClient->StartRendering();
+	RenderBackground((Now - s_LoadingStart) / (float) time_freq());
+
+	CUIRect Screen = *UI()->Screen();
+	const float w = 700;
+	const float h = 200;
+	const float x = Screen.w / 2 - w / 2;
+	const float y = Screen.h / 2 - h / 2;
+	CUIRect Rect = {x, y, w, h};
+
+	Graphics()->BlendNormal();
+	Rect.Draw(vec4(0.0f, 0.0f, 0.0f, 0.5f), 40.0f);
+
+	Rect.y += 20;
+	TextRender()->TextColor(CUI::ms_DefaultTextColor);
+	TextRender()->TextSecondaryColor(CUI::ms_DefaultTextOutlineColor);
+	UI()->DoLabel(&Rect, "Teeworlds", 48.0f, TEXTALIGN_CENTER);
+
+	if(pLabel && pLabel[0])
+	{
+		CUIRect Label = Rect;
+		Label.y += 60.0f;
+		UI()->DoLabel(&Label, pLabel, 16.0f, TEXTALIGN_CENTER);
+	}
+
+	const float Spacing = 40.0f;
+	const float BarRounding = 5.0f;
+
+	CUIRect FullBar = {x + Spacing, y + h - 75.0f, w - 2 * Spacing, 25.0f};
+	FullBar.Draw(vec4(1.0f, 1.0f, 1.0f, 0.1f), BarRounding);
+
+	CUIRect FillingBar = FullBar;
+	FillingBar.w = (FullBar.w - 2 * BarRounding) * Progress + 2 * BarRounding;
+	FillingBar.Draw(vec4(1.0f, 1.0f, 1.0f, 0.75f), BarRounding);
+
+	if(Progress > 0.5f)
+	{
+		TextRender()->TextSecondaryColor(1.0f, 1.0f, 1.0f, 0.7f);
+		TextRender()->TextColor(0.2f, 0.2f, 0.2f, 1.0f);
+	}
+	char aBuf[8];
+	str_format(aBuf, sizeof(aBuf), "%d%%", (int) (100 * Progress));
+	UI()->DoLabel(&FullBar, aBuf, 20.0f, TEXTALIGN_MC);
+
+	if(Progress > 0.5f)
+	{
+		TextRender()->TextColor(CUI::ms_DefaultTextColor);
+		TextRender()->TextSecondaryColor(CUI::ms_DefaultTextOutlineColor);
+	}
+
+	Graphics()->Swap();
+}
+
 void CMenus::RenderNews(CUIRect MainView)
 {
 	MainView.Draw(vec4(1.0f, 1.0f, 1.0f, 0.25f), 10.0f);

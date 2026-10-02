@@ -255,6 +255,14 @@ public:
 	virtual void LoadFonts(IStorage *pStorage, IConsole *pConsole) = 0;
 	virtual void SetFontLanguageVariant(const char *pLanguageFile) = 0;
 
+	// loads local fonts and starts the downloads in fonts/index.json; true when nothing is pending
+	virtual bool LoadFontsAsync(IStorage *pStorage, IConsole *pConsole) = 0;
+	// non-blocking; call once per frame while the loading screen waits
+	virtual void PollFontDownloads(IStorage *pStorage, IConsole *pConsole) = 0;
+	virtual void FinishFontDownloads(IStorage *pStorage, IConsole *pConsole) = 0;
+	virtual bool FontsPending() const = 0;
+	virtual float FontDownloadProgress() const = 0;
+
 	inline void TextColor(float r, float g, float b, float a) { TextColor(vec4(r, g, b, a)); }
 	inline void TextSecondaryColor(float r, float g, float b, float a) { TextSecondaryColor(vec4(r, g, b, a)); }
 

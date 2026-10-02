@@ -71,6 +71,8 @@ public:
 					fs_makedir(GetPath(TYPE_SAVE, "maps", aPath, sizeof(aPath)));
 					fs_makedir(GetPath(TYPE_SAVE, "downloadedmaps", aPath, sizeof(aPath)));
 					fs_makedir(GetPath(TYPE_SAVE, "skins", aPath, sizeof(aPath)));
+					// runtime-downloaded fonts go next to the settings
+					fs_makedir(GetPath(TYPE_SAVE, "fonts", aPath, sizeof(aPath)));
 				}
 				fs_makedir(GetPath(TYPE_SAVE, "dumps", aPath, sizeof(aPath)));
 				fs_makedir(GetPath(TYPE_SAVE, "demos", aPath, sizeof(aPath)));
