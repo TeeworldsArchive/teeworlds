@@ -37,7 +37,7 @@ libgl1-mesa-dev libglu1-mesa-dev
 libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev
 libxinerama-dev libxss-dev libxkbcommon-dev libwayland-dev
 libdrm-dev libgbm-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev
-libfreetype6-dev libfreetype-dev libssl-dev libcurl4-openssl-dev
+libfreetype6-dev libfreetype-dev libharfbuzz-dev libssl-dev libcurl4-openssl-dev
 libopus-dev libopusfile-dev libogg-dev
 zlib1g-dev libzstd-dev
 "

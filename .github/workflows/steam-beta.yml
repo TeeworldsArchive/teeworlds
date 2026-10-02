@@ -226,6 +226,7 @@ jobs:
             zlib-ng:p
             zstd:p
             freetype:p
+            harfbuzz:p
             opus:p
             opusfile:p
             openssl:p
@@ -288,6 +289,7 @@ jobs:
             'libopus-*.dll' \
             'libopusfile-*.dll' \
             'libfreetype-*.dll' \
+            'libharfbuzz-*.dll' \
             'libz-ng*.dll' \
             'libssl-*.dll' \
             'libcrypto-*.dll' \

@@ -60,6 +60,11 @@ public:
 	int m_NumChars;
 	int m_Line;
 	vec2 m_Advance;
+	// advance in screen units with kerning applied; may differ from the nominal advance
+	float m_GlyphAdvance;
+	// mark attachment offsets reported by the shaper, in screen units
+	float m_OffsetX;
+	float m_OffsetY;
 	// indices into the cursor's color pool, so repeated colors are stored once
 	int m_TextColorIndex;
 	int m_SecondaryColorIndex;

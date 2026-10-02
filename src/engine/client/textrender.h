@@ -22,11 +22,13 @@ class CConfig;
 #include FT_FREETYPE_H
 #include FT_MODULE_H
 
+// text shaping
+#include <hb.h>
+
 enum
 {
 	MAX_FACES = 16,
 	MAX_CHARACTERS = 64,
-	MAX_KERNING_CACHE = 1024,
 	MAX_GLYPHS = 32768,
 	// square, single channel glyph atlas; the actual size is chosen at startup
 	// between TEXTURE_SIZE and MAX_TEXTURE_SIZE
@@ -57,8 +59,8 @@ enum
 
 struct CGlyph
 {
-	int m_ID; // unicode code point
-	int m_GlyphIndex; // FreeType glyph index of m_ID on m_Face
+	// FreeType glyph index on m_Face; the pair identifies the record in the cache
+	int m_GlyphIndex;
 	int m_AtlasIndex;
 	int m_PageID;
 	FT_Face m_Face;
@@ -81,31 +83,25 @@ struct CGlyph
 
 struct CGlyphIndex
 {
-	int m_ID;
+	FT_Face m_Face;
+	int m_GlyphIndex;
 
 	friend bool operator==(const CGlyphIndex &l, const CGlyphIndex &r)
 	{
-		return l.m_ID == r.m_ID;
-	};
-};
-
-struct CGlyphKerning
-{
-	int m_PixelSize;
-	int m_LeftID;
-	int m_RightID;
-
-	friend bool operator==(const CGlyphKerning &l, const CGlyphKerning &r)
-	{
-		return l.m_PixelSize == r.m_PixelSize && l.m_LeftID == r.m_LeftID && l.m_RightID == r.m_RightID;
+		return l.m_Face == r.m_Face && l.m_GlyphIndex == r.m_GlyphIndex;
 	};
 };
 
 class CGlyphSearchFunction : public basic_table_function
 {
 public:
-	static unsigned hash(CGlyphIndex key) { return (unsigned) key.m_ID; }
-	static unsigned hash(CGlyphKerning key) { return (key.m_PixelSize << 24) + (key.m_LeftID << 10) + key.m_RightID; }
+	static unsigned hash(CGlyphIndex key)
+	{
+		// pointer mixed with the glyph index
+		unsigned long long Hash = (unsigned long long) (size_t) key.m_Face;
+		Hash ^= (unsigned long long) (unsigned) key.m_GlyphIndex + 0x9e3779b97f4a7c15ull + (Hash << 6) + (Hash >> 2);
+		return (unsigned) Hash;
+	}
 };
 
 // reusable scratch memory for the distance field generation
@@ -158,7 +154,6 @@ class CGlyphMap
 	CAtlas m_aAtlasPages[NUM_PAGES_PER_DIM * NUM_PAGES_PER_DIM];
 	int m_ActiveAtlasIndex;
 	hash_table<CGlyphIndex, CGlyph *, 64, CGlyphSearchFunction> m_Glyphs;
-	hash_table<CGlyphKerning, vec2, 64, CGlyphSearchFunction> m_Kernings;
 
 	// CPU mirror of the atlas; touched page regions are uploaded in one batch
 	unsigned char *m_pStaging;
@@ -171,7 +166,7 @@ class CGlyphMap
 	int m_Frame;
 
 	// glyphs that only have their metrics loaded; rasterization is deferred
-	array<int> m_PendingGlyphs;
+	array<CGlyph *> m_PendingGlyphs;
 	int m_PendingFrame;
 	bool m_PendingBudgetSpent;
 
@@ -193,12 +188,13 @@ class CGlyphMap
 
 	FT_Face m_aFtFaces[MAX_FACES];
 	int m_NumFtFaces;
+	// one HarfBuzz font per FreeType face
+	hb_font_t *m_aHbFonts[MAX_FACES];
 
 	void InitTexture(int Width, int Height);
 	int FitGlyph(int Width, int Height, ivec2 *Position);
 	void UploadGlyph(int TextureIndex, int PosX, int PosY, int Width, int Height, const unsigned char *pData);
 	bool SetFaceByName(FT_Face *pFace, const char *pFamilyName);
-	int GetCharGlyph(int Chr, FT_Face *pFace);
 
 	// loads the metrics only; the glyph is queued for rasterization
 	bool LoadGlyphMetrics(CGlyph *pGlyph);
@@ -212,7 +208,6 @@ class CGlyphMap
 	struct CEvictContext
 	{
 		CGlyph *m_pVictim;
-		int m_VictimID;
 	};
 	static void EvictScanCallback(CGlyph *&pGlyph, void *pUser);
 
@@ -232,7 +227,12 @@ public:
 
 	bool RenderGlyph(CGlyph *pGlyph, bool Render);
 	CGlyph *GetGlyph(int Chr, bool Render);
-	vec2 Kerning(CGlyph *pLeft, CGlyph *pRight, int PixelSize);
+	// glyph record for an explicit (face, glyph index), used by the shaper
+	CGlyph *GetGlyphByIndex(FT_Face Face, int GlyphIndex, bool Render);
+	// resolves the codepoint through the default/variant/fallback/emoji faces
+	int GetCharGlyph(int Chr, FT_Face *pFace);
+	// HarfBuzz font matching a FreeType face, or NULL
+	hb_font_t *HBFont(FT_Face Face) const;
 
 	// queues a glyph for rasterization by ProcessPendingGlyphs()
 	void QueueGlyph(CGlyph *pGlyph);
@@ -289,8 +289,9 @@ class CTextRender : public IEngineTextRender
 
 	// support regional variant fonts
 	int m_NumVariants;
-	int m_CurrentVariant;
 	CFontLanguageVariant *m_pVariants;
+	// active language variant family, re-applied after a font download provides it
+	char m_aVariantFamilyName[FONT_NAME_SIZE];
 
 	FT_Library m_FTLibrary;
 
@@ -372,6 +373,26 @@ class CTextRender : public IEngineTextRender
 		return Chr >= 0x0020 && Chr <= 0x218F;
 	}
 
+	// one glyph produced by HarfBuzz for a run of source text
+	struct SShapedGlyph
+	{
+		CGlyph *m_pGlyph;
+		// cluster byte offset in the shaped range; m_CharCount is set on the first glyph only
+		int m_CharOffset;
+		int m_CharCount;
+		float m_AdvanceX; // screen units, kerning already applied
+		float m_OffsetX;
+		float m_OffsetY;
+	};
+
+	// shaping scratch, reused between MakeWord() calls
+	hb_buffer_t *m_pShapeBuffer;
+	array<char> m_ShapeTextBuffer;
+	array<SShapedGlyph> m_ShapedGlyphs;
+
+	// Shapes a UTF-8 range, splitting it into per-font runs; false if a codepoint has no face.
+	bool ShapeText(const char *pText, int Length, int PixelSize, float Size, bool Render);
+
 	CWordWidthHint MakeWord(CTextCursor *pCursor, const char *pText, const char *pEnd, float Size, int PixelSize, vec2 ScreenScale);
 	void TextRefreshGlyphs(CTextCursor *pCursor);
 
@@ -403,6 +424,8 @@ public:
 
 	void LoadFonts(IStorage *pStorage, IConsole *pConsole);
 	void SetFontLanguageVariant(const char *pLanguageFile);
+	// applies m_aVariantFamilyName to the glyph map and prebakes ASCII
+	void ApplyFontLanguageVariant();
 
 	// loads local fonts and starts the downloads in fonts/index.json; false while one is in flight
 	bool LoadFontsAsync(IStorage *pStorage, IConsole *pConsole);
