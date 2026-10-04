@@ -181,7 +181,6 @@ int fs_storage_path(const char *appname, char *path, int max)
 	char *home = getenv("HOME");
 	int i;
 	char *xdgdatahome = getenv("XDG_DATA_HOME");
-	char xdgpath[max];
 
 	if(!home)
 		return -1;
@@ -190,6 +189,9 @@ int fs_storage_path(const char *appname, char *path, int max)
 	str_format(path, max, "%s/Library/Application Support/%s", home, appname);
 	return 0;
 #endif
+
+	char xdgpath[IO_MAX_PATH_LENGTH];
+	dbg_assert(max <= IO_MAX_PATH_LENGTH, "max too large for xdgpath");
 
 	/* old folder location */
 	str_format(path, max, "%s/.%s", home, appname);
