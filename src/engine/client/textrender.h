@@ -234,6 +234,10 @@ public:
 	// HarfBuzz font matching a FreeType face, or NULL
 	hb_font_t *HBFont(FT_Face Face) const;
 
+	// Pins the face to SDF_BASE_SIZE, the size shaping and rasterization share.
+	// True when the size changed, so the caller can tell hb-ft to re-read its metrics.
+	bool PrepareFaceForShaping(FT_Face Face);
+
 	// queues a glyph for rasterization by ProcessPendingGlyphs()
 	void QueueGlyph(CGlyph *pGlyph);
 
@@ -380,7 +384,8 @@ class CTextRender : public IEngineTextRender
 		// cluster byte offset in the shaped range; m_CharCount is set on the first glyph only
 		int m_CharOffset;
 		int m_CharCount;
-		float m_AdvanceX; // screen units, kerning already applied
+		// kerning already applied; in SDF reference units, scaled by the caller
+		float m_AdvanceX;
 		float m_OffsetX;
 		float m_OffsetY;
 	};
@@ -390,10 +395,29 @@ class CTextRender : public IEngineTextRender
 	array<char> m_ShapeTextBuffer;
 	array<SShapedGlyph> m_ShapedGlyphs;
 
-	// Shapes a UTF-8 range, splitting it into per-font runs; false if a codepoint has no face.
-	bool ShapeText(const char *pText, int Length, int PixelSize, float Size, bool Render);
+	// One line is shaped once and reused by all of its words, which keeps the cost
+	// linear instead of O(n^2) in the line length. The text is compared on lookup so
+	// a recycled buffer address cannot produce a stale hit.
+	array<char> m_ShapeCacheText;
+	int m_ShapeCacheValid;
 
-	CWordWidthHint MakeWord(CTextCursor *pCursor, const char *pText, const char *pEnd, float Size, int PixelSize, vec2 ScreenScale);
+	// Shapes a UTF-8 range into per-font runs; false if a codepoint has no face.
+	// Always shapes at SDF_BASE_SIZE, so advances are size independent and float precise.
+	bool ShapeText(const char *pText, int Length, bool Render);
+
+	// Shapes [pText, pText+Length) unless the cache already holds that text. The range
+	// must start at a line boundary. False when a codepoint has no usable face.
+	bool ShapeTextCached(const char *pText, int Length, bool Render);
+
+	// Bytes in the line starting at pText, up to the next newline.
+	static int LineLength(const char *pText, const char *pEnd);
+
+	// Drops the cached line after a font change alters glyph resolution.
+	void InvalidateShapeCache();
+
+	// pLineStart is the first byte of the line pText belongs to; the line is shaped
+	// once and each of its words is sliced out of that result
+	CWordWidthHint MakeWord(CTextCursor *pCursor, const char *pLineStart, const char *pText, const char *pEnd, float Size, int PixelSize, vec2 ScreenScale);
 	void TextRefreshGlyphs(CTextCursor *pCursor);
 
 	// shader parameters for rebuilding coverage and outline; the scale comes from

@@ -1068,6 +1068,17 @@ hb_font_t *CGlyphMap::HBFont(FT_Face Face) const
 	return NULL;
 }
 
+bool CGlyphMap::PrepareFaceForShaping(FT_Face Face)
+{
+	if(!Face)
+		return false;
+	// hb-ft reads advances from the FT face, which the SDF rasterizer also resizes.
+	// Pinning it to the shared reference size keeps the two from clobbering each other.
+	if(Face->size && Face->size->metrics.y_ppem == SDF_BASE_SIZE)
+		return false;
+	return FT_Set_Pixel_Sizes(Face, 0, SDF_BASE_SIZE) == 0;
+}
+
 void CGlyphMap::TouchPage(int Index)
 {
 	m_aAtlasPages[Index].m_Access++;
@@ -1083,16 +1094,64 @@ void CGlyphMap::PagesAccessReset()
 	m_Frame++;
 }
 
+// Bytes in the line starting at pText, up to the next newline. Shaping per line
+// keeps kerning across word boundaries and avoids redoing the work per word.
+int CTextRender::LineLength(const char *pText, const char *pEnd)
+{
+	const char *pCur = pText;
+	while(pCur < pEnd)
+	{
+		const char *pNext = pCur;
+		const int Chr = str_utf8_decode(&pNext);
+		if(Chr <= 0)
+			break;
+		if(Chr == '\n')
+			break;
+		pCur = pNext;
+	}
+	return pCur - pText;
+}
+
+// Shapes the line on a miss and keeps the glyphs for its remaining words, so a word
+// is sliced out of the shared result instead of shaped again.
+bool CTextRender::ShapeTextCached(const char *pText, int Length, bool Render)
+{
+	// compare the text itself, so a recycled source address cannot alias
+	if(m_ShapeCacheValid && m_ShapeCacheText.size() == Length + 1 &&
+		mem_comp(m_ShapeCacheText.base_ptr(), pText, Length) == 0)
+	{
+		return m_ShapedGlyphs.size() > 0 || Length == 0;
+	}
+
+	const bool Ok = ShapeText(pText, Length, Render);
+	m_ShapeCacheValid = Ok ? 1 : 0;
+
+	if(!Ok)
+	{
+		m_ShapeCacheText.clear_size();
+		return false;
+	}
+
+	// kept so the next word of this line validates against it
+	m_ShapeCacheText.set_size(Length + 1);
+	mem_copy(m_ShapeCacheText.base_ptr(), pText, Length);
+	m_ShapeCacheText[Length] = '\0';
+
+	return true;
+}
+
 // Shapes a UTF-8 range into m_ShapedGlyphs, one HarfBuzz run per face, applying
 // GPOS kerning, ligatures and mark positioning.
-bool CTextRender::ShapeText(const char *pText, int Length, int PixelSize, float Size, bool Render)
+//
+// Everything is shaped at the fixed SDF_BASE_SIZE, which leaves the FT face at the
+// size rasterization uses and keeps hb-ft from reading a stale one. Advances come out
+// in reference units; callers scale by Size / SDF_BASE_SIZE, so spacing stays float
+// precise and linear in the font size instead of quantized to whole pixels.
+bool CTextRender::ShapeText(const char *pText, int Length, bool Render)
 {
 	m_ShapedGlyphs.clear_size();
-	if(Length <= 0 || PixelSize <= 0)
+	if(Length <= 0)
 		return false;
-
-	// HarfBuzz positions are in 26.6 pixels; Size / PixelSize converts to screen units
-	const float Scale = Size / PixelSize;
 
 	if(!m_pShapeBuffer)
 		m_pShapeBuffer = hb_buffer_create();
@@ -1135,15 +1194,18 @@ bool CTextRender::ShapeText(const char *pText, int Length, int PixelSize, float 
 		if(!pFont)
 			return false;
 
+		// the metrics hb-ft caches come from the FT face, whose size just changed
+		if(m_pGlyphMap->PrepareFaceForShaping(RunFace))
+		{
+			hb_ft_font_changed(pFont);
+		}
+		hb_font_set_scale(pFont, SDF_BASE_SIZE * 64, SDF_BASE_SIZE * 64);
+
 		hb_buffer_reset(m_pShapeBuffer);
 		hb_buffer_add_utf8(m_pShapeBuffer, pRunStart, RunLength, 0, RunLength);
 		// force LTR: layout, caret and advance accumulation assume left to right
 		hb_buffer_set_direction(m_pShapeBuffer, HB_DIRECTION_LTR);
 		hb_buffer_guess_segment_properties(m_pShapeBuffer);
-		// hb-ft shapes at the FT face's current size, which rasterization changes;
-		// pin it to the layout size so every run is shaped at the same scale
-		FT_Set_Pixel_Sizes(RunFace, 0, PixelSize);
-		hb_font_set_scale(pFont, PixelSize * 64, PixelSize * 64);
 		hb_shape(pFont, m_pShapeBuffer, NULL, 0);
 
 		unsigned int NumGlyphs = 0;
@@ -1162,9 +1224,10 @@ bool CTextRender::ShapeText(const char *pText, int Length, int PixelSize, float 
 			// clusters are relative to the run, offset them into the range
 			Shaped.m_CharOffset = RunBase + (int) pInfo[i].cluster;
 			Shaped.m_CharCount = 0;
-			Shaped.m_AdvanceX = pPos[i].x_advance / 64.0f * Scale;
-			Shaped.m_OffsetX = pPos[i].x_offset / 64.0f * Scale;
-			Shaped.m_OffsetY = pPos[i].y_offset / 64.0f * Scale;
+			// reference units; the caller applies Size / SDF_BASE_SIZE
+			Shaped.m_AdvanceX = pPos[i].x_advance / 64.0f;
+			Shaped.m_OffsetX = pPos[i].x_offset / 64.0f;
+			Shaped.m_OffsetY = pPos[i].y_offset / 64.0f;
 		}
 
 		// a cluster's byte span belongs to its first glyph
@@ -1191,9 +1254,11 @@ bool CTextRender::ShapeText(const char *pText, int Length, int PixelSize, float 
 	return true;
 }
 
-CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, const char *pEnd, float Size, int PixelSize, vec2 ScreenScale)
+CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pLineStart, const char *pText, const char *pEnd, float Size, int PixelSize, vec2 ScreenScale)
 {
 	(void) ScreenScale;
+	// layout no longer depends on the device pixel size, but the callers still pass it
+	(void) PixelSize;
 	const bool Render = !(pCursor->m_Flags & TEXTFLAG_NO_RENDER);
 	const bool BreakWord = !(pCursor->m_Flags & TEXTFLAG_WORD_WRAP);
 	const bool AllowNewline = pCursor->m_Flags & TEXTFLAG_ALLOW_NEWLINE;
@@ -1237,30 +1302,45 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 		return Hint;
 	}
 
-	// newline and tab render as spaces; one byte for one keeps cluster offsets valid
-	m_ShapeTextBuffer.set_size(WordLength + 1);
+	// The line is shaped once and its words are sliced out of that result. Shaping one
+	// word alone would lose the kerning and ligatures spanning a word boundary ("AV",
+	// "ffi"); shaping the line per word would redo that work for every word.
+	const int LineLen = LineLength(pLineStart, pEnd);
+	m_ShapeTextBuffer.set_size(LineLen + 1);
 	char *pShapeText = m_ShapeTextBuffer.base_ptr();
-	for(int i = 0; i < WordLength; ++i)
+	for(int i = 0; i < LineLen; ++i)
 	{
-		const char c = pText[i];
+		const char c = pLineStart[i];
+		// newline and tab render as spaces; one byte for one keeps clusters valid
 		pShapeText[i] = (c == '\n' || c == '\t') ? ' ' : c;
 	}
-	pShapeText[WordLength] = '\0';
+	pShapeText[LineLen] = '\0';
 
-	if(!ShapeText(pShapeText, WordLength, PixelSize, Size, Render))
+	// A word starts a line only when it is the first one, so the cache is keyed on the
+	// line being laid out rather than on pText.
+	if(!ShapeTextCached(pLineStart, LineLen, Render))
 	{
 		Hint.m_CharCount = -1;
 		return Hint;
 	}
+
+	// where this word begins inside the shaped line
+	const int WordOffset = (int) (pText - pLineStart);
+
+	// reference units to screen units; a pure float ratio, so advances stay linear in
+	// the font size instead of being quantized to whole device pixels
+	const float RefToScreen = Size / SDF_BASE_SIZE;
 
 	float MaxWidth = pCursor->m_MaxWidth;
 	if(MaxWidth < 0)
 		MaxWidth = INFINITY;
 	const float WordStartAdvanceX = pCursor->m_Advance.x;
 
-	// Glyphs are added a cluster at a time so a ligature is never split.
+	// Skip the glyphs of the words already laid out; cluster offsets span the line.
 	const int NumShaped = m_ShapedGlyphs.size();
 	int i = 0;
+	while(i < NumShaped && m_ShapedGlyphs[i].m_CharOffset < WordOffset)
+		i++;
 	int BytesConsumed = 0;
 	while(i < NumShaped)
 	{
@@ -1269,9 +1349,13 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 		while(ClusterEnd < NumShaped && m_ShapedGlyphs[ClusterEnd].m_CharOffset == ClusterStart)
 			ClusterEnd++;
 
+		// the line extends past this word; only lay out up to where the word ends
+		if(ClusterStart >= WordOffset + WordLength)
+			break;
+
 		float ClusterAdvance = 0.0f;
 		for(int g = i; g < ClusterEnd; ++g)
-			ClusterAdvance += m_ShapedGlyphs[g].m_AdvanceX;
+			ClusterAdvance += m_ShapedGlyphs[g].m_AdvanceX * RefToScreen;
 
 		const char *pChr = pShapeText + ClusterStart;
 		const int Chr = str_utf8_decode(&pChr);
@@ -1288,15 +1372,16 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 		for(int g = i; g < ClusterEnd; ++g)
 		{
 			const SShapedGlyph &Shaped = m_ShapedGlyphs[g];
+			const float AdvanceX = Shaped.m_AdvanceX * RefToScreen;
 			if(Render)
 			{
 				CScaledGlyph &Scaled = pCursor->m_Glyphs.emplace();
 				Scaled.m_pGlyph = Shaped.m_pGlyph;
 				Scaled.m_Advance = pCursor->m_Advance;
 				Scaled.m_Size = Size;
-				Scaled.m_GlyphAdvance = Shaped.m_AdvanceX;
-				Scaled.m_OffsetX = Shaped.m_OffsetX;
-				Scaled.m_OffsetY = Shaped.m_OffsetY;
+				Scaled.m_GlyphAdvance = AdvanceX;
+				Scaled.m_OffsetX = Shaped.m_OffsetX * RefToScreen;
+				Scaled.m_OffsetY = Shaped.m_OffsetY * RefToScreen;
 				Scaled.m_Line = pCursor->m_LineCount - 1;
 				Scaled.m_TextColorIndex = CTextCursor::ColorIndex(pCursor->m_TextColors, m_TextColor);
 				Scaled.m_SecondaryColorIndex = CTextCursor::ColorIndex(pCursor->m_SecondaryColors, m_TextSecondaryColor);
@@ -1308,11 +1393,12 @@ CWordWidthHint CTextRender::MakeWord(CTextCursor *pCursor, const char *pText, co
 				pCursor->m_pReleaseGlyphsUser = NULL;
 			}
 
-			pCursor->m_Advance.x += Shaped.m_AdvanceX;
+			pCursor->m_Advance.x += AdvanceX;
 			Hint.m_GlyphCount++;
 		}
 
-		BytesConsumed = ClusterStart + m_ShapedGlyphs[i].m_CharCount;
+		// cluster offsets span the line, but the caller advances pText by m_CharCount
+		BytesConsumed = ClusterStart + m_ShapedGlyphs[i].m_CharCount - WordOffset;
 		i = ClusterEnd;
 
 		if(IsSpace)
@@ -1405,6 +1491,7 @@ CTextRender::CTextRender()
 	m_NumLoadedFaces = 0;
 
 	m_pShapeBuffer = NULL;
+	m_ShapeCacheValid = 0;
 
 	mem_zero(m_apFontData, sizeof(m_apFontData));
 	mem_zero(m_aLoadedFonts, sizeof(m_aLoadedFonts));
@@ -1801,7 +1888,16 @@ void CTextRender::ApplyFontLanguageVariant()
 {
 	m_pGlyphMap->SetVariantFaceByName(m_aVariantFamilyName[0] ? m_aVariantFamilyName : NULL);
 
+	// the variant face changes which font a codepoint resolves to
+	InvalidateShapeCache();
+
 	PrebakeGlyphs();
+}
+
+void CTextRender::InvalidateShapeCache()
+{
+	m_ShapeCacheValid = 0;
+	m_ShapeCacheText.clear_size();
 }
 
 void CTextRender::PrebakeGlyphs()
@@ -1876,10 +1972,13 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 	NextAdvanceY = (int) (NextAdvanceY * ScreenScale.y) / ScreenScale.y;
 	pCursor->m_NextLineAdvanceY = maximum(NextAdvanceY, pCursor->m_NextLineAdvanceY);
 
+	// the line being laid out; shaped once and shared by all of its words
+	const char *pLineStart = pCur;
+
 	while(pCur < pEnd && !pCursor->m_Truncated)
 	{
 		const float WordStartAdvanceX = pCursor->m_Advance.x;
-		CWordWidthHint WordWidth = MakeWord(pCursor, pCur, pEnd, Size, PixelSize, ScreenScale);
+		CWordWidthHint WordWidth = MakeWord(pCursor, pLineStart, pCur, pEnd, Size, PixelSize, ScreenScale);
 		pCursor->m_StartOfLine = false;
 		if(WordWidth.m_CharCount < 0)
 			break;
@@ -1923,6 +2022,8 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 					}
 
 					pCursor->m_StartOfLine = false;
+					// the wrapped word starts the next line
+					pLineStart = pCur;
 				}
 				else
 				{
@@ -1947,6 +2048,9 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 				float NextAdvanceY = pCursor->m_Advance.y + pCursor->m_FontSize;
 				NextAdvanceY = (int) (NextAdvanceY * ScreenScale.y) / ScreenScale.y;
 				pCursor->m_NextLineAdvanceY = maximum(NextAdvanceY, pCursor->m_NextLineAdvanceY);
+
+				// nothing kerns across a newline, so the next line shapes on its own
+				pLineStart = pCur + WordWidth.m_CharCount;
 			}
 			else
 			{
@@ -1978,7 +2082,7 @@ void CTextRender::TextDeferred(CTextCursor *pCursor, const char *pText, int Leng
 		// lay the ellipsis out unlimited, then shrink the text until it fits
 		const int OldMaxWidth = pCursor->m_MaxWidth;
 		pCursor->m_MaxWidth = -1;
-		CWordWidthHint EllipsisWidth = MakeWord(pCursor, aEllipsis, aEllipsis + sizeof(aEllipsis), Size, PixelSize, ScreenScale);
+		CWordWidthHint EllipsisWidth = MakeWord(pCursor, aEllipsis, aEllipsis, aEllipsis + sizeof(aEllipsis), Size, PixelSize, ScreenScale);
 		pCursor->m_MaxWidth = OldMaxWidth;
 
 		const float EllipsisAdvance = EllipsisWidth.m_EffectiveAdvanceX - EllipsisStartX;
