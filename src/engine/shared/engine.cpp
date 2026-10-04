@@ -4,7 +4,11 @@
 #include <stdlib.h> // srand
 
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/thread.h>
+#include <base/system/lock.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
+#include <base/system/fs.h>
 
 #include <engine/console.h>
 #include <engine/engine.h>
@@ -29,7 +33,7 @@ public:
 	IOHANDLE m_DataLogRecv;
 	const char *m_pAppname;
 
-	static void Con_DbgLognetwork(IConsole::IResult *pResult, void *pUserData)
+	static void Con_DbgLognetwork([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 	{
 		CEngine *pEngine = static_cast<CEngine *>(pUserData);
 

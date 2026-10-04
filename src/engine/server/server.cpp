@@ -3,7 +3,11 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/lock.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
+#include <base/system/fs.h>
+#include <base/system/misc.h>
 
 #include <engine/config.h>
 #include <engine/console.h>
@@ -740,7 +744,7 @@ void CServer::SendRconLine(int ClientID, const char *pLine)
 	SendMsg(&Msg, MSGFLAG_VITAL, ClientID);
 }
 
-void CServer::SendRconLineAuthed(const char *pLine, void *pUser, bool Highlighted)
+void CServer::SendRconLineAuthed(const char *pLine, void *pUser, [[maybe_unused]] bool Highlighted)
 {
 	static bool s_ReentryGuard = false;
 	if(s_ReentryGuard)
@@ -1559,7 +1563,7 @@ struct CSubdirCallbackUserdata
 	char m_aName[IConsole::TEMPMAP_NAME_LENGTH];
 };
 
-int CServer::MapListEntryCallback(const char *pFilename, int IsDir, int DirType, void *pUser)
+int CServer::MapListEntryCallback(const char *pFilename, int IsDir, [[maybe_unused]] int DirType, void *pUser)
 {
 	CSubdirCallbackUserdata *pUserdata = (CSubdirCallbackUserdata *) pUser;
 	CServer *pThis = pUserdata->m_pServer;
@@ -1620,7 +1624,7 @@ void CServer::ConKick(IConsole::IResult *pResult, void *pUser)
 		((CServer *) pUser)->Kick(pResult->GetInteger(0), "Kicked by console");
 }
 
-void CServer::ConStatus(IConsole::IResult *pResult, void *pUser)
+void CServer::ConStatus([[maybe_unused]] IConsole::IResult *pResult, void *pUser)
 {
 	char aBuf[1024];
 	char aAddrStr[NETADDR_MAXSTRSIZE];
@@ -1699,17 +1703,17 @@ void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
 	pServer->GameServer()->OnDemoRecorderStart();
 }
 
-void CServer::ConStopRecord(IConsole::IResult *pResult, void *pUser)
+void CServer::ConStopRecord([[maybe_unused]] IConsole::IResult *pResult, void *pUser)
 {
 	((CServer *) pUser)->m_DemoRecorder.Stop();
 }
 
-void CServer::ConMapReload(IConsole::IResult *pResult, void *pUser)
+void CServer::ConMapReload([[maybe_unused]] IConsole::IResult *pResult, void *pUser)
 {
 	((CServer *) pUser)->m_MapReload = true;
 }
 
-void CServer::ConLogout(IConsole::IResult *pResult, void *pUser)
+void CServer::ConLogout([[maybe_unused]] IConsole::IResult *pResult, void *pUser)
 {
 	CServer *pServer = (CServer *) pUser;
 
@@ -1884,7 +1888,7 @@ void CServer::SnapSetStaticsize(int ItemType, int Size)
 
 static CServer *CreateServer() { return new CServer(); }
 
-void HandleSigIntTerm(int Param)
+void HandleSigIntTerm([[maybe_unused]] int Param)
 {
 	InterruptSignaled = 1;
 

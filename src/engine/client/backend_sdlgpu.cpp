@@ -288,7 +288,7 @@ void CCommandProcessorFragment_SDLGPU::ResetRenderStateCache()
 	m_LastFragmentFlagsValid = false;
 }
 
-bool CCommandProcessorFragment_SDLGPU::UploadTexture(SDL_GPUTexture *pTexture, int X, int Y, int Z, int Width, int Height, int Layers, const void *pData, SDL_GPUTextureFormat Format, int BytesPerPixel)
+bool CCommandProcessorFragment_SDLGPU::UploadTexture(SDL_GPUTexture *pTexture, int X, int Y, int Z, int Width, int Height, int Layers, const void *pData, [[maybe_unused]] SDL_GPUTextureFormat Format, int BytesPerPixel)
 {
 	if(!EnsureCommandBuffer())
 		return false;
@@ -684,7 +684,7 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 	dbg_msg("gfx", "SDL_GPU backend initialized (swapchain format %d)", (int)m_FrameFormat);
 }
 
-void CCommandProcessorFragment_SDLGPU::Cmd_Shutdown(const CShutdownCommand *pCommand)
+void CCommandProcessorFragment_SDLGPU::Cmd_Shutdown([[maybe_unused]] const CShutdownCommand *pCommand)
 {
 	if(m_pCommandBuffer)
 	{
@@ -1491,7 +1491,7 @@ void CCommandProcessorFragment_SDLGPU::Cmd_VSync(const CCommandBuffer::CVSyncCom
 		dbg_msg("gfx", "SDL_GPU: failed to set present mode %s: %s", PresentModeName(Mode), SDL_GetError());
 }
 
-void CCommandProcessorFragment_SDLGPU::Cmd_WindowResized(const CCommandBuffer::CWindowResizedCommand *pCommand)
+void CCommandProcessorFragment_SDLGPU::Cmd_WindowResized([[maybe_unused]] const CCommandBuffer::CWindowResizedCommand *pCommand)
 {
 	// the frame texture is recreated lazily in EnsureFrameTexture
 }

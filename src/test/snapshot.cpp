@@ -3,7 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include <base/system.h>
+#include <base/system/mem.h>
+#include <base/system/time.h>
 #include <engine/shared/snapshot.h>
 
 static unsigned NextRand(unsigned &Seed)

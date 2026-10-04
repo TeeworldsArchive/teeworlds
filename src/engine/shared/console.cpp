@@ -4,7 +4,9 @@
 #include <new>
 
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/fs.h>
 
 #include <engine/shared/protocol.h>
 #include <engine/storage.h>
@@ -564,7 +566,7 @@ void CConsole::ConModCommandAccess(IResult *pResult, void *pUser)
 	pConsole->Print(OUTPUT_LEVEL_STANDARD, "console", aBuf);
 }
 
-void CConsole::ConModCommandStatus(IResult *pResult, void *pUser)
+void CConsole::ConModCommandStatus([[maybe_unused]] IResult *pResult, void *pUser)
 {
 	CConsole *pConsole = static_cast<CConsole *>(pUser);
 	char aBuf[240];

@@ -2,6 +2,7 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include "test.h"
+#include <base/system/mem.h>
 
 #include <gtest/gtest.h>
 

@@ -1,7 +1,7 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include "steam.h"
 
-#include <base/system.h>
+#include <base/system/string.h>
 
 #if defined(CONF_STEAM)
 #include <steam/steam_api.h>

@@ -2,6 +2,10 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
+#include <base/system/mem.h>
+#include <base/system/misc.h>
+#include <base/system/string.h>
+#include <base/system/time.h>
 
 #include <engine/console.h>
 #include <engine/shared/config.h>
@@ -551,7 +555,7 @@ void CNetBan::ConUnban(IConsole::IResult *pResult, void *pUser)
 	}
 }
 
-void CNetBan::ConUnbanAll(IConsole::IResult *pResult, void *pUser)
+void CNetBan::ConUnbanAll([[maybe_unused]] IConsole::IResult *pResult, void *pUser)
 {
 	CNetBan *pThis = static_cast<CNetBan *>(pUser);
 
@@ -559,7 +563,7 @@ void CNetBan::ConUnbanAll(IConsole::IResult *pResult, void *pUser)
 	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", "unbanned all entries");
 }
 
-void CNetBan::ConBans(IConsole::IResult *pResult, void *pUser)
+void CNetBan::ConBans([[maybe_unused]] IConsole::IResult *pResult, void *pUser)
 {
 	CNetBan *pThis = static_cast<CNetBan *>(pUser);
 

@@ -431,7 +431,7 @@ void CPlayer::UpdateDeadSpecMode()
 	m_DeadSpecMode = false;
 }
 
-void CPlayer::SetTeam(int Team, bool DoChatMsg)
+void CPlayer::SetTeam(int Team)
 {
 	KillCharacter();
 

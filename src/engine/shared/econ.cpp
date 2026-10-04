@@ -39,7 +39,7 @@ int CEcon::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	return 0;
 }
 
-void CEcon::SendLineCB(const char *pLine, void *pUserData, bool Highlighted)
+void CEcon::SendLineCB(const char *pLine, void *pUserData, [[maybe_unused]] bool Highlighted)
 {
 	static_cast<CEcon *>(pUserData)->Send(-1, pLine);
 }
@@ -64,7 +64,7 @@ void CEcon::ConchainEconLingerUpdate(IConsole::IResult *pResult, void *pUserData
 	}
 }
 
-void CEcon::ConLogout(IConsole::IResult *pResult, void *pUserData)
+void CEcon::ConLogout([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CEcon *pThis = static_cast<CEcon *>(pUserData);
 

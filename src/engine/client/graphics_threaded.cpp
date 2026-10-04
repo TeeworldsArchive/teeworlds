@@ -6,7 +6,10 @@
 #include <base/math.h>
 #include <base/tl/threading.h>
 
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/time.h>
+#include <base/system/fs.h>
 
 #include <spng.h>
 
@@ -35,7 +38,7 @@ static CVideoMode g_aFakeModes[] = {
 	{1856, 1392}, {1920, 1080}, {1920, 1200},
 	{1920, 1440}, {1920, 2400}, {2048, 1536}};
 
-static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp)
+static unsigned char Sample(int w, [[maybe_unused]] int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp)
 {
 	int Sum = 0;
 	for(int x = 0; x < ScaleW; x++)

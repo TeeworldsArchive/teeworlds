@@ -4,7 +4,11 @@
 #ifndef ENGINE_SHARED_NETBAN_H
 #define ENGINE_SHARED_NETBAN_H
 
-#include <base/system.h>
+#include <base/system/mem.h>
+#include <base/system/debug.h>
+#include <base/system/fs.h>
+#include <base/system/net.h>
+#include <base/system/string.h>
 
 inline int NetComp(const NETADDR *pAddr1, const NETADDR *pAddr2)
 {

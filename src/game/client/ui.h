@@ -5,6 +5,7 @@
 #define GAME_CLIENT_UI_H
 
 #include <engine/textrender.h>
+#include <base/system/time.h>
 #include "lineinput.h"
 #include "ui_rect.h"
 

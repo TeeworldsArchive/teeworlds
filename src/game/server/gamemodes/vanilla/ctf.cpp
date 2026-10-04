@@ -67,7 +67,7 @@ int CGameControllerCTF::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, 
 	return HadFlag;
 }
 
-void CGameControllerCTF::OnFlagReturn(CFlag *pFlag)
+void CGameControllerCTF::OnFlagReturn([[maybe_unused]] CFlag *pFlag)
 {
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", "flag_return");
 	GameServer()->SendGameMsg(GAMEMSG_CTF_RETURN, -1);

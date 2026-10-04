@@ -2,7 +2,10 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/time.h>
+#include <base/system/string.h>
+#include <base/system/fs.h>
+#include <base/system/misc.h>
 #include <base/tl/sorted_array.h>
 
 #include <engine/kernel.h>
@@ -40,7 +43,7 @@ static IEngineMap *s_pEngineMap = 0;
 static CJsonWriter *s_pJsonWriter = 0;
 static sorted_array<CMapVersion> s_lMapVersions;
 
-int MaplistCallback(const char *pName, int IsDir, int DirType, void *pUser)
+int MaplistCallback(const char *pName, int IsDir, int DirType, [[maybe_unused]] void *pUser)
 {
 	int l = str_length(pName);
 	if(IsDir || str_endswith_nocase(pName, ".map") == 0)

@@ -915,7 +915,7 @@ void CHud::RenderReadyUpNotification()
 		char aKey[64], aText[128];
 		int KeyID, Modifier;
 		m_pClient->m_pBinds->GetKeyID("ready_change", KeyID, Modifier);
-		m_pClient->m_pBinds->GetKey("ready_change", aKey, sizeof(aKey), KeyID, Modifier);
+		m_pClient->m_pBinds->GetKey(aKey, sizeof(aKey), KeyID, Modifier);
 		str_format(aText, sizeof(aText), Localize("When ready, press <%s>"), aKey);
 
 		s_Cursor.Reset(((int64) g_Localization.Version()) << 32 | KeyID);

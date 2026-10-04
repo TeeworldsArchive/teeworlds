@@ -131,7 +131,7 @@ void IGameController::SetPlayersReadyState(bool ReadyState)
 }
 
 // balancing
-bool IGameController::CanBeMovedOnBalance(int ClientID) const
+bool IGameController::CanBeMovedOnBalance([[maybe_unused]] int ClientID) const
 {
 	return true;
 }
@@ -256,7 +256,7 @@ void IGameController::OnCharacterSpawn(CCharacter *pChr)
 	pChr->GiveWeapon(WEAPON_GUN, 10);
 }
 
-void IGameController::OnFlagReturn(CFlag *pFlag)
+void IGameController::OnFlagReturn([[maybe_unused]] CFlag *pFlag)
 {
 }
 
@@ -311,7 +311,7 @@ bool IGameController::OnEntity(int Index, vec2 Pos)
 	return false;
 }
 
-bool IGameController::OnExtraTile(int Index, vec2 Pos)
+bool IGameController::OnExtraTile([[maybe_unused]] int Index, [[maybe_unused]] vec2 Pos)
 {
 	/*
 		Example: Do some thing like:
@@ -371,7 +371,7 @@ void IGameController::OnPlayerDisconnect(CPlayer *pPlayer)
 	CheckReadyStates(ClientID);
 }
 
-void IGameController::OnPlayerInfoChange(CPlayer *pPlayer)
+void IGameController::OnPlayerInfoChange([[maybe_unused]] CPlayer *pPlayer)
 {
 }
 
@@ -698,7 +698,7 @@ void IGameController::SwapTeamscore()
 }
 
 // general
-void IGameController::Snap(int SnappingClient)
+void IGameController::Snap([[maybe_unused]] int SnappingClient)
 {
 	CNetObj_GameData *pGameData = static_cast<CNetObj_GameData *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATA, 0, sizeof(CNetObj_GameData)));
 	if(!pGameData)
@@ -867,7 +867,7 @@ void IGameController::CheckGameInfo()
 		SendGameInfo(-1);
 }
 
-bool IGameController::IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const
+bool IGameController::IsFriendlyFire(int ClientID1, int ClientID2, [[maybe_unused]] int Damage) const
 {
 	if(ClientID1 == ClientID2)
 		return false;
@@ -884,7 +884,7 @@ bool IGameController::IsFriendlyFire(int ClientID1, int ClientID2, int Damage) c
 	return false;
 }
 
-bool IGameController::IsFriendlyTeamFire(int Team1, int Team2, int Damage) const
+bool IGameController::IsFriendlyTeamFire(int Team1, int Team2, [[maybe_unused]] int Damage) const
 {
 	return IsTeamplay() && !Config()->m_SvTeamdamage && Team1 == Team2;
 }
@@ -1174,12 +1174,12 @@ int IGameController::GetStartTeam()
 	pSelf->GameServer()->SendBroadcast(pResult->GetString(0), -1);
 }*/
 
-void IGameController::RegisterChatCommands(CCommandManager *pManager)
+void IGameController::RegisterChatCommands([[maybe_unused]] CCommandManager *pManager)
 {
 	// pManager->AddCommand("test", "Test the command system", "r", Com_Example, this);
 }
 
-bool IGameController::CanCharacterWeaponFullAuto(CCharacter *pChr, int Weapon)
+bool IGameController::CanCharacterWeaponFullAuto([[maybe_unused]] CCharacter *pChr, int Weapon)
 {
 	return Weapon == WEAPON_GRENADE || Weapon == WEAPON_SHOTGUN || Weapon == WEAPON_LASER;
 }

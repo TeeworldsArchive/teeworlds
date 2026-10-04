@@ -4,6 +4,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_MOTD_H
 #define GAME_CLIENT_COMPONENTS_MOTD_H
 #include <game/client/component.h>
+#include <base/system/time.h>
 
 class CMotd : public CComponent
 {

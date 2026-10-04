@@ -5,6 +5,7 @@
 #define ENGINE_INPUT_H
 
 #include "kernel.h"
+#include <base/system/string.h>
 
 const int g_MaxKeys = 512;
 extern const char g_aaKeyStrings[g_MaxKeys][20];

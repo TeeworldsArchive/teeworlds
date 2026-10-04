@@ -4,7 +4,8 @@
 #include "hash.h"
 #include "hash_ctxt.h"
 
-#include "system.h"
+#include <base/system/mem.h>
+#include <base/system/string.h>
 
 static void digest_str(const unsigned char *digest, size_t digest_len, char *str, size_t max_len)
 {

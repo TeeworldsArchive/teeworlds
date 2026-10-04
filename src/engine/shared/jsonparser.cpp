@@ -1,6 +1,10 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/string.h>
+
 #include "jsonparser.h"
 
 CJsonParser::CJsonParser() : m_pParsedJson(0x0)

@@ -5,6 +5,11 @@
 #define ENGINE_SHARED_FILECOLLECTION_H
 
 #include <base/tl/array.h>
+#include <base/system/time.h>
+#include <base/system/debug.h>
+#include <base/system/io.h>
+#include <base/system/fs.h>
+#include <base/system/time.h>
 
 class CFileCollection
 {

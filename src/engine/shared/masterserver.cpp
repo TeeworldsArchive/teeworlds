@@ -3,7 +3,12 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <stdio.h> // sscanf
 
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/lock.h>
+#include <base/system/net.h>
+#include <base/system/string.h>
+#include <base/system/fs.h>
 
 #include <engine/engine.h>
 #include <engine/masterserver.h>

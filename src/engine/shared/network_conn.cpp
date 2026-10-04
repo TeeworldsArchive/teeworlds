@@ -2,7 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
 #include "config.h"
 #include "network.h"
 
@@ -43,7 +44,7 @@ void CNetConnection::SetToken(TOKEN Token)
 	m_Token = Token;
 }
 
-TOKEN CNetConnection::GenerateToken(const NETADDR *pPeerAddr)
+TOKEN CNetConnection::GenerateToken()
 {
 	return random_int() & NET_TOKEN_MASK;
 }
@@ -181,7 +182,7 @@ void CNetConnection::SendPacketConnless(const char *pData, int DataSize)
 void CNetConnection::SendControlWithToken(int ControlMsg)
 {
 	m_LastSendTime = time_get();
-	m_pNetBase->SendControlMsgWithToken(&m_PeerAddr, m_PeerToken, 0, ControlMsg, m_Token, true, !m_Legacy);
+	m_pNetBase->SendControlMsgWithToken(&m_PeerAddr, m_PeerToken, ControlMsg, m_Token, true, !m_Legacy);
 }
 
 // Accept the connection and tell the client which payload codec the server
@@ -224,7 +225,7 @@ int CNetConnection::Connect(NETADDR *pAddr)
 	m_LastRecvTime = time_get();
 	m_PeerAddr = *pAddr;
 	m_PeerToken = NET_TOKEN_NONE;
-	SetToken(GenerateToken(pAddr));
+	SetToken(GenerateToken());
 	mem_zero(m_ErrorString, sizeof(m_ErrorString));
 	m_State = NET_CONNSTATE_TOKEN;
 	SendControlWithToken(NET_CTRLMSG_TOKEN);

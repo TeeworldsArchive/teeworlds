@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-#include <base/system.h>
+#include <base/system/misc.h>
 
 static const int INT_DATA[] = {0, 1, -1, 32, 64, 256, -512, 12345, -123456, 1234567, 12345678, 123456789, 2147483647, (-2147483647 - 1)};
 static const int INT_NUM = sizeof(INT_DATA) / sizeof(int);

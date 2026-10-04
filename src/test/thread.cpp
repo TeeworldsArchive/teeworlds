@@ -3,7 +3,9 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <gtest/gtest.h>
 
-#include <base/system.h>
+#include <base/system/thread.h>
+#include <base/system/lock.h>
+#include <base/system/semaphore.h>
 
 static void Nothing(void *pUser)
 {

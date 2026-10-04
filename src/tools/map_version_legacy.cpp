@@ -2,7 +2,9 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/string.h>
+#include <base/system/fs.h>
+#include <base/system/misc.h>
 
 #include <engine/kernel.h>
 #include <engine/map.h>
@@ -12,7 +14,7 @@ static IOHANDLE s_File = 0;
 static IStorage *s_pStorage = 0;
 static IEngineMap *s_pEngineMap = 0;
 
-int MaplistCallback(const char *pName, int IsDir, int DirType, void *pUser)
+int MaplistCallback(const char *pName, int IsDir, int DirType, [[maybe_unused]] void *pUser)
 {
 	int l = str_length(pName);
 	if(l < 4 || IsDir || str_comp(pName + l - 4, ".map") != 0)

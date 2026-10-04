@@ -5,7 +5,9 @@
 #define GAME_GAMECORE_H
 
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/fs.h>
+#include <base/system/mem.h>
 
 #include <engine/console.h>
 #include <engine/shared/protocol.h>

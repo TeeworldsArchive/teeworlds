@@ -3,7 +3,8 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef ENGINE_SHARED_LINEREADER_H
 #define ENGINE_SHARED_LINEREADER_H
-#include <base/system.h>
+#include <base/system/io.h>
+#include <base/system/debug.h>
 
 // buffered stream for reading lines, should perhaps be something smaller
 class CLineReader

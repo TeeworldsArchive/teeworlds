@@ -2,7 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/mem.h>
+#include <base/system/misc.h>
 
 #include <math.h>
 
@@ -422,7 +423,7 @@ static int AdjustOutlineThicknessToFontSize(int OutlineThickness, int FontSize)
 	return OutlineThickness;
 }
 
-static void InvalidateGlyphs(CGlyph *&pGlyph, void *pUser)
+static void InvalidateGlyphs(CGlyph *&pGlyph, [[maybe_unused]] void *pUser)
 {
 	pGlyph->m_Rendered = false;
 	pGlyph->m_Pending = false;

@@ -3,7 +3,8 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <gtest/gtest.h>
 
-#include <base/system.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
 #include <engine/shared/compression.h>
 #include <engine/shared/huffman.h>
 #include <engine/shared/network.h>

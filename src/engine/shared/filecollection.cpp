@@ -3,6 +3,10 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
 #include <base/math.h>
+#include <base/system/mem.h>
+#include <base/system/misc.h>
+#include <base/system/string.h>
+#include <base/system/time.h>
 #include <base/tl/algorithm.h>
 
 #include <engine/storage.h>
@@ -165,7 +169,7 @@ void CFileCollection::Init(IStorage *pStorage, const char *pPath, const char *pF
 	}
 }
 
-int CFileCollection::FilelistCallback(const char *pFilename, int IsDir, int StorageType, void *pUser)
+int CFileCollection::FilelistCallback(const char *pFilename, int IsDir, [[maybe_unused]] int StorageType, void *pUser)
 {
 	CFileCollection *pThis = static_cast<CFileCollection *>(pUser);
 

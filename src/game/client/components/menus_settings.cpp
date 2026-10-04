@@ -582,7 +582,7 @@ public:
 	bool operator<(const CLanguage &Other) { return m_Name < Other.m_Name; }
 };
 
-int CMenus::ThemeScan(const char *pName, int IsDir, int DirType, void *pUser)
+int CMenus::ThemeScan(const char *pName, int IsDir, [[maybe_unused]] int DirType, void *pUser)
 {
 	CMenus *pSelf = (CMenus *) pUser;
 	const char *pSuffix = str_endswith(pName, ".map");

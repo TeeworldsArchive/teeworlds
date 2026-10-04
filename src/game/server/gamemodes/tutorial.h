@@ -26,7 +26,7 @@ public:
 	virtual void Tick();
 	virtual bool OnEntity(int Index, vec2 Pos);
 	virtual bool OnExtraTile(int Index, vec2 Pos);
-	virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const { return true; };
+	virtual bool IsFriendlyFire([[maybe_unused]] int ClientID1, [[maybe_unused]] int ClientID2, [[maybe_unused]] int Damage) const { return true; };
 	virtual void OnFlagReturn(class CFlag *pFlag);
 	virtual void OnPlayerConnect(class CPlayer *pPlayer);
 	virtual void OnPlayerDisconnect(class CPlayer *pPlayer);

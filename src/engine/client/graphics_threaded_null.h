@@ -17,7 +17,7 @@ public:
 		m_DesktopScreenHeight = 600;
 	};
 
-	virtual void ClipEnable(int x, int y, int w, int h) {};
+	virtual void ClipEnable([[maybe_unused]] int x, [[maybe_unused]] int y, [[maybe_unused]] int w, [[maybe_unused]] int h) {};
 	virtual void ClipDisable() {};
 
 	virtual void BlendNone() {};
@@ -25,16 +25,16 @@ public:
 
 	virtual void WrapNormal() {};
 	virtual void WrapClamp() {};
-	virtual void WrapMode(int WrapU, int WrapV) {};
+	virtual void WrapMode([[maybe_unused]] int WrapU, [[maybe_unused]] int WrapV) {};
 
 	virtual int MemoryUsage() const { return 0; };
 
-	virtual void StainedOnly(bool Flag) {};
-	virtual void SetTextSDF(const CTextSDFParams &Params) {};
+	virtual void StainedOnly([[maybe_unused]] bool Flag) {};
+	virtual void SetTextSDF([[maybe_unused]] const CTextSDFParams &Params) {};
 
 	virtual float ScreenUIScale() const { return 1.0f; };
 
-	virtual void MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY) {};
+	virtual void MapScreen([[maybe_unused]] float TopLeftX, [[maybe_unused]] float TopLeftY, [[maybe_unused]] float BottomRightX, [[maybe_unused]] float BottomRightY) {};
 	virtual void GetScreen(float *pTopLeftX, float *pTopLeftY, float *pBottomRightX, float *pBottomRightY)
 	{
 		*pTopLeftX = 0;
@@ -45,52 +45,52 @@ public:
 
 	virtual void LinesBegin() {};
 	virtual void LinesEnd() {};
-	virtual void LinesDraw(const CLineItem *pArray, int Num) {};
+	virtual void LinesDraw([[maybe_unused]] const CLineItem *pArray, [[maybe_unused]] int Num) {};
 
-	virtual int UnloadTexture(IGraphics::CTextureHandle *Index) { return 0; };
-	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Layers, int Format, const void *pData, int StoreFormat, int Flags) { return CreateTextureHandle(0); };
-	virtual int LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int z, int Width, int Height, int Format, const void *pData) { return 0; };
+	virtual int UnloadTexture([[maybe_unused]] IGraphics::CTextureHandle *Index) { return 0; };
+	virtual IGraphics::CTextureHandle LoadTextureRaw([[maybe_unused]] int Width, [[maybe_unused]] int Height, [[maybe_unused]] int Layers, [[maybe_unused]] int Format, [[maybe_unused]] const void *pData, [[maybe_unused]] int StoreFormat, [[maybe_unused]] int Flags) { return CreateTextureHandle(0); };
+	virtual int LoadTextureRawSub([[maybe_unused]] IGraphics::CTextureHandle TextureID, [[maybe_unused]] int x, [[maybe_unused]] int y, [[maybe_unused]] int z, [[maybe_unused]] int Width, [[maybe_unused]] int Height, [[maybe_unused]] int Format, [[maybe_unused]] const void *pData) { return 0; };
 
 	// simple uncompressed RGBA loaders
-	virtual IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) { return CreateTextureHandle(0); };
-	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) { return 0; };
-	virtual int LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData, int Size, const char *pContext = "raw data") { return 0; };
+	virtual IGraphics::CTextureHandle LoadTexture([[maybe_unused]] const char *pFilename, [[maybe_unused]] int StorageType, [[maybe_unused]] int StoreFormat, [[maybe_unused]] int Flags) { return CreateTextureHandle(0); };
+	virtual int LoadPNG([[maybe_unused]] CImageInfo *pImg, [[maybe_unused]] const char *pFilename, [[maybe_unused]] int StorageType) { return 0; };
+	virtual int LoadPNGRaw([[maybe_unused]] CImageInfo *pImg, [[maybe_unused]] const unsigned char *pData, [[maybe_unused]] int Size, [[maybe_unused]] const char *pContext = "raw data") { return 0; };
 
-	virtual void TextureSet(CTextureHandle TextureID) {};
+	virtual void TextureSet([[maybe_unused]] CTextureHandle TextureID) {};
 
-	virtual void Clear(float r, float g, float b) {};
+	virtual void Clear([[maybe_unused]] float r, [[maybe_unused]] float g, [[maybe_unused]] float b) {};
 
 	virtual void QuadsBegin() {};
 	virtual void QuadsEnd() {};
-	virtual void QuadsSetRotation(float Angle) {};
+	virtual void QuadsSetRotation([[maybe_unused]] float Angle) {};
 
-	virtual void SetColorVertex(const CColorVertex *pArray, int Num) {};
-	virtual void SetColor(float r, float g, float b, float a) {};
-	virtual void SetColor4(const vec4 &TopLeft, const vec4 &TopRight, const vec4 &BottomLeft, const vec4 &BottomRight) {};
-	virtual void SetGlobalAlpha(float Alpha) {};
+	virtual void SetColorVertex([[maybe_unused]] const CColorVertex *pArray, [[maybe_unused]] int Num) {};
+	virtual void SetColor([[maybe_unused]] float r, [[maybe_unused]] float g, [[maybe_unused]] float b, [[maybe_unused]] float a) {};
+	virtual void SetColor4([[maybe_unused]] const vec4 &TopLeft, [[maybe_unused]] const vec4 &TopRight, [[maybe_unused]] const vec4 &BottomLeft, [[maybe_unused]] const vec4 &BottomRight) {};
+	virtual void SetGlobalAlpha([[maybe_unused]] float Alpha) {};
 	virtual float GetGlobalAlpha() const { return 1.0f; };
 
-	virtual void QuadsSetSubset(float TlU, float TlV, float BrU, float BrV, int TextureIndex = -1) {};
+	virtual void QuadsSetSubset([[maybe_unused]] float TlU, [[maybe_unused]] float TlV, [[maybe_unused]] float BrU, [[maybe_unused]] float BrV, [[maybe_unused]] int TextureIndex = -1) {};
 	virtual void QuadsSetSubsetFree(
-		float x0, float y0, float x1, float y1,
-		float x2, float y2, float x3, float y3, int TextureIndex = -1) {};
+		[[maybe_unused]] float x0, [[maybe_unused]] float y0, [[maybe_unused]] float x1, [[maybe_unused]] float y1,
+		[[maybe_unused]] float x2, [[maybe_unused]] float y2, [[maybe_unused]] float x3, [[maybe_unused]] float y3, [[maybe_unused]] int TextureIndex = -1) {};
 
-	virtual void QuadsDraw(CQuadItem *pArray, int Num) {};
-	virtual void SingleQuadDrawTL(const CQuadItem *pQuad) {};
-	virtual void QuadsDrawTL(const CQuadItem *pArray, int Num) {};
-	virtual void QuadsDrawTLWithUV(const CQuadItem *pArray, const vec4 *pUV, int Num, int TextureIndex = -1) {};
-	virtual void QuadsDrawFreeform(const CFreeformItem *pArray, int Num) {};
-	virtual void QuadsText(float x, float y, float Size, const char *pText) {};
+	virtual void QuadsDraw([[maybe_unused]] CQuadItem *pArray, [[maybe_unused]] int Num) {};
+	virtual void SingleQuadDrawTL([[maybe_unused]] const CQuadItem *pQuad) {};
+	virtual void QuadsDrawTL([[maybe_unused]] const CQuadItem *pArray, [[maybe_unused]] int Num) {};
+	virtual void QuadsDrawTLWithUV([[maybe_unused]] const CQuadItem *pArray, [[maybe_unused]] const vec4 *pUV, [[maybe_unused]] int Num, [[maybe_unused]] int TextureIndex = -1) {};
+	virtual void QuadsDrawFreeform([[maybe_unused]] const CFreeformItem *pArray, [[maybe_unused]] int Num) {};
+	virtual void QuadsText([[maybe_unused]] float x, [[maybe_unused]] float y, [[maybe_unused]] float Size, [[maybe_unused]] const char *pText) {};
 
 	// the null backend does not implement the GPU tilemap path
-	virtual void RenderTilemapTexture(CTextureHandle TileData, int Layer, int Width, int Height, int PassMode, bool ColorOpaque, const vec4 &Color) {};
+	virtual void RenderTilemapTexture([[maybe_unused]] CTextureHandle TileData, [[maybe_unused]] int Layer, [[maybe_unused]] int Width, [[maybe_unused]] int Height, [[maybe_unused]] int PassMode, [[maybe_unused]] bool ColorOpaque, [[maybe_unused]] const vec4 &Color) {};
 
 	virtual int GetNumScreens() const { return 0; };
 	virtual void Minimize() {};
 	virtual void Maximize() {};
-	virtual bool Fullscreen(bool State) { return false; };
-	virtual void SetWindowBordered(bool State) {};
-	virtual bool SetWindowScreen(int Index) { return false; };
+	virtual bool Fullscreen([[maybe_unused]] bool State) { return false; };
+	virtual void SetWindowBordered([[maybe_unused]] bool State) {};
+	virtual bool SetWindowScreen([[maybe_unused]] int Index) { return false; };
 	virtual int GetWindowScreen() { return 0; };
 
 	virtual bool WindowActive() { return false; };
@@ -99,21 +99,21 @@ public:
 	virtual int Init() { return 0; };
 	virtual void Shutdown() {};
 
-	virtual void ReadBackbuffer(unsigned char **ppPixels, int x, int y, int w, int h) {};
-	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, void *pUser) {};
+	virtual void ReadBackbuffer([[maybe_unused]] unsigned char **ppPixels, [[maybe_unused]] int x, [[maybe_unused]] int y, [[maybe_unused]] int w, [[maybe_unused]] int h) {};
+	virtual void TakeScreenshot([[maybe_unused]] const char *pFilename, [[maybe_unused]] FScreenshotCallback pfnCallback, [[maybe_unused]] void *pUser) {};
 	virtual void Swap() {};
-	virtual bool SetVSync(bool State) { return false; };
+	virtual bool SetVSync([[maybe_unused]] bool State) { return false; };
 
-	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) { return 0; };
+	virtual int GetVideoModes([[maybe_unused]] CVideoMode *pModes, [[maybe_unused]] int MaxModes, [[maybe_unused]] int Screen) { return 0; };
 
 	// syncronization
-	virtual void InsertSignal(semaphore *pSemaphore) {};
+	virtual void InsertSignal([[maybe_unused]] semaphore *pSemaphore) {};
 	virtual bool IsIdle() const { return false; };
 	virtual void WaitForIdle() {};
 
-	virtual bool ResizeWindow(int Width, int Height) { return false; };
-	virtual void OnWindowResized(int Width, int Height) {};
-	virtual void OnWindowPixelResized(int ScreenWidth, int ScreenHeight) {};
+	virtual bool ResizeWindow([[maybe_unused]] int Width, [[maybe_unused]] int Height) { return false; };
+	virtual void OnWindowResized([[maybe_unused]] int Width, [[maybe_unused]] int Height) {};
+	virtual void OnWindowPixelResized([[maybe_unused]] int ScreenWidth, [[maybe_unused]] int ScreenHeight) {};
 	virtual void *GetWindowHandle() { return 0; };
 };
 

@@ -23,7 +23,7 @@ void CNotifications::OnConsoleInit()
 	pConsole->Register("snd_toggle", "", CFGFLAG_CLIENT, Con_SndToggle, this, "Toggle sounds on and off");
 }
 
-void CNotifications::Con_SndToggle(IConsole::IResult *pResult, void *pUserData)
+void CNotifications::Con_SndToggle([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CNotifications *pSelf = (CNotifications *) pUserData;
 

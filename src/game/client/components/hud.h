@@ -4,6 +4,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_HUD_H
 #define GAME_CLIENT_COMPONENTS_HUD_H
 #include <game/client/component.h>
+#include <base/system/time.h>
 
 class CHud : public CComponent
 {

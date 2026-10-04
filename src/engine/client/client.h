@@ -5,6 +5,7 @@
 #define ENGINE_CLIENT_CLIENT_H
 
 #include <base/hash.h>
+#include <base/system/time.h>
 #include <base/tl/array.h>
 
 #include <engine/shared/legacy/network_translator.h>

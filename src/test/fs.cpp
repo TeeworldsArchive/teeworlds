@@ -4,7 +4,8 @@
 #include "test.h"
 #include <gtest/gtest.h>
 
-#include <base/system.h>
+#include <base/system/aio.h>
+#include <base/system/fs.h>
 
 TEST(Filesystem, CreateCloseDelete)
 {

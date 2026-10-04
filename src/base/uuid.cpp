@@ -1,6 +1,8 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <base/hash_ctxt.h>
-#include <base/system.h>
+#include <base/system/mem.h>
+#include <base/system/misc.h>
+#include <base/system/string.h>
 
 #include "uuid.h"
 

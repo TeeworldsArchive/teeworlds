@@ -1,6 +1,8 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/lock.h>
+#include <base/system/net.h>
+#include <base/system/string.h>
 #include <engine/engine.h>
 #include <game/version.h>
 

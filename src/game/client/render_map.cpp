@@ -268,7 +268,7 @@ static bool QuadIsOutsideScreen(const CQuad *q, float OffsetX, float OffsetY, fl
 	return MaxX < ScreenMinX || MinX > ScreenMaxX || MaxY < ScreenMinY || MinY > ScreenMaxY;
 }
 
-void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, int RenderFlags, ENVELOPE_EVAL pfnEval, void *pUser)
+void CRenderTools::RenderQuads(const CQuad *pQuads, int NumQuads, ENVELOPE_EVAL pfnEval, void *pUser)
 {
 	// visible area in the current screen coordinate space, used for culling
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;

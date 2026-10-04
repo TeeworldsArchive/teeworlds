@@ -153,8 +153,8 @@ public:
 
 	// maximum health and armor a character spawns with, can be overridden
 	// per gamemode and per character
-	virtual int GetCharacterMaxHealth(class CCharacter *pChr) const { return 10; }
-	virtual int GetCharacterMaxArmor(class CCharacter *pChr) const { return 10; }
+	virtual int GetCharacterMaxHealth([[maybe_unused]] class CCharacter *pChr) const { return 10; }
+	virtual int GetCharacterMaxArmor([[maybe_unused]] class CCharacter *pChr) const { return 10; }
 
 	virtual void OnFlagReturn(class CFlag *pFlag);
 
@@ -248,11 +248,11 @@ public:
 	int GetRealPlayerNum() const { return m_aTeamSize[TEAM_RED] + m_aTeamSize[TEAM_BLUE]; }
 	int GetStartTeam();
 
-	virtual void HandleCharacterTiles(class CCharacter *pChr, vec2 LastPos, vec2 NewPos) {};
+	virtual void HandleCharacterTiles([[maybe_unused]] class CCharacter *pChr, [[maybe_unused]] vec2 LastPos, [[maybe_unused]] vec2 NewPos) {};
 	// static void Com_Example(IConsole::IResult *pResult, void *pContext);
 	virtual void RegisterChatCommands(CCommandManager *pManager);
 
-	virtual bool CanCharacterPickup(class CCharacter *pChr) const { return true; }
+	virtual bool CanCharacterPickup([[maybe_unused]] class CCharacter *pChr) const { return true; }
 	virtual bool CanCharacterWeaponFullAuto(class CCharacter *pChr, int Weapon);
 
 	// return: Reload timer
@@ -260,7 +260,7 @@ public:
 	virtual bool IsPureTuning() const { return false; }
 	virtual bool TimeScore() const { return false; }
 	virtual bool NoEntitiesInMap() const { return false; }
-	virtual bool IsCharacterSnapable(int SnappingClient, int ClientID) const { return true; }
+	virtual bool IsCharacterSnapable([[maybe_unused]] int SnappingClient, [[maybe_unused]] int ClientID) const { return true; }
 };
 
 typedef IGameController *(*FCreateGameController)(class CGameContext *pGameServer);

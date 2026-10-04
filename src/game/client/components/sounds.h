@@ -5,6 +5,7 @@
 #define GAME_CLIENT_COMPONENTS_SOUNDS_H
 
 #include <engine/console.h>
+#include <base/system/time.h>
 #include <engine/shared/jobs.h>
 #include <engine/sound.h>
 #include <game/client/component.h>

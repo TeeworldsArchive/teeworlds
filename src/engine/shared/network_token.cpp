@@ -4,7 +4,9 @@
 
 #include <base/hash_ctxt.h>
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
+#include <base/system/misc.h>
 
 #include "network.h"
 
@@ -61,7 +63,7 @@ int CNetTokenManager::ProcessMessage(const NETADDR *pAddr, const CNetPacketConst
 	// client requesting token
 	if(pPacket->m_DataSize >= NET_TOKENREQUEST_DATASIZE)
 	{
-		m_pNetBase->SendControlMsgWithToken((NETADDR *) pAddr, pPacket->m_ResponseToken, 0, NET_CTRLMSG_TOKEN, GenerateToken(pAddr), false);
+		m_pNetBase->SendControlMsgWithToken((NETADDR *) pAddr, pPacket->m_ResponseToken, NET_CTRLMSG_TOKEN, GenerateToken(pAddr), false);
 	}
 	return 0; // no need to process NET_CTRLMSG_TOKEN further
 }
@@ -108,7 +110,7 @@ TOKEN CNetTokenManager::GenerateToken(const NETADDR *pAddr, int64 Seed)
 	return Result;
 }
 
-bool CNetTokenManager::CheckToken(const NETADDR *pAddr, TOKEN Token, TOKEN ResponseToken, bool *BroadcastResponse)
+bool CNetTokenManager::CheckToken(const NETADDR *pAddr, TOKEN Token, [[maybe_unused]] TOKEN ResponseToken, bool *BroadcastResponse)
 {
 	TOKEN CurrentToken = GenerateToken(pAddr, m_Seed);
 	if(CurrentToken == Token)
@@ -244,7 +246,7 @@ TOKEN CNetTokenCache::GetToken(const NETADDR *pAddr)
 
 void CNetTokenCache::FetchToken(const NETADDR *pAddr)
 {
-	m_pNetBase->SendControlMsgWithToken(pAddr, NET_TOKEN_NONE, 0, NET_CTRLMSG_TOKEN, m_pTokenManager->GenerateToken(pAddr), true);
+	m_pNetBase->SendControlMsgWithToken(pAddr, NET_TOKEN_NONE, NET_CTRLMSG_TOKEN, m_pTokenManager->GenerateToken(pAddr), true);
 }
 
 void CNetTokenCache::AddToken(const NETADDR *pAddr, TOKEN Token, int TokenFLag)

@@ -130,7 +130,7 @@ void CTees::RenderTee(
 	vec2 Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), IntraTick);
 	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Cur.m_VelX / 256.0f, Cur.m_VelY / 256.0f), IntraTick);
 
-	m_pClient->m_pFlow->Add(Position, Vel * 100.0f, 10.0f);
+	m_pClient->m_pFlow->Add(Position, Vel * 100.0f);
 
 	RenderInfo.m_GotAirJump = Cur.m_Jumped & 2 ? 0 : 1;
 

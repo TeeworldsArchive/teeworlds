@@ -5,7 +5,10 @@
 
 #include <base/hash_ctxt.h>
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/time.h>
+#include <base/system/fs.h>
 #include <engine/storage.h>
 #include <zlib-ng.h>
 #include <zstd.h>
@@ -331,7 +334,7 @@ int CDataFileReader::GetDataSize(int Index) const
 	return m_pDataFile->m_pDataSizes[Index];
 }
 
-void *CDataFileReader::GetDataImpl(int Index, int Swap)
+void *CDataFileReader::GetDataImpl(int Index, [[maybe_unused]] int Swap)
 {
 	if(!m_pDataFile)
 	{

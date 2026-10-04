@@ -106,12 +106,12 @@ void CSpectator::HandleSpectateNextPrev(int Direction)
 	}
 }
 
-void CSpectator::ConSpectateNext(IConsole::IResult *pResult, void *pUserData)
+void CSpectator::ConSpectateNext([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CSpectator *) pUserData)->HandleSpectateNextPrev(1);
 }
 
-void CSpectator::ConSpectatePrevious(IConsole::IResult *pResult, void *pUserData)
+void CSpectator::ConSpectatePrevious([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CSpectator *) pUserData)->HandleSpectateNextPrev(-1);
 }

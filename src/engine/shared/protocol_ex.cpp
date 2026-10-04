@@ -1,18 +1,21 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+
 #include "protocol_ex.h"
 
 #include "config.h"
 #include "protocol.h"
 #include "uuid_manager.h"
 
-void RegisterUuids(class CUuidManager *pManager)
+void RegisterUuids([[maybe_unused]] class CUuidManager *pManager)
 {
 #define UUID(id, name) pManager->RegisterName(id, name);
 #include "protocol_ex_msgs.h"
 #undef UUID
 }
 
-int UnpackMessageID(int *pID, bool *pSys, Uuid *pUuid, CUnpacker *pUnpacker, CMsgPacker *pPacker)
+int UnpackMessageID(int *pID, bool *pSys, Uuid *pUuid, CUnpacker *pUnpacker, [[maybe_unused]] CMsgPacker *pPacker)
 {
 	*pID = 0;
 	*pSys = false;

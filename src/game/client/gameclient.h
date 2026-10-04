@@ -231,7 +231,7 @@ public:
 		int m_TeeInfoID;
 
 		void UpdateRenderInfo(CGameClient *pGameClient, int ClientID, bool UpdateSkinInfo);
-		void UpdateBotRenderInfo(CGameClient *pGameClient, const CNetObj_TeeInfo *pTeeInfo, int ClientID);
+		void UpdateBotRenderInfo(CGameClient *pGameClient, const CNetObj_TeeInfo *pTeeInfo);
 		void Reset(CGameClient *pGameClient, int CLientID);
 	};
 

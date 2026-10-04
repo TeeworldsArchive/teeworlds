@@ -1,5 +1,8 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include <base/system.h>
+#include <base/system/thread.h>
+#include <base/system/time.h>
+#include <base/system/string.h>
+#include <base/system/fs.h>
 #include <engine/engine.h>
 #include <engine/storage.h>
 #include <engine/console.h>

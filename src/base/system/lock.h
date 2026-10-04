@@ -1,22 +1,25 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#if !defined(CONF_OPENSSL)
 
-#include "hash_ctxt.h"
+#ifndef BASE_SYSTEM_LOCK_H
+#define BASE_SYSTEM_LOCK_H
 
-#include <engine/external/md5/md5.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* Group: Locks */
+typedef void *LOCK;
 
-void md5_update(MD5_CTX *ctxt, const void *data, size_t data_len)
-{
-	md5_append(ctxt, data, data_len);
+LOCK lock_create();
+void lock_destroy(LOCK lock);
+
+int lock_trylock(LOCK lock);
+int lock_wait(LOCK lock);
+int lock_unlock(LOCK lock);
+
+#ifdef __cplusplus
 }
-
-MD5_DIGEST md5_finish(MD5_CTX *ctxt)
-{
-	MD5_DIGEST result;
-	md5_finish_(ctxt, result.data);
-	return result;
-}
+#endif
 
 #endif

@@ -276,7 +276,7 @@ void CBinds::GetKeyID(const char *pBindStr, int &KeyID, int &Modifier)
 	}
 }
 
-void CBinds::GetKey(const char *pBindStr, char aKey[64], unsigned BufSize, int KeyID, int Modifier)
+void CBinds::GetKey(char aKey[64], unsigned BufSize, int KeyID, int Modifier)
 {
 	aKey[0] = 0;
 	if(KeyID < KEY_LAST)
@@ -291,7 +291,7 @@ void CBinds::GetKey(const char *pBindStr, char aKey[64], unsigned BufSize)
 {
 	int KeyID, Modifier;
 	GetKeyID(pBindStr, KeyID, Modifier);
-	GetKey(pBindStr, aKey, BufSize, KeyID, Modifier);
+	GetKey(aKey, BufSize, KeyID, Modifier);
 }
 
 void CBinds::SetDefaults()
@@ -356,7 +356,7 @@ void CBinds::ConUnbind(IConsole::IResult *pResult, void *pUserData)
 	pBinds->Bind(KeyID, Modifier, "");
 }
 
-void CBinds::ConUnbindAll(IConsole::IResult *pResult, void *pUserData)
+void CBinds::ConUnbindAll([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CBinds *pBinds = (CBinds *) pUserData;
 	pBinds->UnbindAll();

@@ -109,7 +109,7 @@ void CChat::OnRelease()
 	m_Show = false;
 }
 
-void CChat::OnStateChange(int NewState, int OldState)
+void CChat::OnStateChange([[maybe_unused]] int NewState, int OldState)
 {
 	if(OldState <= IClient::STATE_CONNECTING)
 	{
@@ -526,7 +526,7 @@ void CChat::ClearInput()
 	m_SelectedCommand = 0;
 }
 
-void CChat::ServerCommandCallback(IConsole::IResult *pResult, void *pContext)
+void CChat::ServerCommandCallback([[maybe_unused]] IConsole::IResult *pResult, void *pContext)
 {
 	CCommandManager::SCommandContext *pComContext = (CCommandManager::SCommandContext *) pContext;
 	CChat *pChatData = (CChat *) pComContext->m_pContext;
@@ -937,7 +937,7 @@ void CChat::OnRender()
 			{
 				// find keyname and format text
 				char aKeyName[64];
-				m_pClient->m_pBinds->GetKey(aCommand, aKeyName, sizeof(aKeyName), KeyID, Modifier);
+				m_pClient->m_pBinds->GetKey(aKeyName, sizeof(aKeyName), KeyID, Modifier);
 
 				char aInfoText[128];
 				str_format(aInfoText, sizeof(aInfoText), Localize("Press %s to resume chatting"), aKeyName);

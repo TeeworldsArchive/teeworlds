@@ -5,6 +5,7 @@
 #define ENGINE_GRAPHICS_H
 
 #include <base/vmath.h>
+#include <base/system/time.h>
 
 #include "kernel.h"
 

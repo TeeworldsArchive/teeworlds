@@ -5,6 +5,7 @@
 #define ENGINE_SHARED_CONSOLE_H
 
 #include <engine/console.h>
+#include <base/system/mem.h>
 #include "memheap.h"
 #include <new>
 

@@ -1,4 +1,7 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
+#include <base/system/misc.h>
+#include <base/system/string.h>
+
 #include <engine/shared/packer.h>
 
 #include "protocol_ex.h"

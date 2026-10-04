@@ -4,6 +4,10 @@
 #include <algorithm>
 #include <limits.h>
 
+#include <base/system/mem.h>
+#include <base/system/misc.h>
+#include <base/system/string.h>
+#include <base/system/time.h>
 #include <base/tl/algorithm.h>
 
 #include "compression.h"

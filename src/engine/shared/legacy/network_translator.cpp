@@ -1,7 +1,7 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include "network_translator.h"
 
-#include <base/system.h>
+#include <base/system/misc.h>
 
 #include <engine/message.h>
 #include <engine/shared/compression.h>
@@ -458,7 +458,7 @@ namespace legacy
 		m_Snapshots7.PurgeUntil(GameTick - SERVER_TICK_SPEED * 3);
 	}
 
-	int CNetworkTranslator::TranslateSnapshotDelta(int GameTick, int DeltaTick, const void *pDelta7, int DeltaSize7, void *pOut, int OutSize)
+	int CNetworkTranslator::TranslateSnapshotDelta(int GameTick, int DeltaTick, const void *pDelta7, int DeltaSize7, void *pOut)
 	{
 		const CSnapshot *pBase7 = &m_EmptySnap;
 		int BaseSize7 = (int) sizeof(CSnapshot);
@@ -589,7 +589,7 @@ namespace legacy
 		if(DeltaTick < 0)
 			ResetBase8();
 		const int BaseTickBefore = m_BaseTick8;
-		const int DeltaSize8 = TranslateSnapshotDelta(GameTick, DeltaTick, aDecompressed.base_ptr(), IntSize, aDelta8.base_ptr(), aDelta8.size());
+		const int DeltaSize8 = TranslateSnapshotDelta(GameTick, DeltaTick, aDecompressed.base_ptr(), IntSize, aDelta8.base_ptr());
 		if(DeltaSize8 < 0)
 			return 0;
 

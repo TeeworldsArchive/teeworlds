@@ -5,6 +5,7 @@
 #define GAME_CLIENT_COMPONENTS_STATS_H
 
 #include <game/client/component.h>
+#include <base/system/time.h>
 
 enum
 {
@@ -75,7 +76,7 @@ public:
 	void OnMatchStart();
 	void OnFlagGrab(int ClientID);
 	void OnFlagCapture(int ClientID);
-	void OnPlayerEnter(int ClientID, int Team);
+	void OnPlayerEnter(int ClientID);
 	void OnPlayerLeave(int ClientID);
 
 	const CPlayerStats *GetPlayerStats(int ClientID) const { return &m_aStats[ClientID]; }

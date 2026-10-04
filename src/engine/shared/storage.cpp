@@ -2,7 +2,10 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/hash_ctxt.h>
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/string.h>
+#include <base/system/fs.h>
 #include <engine/storage.h>
 #include "linereader.h"
 #include <zlib-ng.h>
@@ -35,7 +38,7 @@ public:
 		m_aAppDir[0] = 0;
 	}
 
-	int Init(const char *pApplicationName, int StorageType, int NumArgs, const char **ppArguments)
+	int Init(const char *pApplicationName, int StorageType, [[maybe_unused]] int NumArgs, const char **ppArguments)
 	{
 		// get userdir
 		fs_storage_path(pApplicationName, m_aUserDir, sizeof(m_aUserDir));

@@ -35,7 +35,7 @@ protected:
 public:
 	virtual ~CComponent() {}
 
-	virtual void OnStateChange(int NewState, int OldState) {}
+	virtual void OnStateChange([[maybe_unused]] int NewState, [[maybe_unused]] int OldState) {}
 	virtual void OnConsoleInit() {}
 	virtual int GetInitAmount() const { return 0; } // Amount of progress reported by this component during OnInit
 	virtual void OnInit() {}
@@ -46,9 +46,9 @@ public:
 	virtual void OnMapLoad() {}
 	virtual void OnMapUnload() {}
 	virtual void OnSoundLoaded() {};
-	virtual void OnMessage(int Msg, void *pRawMsg) {}
-	virtual bool OnCursorMove(float x, float y, int CursorType) { return false; }
-	virtual bool OnInput(IInput::CEvent e) { return false; }
+	virtual void OnMessage([[maybe_unused]] int Msg, [[maybe_unused]] void *pRawMsg) {}
+	virtual bool OnCursorMove([[maybe_unused]] float x, [[maybe_unused]] float y, [[maybe_unused]] int CursorType) { return false; }
+	virtual bool OnInput([[maybe_unused]] IInput::CEvent e) { return false; }
 };
 
 #endif

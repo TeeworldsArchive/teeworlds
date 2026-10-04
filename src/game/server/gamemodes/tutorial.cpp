@@ -116,7 +116,7 @@ bool CGameControllerTutorial::OnExtraTile(int Index, vec2 Pos)
 	return true;
 }
 
-void CGameControllerTutorial::OnFlagReturn(CFlag *pFlag)
+void CGameControllerTutorial::OnFlagReturn([[maybe_unused]] CFlag *pFlag)
 {
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", "flag_return");
 	GameServer()->SendGameMsg(GAMEMSG_CTF_RETURN, -1);
@@ -128,7 +128,7 @@ void CGameControllerTutorial::OnPlayerConnect(CPlayer *pPlayer)
 	GameServer()->SendChat(-1, CHAT_ALL, pPlayer->GetCID(), Localize("Hello! It's tutorial day! Moving yourself to the right of this cave."));
 }
 
-void CGameControllerTutorial::OnPlayerDisconnect(CPlayer *pPlayer)
+void CGameControllerTutorial::OnPlayerDisconnect([[maybe_unused]] CPlayer *pPlayer)
 {
 	GameServer()->Console()->ExecuteLine("shutdown");
 }

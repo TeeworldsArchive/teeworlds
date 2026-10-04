@@ -5,6 +5,7 @@
 #define ENGINE_SHARED_ECON_H
 
 #include "network.h"
+#include <base/system/time.h>
 
 class CEcon
 {

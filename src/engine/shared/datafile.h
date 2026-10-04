@@ -5,7 +5,9 @@
 #define ENGINE_SHARED_DATAFILE_H
 
 #include <base/hash.h>
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/fs.h>
+#include <base/system/io.h>
 
 // raw datafile access
 class CDataFileReader

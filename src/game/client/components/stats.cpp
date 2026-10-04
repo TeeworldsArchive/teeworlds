@@ -650,7 +650,7 @@ void CStats::OnFlagCapture(int ClientID)
 	m_aStats[ClientID].m_FlagCaptures++;
 }
 
-void CStats::OnPlayerEnter(int ClientID, int Team)
+void CStats::OnPlayerEnter(int ClientID)
 {
 	m_aStats[ClientID].Reset();
 }

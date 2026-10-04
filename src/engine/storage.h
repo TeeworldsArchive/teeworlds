@@ -5,6 +5,10 @@
 #define ENGINE_STORAGE_H
 
 #include <base/hash.h>
+#include <base/system/fs.h>
+#include <base/system/debug.h>
+#include <base/system/io.h>
+#include <base/system/fs.h>
 #include "kernel.h"
 
 class IStorage : public IInterface

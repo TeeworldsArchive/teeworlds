@@ -126,7 +126,7 @@ namespace legacy
 
 		// Snapshot delta translation. Returns the 0.8 delta size, -1 if it could
 		// not be decoded, or a negative delta error code.
-		int TranslateSnapshotDelta(int GameTick, int DeltaTick, const void *pDelta7, int DeltaSize7, void *pOut, int OutSize);
+		int TranslateSnapshotDelta(int GameTick, int DeltaTick, const void *pDelta7, int DeltaSize7, void *pOut);
 
 		// Emits 0.8 snapshot chunks for an already translated delta.
 		int EmitSnapshot8(int GameTick, int DeltaField, int DeltaSize8, const void *pDelta8, CNetChunk *pOutChunks, int MaxOutChunks);

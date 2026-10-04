@@ -2,7 +2,10 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/mem.h>
+#include <base/system/lock.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
 
 #include <engine/engine.h>
 
@@ -397,7 +400,7 @@ bool Net8HasGenerationMarker(const unsigned char *pChunkData, int ChunkDataSize,
 	       pChunkData[Offset + 2] == NET_GENERATION_MARKER_2;
 }
 
-void CNetBase::SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, TOKEN MyToken, bool Extended, bool GenerationMarker)
+void CNetBase::SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int ControlMsg, TOKEN MyToken, bool Extended, bool GenerationMarker)
 {
 	dbg_assert((Token & ~NET_TOKEN_MASK) == 0, "token out of range");
 	dbg_assert((MyToken & ~NET_TOKEN_MASK) == 0, "resp token out of range");

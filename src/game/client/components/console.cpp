@@ -5,7 +5,10 @@
 
 #include <generated/client_data.h>
 
-#include <base/system.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
+#include <base/system/fs.h>
+#include <base/system/misc.h>
 
 #include <engine/console.h>
 #include <engine/graphics.h>
@@ -369,7 +372,7 @@ struct CCompletionOptionRenderInfo
 	float m_TotalWidth;
 };
 
-void CGameConsole::PossibleCommandsRenderCallback(int Index, const char *pStr, void *pUser)
+void CGameConsole::PossibleCommandsRenderCallback([[maybe_unused]] int Index, const char *pStr, void *pUser)
 {
 	CCompletionOptionRenderInfo *pInfo = static_cast<CCompletionOptionRenderInfo *>(pUser);
 
@@ -762,32 +765,32 @@ void CGameConsole::Dump(int Type)
 	Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", aBuf);
 }
 
-void CGameConsole::ConToggleLocalConsole(IConsole::IResult *pResult, void *pUserData)
+void CGameConsole::ConToggleLocalConsole([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameConsole *) pUserData)->Toggle(CONSOLETYPE_LOCAL);
 }
 
-void CGameConsole::ConToggleRemoteConsole(IConsole::IResult *pResult, void *pUserData)
+void CGameConsole::ConToggleRemoteConsole([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameConsole *) pUserData)->Toggle(CONSOLETYPE_REMOTE);
 }
 
-void CGameConsole::ConClearLocalConsole(IConsole::IResult *pResult, void *pUserData)
+void CGameConsole::ConClearLocalConsole([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameConsole *) pUserData)->m_LocalConsole.ClearBacklog();
 }
 
-void CGameConsole::ConClearRemoteConsole(IConsole::IResult *pResult, void *pUserData)
+void CGameConsole::ConClearRemoteConsole([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameConsole *) pUserData)->m_RemoteConsole.ClearBacklog();
 }
 
-void CGameConsole::ConDumpLocalConsole(IConsole::IResult *pResult, void *pUserData)
+void CGameConsole::ConDumpLocalConsole([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameConsole *) pUserData)->Dump(CONSOLETYPE_LOCAL);
 }
 
-void CGameConsole::ConDumpRemoteConsole(IConsole::IResult *pResult, void *pUserData)
+void CGameConsole::ConDumpRemoteConsole([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameConsole *) pUserData)->Dump(CONSOLETYPE_REMOTE);
 }
@@ -801,7 +804,7 @@ struct CDumpCommandsCallbackInfo
 	bool m_Temp;
 };
 
-void CGameConsole::DumpCommandsCallback(int Index, const char *pStr, void *pUser)
+void CGameConsole::DumpCommandsCallback([[maybe_unused]] int Index, const char *pStr, void *pUser)
 {
 	CDumpCommandsCallbackInfo *pInfo = (CDumpCommandsCallbackInfo *) pUser;
 	const IConsole::CCommandInfo *pCommand = pInfo->m_pConsole->Console()->GetCommandInfo(pStr, pInfo->m_FlagMask, pInfo->m_Temp);
@@ -813,7 +816,7 @@ void CGameConsole::DumpCommandsCallback(int Index, const char *pStr, void *pUser
 	io_write_newline(pInfo->m_File);
 }
 
-void CGameConsole::ConDumpCommands(IConsole::IResult *pResult, void *pUserData)
+void CGameConsole::ConDumpCommands([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameConsole *pConsole = (CGameConsole *) pUserData;
 	char aBuf[128];
@@ -897,7 +900,7 @@ void CGameConsole::OnConsoleInit()
 	Console()->Chain("console_output_level", ConchainConsoleOutputLevelUpdate, this);
 }
 
-void CGameConsole::OnStateChange(int NewState, int OldState)
+void CGameConsole::OnStateChange(int NewState, [[maybe_unused]] int OldState)
 {
 	if(NewState == IClient::STATE_OFFLINE)
 		m_RemoteConsole.ClearHistory();

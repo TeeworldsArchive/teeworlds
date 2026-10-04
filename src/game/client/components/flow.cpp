@@ -83,7 +83,7 @@ vec2 CFlow::Get(vec2 Pos)
 	return m_pCells[y * m_Width + x].m_Vel;
 }
 
-void CFlow::Add(vec2 Pos, vec2 Vel, float Size)
+void CFlow::Add(vec2 Pos, vec2 Vel)
 {
 	if(!m_pCells)
 		return;

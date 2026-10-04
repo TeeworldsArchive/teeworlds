@@ -212,7 +212,7 @@ CGameControllerReinfected::~CGameControllerReinfected()
 	delete m_pHelper;
 }
 
-bool CGameControllerReinfected::IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const
+bool CGameControllerReinfected::IsFriendlyFire(int ClientID1, int ClientID2, [[maybe_unused]] int Damage) const
 {
 	if(ClientID1 == ClientID2)
 		return false;
@@ -226,7 +226,7 @@ bool CGameControllerReinfected::IsFriendlyFire(int ClientID1, int ClientID2, int
 	return false;
 }
 
-bool CGameControllerReinfected::IsFriendlyTeamFire(int Team1, int Team2, int Damage) const
+bool CGameControllerReinfected::IsFriendlyTeamFire(int Team1, int Team2, [[maybe_unused]] int Damage) const
 {
 	return Team1 == Team2;
 }

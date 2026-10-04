@@ -169,7 +169,7 @@ void CVoting::OnReset()
 	Clear();
 }
 
-void CVoting::OnStateChange(int NewState, int OldState)
+void CVoting::OnStateChange([[maybe_unused]] int NewState, int OldState)
 {
 	if(OldState == IClient::STATE_ONLINE || OldState == IClient::STATE_OFFLINE)
 		Clear();

@@ -12,8 +12,6 @@
 #include "nameplates.h"
 
 void CNamePlates::RenderNameplate(
-	const CNetObj_Character *pPrevChar,
-	const CNetObj_Character *pPlayerChar,
 	int ClientID) const
 {
 	const CGameClient::CClientData *pClientData = m_pClient->GetClientData(ClientID);
@@ -91,9 +89,6 @@ void CNamePlates::OnRender()
 		if(!pCharInfo || !pCharInfo->m_Active)
 			continue;
 
-		RenderNameplate(
-			&pCharInfo->m_Prev,
-			&pCharInfo->m_Cur,
-			i);
+		RenderNameplate(i);
 	}
 }

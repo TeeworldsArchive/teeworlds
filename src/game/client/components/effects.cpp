@@ -241,7 +241,7 @@ void CEffects::Explosion(vec2 Pos)
 				continue;
 
 			float a = 1 - (length(vec2(x, y)) / length(vec2(8, 8)));
-			m_pClient->m_pFlow->Add(Pos + vec2(x, y) * 16, normalize(vec2(x, y)) * 5000.0f * a, 10.0f);
+			m_pClient->m_pFlow->Add(Pos + vec2(x, y) * 16, normalize(vec2(x, y)) * 5000.0f * a);
 		}
 
 	// add the explosion

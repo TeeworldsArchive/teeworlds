@@ -44,7 +44,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(TARGET_OS "mac")
 endif()
 
-include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckSymbolExists)
 
@@ -60,9 +59,8 @@ if(TARGET_OS STREQUAL "windows")
   set(AUTO_DEPENDENCIES_DEFAULT ON)
 endif()
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED TRUE)
-
+# The bundled third-party sources under src/engine/external are still plain C,
+# so the C language stays enabled; the project's own code is C++17 only.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
@@ -119,14 +117,14 @@ set(CLIENT_EXECUTABLE ArchiveClient CACHE STRING "Name of the build client execu
 # Compiler flags
 ########################################################################
 
-function(add_c_compiler_flag_if_supported VARIABLE FLAG)
+function(add_cxx_compiler_flag_if_supported VARIABLE FLAG)
   if(ARGC GREATER 2)
     set(CHECKED_FLAG "${ARGV2}")
   else()
     set(CHECKED_FLAG "${FLAG}")
   endif()
   string(REGEX REPLACE "[^A-Za-z0-9]" "_" CONFIG_VARIABLE "FLAG_SUPPORTED${CHECKED_FLAG}")
-  check_c_compiler_flag("${CHECKED_FLAG}" ${CONFIG_VARIABLE})
+  check_cxx_compiler_flag("${CHECKED_FLAG}" ${CONFIG_VARIABLE})
   if(${CONFIG_VARIABLE})
     if(${VARIABLE})
       set("${VARIABLE}" "${${VARIABLE}};${FLAG}" PARENT_SCOPE)
@@ -138,42 +136,41 @@ endfunction()
 
 if(NOT MSVC)
   # Protect the stack pointer.
-  add_c_compiler_flag_if_supported(OUR_FLAGS -fstack-protector-all)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS -fstack-protector-all)
 
   # Control-flow protection. Should protect against ROP.
-  add_c_compiler_flag_if_supported(OUR_FLAGS -fcf-protection)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS -fcf-protection)
 
   # Inaccurate floating point numbers cause problems on mingw-w64-gcc when
   # compiling for x86, might cause problems elsewhere. So don't store floats
   # in registers but keep them at higher accuracy.
   if(TARGET_ARCH STREQUAL "x86")
-    add_c_compiler_flag_if_supported(OUR_FLAGS -ffloat-store)
+    add_cxx_compiler_flag_if_supported(OUR_FLAGS -ffloat-store)
   endif()
 
   # gcc < 4.10 chokes on _mm_pause on x86 without SSE support.
   if(TARGET_ARCH STREQUAL "x86")
-    check_c_source_compiles("#include <immintrin.h>\nint main() { _mm_pause(); return 0; }" MM_PAUSE_WORKS_WITHOUT_MSSE2)
+    check_cxx_source_compiles("#include <immintrin.h>\nint main() { _mm_pause(); return 0; }" MM_PAUSE_WORKS_WITHOUT_MSSE2)
     if(NOT MM_PAUSE_WORKS_WITHOUT_MSSE2)
-      add_c_compiler_flag_if_supported(OUR_FLAGS -msse2)
+      add_cxx_compiler_flag_if_supported(OUR_FLAGS -msse2)
     endif()
   endif()
 
   if(TARGET_OS STREQUAL "mac")
-    add_c_compiler_flag_if_supported(OUR_FLAGS -stdlib=libc++)
+    add_cxx_compiler_flag_if_supported(OUR_FLAGS -stdlib=libc++)
   endif()
 
-  add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -Wall)
-  add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -Wextra)
-  add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -Wno-unused-parameter)
-  add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -Wno-missing-field-initializers)
-  add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -Wformat=2) # Warn about format strings.
-  add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -Wno-stringop-truncation)
-  add_c_compiler_flag_if_supported(OUR_FLAGS_OWN -fno-exceptions)
-  add_c_compiler_flag_if_supported(OUR_FLAGS_DEP -Wno-implicit-function-declaration)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wall)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wextra)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wno-missing-field-initializers)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wformat=2) # Warn about format strings.
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wno-stringop-truncation)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -fno-exceptions)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_DEP -Wno-implicit-function-declaration)
 endif()
 
 if(NOT MSVC)
-  check_c_compiler_flag("-O2;-Wp,-Werror;-D_FORTIFY_SOURCE=2" DEFINE_FORTIFY_SOURCE) # Some distributions define _FORTIFY_SOURCE by themselves.
+  check_cxx_compiler_flag("-O2;-Wp,-Werror;-D_FORTIFY_SOURCE=2" DEFINE_FORTIFY_SOURCE) # Some distributions define _FORTIFY_SOURCE by themselves.
 endif()
 
 ########################################################################
@@ -1399,19 +1396,41 @@ generate_source("src/generated/server_data.h" "server_content_header")
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
-  c11/threads.c
-  c11/threads.h
   color.h
   detect.h
-  hash.c
+  hash.cpp
   hash.h
-  hash_bundled.c
+  hash_bundled.cpp
   hash_ctxt.h
-  hash_libtomcrypt.c
-  hash_openssl.c
+  hash_libtomcrypt.cpp
+  hash_openssl.cpp
   math.h
-  system.c
-  system.h
+  system/aio.cpp
+  system/aio.h
+  system/base.h
+  system/debug.cpp
+  system/debug.h
+  system/fs.cpp
+  system/fs.h
+  system/io.cpp
+  system/io.h
+  system/lock.cpp
+  system/lock.h
+  system/mem.cpp
+  system/mem.h
+  system/misc.cpp
+  system/misc.h
+  system/net.cpp
+  system/net.h
+  system/net_internal.h
+  system/semaphore.cpp
+  system/semaphore.h
+  system/string.cpp
+  system/string.h
+  system/thread.cpp
+  system/thread.h
+  system/time.cpp
+  system/time.h
   tl/algorithm.h
   tl/allocator.h
   tl/array.h
@@ -1422,7 +1441,7 @@ set_src(BASE GLOB_RECURSE src/base
   tl/stream.h
   tl/string.h
   tl/threading.h
-  uuid.c
+  uuid.cpp
   uuid.h
   vmath.h
 )

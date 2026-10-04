@@ -5,8 +5,10 @@
 #define GAME_SERVER_ALLOC_H
 
 #include <new>
+#include <base/system/fs.h>
 
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
 
 #define MACRO_ALLOC_HEAP() \
 public: \

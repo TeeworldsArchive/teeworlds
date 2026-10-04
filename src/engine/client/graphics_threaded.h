@@ -5,6 +5,7 @@
 #define ENGINE_CLIENT_GRAPHICS_THREADED_H
 
 #include <stdint.h>
+#include <base/system/time.h>
 
 #include <engine/graphics.h>
 

@@ -26,7 +26,7 @@ bool CMotd::IsActive()
 	return time_get() < m_ServerMotdTime;
 }
 
-void CMotd::OnStateChange(int NewState, int OldState)
+void CMotd::OnStateChange([[maybe_unused]] int NewState, int OldState)
 {
 	if(OldState == IClient::STATE_ONLINE || OldState == IClient::STATE_OFFLINE)
 		Clear();

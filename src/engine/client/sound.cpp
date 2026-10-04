@@ -2,7 +2,9 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/mem.h>
+#include <base/system/misc.h>
+#include <base/system/lock.h>
 
 #include <engine/graphics.h>
 #include <engine/storage.h>
@@ -232,7 +234,7 @@ static void Mix(short *pFinalOut, unsigned Frames)
 #endif
 }
 
-static void SDLNewCallback(void *pUnused, SDL_AudioStream *pStream, int AdditionalAmount, int TotalAmount)
+static void SDLNewCallback(void *pUnused, SDL_AudioStream *pStream, int AdditionalAmount, [[maybe_unused]] int TotalAmount)
 {
 	(void) pUnused;
 	/* Calculate a little more audio here, maybe using `userdata`, write it to `stream`
@@ -795,7 +797,7 @@ void CSound::SwitchAudioDevice(int NewDeviceIndex)
 	}
 }
 
-int CSound::GetAudioDevices(CAudioDevice *pDevices, int MaxDevices)
+int CSound::GetAudioDevices(CAudioDevice *pDevices, [[maybe_unused]] int MaxDevices)
 {
 	for(int i = 0; i < m_NumAudioDevices; i++)
 	{

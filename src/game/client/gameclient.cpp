@@ -2,6 +2,7 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <engine/contacts.h>
+#include <base/system/thread.h>
 #include <engine/demo.h>
 #include <engine/engine.h>
 #include <engine/graphics.h>
@@ -853,7 +854,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		if(m_LocalClientID != -1 && ClientID != m_LocalClientID)
 			DoEnterMessage(pClient->m_aName, ClientID, pClient->m_Team);
 
-		m_pStats->OnPlayerEnter(ClientID, pClient->m_Team);
+		m_pStats->OnPlayerEnter(ClientID);
 	}
 	else if(MsgId == NETMSGTYPE_SV_CLIENTDROP)
 	{
@@ -1255,7 +1256,7 @@ void CGameClient::OnNewSnapshot()
 							m_Snap.m_SpecInfo.m_SpectatorID = -1;
 						}
 					}
-					pClient->UpdateBotRenderInfo(this, pInfo, TeeInfoID);
+					pClient->UpdateBotRenderInfo(this, pInfo);
 				}
 			}
 			else if(Item.m_Type == NETOBJTYPE_CHARACTER)
@@ -1678,7 +1679,7 @@ vec2 CGameClient::GetCharPos(int ClientID, bool Predicted) const
 	}
 }
 
-void CGameClient::CClientData::UpdateBotRenderInfo(CGameClient *pGameClient, const CNetObj_TeeInfo *pTeeInfo, int ClientID)
+void CGameClient::CClientData::UpdateBotRenderInfo(CGameClient *pGameClient, const CNetObj_TeeInfo *pTeeInfo)
 {
 	static const unsigned char s_aBotColors[][3] = {
 		{0xff, 0x00, 0x00},
@@ -2029,21 +2030,21 @@ void CGameClient::ConTeam(IConsole::IResult *pResult, void *pUserData)
 	pClient->SendSwitchTeam(Team);
 }
 
-void CGameClient::ConKill(IConsole::IResult *pResult, void *pUserData)
+void CGameClient::ConKill([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
 	if(pClient->Client()->State() == IClient::STATE_ONLINE)
 		pClient->SendKill();
 }
 
-void CGameClient::ConReadyChange(IConsole::IResult *pResult, void *pUserData)
+void CGameClient::ConReadyChange([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
 	if(pClient->Client()->State() == IClient::STATE_ONLINE)
 		pClient->SendReadyChange();
 }
 
-void CGameClient::ConScreenshot(IConsole::IResult *pResult, void *pUserData)
+void CGameClient::ConScreenshot([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
 	pClient->Graphics()->TakeScreenshot(0, ScreenshotCallback, pClient);

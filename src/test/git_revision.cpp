@@ -3,7 +3,7 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <gtest/gtest.h>
 
-#include <base/system.h>
+#include <base/system/misc.h>
 #include <game/version.h>
 
 extern const char *GIT_SHORTREV_HASH;

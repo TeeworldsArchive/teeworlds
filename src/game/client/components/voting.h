@@ -5,6 +5,7 @@
 #define GAME_CLIENT_COMPONENTS_VOTING_H
 
 #include <engine/shared/memheap.h>
+#include <base/system/time.h>
 
 #include <game/client/component.h>
 #include <game/client/ui.h>

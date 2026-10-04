@@ -4,7 +4,8 @@
 #include "test.h"
 #include <gtest/gtest.h>
 
-#include <base/system.h>
+#include <base/system/mem.h>
+#include <base/system/string.h>
 #include <engine/message.h>
 
 // pExpected is NULL if an error is expected

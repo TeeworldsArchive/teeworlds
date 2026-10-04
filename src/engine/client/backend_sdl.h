@@ -5,6 +5,8 @@
 #define ENGINE_CLIENT_BACKEND_SDL_H
 
 #include "graphics_threaded.h"
+#include <base/system/mem.h>
+#include <base/system/time.h>
 
 #include <engine/external/glad/gl.h>
 

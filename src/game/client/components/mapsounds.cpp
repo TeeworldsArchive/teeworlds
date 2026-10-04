@@ -241,7 +241,7 @@ void CMapSounds::Clear()
 	m_Count = 0;
 }
 
-void CMapSounds::OnStateChange(int NewState, int OldState)
+void CMapSounds::OnStateChange(int NewState, [[maybe_unused]] int OldState)
 {
 	if(NewState < IClient::STATE_ONLINE)
 		Clear();

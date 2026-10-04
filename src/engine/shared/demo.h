@@ -5,6 +5,7 @@
 #define ENGINE_SHARED_DEMO_H
 
 #include <engine/demo.h>
+#include <base/system/time.h>
 #include <engine/shared/protocol.h>
 
 #include "huffman.h"

@@ -7,7 +7,13 @@
 #include <stdarg.h>
 
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/thread.h>
+#include <base/system/lock.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
+#include <base/system/string.h>
+#include <base/system/fs.h>
+#include <base/system/misc.h>
 #include <base/tl/inplace_array.h>
 
 #include <engine/client.h>
@@ -381,7 +387,7 @@ void CClient::SendReady()
 	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
 }
 
-void CClient::SendRconAuth(const char *pName, const char *pPassword)
+void CClient::SendRconAuth([[maybe_unused]] const char *pName, const char *pPassword)
 {
 	if(RconAuthed())
 		return;
@@ -2345,25 +2351,25 @@ void CClient::Con_Connect(IConsole::IResult *pResult, void *pUserData)
 	str_copy(pSelf->m_aCmdConnect, pResult->GetString(0), sizeof(pSelf->m_aCmdConnect));
 }
 
-void CClient::Con_Disconnect(IConsole::IResult *pResult, void *pUserData)
+void CClient::Con_Disconnect([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
 	pSelf->Disconnect();
 }
 
-void CClient::Con_Quit(IConsole::IResult *pResult, void *pUserData)
+void CClient::Con_Quit([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
 	pSelf->Quit();
 }
 
-void CClient::Con_Minimize(IConsole::IResult *pResult, void *pUserData)
+void CClient::Con_Minimize([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
 	pSelf->Graphics()->Minimize();
 }
 
-void CClient::Con_Ping(IConsole::IResult *pResult, void *pUserData)
+void CClient::Con_Ping([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
 
@@ -2533,13 +2539,13 @@ void CClient::Con_Record(IConsole::IResult *pResult, void *pUserData)
 		pSelf->DemoRecorder_Start(pSelf->m_aCurrentMap, true);
 }
 
-void CClient::Con_StopRecord(IConsole::IResult *pResult, void *pUserData)
+void CClient::Con_StopRecord([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
 	pSelf->DemoRecorder_Stop(true);
 }
 
-void CClient::Con_AddDemoMarker(IConsole::IResult *pResult, void *pUserData)
+void CClient::Con_AddDemoMarker([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
 	pSelf->DemoRecorder_AddDemoMarker();
@@ -2750,7 +2756,7 @@ void CClient::DoVersionSpecificActions()
 	Config()->m_ClLastVersionPlayed = CLIENT_VERSION;
 }
 
-void HandleSigIntTerm(int Param)
+void HandleSigIntTerm([[maybe_unused]] int Param)
 {
 	InterruptSignaled = 1;
 

@@ -4,6 +4,15 @@
 #ifndef ENGINE_SHARED_NETWORK_H
 #define ENGINE_SHARED_NETWORK_H
 
+#include <base/system/net.h>
+#include <base/system/time.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/io.h>
+#include <base/system/string.h>
+#include <base/system/fs.h>
+#include <base/system/time.h>
+
 #include "net_queue.h"
 
 #include "huffman.h"
@@ -288,7 +297,7 @@ public:
 	void Wait(int Time);
 
 	void SendControlMsg(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, const void *pExtra, int ExtraSize);
-	void SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int Ack, int ControlMsg, TOKEN MyToken, bool Extended, bool GenerationMarker = true);
+	void SendControlMsgWithToken(const NETADDR *pAddr, TOKEN Token, int ControlMsg, TOKEN MyToken, bool Extended, bool GenerationMarker = true);
 	void SendPacketConnless(const NETADDR *pAddr, TOKEN Token, TOKEN ResponseToken, const void *pData, int DataSize);
 	void SendPacket(const NETADDR *pAddr, CNetPacketConstruct *pPacket);
 	int UnpackPacket(NETADDR *pAddr, unsigned char *pBuffer, CNetPacketConstruct *pPacket);
@@ -436,7 +445,7 @@ private:
 	void ResendChunk(CNetChunkResend *pResend);
 	void Resend();
 
-	static TOKEN GenerateToken(const NETADDR *pPeerAddr);
+	static TOKEN GenerateToken();
 
 public:
 	void Init(CNetBase *pNetBase, bool BlockCloseMsg);

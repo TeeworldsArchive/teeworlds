@@ -9,7 +9,7 @@ class CScoreboard : public CComponent
 {
 	void RenderGoals(float x, float y, float w);
 	float RenderSpectators(float x, float y, float w);
-	float RenderScoreboard(float x, float y, float w, int Align);
+	float RenderScoreboard(float x, float y, float w);
 	void RenderRecordingNotification(float x, float w);
 	void RenderNetworkQuality(float x, float w);
 

@@ -1151,7 +1151,7 @@ void CGameContext::ConTuneReset(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
-void CGameContext::ConTunes(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConTunes([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 	char aBuf[256];
@@ -1231,13 +1231,13 @@ void CGameContext::ConSetTeamAll(IConsole::IResult *pResult, void *pUserData)
 			pSelf->m_pController->DoTeamChange(pSelf->m_apPlayers[i], Team, false);
 }
 
-void CGameContext::ConSwapTeams(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConSwapTeams([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 	pSelf->SwapTeams();
 }
 
-void CGameContext::ConShuffleTeams(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConShuffleTeams([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 	if(!pSelf->m_pController->IsTeamplay())
@@ -1268,14 +1268,14 @@ void CGameContext::ConShuffleTeams(IConsole::IResult *pResult, void *pUserData)
 		pSelf->m_pController->DoTeamChange(pSelf->m_apPlayers[aPlayer[i]], i < (PlayerTeam + rnd) / 2 ? TEAM_RED : TEAM_BLUE, false);
 }
 
-void CGameContext::ConLockTeams(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConLockTeams([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 	pSelf->m_LockTeams ^= 1;
 	pSelf->SendSettings(-1);
 }
 
-void CGameContext::ConForceTeamBalance(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConForceTeamBalance([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 	if(pSelf->m_pController)
@@ -1414,7 +1414,7 @@ void CGameContext::ConRemoveVote(IConsole::IResult *pResult, void *pUserData)
 	pSelf->m_NumVoteOptions = NumVoteOptions;
 }
 
-void CGameContext::ConClearVotes(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConClearVotes([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 
@@ -1513,7 +1513,7 @@ void CGameContext::ConListMaps(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
-void CGameContext::ConListMapGroups(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConListMapGroups([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 

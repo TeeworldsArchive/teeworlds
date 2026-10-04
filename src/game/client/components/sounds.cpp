@@ -113,7 +113,7 @@ void CSounds::OnReset()
 	}
 }
 
-void CSounds::OnStateChange(int NewState, int OldState)
+void CSounds::OnStateChange(int NewState, [[maybe_unused]] int OldState)
 {
 	if(NewState == IClient::STATE_ONLINE || NewState == IClient::STATE_DEMOPLAYBACK)
 		OnReset();

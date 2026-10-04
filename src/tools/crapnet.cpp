@@ -2,7 +2,11 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
+#include <base/system/thread.h>
+#include <base/system/time.h>
+#include <base/system/net.h>
 
 struct CPacket
 {
@@ -205,7 +209,7 @@ void Run(unsigned short Port, NETADDR Dest)
 	}
 }
 
-int main(int argc, const char **argv)
+int main([[maybe_unused]] int argc, [[maybe_unused]] const char **argv)
 {
 	NETADDR Addr = {NETTYPE_IPV4, {127, 0, 0, 1}, 8303};
 	dbg_logger_stdout();

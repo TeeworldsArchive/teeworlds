@@ -202,7 +202,7 @@ float CScoreboard::RenderSpectators(float x, float y, float w)
 	return RectHeight;
 }
 
-float CScoreboard::RenderScoreboard(float x, float y, float w, int Align)
+float CScoreboard::RenderScoreboard(float x, float y, float w)
 {
 	// ready mode
 	const CGameClient::CSnapState &Snap = m_pClient->m_Snap;
@@ -530,7 +530,7 @@ void CScoreboard::OnRender()
 
 	if(m_pClient->m_Snap.m_pGameData)
 	{
-		float ScoreboardHeight = RenderScoreboard(Width / 2 - w / 2, y, w, 0);
+		float ScoreboardHeight = RenderScoreboard(Width / 2 - w / 2, y, w);
 		float SpectatorHeight = RenderSpectators(Width / 2 - w / 2, y + 3.0f + ScoreboardHeight, w);
 		RenderGoals(Width / 2 - w / 2, y + 3.0f + ScoreboardHeight, w);
 

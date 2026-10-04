@@ -5,6 +5,7 @@
 #define BASE_TL_STRING_H
 
 #include "allocator.h"
+#include <base/system/mem.h>
 
 template<class ALLOCATOR>
 class string_base : private ALLOCATOR

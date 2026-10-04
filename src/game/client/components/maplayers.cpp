@@ -556,9 +556,9 @@ void CMapLayers::RenderLayers(CLayers *pLayers, array<CEnvPoint> *pEnvPoints, in
 						CQuad *pQuads = (CQuad *) pLayers->Map()->GetDataSwapped(pQLayer->m_Data);
 
 						// Graphics()->BlendNone();
-						// RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_OPAQUE, EnvelopeEval, this);
+						// RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, EnvelopeEval, this);
 						Graphics()->BlendNormal();
-						RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_TRANSPARENT, EnvelopeEval, this);
+						RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, EnvelopeEval, this);
 					}
 				}
 			}

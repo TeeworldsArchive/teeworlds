@@ -4,7 +4,7 @@
 #ifndef ENGINE_KERNEL_H
 #define ENGINE_KERNEL_H
 
-#include <base/system.h>
+#include <base/system/io.h>
 
 class IKernel;
 class IInterface;

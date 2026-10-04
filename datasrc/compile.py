@@ -331,6 +331,7 @@ def EmitNetworkSource(net, header_name, namespace = None):
 
 	lines += ['void RegisterGameUuids(CUuidManager *pManager)']
 	lines += ['{']
+	lines += ['\t(void)pManager;']
 
 	for item in net.Objects + net.Messages:
 		if item.ex is not None:

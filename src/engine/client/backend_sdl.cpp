@@ -2,6 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/detect.h>
+#include <base/system/thread.h>
+#include <base/system/aio.h>
 #include <base/tl/threading.h>
 
 #include <engine/storage.h>
@@ -569,7 +571,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Init(const CInitCommand *pCommand)
 	glDepthMask(0);
 }
 
-void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const CGLShutdownCommand *pCommand)
+void CCommandProcessorFragment_OpenGL::Cmd_Shutdown([[maybe_unused]] const CGLShutdownCommand *pCommand)
 {
 	glBindVertexArray(0);
 	glDeleteBuffers(1, &m_PrimitiveDrawBufferID);
@@ -815,7 +817,7 @@ void CCommandProcessorFragment_SDL::Cmd_Init(const CInitCommand *pCommand)
 	SDL_GL_MakeCurrent(m_pWindow, m_GLContext);
 }
 
-void CCommandProcessorFragment_SDL::Cmd_Shutdown(const CShutdownCommand *pCommand)
+void CCommandProcessorFragment_SDL::Cmd_Shutdown([[maybe_unused]] const CShutdownCommand *pCommand)
 {
 	SDL_GL_MakeCurrent(NULL, NULL);
 }
@@ -1041,7 +1043,7 @@ int CGraphicsBackend_SDL::GetWindowScreen()
 	return SDL_GetDisplayForWindow(m_pWindow);
 }
 
-int CGraphicsBackend_SDL::GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen)
+int CGraphicsBackend_SDL::GetVideoModes(CVideoMode *pModes, int MaxModes, [[maybe_unused]] int Screen)
 {
 	SDL_DisplayMode **ppModes;
 	int NumModes;

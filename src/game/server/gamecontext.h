@@ -5,6 +5,7 @@
 #define GAME_SERVER_GAMECONTEXT_H
 
 #include <base/tl/sorted_array.h>
+#include <base/system/time.h>
 
 #include <engine/console.h>
 #include <engine/server.h>

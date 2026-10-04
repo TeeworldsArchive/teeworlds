@@ -5,6 +5,7 @@
 #define ENGINE_CLIENT_TEXTRENDER_H
 
 #include <base/tl/hashtable.h>
+#include <base/system/time.h>
 #include <base/vmath.h>
 #include <engine/textrender.h>
 
