@@ -16,21 +16,21 @@ class CMap : public IEngineMap
 public:
 	CMap() {}
 
-	virtual int GetDataSize(int Index) { return m_DataFile.GetDataSize(Index); }
-	virtual void *GetData(int Index) { return m_DataFile.GetData(Index); }
-	virtual void *GetDataSwapped(int Index) { return m_DataFile.GetDataSwapped(Index); }
-	virtual void UnloadData(int Index) { m_DataFile.UnloadData(Index); }
-	virtual void *GetItem(int Index, int *pType, int *pID) { return m_DataFile.GetItem(Index, pType, pID); }
-	virtual void GetType(int Type, int *pStart, int *pNum) { m_DataFile.GetType(Type, pStart, pNum); }
-	virtual void *FindItem(int Type, int ID) { return m_DataFile.FindItem(Type, ID); }
-	virtual int NumItems() { return m_DataFile.NumItems(); }
+	virtual int GetDataSize(int Index) override { return m_DataFile.GetDataSize(Index); }
+	virtual void *GetData(int Index) override { return m_DataFile.GetData(Index); }
+	virtual void *GetDataSwapped(int Index) override { return m_DataFile.GetDataSwapped(Index); }
+	virtual void UnloadData(int Index) override { m_DataFile.UnloadData(Index); }
+	virtual void *GetItem(int Index, int *pType, int *pID) override { return m_DataFile.GetItem(Index, pType, pID); }
+	virtual void GetType(int Type, int *pStart, int *pNum) override { m_DataFile.GetType(Type, pStart, pNum); }
+	virtual void *FindItem(int Type, int ID) override { return m_DataFile.FindItem(Type, ID); }
+	virtual int NumItems() override { return m_DataFile.NumItems(); }
 
-	virtual void Unload()
+	virtual void Unload() override
 	{
 		m_DataFile.Close();
 	}
 
-	virtual bool Load(const char *pMapName, IStorage *pStorage)
+	virtual bool Load(const char *pMapName, IStorage *pStorage) override
 	{
 		if(!pStorage)
 			pStorage = Kernel()->RequestInterface<IStorage>();
@@ -95,17 +95,17 @@ public:
 		return true;
 	}
 
-	virtual bool IsLoaded()
+	virtual bool IsLoaded() override
 	{
 		return m_DataFile.IsOpen();
 	}
 
-	virtual SHA256_DIGEST Sha256()
+	virtual SHA256_DIGEST Sha256() override
 	{
 		return m_DataFile.Sha256();
 	}
 
-	virtual unsigned Crc()
+	virtual unsigned Crc() override
 	{
 		return m_DataFile.Crc();
 	}

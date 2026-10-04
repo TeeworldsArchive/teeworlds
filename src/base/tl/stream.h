@@ -34,12 +34,12 @@ public:
 		io_close(file);
 	}
 
-	virtual unsigned write(const unsigned char *buffer, unsigned size)
+	virtual unsigned write(const unsigned char *buffer, unsigned size) override
 	{
 		return io_write(file, buffer, size);
 	}
 
-	virtual unsigned write_newline()
+	virtual unsigned write_newline() override
 	{
 		return io_write_newline(file);
 	}
@@ -57,7 +57,7 @@ public:
 		end = start + size;
 	}
 
-	virtual unsigned write(const unsigned char *buffer, unsigned size)
+	virtual unsigned write(const unsigned char *buffer, unsigned size) override
 	{
 		if(start + size > end)
 			return 0;
@@ -65,7 +65,7 @@ public:
 		return size;
 	}
 
-	virtual unsigned write_newline()
+	virtual unsigned write_newline() override
 	{
 		if(start >= end)
 			return 0;
@@ -87,7 +87,7 @@ public:
 		mem_buffer = buffer;
 	}
 
-	virtual unsigned write(const unsigned char *buffer, unsigned size)
+	virtual unsigned write(const unsigned char *buffer, unsigned size) override
 	{
 		const int start = mem_buffer->size();
 		// append() grows geometrically; set_size() reallocates and copies the
@@ -97,7 +97,7 @@ public:
 		return stream.write(buffer, size);
 	}
 
-	virtual unsigned write_newline()
+	virtual unsigned write_newline() override
 	{
 		return write((const unsigned char *) ("\n"), 1);
 	}

@@ -59,9 +59,9 @@ class CInfoMessages : public CComponent
 	void RenderFinishMsg(CInfoMsg *pInfoMsg, float x, float y) const;
 
 public:
-	virtual void OnReset();
-	virtual void OnRender();
-	virtual void OnMessage(int MsgType, void *pRawMsg);
+	virtual void OnReset() override;
+	virtual void OnRender() override;
+	virtual void OnMessage(int MsgType, void *pRawMsg) override;
 };
 
 #endif

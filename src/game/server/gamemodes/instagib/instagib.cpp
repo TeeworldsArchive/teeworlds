@@ -19,25 +19,25 @@
 			m_MaxPlayerSlots = MAX_CLIENTS; \
 		} \
 \
-		virtual void OnCharacterSpawn(CCharacter *pChr) \
+		virtual void OnCharacterSpawn(CCharacter *pChr) override \
 		{ \
 			IGameController::OnCharacterSpawn(pChr); \
 			SetBasicWeapon(pChr); \
 		} \
 \
-		virtual int OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int Weapon) \
+		virtual int OnCharacterFireWeapon(CCharacter *pChr, vec2 Direction, int Weapon) override \
 		{ \
 			return CInstaCore::OnCharacterFireWeapon(pChr, Direction, Weapon); \
 		} \
 \
-		virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const \
+		virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const override \
 		{ \
 			if(Damage < INSTA_MAGIC_MIN_DAMAGE || ClientID1 == ClientID2) \
 				return true; \
 			return IGameController::IsFriendlyFire(ClientID1, ClientID2, Damage); \
 		} \
 \
-		virtual bool IsFriendlyTeamFire(int Team1, int Team2, int Damage) const \
+		virtual bool IsFriendlyTeamFire(int Team1, int Team2, int Damage) const override \
 		{ \
 			if(Damage < INSTA_MAGIC_MIN_DAMAGE || Team1 == Team2) \
 				return true; \

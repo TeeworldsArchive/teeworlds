@@ -13,10 +13,10 @@ class CPickup : public CEntity
 public:
 	CPickup(CGameWorld *pGameWorld, int Type, vec2 Pos);
 
-	virtual void Reset();
-	virtual void Tick();
-	virtual void TickPaused();
-	virtual void Snap(int SnappingClient);
+	virtual void Reset() override;
+	virtual void Tick() override;
+	virtual void TickPaused() override;
+	virtual void Snap(int SnappingClient) override;
 
 private:
 	int m_Type;

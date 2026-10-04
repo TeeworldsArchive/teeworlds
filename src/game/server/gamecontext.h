@@ -212,40 +212,40 @@ public:
 	void SwapTeams();
 
 	// engine events
-	virtual void OnInit();
-	virtual void OnConsoleInit();
-	virtual void OnShutdown();
+	virtual void OnInit() override;
+	virtual void OnConsoleInit() override;
+	virtual void OnShutdown() override;
 
-	virtual void OnTick();
-	virtual void OnPreSnap();
-	virtual void OnSnap(int ClientID);
-	virtual void OnPostSnap();
+	virtual void OnTick() override;
+	virtual void OnPreSnap() override;
+	virtual void OnSnap(int ClientID) override;
+	virtual void OnPostSnap() override;
 
-	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID);
-	virtual void OnDemoRecorderStart();
+	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID) override;
+	virtual void OnDemoRecorderStart() override;
 
-	virtual void OnClientConnected(int ClientID, bool AsSpec) { OnClientConnected(ClientID, false, AsSpec); }
+	virtual void OnClientConnected(int ClientID, bool AsSpec) override { OnClientConnected(ClientID, false, AsSpec); }
 	void OnClientConnected(int ClientID, bool Dummy, bool AsSpec);
 	void OnClientTeamChange(int ClientID);
-	virtual void OnClientEnter(int ClientID);
-	virtual void OnClientDrop(int ClientID, const char *pReason);
-	virtual void OnClientDirectInput(int ClientID, void *pInput);
-	virtual void OnClientPredictedInput(int ClientID, void *pInput);
+	virtual void OnClientEnter(int ClientID) override;
+	virtual void OnClientDrop(int ClientID, const char *pReason) override;
+	virtual void OnClientDirectInput(int ClientID, void *pInput) override;
+	virtual void OnClientPredictedInput(int ClientID, void *pInput) override;
 
-	virtual bool IsClientBot(int ClientID) const;
-	virtual bool IsClientReady(int ClientID) const;
-	virtual bool IsClientPlayer(int ClientID) const;
-	virtual bool IsClientSpectator(int ClientID) const;
+	virtual bool IsClientBot(int ClientID) const override;
+	virtual bool IsClientReady(int ClientID) const override;
+	virtual bool IsClientPlayer(int ClientID) const override;
+	virtual bool IsClientSpectator(int ClientID) const override;
 
-	virtual const char *GameType() const;
-	virtual const char *Version() const;
-	virtual const char *NetVersion() const;
-	virtual const char *NetVersionHashUsed() const;
-	virtual const char *NetVersionHashReal() const;
+	virtual const char *GameType() const override;
+	virtual const char *Version() const override;
+	virtual const char *NetVersion() const override;
+	virtual const char *NetVersionHashUsed() const override;
+	virtual const char *NetVersionHashReal() const override;
 
-	virtual bool TimeScore() const;
+	virtual bool TimeScore() const override;
 
-	virtual int GetMaxPlayerSlots();
+	virtual int GetMaxPlayerSlots() override;
 };
 
 inline CClientMask CmaskAll() { return CClientMask::All(); }

@@ -40,7 +40,7 @@ public:
 	};
 
 	CCamera();
-	virtual void OnRender();
+	virtual void OnRender() override;
 
 	void ChangePosition(int PositionNumber);
 	int GetCurrentPosition() const { return m_CurrentPosition; }
@@ -75,8 +75,8 @@ public:
 
 	static void ConSetPosition(IConsole::IResult *pResult, void *pUserData);
 
-	virtual void OnConsoleInit();
-	virtual void OnStateChange(int NewState, int OldState);
+	virtual void OnConsoleInit() override;
+	virtual void OnStateChange(int NewState, int OldState) override;
 
 private:
 	enum

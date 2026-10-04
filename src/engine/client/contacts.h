@@ -36,15 +36,15 @@ class CFriends : public IFriends, public IContactList
 public:
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
 
-	void Init();
+	virtual void Init() override;
 
 	// bridges
-	inline virtual int NumFriends() const { return IContactList::NumContacts(); }
-	inline virtual const CContactInfo *GetFriend(int Index) const { return IContactList::GetContact(Index); }
-	inline virtual int GetFriendState(const char *pName, const char *pClan) const { return IContactList::GetContactState(pName, pClan); }
-	inline virtual bool IsFriend(const char *pName, const char *pClan, bool PlayersOnly) const { return IContactList::IsContact(pName, pClan, PlayersOnly); }
-	inline virtual void AddFriend(const char *pName, const char *pClan) { IContactList::AddContact(pName, pClan); }
-	inline virtual void RemoveFriend(const char *pName, const char *pClan) { IContactList::RemoveContact(pName, pClan); }
+	inline virtual int NumFriends() const override { return IContactList::NumContacts(); }
+	inline virtual const CContactInfo *GetFriend(int Index) const override { return IContactList::GetContact(Index); }
+	inline virtual int GetFriendState(const char *pName, const char *pClan) const override { return IContactList::GetContactState(pName, pClan); }
+	inline virtual bool IsFriend(const char *pName, const char *pClan, bool PlayersOnly) const override { return IContactList::IsContact(pName, pClan, PlayersOnly); }
+	inline virtual void AddFriend(const char *pName, const char *pClan) override { IContactList::AddContact(pName, pClan); }
+	inline virtual void RemoveFriend(const char *pName, const char *pClan) override { IContactList::RemoveContact(pName, pClan); }
 
 	static void ConAddFriend(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveFriend(IConsole::IResult *pResult, void *pUserData);
@@ -55,12 +55,12 @@ class CBlacklist : public IBlacklist, public IContactList
 public:
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
 
-	void Init();
+	virtual void Init() override;
 
 	// bridges
-	inline virtual bool IsIgnored(const char *pName, const char *pClan, bool PlayersOnly) const { return IContactList::IsContact(pName, pClan, PlayersOnly); }
-	inline virtual void AddIgnoredPlayer(const char *pName, const char *pClan) { IContactList::AddContact(pName, pClan); }
-	inline virtual void RemoveIgnoredPlayer(const char *pName, const char *pClan) { IContactList::RemoveContact(pName, pClan); }
+	inline virtual bool IsIgnored(const char *pName, const char *pClan, bool PlayersOnly) const override { return IContactList::IsContact(pName, pClan, PlayersOnly); }
+	inline virtual void AddIgnoredPlayer(const char *pName, const char *pClan) override { IContactList::AddContact(pName, pClan); }
+	inline virtual void RemoveIgnoredPlayer(const char *pName, const char *pClan) override { IContactList::RemoveContact(pName, pClan); }
 
 	static void ConAddIgnore(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveIgnore(IConsole::IResult *pResult, void *pUserData);

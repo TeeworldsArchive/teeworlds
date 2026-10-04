@@ -15,43 +15,43 @@ public:
 	IEngineGraphics *m_pGraphics;
 	IStorage *m_pStorage;
 
-	virtual int Init();
+	virtual int Init() override;
 	int InitAudioDevice(bool Reset);
 
-	int Update();
-	int Shutdown();
+	virtual int Update() override;
+	virtual int Shutdown() override;
 	int AllocID();
 
 	static void RateConvert(int SampleID);
 
-	virtual bool IsSoundEnabled() { return m_SoundEnabled != 0; }
+	virtual bool IsSoundEnabled() override { return m_SoundEnabled != 0; }
 
-	virtual CSampleHandle LoadOpusMemory(const char *pContext, const unsigned char *pData, int DataSize);
-	virtual CSampleHandle LoadOpus(const char *pFilename);
-	virtual bool UnloadSample(CSampleHandle *pSampleID);
+	virtual CSampleHandle LoadOpusMemory(const char *pContext, const unsigned char *pData, int DataSize) override;
+	virtual CSampleHandle LoadOpus(const char *pFilename) override;
+	virtual bool UnloadSample(CSampleHandle *pSampleID) override;
 
-	virtual void SetListenerPos(float x, float y);
-	virtual void SetChannelVolume(int ChannelID, float Vol);
-	virtual void SetChannelPan(int ChannelID, float Pan);
-	virtual void SetMaxDistance(float Distance);
+	virtual void SetListenerPos(float x, float y) override;
+	virtual void SetChannelVolume(int ChannelID, float Vol) override;
+	virtual void SetChannelPan(int ChannelID, float Pan) override;
+	virtual void SetMaxDistance(float Distance) override;
 
 	int Play(int ChannelID, CSampleHandle SampleID, float Volume, int Flags, float x, float y);
-	virtual int PlayAt(int ChannelID, CSampleHandle SampleID, float Volume, int Flags, float x, float y);
-	virtual int Play(int ChannelID, CSampleHandle SampleID, float Volume, int Flags);
-	virtual void Stop(CSampleHandle SampleID);
-	virtual void StopAll();
-	virtual bool IsPlaying(CSampleHandle SampleID);
+	virtual int PlayAt(int ChannelID, CSampleHandle SampleID, float Volume, int Flags, float x, float y) override;
+	virtual int Play(int ChannelID, CSampleHandle SampleID, float Volume, int Flags) override;
+	virtual void Stop(CSampleHandle SampleID) override;
+	virtual void StopAll() override;
+	virtual bool IsPlaying(CSampleHandle SampleID) override;
 
-	virtual void SetVoiceVolume(int VoiceID, float Volume);
-	virtual void SetVoiceFalloff(int VoiceID, float Falloff);
-	virtual void SetVoicePos(int VoiceID, float x, float y);
-	virtual void SetVoiceCircle(int VoiceID, float Radius);
-	virtual void SetVoiceRectangle(int VoiceID, float Width, float Height);
-	virtual void SetVoiceTimeOffset(int VoiceID, float Offset);
-	virtual void StopVoice(int VoiceID);
+	virtual void SetVoiceVolume(int VoiceID, float Volume) override;
+	virtual void SetVoiceFalloff(int VoiceID, float Falloff) override;
+	virtual void SetVoicePos(int VoiceID, float x, float y) override;
+	virtual void SetVoiceCircle(int VoiceID, float Radius) override;
+	virtual void SetVoiceRectangle(int VoiceID, float Width, float Height) override;
+	virtual void SetVoiceTimeOffset(int VoiceID, float Offset) override;
+	virtual void StopVoice(int VoiceID) override;
 
-	virtual void SwitchAudioDevice(int NewDeviceIndex);
-	virtual int GetAudioDevices(CAudioDevice *pDevices, int MaxDevices);
+	virtual void SwitchAudioDevice(int NewDeviceIndex) override;
+	virtual int GetAudioDevices(CAudioDevice *pDevices, int MaxDevices) override;
 };
 
 #endif

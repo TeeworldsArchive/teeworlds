@@ -11,8 +11,8 @@ public:
 	CGameControllerTDM(class CGameContext *pGameServer);
 
 	// event
-	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
-	virtual bool IsPureTuning() const { return true; }
+	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon) override;
+	virtual bool IsPureTuning() const override { return true; }
 };
 
 #endif

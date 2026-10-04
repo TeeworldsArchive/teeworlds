@@ -211,27 +211,27 @@ public:
 	CClient();
 
 	// ----- send functions -----
-	virtual int SendMsg(CMsgPacker *pMsg, int Flags);
+	virtual int SendMsg(CMsgPacker *pMsg, int Flags) override;
 
 	void SendInfo();
 	void SendEnterGame();
 	void SendReady();
 	void SendInput();
-	void SendRconAuth(const char *pName, const char *pPassword);
-	virtual void SendRcon(const char *pCmd);
+	virtual void SendRconAuth(const char *pName, const char *pPassword) override;
+	virtual void SendRcon(const char *pCmd) override;
 
-	virtual bool RconAuthed() const { return m_RconAuthed != 0; }
-	virtual bool UseTempRconCommands() const { return m_UseTempRconCommands != 0; }
+	virtual bool RconAuthed() const override { return m_RconAuthed != 0; }
+	virtual bool UseTempRconCommands() const override { return m_UseTempRconCommands != 0; }
 
-	virtual bool ConnectionProblems() const;
-	virtual int GetInputtimeMarginStabilityScore();
+	virtual bool ConnectionProblems() const override;
+	virtual int GetInputtimeMarginStabilityScore() override;
 
-	virtual bool SoundInitFailed() const { return m_SoundInitFailed; }
+	virtual bool SoundInitFailed() const override { return m_SoundInitFailed; }
 
 	// TODO: OPT: do this alot smarter!
-	virtual const int *GetInput(int Tick) const;
+	virtual const int *GetInput(int Tick) const override;
 
-	const char *LatestVersion() const;
+	virtual const char *LatestVersion() const override;
 	void VersionUpdate();
 
 	// ------ state handling -----
@@ -239,32 +239,32 @@ public:
 
 	// called when the map is loaded and we should init for a new round
 	void OnEnterGame();
-	virtual void EnterGame();
+	virtual void EnterGame() override;
 	void OnClientOnline();
 
-	virtual void Connect(const char *pAddress);
+	virtual void Connect(const char *pAddress) override;
 	void DisconnectWithReason(const char *pReason);
-	virtual void Disconnect();
-	const char *ServerAddress() const { return m_aServerAddressStr; }
+	virtual void Disconnect() override;
+	virtual const char *ServerAddress() const override { return m_aServerAddressStr; }
 	bool IsLegacyConnection() const { return m_LegacyConnection; }
 
-	virtual void GetServerInfo(CServerInfo *pServerInfo);
+	virtual void GetServerInfo(CServerInfo *pServerInfo) override;
 
 	// ---
 
-	const void *SnapGetItem(int SnapID, int Index, CSnapItem *pItem) const;
-	void SnapInvalidateItem(int SnapID, int Index);
-	const void *SnapFindItem(int SnapID, int Type, int ID) const;
-	int SnapNumItems(int SnapID) const;
-	void *SnapNewItem(int Type, int ID, int Size);
-	void SnapSetStaticsize(int ItemType, int Size);
+	virtual const void *SnapGetItem(int SnapID, int Index, CSnapItem *pItem) const override;
+	virtual void SnapInvalidateItem(int SnapID, int Index) override;
+	virtual const void *SnapFindItem(int SnapID, int Type, int ID) const override;
+	virtual int SnapNumItems(int SnapID) const override;
+	virtual void *SnapNewItem(int Type, int ID, int Size) override;
+	virtual void SnapSetStaticsize(int ItemType, int Size) override;
 
 	void Render();
 	void DebugRender();
 
-	virtual void Quit();
+	virtual void Quit() override;
 
-	virtual const char *ErrorString() const;
+	virtual const char *ErrorString() const override;
 
 	const char *LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc);
 	const char *LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc);
@@ -274,17 +274,17 @@ public:
 	void ProcessConnlessPacket(CNetChunk *pPacket);
 	void ProcessServerPacket(CNetChunk *pPacket);
 
-	const char *GetCurrentMapName() const { return m_aCurrentMap; }
-	const char *GetCurrentMapPath() const { return m_aCurrentMapPath; }
-	virtual void UnloadMap();
-	virtual const char *MapDownloadName() const { return m_aMapdownloadName; }
-	virtual int MapDownloadAmount() const { return m_MapdownloadAmount; }
-	virtual int MapDownloadTotalsize() const { return m_MapdownloadTotalsize; }
+	virtual const char *GetCurrentMapName() const override { return m_aCurrentMap; }
+	virtual const char *GetCurrentMapPath() const override { return m_aCurrentMapPath; }
+	virtual void UnloadMap() override;
+	virtual const char *MapDownloadName() const override { return m_aMapdownloadName; }
+	virtual int MapDownloadAmount() const override { return m_MapdownloadAmount; }
+	virtual int MapDownloadTotalsize() const override { return m_MapdownloadTotalsize; }
 
 	void PumpNetwork();
 
-	virtual void OnDemoPlayerSnapshot(void *pData, int Size);
-	virtual void OnDemoPlayerMessage(void *pData, int Size);
+	virtual void OnDemoPlayerSnapshot(void *pData, int Size) override;
+	virtual void OnDemoPlayerMessage(void *pData, int Size) override;
 
 	void Update();
 	void UpdateSteamPresence();
@@ -316,29 +316,29 @@ public:
 
 	void RegisterCommands();
 
-	const char *DemoPlayer_Play(const char *pFilename, int StorageType);
-	void DemoRecorder_Start(const char *pFilename, bool WithTimestamp);
-	void DemoRecorder_HandleAutoStart();
-	void DemoRecorder_Stop(bool ErrorIfNotRecording = false);
+	virtual const char *DemoPlayer_Play(const char *pFilename, int StorageType) override;
+	virtual void DemoRecorder_Start(const char *pFilename, bool WithTimestamp) override;
+	virtual void DemoRecorder_HandleAutoStart() override;
+	virtual void DemoRecorder_Stop(bool ErrorIfNotRecording = false) override;
 	void DemoRecorder_AddDemoMarker();
-	void RecordGameMessage(bool State) { m_RecordGameMessage = State; }
+	virtual void RecordGameMessage(bool State) override { m_RecordGameMessage = State; }
 
-	void AutoScreenshot_Start();
-	void AutoStatScreenshot_Start();
+	virtual void AutoScreenshot_Start() override;
+	virtual void AutoStatScreenshot_Start() override;
 	void AutoScreenshot_Cleanup();
 
-	void ServerBrowserUpdate();
+	virtual void ServerBrowserUpdate() override;
 
 	// gfx
-	void SwitchWindowScreen(int Index);
-	bool ToggleFullscreen();
-	void ToggleWindowBordered();
-	void ToggleWindowVSync();
+	virtual void SwitchWindowScreen(int Index) override;
+	virtual bool ToggleFullscreen() override;
+	virtual void ToggleWindowBordered() override;
+	virtual void ToggleWindowVSync() override;
 
-	virtual void OpenURL(const char *pUrl);
-	virtual void OpenLocalServer(int NumParams, ...);
-	virtual void CloseLocalServer();
-	virtual bool IsLocalServerRunning();
+	virtual void OpenURL(const char *pUrl) override;
+	virtual void OpenLocalServer(int NumParams, ...) override;
+	virtual void CloseLocalServer() override;
+	virtual bool IsLocalServerRunning() override;
 	void CheckLocalServer();
 };
 #endif

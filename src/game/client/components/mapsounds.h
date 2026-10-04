@@ -38,10 +38,10 @@ public:
 	void Play(int Channel, int SoundId);
 	void PlayAt(int Channel, int SoundId, vec2 Position);
 
-	virtual void OnMapLoad();
-	virtual void OnMapUnload();
-	virtual void OnRender();
-	virtual void OnStateChange(int NewState, int OldState);
+	virtual void OnMapLoad() override;
+	virtual void OnMapUnload() override;
+	virtual void OnRender() override;
+	virtual void OnStateChange(int NewState, int OldState) override;
 };
 
 #endif // GAME_CLIENT_COMPONENTS_MAPSOUNDS_H

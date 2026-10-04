@@ -67,18 +67,18 @@ public:
 	};
 
 	CMapLayers(int Type);
-	virtual void OnStateChange(int NewState, int OldState);
-	virtual int GetInitAmount() const;
-	virtual void OnInit();
-	virtual void OnShutdown();
-	virtual void OnRender();
-	virtual void OnMapLoad();
-	virtual void OnMapUnload();
+	virtual void OnStateChange(int NewState, int OldState) override;
+	virtual int GetInitAmount() const override;
+	virtual void OnInit() override;
+	virtual void OnShutdown() override;
+	virtual void OnRender() override;
+	virtual void OnMapLoad() override;
+	virtual void OnMapUnload() override;
 
 	static void ConchainBackgroundMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainTileBuffering(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
-	virtual void OnConsoleInit();
+	virtual void OnConsoleInit() override;
 
 	void BackgroundMapUpdate();
 

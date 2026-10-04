@@ -9,25 +9,25 @@
 class CGameControllerCTF : public IGameController
 {
 	// balancing
-	virtual bool CanBeMovedOnBalance(int ClientID) const;
+	virtual bool CanBeMovedOnBalance(int ClientID) const override;
 
 	// game
 	class CFlag *m_apFlags[2];
 
-	virtual bool DoWincheckMatch();
+	virtual bool DoWincheckMatch() override;
 
 public:
 	CGameControllerCTF(class CGameContext *pGameServer);
 
 	// event
-	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
-	virtual void OnFlagReturn(class CFlag *pFlag);
-	virtual bool OnEntity(int Index, vec2 Pos);
+	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon) override;
+	virtual void OnFlagReturn(class CFlag *pFlag) override;
+	virtual bool OnEntity(int Index, vec2 Pos) override;
 
 	// general
-	virtual void Snap(int SnappingClient);
-	virtual void Tick();
-	virtual bool IsPureTuning() const { return true; }
+	virtual void Snap(int SnappingClient) override;
+	virtual void Tick() override;
+	virtual bool IsPureTuning() const override { return true; }
 };
 
 #endif

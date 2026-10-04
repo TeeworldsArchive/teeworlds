@@ -41,11 +41,11 @@ public:
 		CHN_MAPSOUND,
 	};
 
-	virtual int GetInitAmount() const;
-	virtual void OnInit();
-	virtual void OnReset();
-	virtual void OnStateChange(int NewState, int OldState);
-	virtual void OnRender();
+	virtual int GetInitAmount() const override;
+	virtual void OnInit() override;
+	virtual void OnReset() override;
+	virtual void OnStateChange(int NewState, int OldState) override;
+	virtual void OnRender() override;
 
 	void ClearQueue();
 	void EnqueueSample(int Channel, ISound::CSampleHandle Sample);

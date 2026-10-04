@@ -55,8 +55,8 @@ public:
 
 	void InitServerBan(class IConsole *pConsole, class IStorage *pStorage, class CServer *pServer);
 
-	virtual int BanAddr(const NETADDR *pAddr, int Seconds, const char *pReason);
-	virtual int BanRange(const CNetRange *pRange, int Seconds, const char *pReason);
+	virtual int BanAddr(const NETADDR *pAddr, int Seconds, const char *pReason) override;
+	virtual int BanRange(const CNetRange *pRange, int Seconds, const char *pReason) override;
 
 	static void ConBanExt(class IConsole::IResult *pResult, void *pUser);
 };
@@ -207,15 +207,15 @@ public:
 
 	CServer();
 
-	virtual void SetClientName(int ClientID, const char *pName);
-	virtual void SetClientClan(int ClientID, char const *pClan);
-	virtual void SetClientCountry(int ClientID, int Country);
-	virtual void SetClientScore(int ClientID, int Score);
+	virtual void SetClientName(int ClientID, const char *pName) override;
+	virtual void SetClientClan(int ClientID, char const *pClan) override;
+	virtual void SetClientCountry(int ClientID, int Country) override;
+	virtual void SetClientScore(int ClientID, int Score) override;
 
-	void Kick(int ClientID, const char *pReason);
+	virtual void Kick(int ClientID, const char *pReason) override;
 
-	void DemoRecorder_HandleAutoStart();
-	bool DemoRecorder_IsRecording();
+	virtual void DemoRecorder_HandleAutoStart() override;
+	virtual bool DemoRecorder_IsRecording() override;
 
 	int64 TickStartTime(int Tick);
 
@@ -223,18 +223,18 @@ public:
 
 	void InitRconPasswordIfUnset();
 
-	void SetRconCID(int ClientID);
-	bool IsAuthed(int ClientID) const;
-	bool IsBanned(int ClientID);
-	int GetClientInfo(int ClientID, CClientInfo *pInfo) const;
-	void GetClientAddr(int ClientID, char *pAddrStr, int Size) const;
-	int GetClientVersion(int ClientID) const;
-	const char *ClientName(int ClientID) const;
-	const char *ClientClan(int ClientID) const;
-	int ClientCountry(int ClientID) const;
-	bool ClientIngame(int ClientID) const;
+	virtual void SetRconCID(int ClientID) override;
+	virtual bool IsAuthed(int ClientID) const override;
+	virtual bool IsBanned(int ClientID) override;
+	virtual int GetClientInfo(int ClientID, CClientInfo *pInfo) const override;
+	virtual void GetClientAddr(int ClientID, char *pAddrStr, int Size) const override;
+	virtual int GetClientVersion(int ClientID) const override;
+	virtual const char *ClientName(int ClientID) const override;
+	virtual const char *ClientClan(int ClientID) const override;
+	virtual int ClientCountry(int ClientID) const override;
+	virtual bool ClientIngame(int ClientID) const override;
 
-	virtual int SendMsg(CMsgPacker *pMsg, int Flags, int ClientID);
+	virtual int SendMsg(CMsgPacker *pMsg, int Flags, int ClientID) override;
 
 	void DoSnapshot();
 
@@ -265,7 +265,7 @@ public:
 
 	void PumpNetwork();
 
-	virtual void ChangeMap(const char *pMap);
+	virtual void ChangeMap(const char *pMap) override;
 	const char *GetMapName();
 	int LoadMap(const char *pMapName);
 
@@ -296,10 +296,10 @@ public:
 
 	void RegisterCommands();
 
-	virtual int SnapNewID();
-	virtual void SnapFreeID(int ID);
-	virtual void *SnapNewItem(int Type, int ID, int Size);
-	void SnapSetStaticsize(int ItemType, int Size);
+	virtual int SnapNewID() override;
+	virtual void SnapFreeID(int ID) override;
+	virtual void *SnapNewItem(int Type, int ID, int Size) override;
+	virtual void SnapSetStaticsize(int ItemType, int Size) override;
 };
 
 #endif

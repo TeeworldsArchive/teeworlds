@@ -11,7 +11,7 @@ class CDebugHud : public CComponent
 	void RenderTuning();
 
 public:
-	virtual void OnRender();
+	virtual void OnRender() override;
 };
 
 #endif

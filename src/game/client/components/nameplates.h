@@ -11,7 +11,7 @@ class CNamePlates : public CComponent
 		int ClientID) const;
 
 public:
-	virtual void OnRender();
+	virtual void OnRender() override;
 };
 
 #endif

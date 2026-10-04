@@ -18,10 +18,10 @@ public:
 	bool IsActive();
 	const char *GetMotd() const { return m_aServerMotd; }
 
-	virtual void OnRender();
-	virtual void OnStateChange(int NewState, int OldState);
-	virtual void OnMessage(int MsgType, void *pRawMsg);
-	virtual bool OnInput(IInput::CEvent Event);
+	virtual void OnRender() override;
+	virtual void OnStateChange(int NewState, int OldState) override;
+	virtual void OnMessage(int MsgType, void *pRawMsg) override;
+	virtual bool OnInput(IInput::CEvent Event) override;
 };
 
 #endif

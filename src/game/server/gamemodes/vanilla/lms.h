@@ -11,11 +11,11 @@ public:
 	CGameControllerLMS(class CGameContext *pGameServer);
 
 	// event
-	virtual void OnCharacterSpawn(class CCharacter *pChr);
+	virtual void OnCharacterSpawn(class CCharacter *pChr) override;
 	// game
-	virtual void DoWincheckRound();
-	virtual bool IsPureTuning() const { return true; }
-	virtual bool NoEntitiesInMap() const { return true; }
+	virtual void DoWincheckRound() override;
+	virtual bool IsPureTuning() const override { return true; }
+	virtual bool NoEntitiesInMap() const override { return true; }
 };
 
 #endif

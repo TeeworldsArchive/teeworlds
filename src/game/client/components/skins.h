@@ -57,8 +57,8 @@ public:
 	IGraphics::CTextureHandle m_XmasHatTexture;
 	IGraphics::CTextureHandle m_BotTexture;
 
-	int GetInitAmount() const;
-	void OnInit();
+	virtual int GetInitAmount() const override;
+	virtual void OnInit() override;
 
 	void AddSkin(const char *pSkinName);
 	void RemoveSkin(const CSkin *pSkin);

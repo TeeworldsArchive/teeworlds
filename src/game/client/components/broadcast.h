@@ -43,9 +43,9 @@ public:
 	void ToggleMuteServerBroadcast() { m_MuteServerBroadcast = !m_MuteServerBroadcast; }
 	bool IsMuteServerBroadcast() const { return m_MuteServerBroadcast; }
 
-	virtual void OnReset();
-	virtual void OnMessage(int MsgType, void *pRawMsg);
-	virtual void OnRender();
+	virtual void OnReset() override;
+	virtual void OnMessage(int MsgType, void *pRawMsg) override;
+	virtual void OnRender() override;
 };
 
 #endif

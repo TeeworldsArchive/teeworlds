@@ -40,8 +40,8 @@ public:
 	IGraphics::CTextureHandle Get(int Index, bool IsQuads, int MapType = -1) const;
 	int Num() const;
 
-	virtual void OnMapLoad();
-	virtual void OnMapUnload();
+	virtual void OnMapLoad() override;
+	virtual void OnMapUnload() override;
 	void OnMenuMapLoad(class IMap *pMap, int MapType = MAP_TYPE_MENU);
 	void UnloadMap(int MapType);
 

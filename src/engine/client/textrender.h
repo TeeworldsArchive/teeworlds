@@ -443,49 +443,49 @@ class CTextRender : public IEngineTextRender
 public:
 	CTextRender();
 
-	void Init();
-	void Update();
-	void Shutdown();
+	virtual void Init() override;
+	virtual void Update() override;
+	virtual void Shutdown() override;
 
-	void LoadFonts(IStorage *pStorage, IConsole *pConsole);
-	void SetFontLanguageVariant(const char *pLanguageFile);
+	virtual void LoadFonts(IStorage *pStorage, IConsole *pConsole) override;
+	virtual void SetFontLanguageVariant(const char *pLanguageFile) override;
 	// applies m_aVariantFamilyName to the glyph map and prebakes ASCII
 	void ApplyFontLanguageVariant();
 
 	// loads local fonts and starts the downloads in fonts/index.json; false while one is in flight
-	bool LoadFontsAsync(IStorage *pStorage, IConsole *pConsole);
+	virtual bool LoadFontsAsync(IStorage *pStorage, IConsole *pConsole) override;
 	// advances the downloads and loads whatever finished; never blocks
-	void PollFontDownloads(IStorage *pStorage, IConsole *pConsole);
+	virtual void PollFontDownloads(IStorage *pStorage, IConsole *pConsole) override;
 	// one last poll so results arriving at the deadline are still picked up
-	void FinishFontDownloads(IStorage *pStorage, IConsole *pConsole);
-	bool FontsPending() const;
-	float FontDownloadProgress() const;
+	virtual void FinishFontDownloads(IStorage *pStorage, IConsole *pConsole) override;
+	virtual bool FontsPending() const override;
+	virtual float FontDownloadProgress() const override;
 
 	// loads every font in the parsed index and returns the number of faces added;
 	// AlreadyLoaded marks the entries to skip
 	int LoadFontFiles(IStorage *pStorage, IConsole *pConsole, const json_value *pJsonData, bool AlreadyLoaded[MAX_FACES]);
 
-	void TextColor(const vec4 &Color) { m_TextColor = Color; }
-	void TextSecondaryColor(const vec4 &Color) { m_TextSecondaryColor = Color; }
+	virtual void TextColor(const vec4 &Color) override { m_TextColor = Color; }
+	virtual void TextSecondaryColor(const vec4 &Color) override { m_TextSecondaryColor = Color; }
 
-	vec4 GetColor() const { return m_TextColor; }
-	vec4 GetSecondaryColor() const { return m_TextSecondaryColor; }
+	virtual vec4 GetColor() const override { return m_TextColor; }
+	virtual vec4 GetSecondaryColor() const override { return m_TextSecondaryColor; }
 
-	float TextWidth(float FontSize, const char *pText, int Length);
-	void TextDeferred(CTextCursor *pCursor, const char *pText, int Length);
-	void TextDeferredCached(CTextCursor *pCursor, const char *pText, int Length);
-	void TextNewline(CTextCursor *pCursor);
-	void TextAdvance(CTextCursor *pCursor, float AdvanceX);
-	void TextPlain(CTextCursor *pCursor, const char *pText, int Length);
-	void TextOutlined(CTextCursor *pCursor, const char *pText, int Length);
-	void TextShadowed(CTextCursor *pCursor, const char *pText, int Length, vec2 ShadowOffset);
+	virtual float TextWidth(float FontSize, const char *pText, int Length) override;
+	virtual void TextDeferred(CTextCursor *pCursor, const char *pText, int Length) override;
+	virtual void TextDeferredCached(CTextCursor *pCursor, const char *pText, int Length) override;
+	virtual void TextNewline(CTextCursor *pCursor) override;
+	virtual void TextAdvance(CTextCursor *pCursor, float AdvanceX) override;
+	virtual void TextPlain(CTextCursor *pCursor, const char *pText, int Length) override;
+	virtual void TextOutlined(CTextCursor *pCursor, const char *pText, int Length) override;
+	virtual void TextShadowed(CTextCursor *pCursor, const char *pText, int Length, vec2 ShadowOffset) override;
 
-	void DrawTextPlain(CTextCursor *pCursor, float Alpha, int StartGlyph, int NumGlyphs);
-	void DrawTextOutlined(CTextCursor *pCursor, float Alpha, int StartGlyph, int NumGlyphs);
-	void DrawTextShadowed(CTextCursor *pCursor, vec2 ShadowOffset, float Alpha, int StartGlyph, int NumGlyphs);
+	virtual void DrawTextPlain(CTextCursor *pCursor, float Alpha, int StartGlyph, int NumGlyphs) override;
+	virtual void DrawTextOutlined(CTextCursor *pCursor, float Alpha, int StartGlyph, int NumGlyphs) override;
+	virtual void DrawTextShadowed(CTextCursor *pCursor, vec2 ShadowOffset, float Alpha, int StartGlyph, int NumGlyphs) override;
 
-	int CharToGlyph(CTextCursor *pCursor, int NumChars, float *pLineWidth = 0);
-	vec2 CaretPosition(CTextCursor *pCursor, int NumChars);
+	virtual int CharToGlyph(CTextCursor *pCursor, int NumChars, float *pLineWidth = 0) override;
+	virtual vec2 CaretPosition(CTextCursor *pCursor, int NumChars) override;
 };
 
 #endif

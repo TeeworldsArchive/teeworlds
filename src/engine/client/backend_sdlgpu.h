@@ -220,7 +220,7 @@ class CCommandProcessor_SDL_GPU : public CCommandProcessor_SDL
 	CCommandProcessorFragment_SDLGPU m_SDLGPU;
 
 protected:
-	virtual bool RunBackendCommand(CCommandBuffer::CCommand *pCommand);
+	virtual bool RunBackendCommand(CCommandBuffer::CCommand *pCommand) override;
 };
 
 // graphics backend implemented with SDL_GPU
@@ -236,8 +236,8 @@ class CGraphicsBackend_SDL_GPU : public CGraphicsBackend_SDL
 
 public:
 	CGraphicsBackend_SDL_GPU(class IStorage *pStorage);
-	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight);
-	virtual int Shutdown();
+	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight) override;
+	virtual int Shutdown() override;
 };
 
 #endif // ENGINE_CLIENT_BACKEND_SDLGPU_H

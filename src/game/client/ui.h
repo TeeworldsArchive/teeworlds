@@ -18,11 +18,11 @@ public:
 class CLinearScrollbarScale : public IScrollbarScale
 {
 public:
-	float ToRelative(int AbsoluteValue, int Min, int Max) const
+	virtual float ToRelative(int AbsoluteValue, int Min, int Max) const override
 	{
 		return (AbsoluteValue - Min) / (float) (Max - Min);
 	}
-	int ToAbsolute(float RelativeValue, int Min, int Max) const
+	virtual int ToAbsolute(float RelativeValue, int Min, int Max) const override
 	{
 		return round_to_int(RelativeValue * (Max - Min) + Min + 0.1f);
 	}
@@ -37,7 +37,7 @@ public:
 	{
 		m_MinAdjustment = maximum(MinAdjustment, 1); // must be at least 1 to support Min == 0 with logarithm
 	}
-	float ToRelative(int AbsoluteValue, int Min, int Max) const
+	virtual float ToRelative(int AbsoluteValue, int Min, int Max) const override
 	{
 		if(Min < m_MinAdjustment)
 		{
@@ -47,7 +47,7 @@ public:
 		}
 		return (log(AbsoluteValue) - log(Min)) / (float) (log(Max) - log(Min));
 	}
-	int ToAbsolute(float RelativeValue, int Min, int Max) const
+	virtual int ToAbsolute(float RelativeValue, int Min, int Max) const override
 	{
 		int ResultAdjustment = 0;
 		if(Min < m_MinAdjustment)
@@ -68,7 +68,7 @@ public:
 static class CDarkButtonColorFunction : public IButtonColorFunction
 {
 public:
-	vec4 GetColor(bool Active, bool Hovered) const
+	virtual vec4 GetColor(bool Active, bool Hovered) const override
 	{
 		if(Active)
 			return vec4(0.15f, 0.15f, 0.15f, 0.25f);
@@ -80,7 +80,7 @@ public:
 static class CLightButtonColorFunction : public IButtonColorFunction
 {
 public:
-	vec4 GetColor(bool Active, bool Hovered) const
+	virtual vec4 GetColor(bool Active, bool Hovered) const override
 	{
 		if(Active)
 			return vec4(1.0f, 1.0f, 1.0f, 0.4f);
@@ -92,7 +92,7 @@ public:
 static class CScrollBarColorFunction : public IButtonColorFunction
 {
 public:
-	vec4 GetColor(bool Active, bool Hovered) const
+	virtual vec4 GetColor(bool Active, bool Hovered) const override
 	{
 		if(Active)
 			return vec4(0.9f, 0.9f, 0.9f, 1.0f);

@@ -51,7 +51,7 @@ public:
 		m_pStorage = 0;
 	}
 
-	virtual int RefreshAddresses(int Nettype)
+	virtual int RefreshAddresses(int Nettype) override
 	{
 		if(m_State != STATE_INIT && m_State != STATE_READY)
 			return -1;
@@ -69,7 +69,7 @@ public:
 		return 0;
 	}
 
-	virtual void Update()
+	virtual void Update() override
 	{
 		// check if we need to update
 		if(m_State != STATE_UPDATE)
@@ -100,40 +100,40 @@ public:
 		}
 	}
 
-	virtual bool IsRefreshing() const
+	virtual bool IsRefreshing() const override
 	{
 		return m_State != STATE_READY;
 	}
 
-	virtual NETADDR GetAddr(int Index) const
+	virtual NETADDR GetAddr(int Index) const override
 	{
 		return m_aMasterServers[Index].m_Addr;
 	}
 
-	virtual const char *GetName(int Index) const
+	virtual const char *GetName(int Index) const override
 	{
 		return m_aMasterServers[Index].m_aHostname;
 	}
 
-	virtual bool IsValid(int Index) const
+	virtual bool IsValid(int Index) const override
 	{
 		return m_aMasterServers[Index].m_Valid;
 	}
 
-	virtual void Init()
+	virtual void Init() override
 	{
 		m_pEngine = Kernel()->RequestInterface<IEngine>();
 		m_pStorage = Kernel()->RequestInterface<IStorage>();
 	}
 
-	virtual void SetDefault()
+	virtual void SetDefault() override
 	{
 		mem_zero(m_aMasterServers, sizeof(m_aMasterServers));
 		for(int i = 0; i < MAX_MASTERSERVERS; i++)
 			str_format(m_aMasterServers[i].m_aHostname, sizeof(m_aMasterServers[i].m_aHostname), "master%d.teeworlds.com", i + 1);
 	}
 
-	virtual int Load()
+	virtual int Load() override
 	{
 		if(!m_pStorage)
 			return -1;
@@ -186,7 +186,7 @@ public:
 		return 0;
 	}
 
-	virtual int Save()
+	virtual int Save() override
 	{
 		if(!m_pStorage)
 			return -1;

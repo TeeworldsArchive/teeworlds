@@ -137,14 +137,14 @@ public:
 	void EnableMode(int Mode, const char *pText = 0x0);
 	void SendChat(int Mode, const char *pLine);
 
-	virtual void OnInit();
-	virtual void OnReset();
-	virtual void OnMapLoad();
-	virtual void OnConsoleInit();
-	virtual void OnStateChange(int NewState, int OldState);
-	virtual void OnRender();
-	virtual void OnRelease();
-	virtual void OnMessage(int MsgType, void *pRawMsg);
-	virtual bool OnInput(IInput::CEvent Event);
+	virtual void OnInit() override;
+	virtual void OnReset() override;
+	virtual void OnMapLoad() override;
+	virtual void OnConsoleInit() override;
+	virtual void OnStateChange(int NewState, int OldState) override;
+	virtual void OnRender() override;
+	virtual void OnRelease() override;
+	virtual void OnMessage(int MsgType, void *pRawMsg) override;
+	virtual bool OnInput(IInput::CEvent Event) override;
 };
 #endif

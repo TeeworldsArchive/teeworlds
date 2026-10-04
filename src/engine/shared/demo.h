@@ -33,15 +33,15 @@ public:
 	void Init(class IConsole *pConsole, class IStorage *pStorage);
 
 	int Start(const char *pFilename, const char *pNetversion, const char *pMap, SHA256_DIGEST MapSha256, unsigned MapCrc, const char *pType);
-	int Stop();
+	virtual int Stop() override;
 	void AddDemoMarker();
 
 	void RecordSnapshot(int Tick, const void *pData, int Size);
 	void RecordMessage(const void *pData, int Size);
 
-	bool IsRecording() const { return m_File != 0; }
+	virtual bool IsRecording() const override { return m_File != 0; }
 
-	int Length() const { return (m_LastTickMarker - m_FirstTick) / SERVER_TICK_SPEED; }
+	virtual int Length() const override { return (m_LastTickMarker - m_FirstTick) / SERVER_TICK_SPEED; }
 };
 
 class CDemoPlayer : public IDemoPlayer
@@ -126,17 +126,17 @@ public:
 	const char *Load(const char *pFilename, int StorageType, const char *pNetversion, const char *pLegacyNetversion = 0);
 	bool IsLegacy() const { return m_Legacy; }
 	int Play();
-	void Pause();
-	void Unpause();
+	virtual void Pause() override;
+	virtual void Unpause() override;
 	int Stop();
-	void SetSpeed(float Speed);
-	void SetSpeedIndex(int Offset);
-	int SetPos(float Percent);
-	int SetPos(int WantedTick);
-	const CInfo *BaseInfo() const { return &m_Info.m_Info; }
-	void GetDemoName(char *pBuffer, int BufferSize) const;
-	bool GetDemoInfo(const char *pFilename, int StorageType, CDemoHeader *pDemoHeader) const;
-	int GetDemoType() const;
+	virtual void SetSpeed(float Speed) override;
+	virtual void SetSpeedIndex(int Offset) override;
+	virtual int SetPos(float Percent) override;
+	virtual int SetPos(int WantedTick) override;
+	virtual const CInfo *BaseInfo() const override { return &m_Info.m_Info; }
+	virtual void GetDemoName(char *pBuffer, int BufferSize) const override;
+	virtual bool GetDemoInfo(const char *pFilename, int StorageType, CDemoHeader *pDemoHeader) const override;
+	virtual int GetDemoType() const override;
 
 	int Update();
 

@@ -22,11 +22,11 @@ class CEmoticon : public CComponent
 public:
 	CEmoticon();
 
-	virtual void OnReset();
-	virtual void OnConsoleInit();
-	virtual void OnRender();
-	virtual void OnRelease();
-	virtual bool OnCursorMove(float x, float y, int CursorType);
+	virtual void OnReset() override;
+	virtual void OnConsoleInit() override;
+	virtual void OnRender() override;
+	virtual void OnRelease() override;
+	virtual bool OnCursorMove(float x, float y, int CursorType) override;
 
 	void SendEmote(int Emoticon);
 };

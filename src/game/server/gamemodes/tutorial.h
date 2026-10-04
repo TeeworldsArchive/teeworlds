@@ -23,14 +23,14 @@ class CGameControllerTutorial : public IGameController
 
 public:
 	CGameControllerTutorial(class CGameContext *pGameServer);
-	virtual void Tick();
-	virtual bool OnEntity(int Index, vec2 Pos);
-	virtual bool OnExtraTile(int Index, vec2 Pos);
-	virtual bool IsFriendlyFire([[maybe_unused]] int ClientID1, [[maybe_unused]] int ClientID2, [[maybe_unused]] int Damage) const { return true; };
-	virtual void OnFlagReturn(class CFlag *pFlag);
-	virtual void OnPlayerConnect(class CPlayer *pPlayer);
-	virtual void OnPlayerDisconnect(class CPlayer *pPlayer);
-	virtual void HandleCharacterTiles(class CCharacter *pChr, vec2 LastPos, vec2 NewPos);
-	virtual bool IsPureTuning() const { return true; }
+	virtual void Tick() override;
+	virtual bool OnEntity(int Index, vec2 Pos) override;
+	virtual bool OnExtraTile(int Index, vec2 Pos) override;
+	virtual bool IsFriendlyFire([[maybe_unused]] int ClientID1, [[maybe_unused]] int ClientID2, [[maybe_unused]] int Damage) const override { return true; };
+	virtual void OnFlagReturn(class CFlag *pFlag) override;
+	virtual void OnPlayerConnect(class CPlayer *pPlayer) override;
+	virtual void OnPlayerDisconnect(class CPlayer *pPlayer) override;
+	virtual void HandleCharacterTiles(class CCharacter *pChr, vec2 LastPos, vec2 NewPos) override;
+	virtual bool IsPureTuning() const override { return true; }
 };
 #endif

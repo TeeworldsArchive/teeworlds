@@ -59,10 +59,10 @@ public:
 	// the animated fallback background, shown when no menu map is loaded
 	void RenderBackground(float Time);
 
-	virtual void OnMapLoad();
-	virtual void OnMapUnload();
-	virtual void OnStateChange(int NewState, int OldState);
-	virtual void OnRender();
+	virtual void OnMapLoad() override;
+	virtual void OnMapUnload() override;
+	virtual void OnStateChange(int NewState, int OldState) override;
+	virtual void OnRender() override;
 };
 
 #endif

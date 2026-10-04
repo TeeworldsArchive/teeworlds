@@ -44,7 +44,7 @@ public:
 		m_NumInterfaces = 0;
 	}
 
-	virtual bool RegisterInterfaceImpl(const char *pName, IInterface *pInterface)
+	virtual bool RegisterInterfaceImpl(const char *pName, IInterface *pInterface) override
 	{
 		// TODO: More error checks here
 		if(!pInterface)
@@ -73,7 +73,7 @@ public:
 		return true;
 	}
 
-	virtual bool ReregisterInterfaceImpl(const char *pName, IInterface *pInterface)
+	virtual bool ReregisterInterfaceImpl(const char *pName, IInterface *pInterface) override
 	{
 		if(FindInterfaceInfo(pName) == 0)
 		{
@@ -86,7 +86,7 @@ public:
 		return true;
 	}
 
-	virtual IInterface *RequestInterfaceImpl(const char *pName)
+	virtual IInterface *RequestInterfaceImpl(const char *pName) override
 	{
 		CInterfaceInfo *pInfo = FindInterfaceInfo(pName);
 		if(!pInfo)

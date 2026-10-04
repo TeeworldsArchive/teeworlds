@@ -51,15 +51,15 @@ public:
 
 	CGraphicsBackend_Threaded();
 
-	virtual void RunBuffer(CCommandBuffer *pBuffer);
-	virtual bool IsIdle() const;
-	virtual void WaitForIdle();
+	virtual void RunBuffer(CCommandBuffer *pBuffer) override;
+	virtual bool IsIdle() const override;
+	virtual void WaitForIdle() override;
 
 	// conservative default, overridden once the device has been created
-	virtual int MaxTextureSize() const { return 2048; }
+	virtual int MaxTextureSize() const override { return 2048; }
 
 	// time the render thread spent inside RunBuffer() since the last call
-	virtual int64 TakeRenderThreadTime()
+	virtual int64 TakeRenderThreadTime() override
 	{
 		const int64 Time = m_RenderThreadTime;
 		m_RenderThreadTime = 0;
@@ -286,7 +286,7 @@ protected:
 	virtual bool RunBackendCommand(CCommandBuffer::CCommand *pCommand) = 0;
 
 public:
-	virtual void RunBuffer(CCommandBuffer *pBuffer);
+	virtual void RunBuffer(CCommandBuffer *pBuffer) override;
 };
 
 // OpenGL ES command processor
@@ -296,7 +296,7 @@ class CCommandProcessor_SDL_OpenGL : public CCommandProcessor_SDL
 	CCommandProcessorFragment_SDL m_SDL;
 
 protected:
-	virtual bool RunBackendCommand(CCommandBuffer::CCommand *pCommand);
+	virtual bool RunBackendCommand(CCommandBuffer::CCommand *pCommand) override;
 };
 
 // shared SDL window handling for the SDL based graphics backends
@@ -324,25 +324,25 @@ public:
 	CGraphicsBackend_SDL(class IStorage *pStorage);
 	virtual ~CGraphicsBackend_SDL() {}
 
-	virtual int MemoryUsage() const;
+	virtual int MemoryUsage() const override;
 
-	virtual int MaxTextureSize() const { return m_MaxTextureSize; }
+	virtual int MaxTextureSize() const override { return m_MaxTextureSize; }
 
-	virtual int GetNumScreens() const { return m_NumScreens; }
+	virtual int GetNumScreens() const override { return m_NumScreens; }
 
-	virtual void Minimize();
-	virtual void Maximize();
-	virtual bool Fullscreen(bool State); // on=true/off=false
-	virtual void SetWindowBordered(bool State); // on=true/off=false
-	virtual bool SetWindowScreen(int Index);
-	virtual int GetWindowScreen();
-	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen);
-	virtual bool GetDesktopResolution(int Index, int *pDesktopWidth, int *pDesktopHeight);
-	virtual bool WindowActive();
-	virtual bool WindowOpen();
+	virtual void Minimize() override;
+	virtual void Maximize() override;
+	virtual bool Fullscreen(bool State) override; // on=true/off=false
+	virtual void SetWindowBordered(bool State) override; // on=true/off=false
+	virtual bool SetWindowScreen(int Index) override;
+	virtual int GetWindowScreen() override;
+	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) override;
+	virtual bool GetDesktopResolution(int Index, int *pDesktopWidth, int *pDesktopHeight) override;
+	virtual bool WindowActive() override;
+	virtual bool WindowOpen() override;
 
-	virtual bool ResizeWindow(int Width, int Height);
-	virtual void *GetWindowHandle();
+	virtual bool ResizeWindow(int Width, int Height) override;
+	virtual void *GetWindowHandle() override;
 };
 
 // graphics backend implemented with SDL and OpenGL ES
@@ -355,8 +355,8 @@ class CGraphicsBackend_SDL_OpenGL : public CGraphicsBackend_SDL
 
 public:
 	CGraphicsBackend_SDL_OpenGL(class IStorage *pStorage);
-	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight);
-	virtual int Shutdown();
+	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight) override;
+	virtual int Shutdown() override;
 };
 
 #endif // ENGINE_CLIENT_BACKEND_SDL_H

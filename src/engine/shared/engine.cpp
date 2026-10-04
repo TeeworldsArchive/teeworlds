@@ -83,7 +83,7 @@ public:
 		StopLogging();
 	}
 
-	void Init()
+	virtual void Init() override
 	{
 		m_pConfig = Kernel()->RequestInterface<IConfigManager>()->Values();
 		m_pConsole = Kernel()->RequestInterface<IConsole>();
@@ -95,12 +95,12 @@ public:
 		m_pConsole->Register("dbg_lognetwork", "", CFGFLAG_SERVER | CFGFLAG_CLIENT, Con_DbgLognetwork, this, "Log the network");
 	}
 
-	void ShutdownJobs()
+	virtual void ShutdownJobs() override
 	{
 		m_JobPool.Shutdown();
 	}
 
-	void InitLogfile()
+	virtual void InitLogfile() override
 	{
 		// open logfile if needed
 		if(m_pConfig->m_Logfile[0])
@@ -120,7 +120,7 @@ public:
 		}
 	}
 
-	void QueryNetLogHandles(IOHANDLE *pHDLSend, IOHANDLE *pHDLRecv)
+	virtual void QueryNetLogHandles(IOHANDLE *pHDLSend, IOHANDLE *pHDLRecv) override
 	{
 		*pHDLSend = m_DataLogSent;
 		*pHDLRecv = m_DataLogRecv;
@@ -164,14 +164,14 @@ public:
 		m_Logging = false;
 	}
 
-	void HostLookup(CHostLookup *pLookup, const char *pHostname, int Nettype)
+	virtual void HostLookup(CHostLookup *pLookup, const char *pHostname, int Nettype) override
 	{
 		str_copy(pLookup->m_aHostname, pHostname, sizeof(pLookup->m_aHostname));
 		pLookup->m_Nettype = Nettype;
 		AddJob(&pLookup->m_Job, HostLookupThread, pLookup);
 	}
 
-	void AddJob(CJob *pJob, JOBFUNC pfnFunc, void *pData)
+	virtual void AddJob(CJob *pJob, JOBFUNC pfnFunc, void *pData) override
 	{
 		if(m_pConfig->m_Debug)
 			dbg_msg("engine", "job added");

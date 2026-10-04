@@ -314,33 +314,33 @@ public:
 	void OnSoundLoaded();
 
 	// hooks
-	virtual void OnConnected();
-	virtual void OnRender();
-	virtual void OnUpdate();
+	virtual void OnConnected() override;
+	virtual void OnRender() override;
+	virtual void OnUpdate() override;
 	virtual void OnRelease();
-	virtual void OnInit();
-	virtual void OnConsoleInit();
-	virtual void OnStateChange(int NewState, int OldState);
-	virtual void OnMapUnload();
-	virtual void OnMessage(int MsgId, CUnpacker *pUnpacker);
-	virtual void OnNewSnapshot();
-	virtual void OnDemoRecSnap();
-	virtual void OnPredict();
-	virtual void OnDemoRecorderStart();
-	virtual int OnSnapInput(int *pData);
-	virtual void OnShutdown();
-	virtual void OnEnterGame();
-	virtual void OnRconLine(const char *pLine);
+	virtual void OnInit() override;
+	virtual void OnConsoleInit() override;
+	virtual void OnStateChange(int NewState, int OldState) override;
+	virtual void OnMapUnload() override;
+	virtual void OnMessage(int MsgId, CUnpacker *pUnpacker) override;
+	virtual void OnNewSnapshot() override;
+	virtual void OnDemoRecSnap() override;
+	virtual void OnPredict() override;
+	virtual void OnDemoRecorderStart() override;
+	virtual int OnSnapInput(int *pData) override;
+	virtual void OnShutdown() override;
+	virtual void OnEnterGame() override;
+	virtual void OnRconLine(const char *pLine) override;
 	virtual void OnGameOver();
 	virtual void OnStartGame();
 
-	virtual const char *GetItemName(int Type) const;
-	virtual const char *Version() const;
-	virtual const char *NetVersion() const;
-	virtual const char *NetVersionHashUsed() const;
-	virtual const char *NetVersionHashReal() const;
-	virtual int ClientVersion() const;
-	virtual int GetNumPlayers() const;
+	virtual const char *GetItemName(int Type) const override;
+	virtual const char *Version() const override;
+	virtual const char *NetVersion() const override;
+	virtual const char *NetVersionHashUsed() const override;
+	virtual const char *NetVersionHashReal() const override;
+	virtual int ClientVersion() const override;
+	virtual int GetNumPlayers() const override;
 	void GetPlayerLabel(char *aBuf, int BufferSize, int ClientID, const char *ClientName);
 	void StartRendering();
 

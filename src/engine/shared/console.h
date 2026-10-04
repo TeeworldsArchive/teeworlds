@@ -21,7 +21,7 @@ class CConsole : public IConsole
 		FCommandCallback m_pfnCallback;
 		void *m_pUserData;
 
-		virtual const CCommandInfo *NextCommandInfo(int AccessLevel, int FlagMask) const;
+		virtual const CCommandInfo *NextCommandInfo(int AccessLevel, int FlagMask) const override;
 
 		void SetAccessLevel(int AccessLevel) { m_AccessLevel = clamp(AccessLevel, (int) (ACCESS_LEVEL_ADMIN), (int) (ACCESS_LEVEL_MOD)); }
 	};
@@ -68,7 +68,7 @@ class CConsole : public IConsole
 	static void ConModCommandStatus(IResult *pResult, void *pUser);
 
 	void ExecuteFileRecurse(const char *pFilename);
-	void ExecuteLineStroked(int Stroke, const char *pStr);
+	virtual void ExecuteLineStroked(int Stroke, const char *pStr) override;
 
 	struct
 	{
@@ -120,9 +120,9 @@ class CConsole : public IConsole
 			m_apArgs[m_NumArgs++] = pArg;
 		}
 
-		virtual const char *GetString(unsigned Index);
-		virtual int GetInteger(unsigned Index);
-		virtual float GetFloat(unsigned Index);
+		virtual const char *GetString(unsigned Index) override;
+		virtual int GetInteger(unsigned Index) override;
+		virtual float GetFloat(unsigned Index) override;
 	};
 
 	int ParseStart(CResult *pResult, const char *pString, int Length);
@@ -185,36 +185,36 @@ public:
 	CConsole(int FlagMask);
 	~CConsole();
 
-	virtual void Init();
-	virtual const CCommandInfo *FirstCommandInfo(int AccessLevel, int FlagMask) const;
-	virtual const CCommandInfo *GetCommandInfo(const char *pName, int FlagMask, bool Temp);
-	virtual int PossibleCommands(const char *pStr, int FlagMask, bool Temp, FPossibleCallback pfnCallback, void *pUser);
-	virtual int PossibleMaps(const char *pStr, FPossibleCallback pfnCallback, void *pUser);
+	virtual void Init() override;
+	virtual const CCommandInfo *FirstCommandInfo(int AccessLevel, int FlagMask) const override;
+	virtual const CCommandInfo *GetCommandInfo(const char *pName, int FlagMask, bool Temp) override;
+	virtual int PossibleCommands(const char *pStr, int FlagMask, bool Temp, FPossibleCallback pfnCallback, void *pUser) override;
+	virtual int PossibleMaps(const char *pStr, FPossibleCallback pfnCallback, void *pUser) override;
 
-	virtual void ParseArguments(int NumArgs, const char **ppArguments);
-	virtual void Register(const char *pName, const char *pParams, int Flags, FCommandCallback pfnFunc, void *pUser, const char *pHelp);
-	virtual void RegisterTemp(const char *pName, const char *pParams, int Flags, const char *pHelp);
-	virtual void DeregisterTemp(const char *pName);
-	virtual void DeregisterTempAll();
-	virtual void RegisterTempMap(const char *pName);
-	virtual void DeregisterTempMap(const char *pName);
-	virtual void DeregisterTempMapAll();
-	virtual void Chain(const char *pName, FChainCommandCallback pfnChainFunc, void *pUser);
-	virtual void StoreCommands(bool Store);
+	virtual void ParseArguments(int NumArgs, const char **ppArguments) override;
+	virtual void Register(const char *pName, const char *pParams, int Flags, FCommandCallback pfnFunc, void *pUser, const char *pHelp) override;
+	virtual void RegisterTemp(const char *pName, const char *pParams, int Flags, const char *pHelp) override;
+	virtual void DeregisterTemp(const char *pName) override;
+	virtual void DeregisterTempAll() override;
+	virtual void RegisterTempMap(const char *pName) override;
+	virtual void DeregisterTempMap(const char *pName) override;
+	virtual void DeregisterTempMapAll() override;
+	virtual void Chain(const char *pName, FChainCommandCallback pfnChainFunc, void *pUser) override;
+	virtual void StoreCommands(bool Store) override;
 
-	virtual bool ArgStringIsValid(const char *pFormat);
-	virtual bool LineIsValid(const char *pStr);
-	virtual void ExecuteLine(const char *pStr);
-	virtual void ExecuteLineFlag(const char *pStr, int FlagMask);
-	virtual bool ExecuteFile(const char *pFilename);
+	virtual bool ArgStringIsValid(const char *pFormat) override;
+	virtual bool LineIsValid(const char *pStr) override;
+	virtual void ExecuteLine(const char *pStr) override;
+	virtual void ExecuteLineFlag(const char *pStr, int FlagMask) override;
+	virtual bool ExecuteFile(const char *pFilename) override;
 
-	virtual int RegisterPrintCallback(int OutputLevel, FPrintCallback pfnPrintCallback, void *pUserData);
-	virtual void SetPrintOutputLevel(int Index, int OutputLevel);
-	virtual void Print(int Level, const char *pFrom, const char *pStr, bool Highlighted = false);
+	virtual int RegisterPrintCallback(int OutputLevel, FPrintCallback pfnPrintCallback, void *pUserData) override;
+	virtual void SetPrintOutputLevel(int Index, int OutputLevel) override;
+	virtual void Print(int Level, const char *pFrom, const char *pStr, bool Highlighted = false) override;
 
-	virtual int ParseCommandArgs(const char *pArgs, const char *pFormat, FCommandCallback pfnCallback, void *pContext);
+	virtual int ParseCommandArgs(const char *pArgs, const char *pFormat, FCommandCallback pfnCallback, void *pContext) override;
 
-	void SetAccessLevel(int AccessLevel) { m_AccessLevel = clamp(AccessLevel, (int) (ACCESS_LEVEL_ADMIN), (int) (ACCESS_LEVEL_MOD)); }
+	virtual void SetAccessLevel(int AccessLevel) override { m_AccessLevel = clamp(AccessLevel, (int) (ACCESS_LEVEL_ADMIN), (int) (ACCESS_LEVEL_MOD)); }
 };
 
 #endif

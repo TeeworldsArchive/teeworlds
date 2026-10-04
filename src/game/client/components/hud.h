@@ -43,9 +43,9 @@ class CHud : public CComponent
 public:
 	CHud();
 
-	virtual void OnReset();
-	virtual void OnMessage(int MsgType, void *pRawMsg);
-	virtual void OnRender();
+	virtual void OnReset() override;
+	virtual void OnMessage(int MsgType, void *pRawMsg) override;
+	virtual void OnRender() override;
 };
 
 #endif

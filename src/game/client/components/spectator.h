@@ -33,11 +33,11 @@ class CSpectator : public CComponent
 public:
 	CSpectator();
 
-	virtual void OnConsoleInit();
-	virtual bool OnCursorMove(float x, float y, int CursorType);
-	virtual void OnRender();
-	virtual void OnRelease();
-	virtual void OnReset();
+	virtual void OnConsoleInit() override;
+	virtual bool OnCursorMove(float x, float y, int CursorType) override;
+	virtual void OnRender() override;
+	virtual void OnRelease() override;
+	virtual void OnReset() override;
 
 	void SendSpectate(int SpecMode, int SpectatorID);
 };

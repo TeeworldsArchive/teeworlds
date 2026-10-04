@@ -106,10 +106,10 @@ public:
 	bool IsConsoleActive();
 	void PrintLine(int Type, const char *pLine);
 
-	virtual void OnStateChange(int NewState, int OldState);
-	virtual void OnConsoleInit();
-	virtual void OnReset();
-	virtual void OnRender();
-	virtual bool OnInput(IInput::CEvent Events);
+	virtual void OnStateChange(int NewState, int OldState) override;
+	virtual void OnConsoleInit() override;
+	virtual void OnReset() override;
+	virtual void OnRender() override;
+	virtual bool OnInput(IInput::CEvent Events) override;
 };
 #endif

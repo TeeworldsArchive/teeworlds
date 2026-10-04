@@ -20,29 +20,29 @@ protected:
 	virtual void Infect(int InfectedID);
 	virtual void Cure(int CureID);
 	virtual void AddScoreForInfection(int InfectedID);
-	virtual bool HasEnoughPlayers() const;
+	virtual bool HasEnoughPlayers() const override;
 
 public:
 	CGameControllerReinfected(class CGameContext *pGameServer);
 	virtual ~CGameControllerReinfected();
 
-	virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const;
-	virtual bool IsFriendlyTeamFire(int Team1, int Team2, int Damage) const;
-	virtual int GetPlayerCheckTeam(class CPlayer *pPlayer) const;
+	virtual bool IsFriendlyFire(int ClientID1, int ClientID2, int Damage) const override;
+	virtual bool IsFriendlyTeamFire(int Team1, int Team2, int Damage) const override;
+	virtual int GetPlayerCheckTeam(class CPlayer *pPlayer) const override;
 
-	virtual void OnRoundStart();
+	virtual void OnRoundStart() override;
 
-	virtual void OnPlayerConnect(class CPlayer *pPlayer);
-	virtual void OnPlayerDisconnect(class CPlayer *pPlayer);
-	virtual void OnPlayerInfoChange(class CPlayer *pPlayer);
+	virtual void OnPlayerConnect(class CPlayer *pPlayer) override;
+	virtual void OnPlayerDisconnect(class CPlayer *pPlayer) override;
+	virtual void OnPlayerInfoChange(class CPlayer *pPlayer) override;
 
-	virtual bool CanCharacterPickup(class CCharacter *pChr) const;
-	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
-	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon);
-	virtual void OnCharacterSpawn(class CCharacter *pChr);
+	virtual bool CanCharacterPickup(class CCharacter *pChr) const override;
+	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon) override;
+	virtual int OnCharacterFireWeapon(class CCharacter *pChr, vec2 Direction, int Weapon) override;
+	virtual void OnCharacterSpawn(class CCharacter *pChr) override;
 
-	virtual bool DoWincheckMatch();
-	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg);
+	virtual bool DoWincheckMatch() override;
+	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg) override;
 
 	void RefreshClientSkin(int ClientID, bool Sync);
 

@@ -20,8 +20,8 @@ public:
 		bool operator<(const CCountryFlag &Other) const { return str_comp(m_aCountryCodeString, Other.m_aCountryCodeString) < 0; }
 	};
 
-	int GetInitAmount() const;
-	void OnInit();
+	virtual int GetInitAmount() const override;
+	virtual void OnInit() override;
 
 	int Num() const;
 	const CCountryFlag *GetByCountryCode(int CountryCode) const;

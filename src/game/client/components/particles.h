@@ -66,8 +66,8 @@ public:
 
 	void Add(int Group, CParticle *pPart);
 
-	virtual void OnReset();
-	virtual void OnRender();
+	virtual void OnReset() override;
+	virtual void OnRender() override;
 
 private:
 	enum
@@ -87,7 +87,7 @@ private:
 	{
 	public:
 		CParticles *m_pParts;
-		virtual void OnRender() { m_pParts->RenderGroup(TGROUP); }
+		virtual void OnRender() override { m_pParts->RenderGroup(TGROUP); }
 	};
 
 	CRenderGroup<GROUP_PROJECTILE_TRAIL> m_RenderTrail;

@@ -9,14 +9,14 @@ class CNotifications : public CComponent
 {
 	float m_SoundToggleTime;
 
-	void OnConsoleInit();
+	virtual void OnConsoleInit() override;
 	void RenderSoundNotification();
 
 	static void Con_SndToggle(IConsole::IResult *pResult, void *pUserData);
 
 public:
 	CNotifications();
-	virtual void OnRender();
+	virtual void OnRender() override;
 };
 
 #endif

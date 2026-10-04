@@ -24,10 +24,10 @@ public:
 	int GetOwner() const { return m_Owner; }
 	void LoseOwner();
 
-	virtual void Reset();
-	virtual void Tick();
-	virtual void TickPaused();
-	virtual void Snap(int SnappingClient);
+	virtual void Reset() override;
+	virtual void Tick() override;
+	virtual void TickPaused() override;
+	virtual void Snap(int SnappingClient) override;
 
 private:
 	vec2 m_Direction;

@@ -28,18 +28,18 @@ public:
 		CJoystick() { /* empty constructor for sorted_array */ }
 		CJoystick(CInput *pInput, int Index, SDL_Joystick *pDelegate);
 
-		int GetIndex() const { return m_Index; }
-		const char *GetName() const { return m_aName; }
+		virtual int GetIndex() const override { return m_Index; }
+		virtual const char *GetName() const override { return m_aName; }
 		const char *GetGUID() const { return m_aGUID; }
 		SDL_JoystickID GetInstanceID() const { return m_InstanceID; }
-		int GetNumAxes() const { return m_NumAxes; }
-		int GetNumButtons() const { return m_NumButtons; }
-		int GetNumBalls() const { return m_NumBalls; }
-		int GetNumHats() const { return m_NumHats; }
-		float GetAxisValue(int Axis);
-		int GetHatValue(int Hat);
-		bool Relative(float *pX, float *pY);
-		bool Absolute(float *pX, float *pY);
+		virtual int GetNumAxes() const override { return m_NumAxes; }
+		virtual int GetNumButtons() const override { return m_NumButtons; }
+		virtual int GetNumBalls() const override { return m_NumBalls; }
+		virtual int GetNumHats() const override { return m_NumHats; }
+		virtual float GetAxisValue(int Axis) override;
+		virtual int GetHatValue(int Hat) override;
+		virtual bool Relative(float *pX, float *pY) override;
+		virtual bool Absolute(float *pX, float *pY) override;
 
 		static int GetJoystickHatKey(int Hat, int HatValue);
 	};
@@ -77,8 +77,8 @@ private:
 	int m_CandidateSelectedIndex;
 
 	void AddEvent(const char *pText, int Key, int Flags);
-	void Clear();
-	bool IsEventValid(CEvent *pEvent) const { return pEvent->m_InputCount == m_InputCounter; }
+	virtual void Clear() override;
+	virtual bool IsEventValid(CEvent *pEvent) const override { return pEvent->m_InputCount == m_InputCounter; }
 
 	// quick access to input
 	unsigned short m_aInputCount[g_MaxKeys];
@@ -100,36 +100,36 @@ private:
 public:
 	CInput();
 
-	void Init();
-	void Shutdown();
-	int Update();
+	virtual void Init() override;
+	virtual void Shutdown() override;
+	virtual int Update() override;
 
-	bool KeyIsPressed(int Key) const { return KeyState(Key); }
-	bool KeyPress(int Key, bool CheckCounter) const { return CheckCounter ? (m_aInputCount[Key] == m_InputCounter) : m_aInputCount[Key]; }
+	virtual bool KeyIsPressed(int Key) const override { return KeyState(Key); }
+	virtual bool KeyPress(int Key, bool CheckCounter) const override { return CheckCounter ? (m_aInputCount[Key] == m_InputCounter) : m_aInputCount[Key]; }
 
-	int NumJoysticks() const { return m_aJoysticks.size(); }
-	CJoystick *GetActiveJoystick() { return m_pActiveJoystick; }
-	void SelectNextJoystick();
+	virtual int NumJoysticks() const override { return m_aJoysticks.size(); }
+	virtual CJoystick *GetActiveJoystick() override { return m_pActiveJoystick; }
+	virtual void SelectNextJoystick() override;
 
-	void MouseModeRelative();
-	void MouseModeAbsolute();
-	bool MouseDoubleClick();
-	bool MouseRelative(float *pX, float *pY);
+	virtual void MouseModeRelative() override;
+	virtual void MouseModeAbsolute() override;
+	virtual bool MouseDoubleClick() override;
+	virtual bool MouseRelative(float *pX, float *pY) override;
 
-	const char *GetClipboardText();
-	void SetClipboardText(const char *pText);
-	void SetClipboardImage(unsigned char *pData, int DataSize);
+	virtual const char *GetClipboardText() override;
+	virtual void SetClipboardText(const char *pText) override;
+	virtual void SetClipboardImage(unsigned char *pData, int DataSize) override;
 
-	void StartTextInput();
-	void StopTextInput();
-	const char *GetComposition() const { return m_aComposition; }
-	bool HasComposition() const { return m_CompositionLength != COMP_LENGTH_INACTIVE; }
-	int GetCompositionCursor() const { return m_CompositionCursor; }
-	int GetCompositionSelectedLength() const { return m_CompositionSelectedLength; }
-	int GetCompositionLength() const { return m_CompositionLength; }
-	const char *GetCandidate(int Index) const { return m_aaCandidates[Index]; }
-	int GetCandidateCount() const { return m_CandidateCount; }
-	int GetCandidateSelectedIndex() const { return m_CandidateSelectedIndex; }
-	void SetCompositionWindowPosition(float X, float Y, float H);
+	virtual void StartTextInput() override;
+	virtual void StopTextInput() override;
+	virtual const char *GetComposition() const override { return m_aComposition; }
+	virtual bool HasComposition() const override { return m_CompositionLength != COMP_LENGTH_INACTIVE; }
+	virtual int GetCompositionCursor() const override { return m_CompositionCursor; }
+	virtual int GetCompositionSelectedLength() const override { return m_CompositionSelectedLength; }
+	virtual int GetCompositionLength() const override { return m_CompositionLength; }
+	virtual const char *GetCandidate(int Index) const override { return m_aaCandidates[Index]; }
+	virtual int GetCandidateCount() const override { return m_CandidateCount; }
+	virtual int GetCandidateSelectedIndex() const override { return m_CandidateSelectedIndex; }
+	virtual void SetCompositionWindowPosition(float X, float Y, float H) override;
 };
 #endif

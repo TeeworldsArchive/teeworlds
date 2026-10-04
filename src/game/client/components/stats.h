@@ -65,12 +65,12 @@ private:
 public:
 	CStats();
 	bool IsActive() const;
-	virtual void OnReset();
+	virtual void OnReset() override;
 	void OnStartGame();
-	virtual void OnConsoleInit();
-	virtual void OnRender();
-	virtual void OnRelease();
-	virtual void OnMessage(int MsgType, void *pRawMsg);
+	virtual void OnConsoleInit() override;
+	virtual void OnRender() override;
+	virtual void OnRelease() override;
+	virtual void OnMessage(int MsgType, void *pRawMsg) override;
 
 	void UpdatePlayTime(int Ticks);
 	void OnMatchStart();
