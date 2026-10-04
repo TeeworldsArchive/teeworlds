@@ -232,6 +232,7 @@ jobs:
             openssl:p
             curl:p
             libspng:p
+            shaderc:p
 
       - name: Cache SDL3
         uses: actions/cache@v4
