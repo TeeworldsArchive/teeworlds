@@ -12,6 +12,9 @@
 #include <base/system/string.h>
 #include <base/system/debug.h>
 #include <base/system/mem.h>
+#if defined(CONF_FAMILY_WINDOWS)
+#include <process.h> // _vsprintf_p
+#endif
 
 void str_append(char *dst, const char *src, int dst_size)
 {

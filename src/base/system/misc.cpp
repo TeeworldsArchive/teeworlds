@@ -8,6 +8,7 @@
 #include <base/system/base.h>
 #include <base/system/misc.h>
 #include <base/system/io.h>
+#include <base/system/mem.h>
 #include <base/system/net.h>
 #include <base/system/net_internal.h>
 #include <base/system/debug.h>
@@ -19,6 +20,7 @@
 #elif defined(CONF_FAMILY_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <process.h>
 #include <shellapi.h>
 #include <wincrypt.h>
 #else
@@ -383,7 +385,7 @@ void secure_random_fill(void *bytes, unsigned length)
 		dbg_break();
 	}
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!CryptGenRandom(secure_random_data.provider, length, bytes))
+	if(!CryptGenRandom(secure_random_data.provider, length, (BYTE *) bytes))
 	{
 		dbg_msg("secure", "CryptGenRandom failed, last_error=%lu", GetLastError());
 		dbg_break();
@@ -447,7 +449,7 @@ void cmdline_fix(int *argc, const char ***argv)
 #endif
 }
 
-void cmdline_free(int argc, const char **argv)
+void cmdline_free([[maybe_unused]] int argc, const char **argv)
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	free((void *) *argv);

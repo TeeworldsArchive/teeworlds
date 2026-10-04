@@ -102,7 +102,7 @@ void dbg_msg(const char *sys, const char *fmt, ...)
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
-static void logger_win_console(const char *line, void *user)
+static void logger_win_console(const char *line, [[maybe_unused]] void *user)
 {
 #define MAX_LENGTH 1024
 #define MAX_LENGTH_ERROR (MAX_LENGTH + 32)
@@ -197,7 +197,7 @@ static void logger_stdout(const char *line, void *user)
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
-static void logger_win_debugger(const char *line, void *user)
+static void logger_win_debugger(const char *line, [[maybe_unused]] void *user)
 {
 	WCHAR wBuffer[512];
 	MultiByteToWideChar(CP_UTF8, 0, line, -1, wBuffer, sizeof(wBuffer) / sizeof(WCHAR));

@@ -157,7 +157,8 @@ if(NOT MSVC)
   endif()
 
   if(TARGET_OS STREQUAL "mac")
-    add_cxx_compiler_flag_if_supported(OUR_FLAGS -stdlib=libc++)
+    # C++-only: passing it to the C compiler is an unused-argument error under -Werror.
+    add_cxx_compiler_flag_if_supported(OUR_FLAGS_CXX -stdlib=libc++)
   endif()
 
   add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wall)
@@ -2225,6 +2226,9 @@ foreach(target ${TARGETS})
   endif()
   if(OUR_FLAGS)
     target_compile_options(${target} PRIVATE ${OUR_FLAGS})
+  endif()
+  if(OUR_FLAGS_CXX)
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${OUR_FLAGS_CXX}>)
   endif()
   if(DEFINE_FORTIFY_SOURCE)
     target_compile_definitions(${target} PRIVATE $<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=2>) # Detect some buffer overflows.

@@ -363,9 +363,7 @@ function BuildEngineCommon(settings)
 	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/*.cpp")))
 	settings.link.extrafiles:Merge(Compile(settings, Collect("src/engine/shared/legacy/*.cpp")))
 
-	local c11_settings = settings:Copy();
-	c11_settings.cc.flags:Add("-std=c11")
-	settings.link.extrafiles:Merge(Compile(c11_settings, CollectRecursive("src/base/*.c")))
+	settings.link.extrafiles:Merge(Compile(settings, CollectRecursive("src/base/*.cpp")))
 end
 
 function BuildGameCommon(settings)

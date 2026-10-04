@@ -845,22 +845,6 @@ int net_init()
 	return 0;
 }
 
-#if defined(CONF_FAMILY_WINDOWS)
-static inline time_t filetime_to_unixtime(LPFILETIME filetime)
-{
-	time_t t;
-	ULARGE_INTEGER li;
-	li.LowPart = filetime->dwLowDateTime;
-	li.HighPart = filetime->dwHighDateTime;
-
-	li.QuadPart /= 10000000; // 100ns to 1s
-	li.QuadPart -= 11644473600LL; // Windows epoch is in the past
-
-	t = li.QuadPart;
-	return t == (time_t) li.QuadPart ? t : (time_t) -1;
-}
-#endif
-
 
 void swap_endian(void *data, unsigned elem_size, unsigned num)
 {

@@ -4,6 +4,7 @@
 
 #define _DEFAULT_SOURCE
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,7 +17,6 @@
 #if defined(CONF_FAMILY_UNIX)
 
 #include <dirent.h>
-#include <errno.h>
 #include <unistd.h>
 
 #elif defined(CONF_FAMILY_WINDOWS)
@@ -25,6 +25,22 @@
 #include <direct.h>
 #else
 #error NOT IMPLEMENTED
+#endif
+
+#if defined(CONF_FAMILY_WINDOWS)
+static inline time_t filetime_to_unixtime(LPFILETIME filetime)
+{
+	time_t t;
+	ULARGE_INTEGER li;
+	li.LowPart = filetime->dwLowDateTime;
+	li.HighPart = filetime->dwHighDateTime;
+
+	li.QuadPart /= 10000000; // 100ns to 1s
+	li.QuadPart -= 11644473600LL; // Windows epoch is in the past
+
+	t = li.QuadPart;
+	return t == (time_t) li.QuadPart ? t : (time_t) -1;
+}
 #endif
 
 
