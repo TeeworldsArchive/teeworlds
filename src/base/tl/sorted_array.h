@@ -13,12 +13,12 @@ class sorted_array : public array<T, ALLOCATOR>
 	typedef array<T, ALLOCATOR> parent;
 
 	// insert and size is not allowed
-	int insert(const T &item, typename parent::range r)
+	int insert([[maybe_unused]] const T &item, [[maybe_unused]] typename parent::range r)
 	{
 		dbg_break();
 		return 0;
 	}
-	int set_size(int new_size)
+	int set_size([[maybe_unused]] int new_size)
 	{
 		dbg_break();
 		return 0;
