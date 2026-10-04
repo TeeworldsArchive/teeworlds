@@ -71,7 +71,9 @@ static LOCK m_SoundLock = 0;
 static int m_CenterX = 0;
 static int m_CenterY = 0;
 
-static float m_MaxDistance = 1500.0f;
+// Kept for IEngineSound::SetMaxDistance. Falloff is driven by each sound's own
+// radius or shape, so the value is stored but never read.
+[[maybe_unused]] static float m_MaxDistance = 1500.0f;
 
 static int m_MixingRate = 48000;
 static int m_SoundVolume = 100;
