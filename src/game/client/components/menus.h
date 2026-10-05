@@ -94,7 +94,6 @@ private:
 
 		SETTINGS_GENERAL = 0,
 		SETTINGS_PLAYER,
-		SETTINGS_TBD, // TODO: replace this removed tee page
 		SETTINGS_CONTROLS,
 		SETTINGS_GRAPHICS,
 		SETTINGS_SOUND,
@@ -605,7 +604,6 @@ private:
 	void RenderSkinPartPalette(CUIRect MainView);
 	void RenderSettingsGeneral(CUIRect MainView);
 	void RenderSettingsPlayer(CUIRect MainView);
-	// void RenderSettingsTBD(CUIRect MainView); // TODO: change removed tee page to something else
 	void RenderSettingsTeeBasic(CUIRect MainView);
 	void RenderSettingsTeeCustom(CUIRect MainView);
 	void PopupConfirmDeleteSkin();

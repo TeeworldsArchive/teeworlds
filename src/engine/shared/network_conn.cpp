@@ -256,6 +256,26 @@ void CNetConnection::Disconnect(const char *pReason)
 	Reset();
 }
 
+int CNetConnection::ProcessVitalSequence(int Sequence)
+{
+	if(Sequence == NextSequence())
+	{
+		// in sequence
+		m_Ack = (m_Ack + 1) % NET_MAX_SEQUENCE;
+		return 0;
+	}
+
+	// old packet that we already got
+	if(IsSeqInBackroom(Sequence, m_Ack))
+		return -1;
+
+	// out of sequence, request resend
+	if(Config()->m_Debug)
+		dbg_msg("conn", "asking for resend %d %d", Sequence, NextSequence());
+	SignalResend();
+	return 1;
+}
+
 int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr)
 {
 	// check if actual ack value is valid(own sequence..latest peer ack)

@@ -78,23 +78,11 @@ int CNetRecvUnpacker::FetchChunk(CNetChunk *pChunk)
 		// handle sequence stuff
 		if(m_pConnection && (Header.m_Flags & NET_CHUNKFLAG_VITAL))
 		{
-			if(Header.m_Sequence == (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE)
-			{
-				// in sequence
-				m_pConnection->m_Ack = (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE;
-			}
-			else
-			{
-				// old packet that we already got
-				if(m_pConnection->IsSeqInBackroom(Header.m_Sequence, m_pConnection->m_Ack))
-					continue;
-
-				// out of sequence, request resend
-				if(m_pConnection->Config()->m_Debug)
-					dbg_msg("conn", "asking for resend %d %d", Header.m_Sequence, (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE);
-				m_pConnection->SignalResend();
-				continue; // take the next chunk in the packet
-			}
+			int Result = m_pConnection->ProcessVitalSequence(Header.m_Sequence);
+			if(Result < 0)
+				continue; // old packet that we already got
+			if(Result > 0)
+				continue; // out of sequence, a resend was requested
 		}
 
 		// fill in the info

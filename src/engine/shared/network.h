@@ -391,11 +391,6 @@ private:
 
 class CNetConnection
 {
-	// TODO: is this needed because this needs to be aware of
-	// the ack sequencing number and is also responible for updating
-	// that. this should be fixed.
-	friend class CNetRecvUnpacker;
-
 private:
 	unsigned short m_Sequence;
 	unsigned short m_Ack;
@@ -484,6 +479,14 @@ public:
 	int AckSequence() const { return m_Ack; }
 	// The backroom is ack-NET_MAX_SEQUENCE/2. Used for knowing if we acked a packet or not
 	static int IsSeqInBackroom(int Seq, int Ack);
+
+	// The sequence number we expect to receive next.
+	int NextSequence() const { return (m_Ack + 1) % NET_MAX_SEQUENCE; }
+	// Checks an incoming vital chunk against the ack. Advances the ack and
+	// returns 0 if it was next in line, returns -1 if it is a duplicate we
+	// already have, and requests a resend and returns 1 if it arrived out of
+	// order.
+	int ProcessVitalSequence(int Sequence);
 };
 
 class CConsoleNetConnection
