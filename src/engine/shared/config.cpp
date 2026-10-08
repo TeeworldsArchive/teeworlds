@@ -61,7 +61,7 @@ void CConfigManager::Reset()
 #define MACRO_CONFIG_STR(Name, ScriptName, len, def, flags, desc) str_copy(m_Values.m_##Name, def, len);
 #define MACRO_CONFIG_UTF8STR(Name, ScriptName, size, len, def, flags, desc) str_utf8_copy_num(m_Values.m_##Name, def, size, len);
 
-#include "config_variables.h"
+#include <game/config_variables.h>
 
 #undef MACRO_CONFIG_INT
 #undef MACRO_CONFIG_STR
@@ -78,7 +78,7 @@ void CConfigManager::RestoreStrings()
 	if(!m_Values.m_##Name[0] && def[0]) \
 		str_utf8_copy_num(m_Values.m_##Name, def, size, len);
 
-#include "config_variables.h"
+#include <game/config_variables.h>
 
 #undef MACRO_CONFIG_INT
 #undef MACRO_CONFIG_STR
@@ -123,7 +123,7 @@ void CConfigManager::Save(const char *pFilename)
 		WriteLine(aLineBuf); \
 	}
 
-#include "config_variables.h"
+#include <game/config_variables.h>
 
 #undef MACRO_CONFIG_INT
 #undef MACRO_CONFIG_STR

@@ -14,7 +14,7 @@ public:
 #define MACRO_CONFIG_STR(Name, ScriptName, Len, Def, Save, Desc) char m_##Name[Len]; // Flawfinder: ignore
 #define MACRO_CONFIG_UTF8STR(Name, ScriptName, Size, Len, Def, Save, Desc) char m_##Name[Size]; // Flawfinder: ignore
 
-#include "config_variables.h"
+#include <game/config_variables.h>
 
 #undef MACRO_CONFIG_INT
 #undef MACRO_CONFIG_STR

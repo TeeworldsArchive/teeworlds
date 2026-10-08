@@ -1537,6 +1537,7 @@ set_src(GAME_SHARED GLOB src/game
   collision.cpp
   collision.h
   commands.h
+  config_variables.h
   gamecore.cpp
   gamecore.h
   layers.cpp
