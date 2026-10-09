@@ -1,8 +1,8 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#include <engine/contacts.h>
 #include <base/system/thread.h>
+#include <engine/contacts.h>
 #include <engine/demo.h>
 #include <engine/engine.h>
 #include <engine/graphics.h>
@@ -501,13 +501,16 @@ void CGameClient::OnReset()
 		// clear out the invalid pointers
 		m_LastNewPredictedTick = -1;
 		mem_zero(&m_Snap, sizeof(m_Snap));
-		m_BotClients.clear();
-		m_BotCharacters.clear();
-		m_BotTeeInfos.clear();
-		m_aBotTeeInfoIDs.clear_size();
+		m_aTeeIDs.clear_size();
+		m_aKnownTeeIDs.clear_size();
 
+		// Free the sparse TeeID storage and start over with real clients only.
+		m_aClients.clear();
 		for(int ClientID = 0; ClientID < MAX_CLIENTS; ClientID++)
 			m_aClients[ClientID].Reset(this, ClientID);
+		m_aCharacters.clear();
+		m_apTeeInfos.clear();
+		m_aInfoByScore.clear();
 	}
 
 	for(int i = 0; i < m_All.m_Num; i++)
@@ -856,13 +859,8 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 	{
 		CNetMsg_Sv_ClientDrop *pMsg = (CNetMsg_Sv_ClientDrop *) pRawMsg;
 
-		// Sv_ClientDrop is range-limited to real clients, but keep bots safe too.
-		if(pMsg->m_ClientID >= MAX_CLIENTS)
-		{
-			m_BotClients.remove(pMsg->m_ClientID);
-			return;
-		}
-
+		// Sv_ClientDrop is limited to real clients by the protocol, so it can
+		// never address a bot TeeID.
 		if(m_LocalClientID == pMsg->m_ClientID || !m_aClients[pMsg->m_ClientID].m_Active)
 		{
 			if(Config()->m_Debug)
@@ -910,7 +908,6 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 	{
 		CNetMsg_Sv_Team *pMsg = (CNetMsg_Sv_Team *) pRawMsg;
 
-		// Sv_Team addresses any TeeInfoID, including bots
 		CClientData *pClient = GetClientData(pMsg->m_ClientID);
 		if(!pClient)
 			return;
@@ -948,7 +945,6 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 	{
 		CNetMsg_Sv_Emoticon *pMsg = (CNetMsg_Sv_Emoticon *) pRawMsg;
 
-		// apply; Sv_Emoticon addresses any TeeInfoID, including bots
 		CClientData *pClient = GetClientData(pMsg->m_ClientID);
 		if(pClient)
 		{
@@ -1086,30 +1082,32 @@ bool CompareTime(const CNetObj_TeeInfo *Pl1, const CNetObj_TeeInfo *Pl2)
 	return Pl1->m_Score > Pl2->m_Score;
 }
 
-static void MarkBotInactive(CGameClient::CClientData &Data, void *)
-{
-	Data.m_Active = false;
-}
-
-static void CollectInactiveBot(CGameClient::CClientData &Data, void *pUser)
-{
-	if(!Data.m_Active)
-		static_cast<array<int> *>(pUser)->add(Data.m_TeeInfoID);
-}
-
 void CGameClient::OnNewSnapshot()
 {
 	// clear out the invalid pointers
 	mem_zero(&m_Snap, sizeof(m_Snap));
 
-	// bot identities persist across snapshots (they carry render info like the
-	// bot colour), so they are marked inactive here and pruned after gathering.
-	// Bot Character state is pure per-snapshot state, so it is rebuilt from
-	// scratch; clear_size keeps the allocated buckets.
-	m_BotClients.for_each(MarkBotInactive, 0);
-	m_BotCharacters.clear_size();
-	m_BotTeeInfos.clear();
-	m_aBotTeeInfoIDs.clear_size();
+	// Tee identities persist across snapshots (they carry render info such as
+	// the bot colour), so they are marked inactive and whatever the snapshot
+	// does not refresh is dropped below. Character state, TeeInfo pointers and
+	// the id list are rebuilt from scratch; clear_size keeps their parts.
+	//
+	// Real clients and bots are visited the same way, through the ids that had
+	// an identity as this snapshot started: being in the snapshot is what makes
+	// a tee active, and only a TeeInfo can put it there. Nothing is inferred
+	// from an id being below MAX_CLIENTS, which a bot's display id is not
+	// guaranteed to be either way.
+	for(int i = 0; i < m_aKnownTeeIDs.size(); i++)
+	{
+		CClientData *pClient = GetClientData(m_aKnownTeeIDs[i]);
+		if(pClient)
+			pClient->m_Active = false;
+	}
+
+	m_aCharacters.clear_size();
+	m_apTeeInfos.clear_size();
+	m_aInfoByScore.clear_size();
+	m_aTeeIDs.clear_size();
 
 	// secure snapshot
 	{
@@ -1174,22 +1172,22 @@ void CGameClient::OnNewSnapshot()
 				const int TeeInfoID = Item.m_ID;
 				if(TeeInfoID >= 0 && TeeInfoID < MAX_TEES)
 				{
-					CClientData *pClient;
-					if(TeeInfoID < MAX_CLIENTS)
-					{
-						pClient = &m_aClients[TeeInfoID];
-						m_Snap.m_apTeeInfos[TeeInfoID] = pInfo;
-						m_Snap.m_aInfoByScore[TeeInfoID].m_pTeeInfo = pInfo;
-						m_Snap.m_aInfoByScore[TeeInfoID].m_ClientID = TeeInfoID;
-					}
-					else
-					{
-						// Bots occupy the sparse [MAX_CLIENTS, MAX_TEES) range, so
-						// their identity lives in the hash table, not m_aClients.
-						pClient = GetOrCreateClientData(TeeInfoID);
-						m_BotTeeInfos.set(TeeInfoID, pInfo);
-						m_aBotTeeInfoIDs.add(TeeInfoID);
-					}
+					// A TeeInfo is what makes a tee exist, real client or bot
+					// alike; the sparse container only cares that the id is
+					// within MAX_TEES.
+					CClientData *pClient = GetOrCreateClientData(TeeInfoID);
+					if(!pClient)
+						continue;
+
+					m_apTeeInfos[TeeInfoID] = pInfo;
+					// Registered for every tee, so the passes that run before
+					// and after the next snapshot see the same set of ids.
+					m_aTeeIDs.add(TeeInfoID);
+
+					CPlayerInfoItem Info;
+					Info.m_pTeeInfo = pInfo;
+					Info.m_ClientID = TeeInfoID;
+					m_aInfoByScore.add(Info);
 
 					// A TeeInfo in the snapshot is what makes a player exist.
 					// Sv_ClientEnter is only a hint and may never arrive (e.g. a
@@ -1260,8 +1258,14 @@ void CGameClient::OnNewSnapshot()
 				const int TeeInfoID = Item.m_ID;
 				if(TeeInfoID >= 0 && TeeInfoID < MAX_TEES)
 				{
+					// Character state is per snapshot and may exist for an id
+					// whose TeeInfo this client is not being sent, so it gets
+					// its own container. The identity is looked up, never
+					// created: only a TeeInfo makes a tee exist, and inventing
+					// one here would leave an identity nothing ever expires,
+					// because the id would not be in the set tracked above.
 					CSnapState::CCharacterInfo *pCharInfo = GetOrCreateCharacterInfo(TeeInfoID);
-					CClientData *pClient = GetOrCreateClientData(TeeInfoID);
+					CClientData *pClient = GetClientData(TeeInfoID);
 					if(pCharInfo && pClient)
 					{
 						const void *pOld = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, TeeInfoID);
@@ -1352,18 +1356,33 @@ void CGameClient::OnNewSnapshot()
 		}
 	}
 
-	// drop bot identities whose TeeInfo disappeared from the snapshot
+	// Drop the identity of every tee whose TeeInfo is not in this snapshot, so
+	// it stops being rendered or listed. Real clients are handled the same way
+	// as bots: Sv_ClientDrop also resets them, but a client whose TeeInfo stops
+	// being snapped has to stop being drawn even if that message never comes.
+	//
+	// The ids come from the previous snapshot, which is the set marked inactive
+	// above; the ones that stayed active are still there. Iterate backwards
+	// because RemoveIdentity shifts the list.
+	for(int i = m_aKnownTeeIDs.size() - 1; i >= 0; i--)
 	{
-		array<int> aInactiveBots;
-		m_BotClients.for_each(CollectInactiveBot, &aInactiveBots);
-		for(int i = 0; i < aInactiveBots.size(); i++)
-			m_BotClients.remove(aInactiveBots[i]);
+		const int TeeInfoID = m_aKnownTeeIDs[i];
+		const CClientData *pClient = GetClientData(TeeInfoID);
+		if(pClient && pClient->m_Active)
+			continue;
+		RemoveIdentity(TeeInfoID);
 	}
+
+	// Carry this snapshot's tees into the next one, which is the set that will
+	// be marked inactive and then expired if they stop being snapped.
+	m_aKnownTeeIDs.clear_size();
+	for(int i = 0; i < m_aTeeIDs.size(); i++)
+		m_aKnownTeeIDs.add(m_aTeeIDs[i]);
 
 	// setup local pointers
 	if(m_LocalClientID >= 0)
 	{
-		CSnapState::CCharacterInfo *c = &m_Snap.m_aCharacters[m_LocalClientID];
+		CSnapState::CCharacterInfo *c = &m_aCharacters[m_LocalClientID];
 		if(c->m_Active)
 		{
 			if(!m_Snap.m_SpecInfo.m_Active)
@@ -1383,7 +1402,7 @@ void CGameClient::OnNewSnapshot()
 	{
 		m_Snap.m_SpecInfo.m_Active = true;
 		if(Client()->State() == IClient::STATE_DEMOPLAYBACK && DemoPlayer()->GetDemoType() == IDemoPlayer::DEMOTYPE_SERVER &&
-			m_DemoSpecID != -1 && m_Snap.m_aCharacters[m_DemoSpecID].m_Active)
+			m_DemoSpecID != -1 && GetCharacterInfo(m_DemoSpecID) && GetCharacterInfo(m_DemoSpecID)->m_Active)
 		{
 			m_Snap.m_SpecInfo.m_SpecMode = SPEC_PLAYER;
 			m_Snap.m_SpecInfo.m_SpectatorID = m_DemoSpecID;
@@ -1407,69 +1426,78 @@ void CGameClient::OnNewSnapshot()
 	m_GameInfo.m_NumPlayers = 0;
 	m_GameInfo.m_aTeamSize[TEAM_RED] = 0;
 	m_GameInfo.m_aTeamSize[TEAM_BLUE] = 0;
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	for(int k = 0; k < m_aTeeIDs.size(); k++)
 	{
-		// existence is TeeInfo presence, not the Sv_ClientEnter announcement
-		if(!m_Snap.m_apTeeInfos[i])
+		const int ClientID = m_aTeeIDs[k];
+		const CClientData *pClient = GetClientData(ClientID);
+		if(!pClient)
 			continue;
+
 		m_GameInfo.m_NumPlayers++;
-		if(m_aClients[i].m_Team != TEAM_SPECTATORS)
-			m_GameInfo.m_aTeamSize[m_aClients[i].m_Team]++;
+		if(pClient->m_Team != TEAM_SPECTATORS)
+			m_GameInfo.m_aTeamSize[pClient->m_Team]++;
 	}
 
 	// sort player infos by score
 	FCompareFunc Compare = (m_GameInfo.m_GameFlags & GAMEFLAG_RACE) ? CompareTime : CompareScore;
 
-	for(int k = 0; k < MAX_CLIENTS - 1; k++) // ffs, bubblesort
+	for(int k = 0; k < m_aInfoByScore.size() - 1; k++) // ffs, bubblesort
 	{
-		for(int i = 0; i < MAX_CLIENTS - k - 1; i++)
+		for(int i = 0; i < m_aInfoByScore.size() - k - 1; i++)
 		{
-			if(m_Snap.m_aInfoByScore[i + 1].m_pTeeInfo && (!m_Snap.m_aInfoByScore[i].m_pTeeInfo ||
-									      Compare(m_Snap.m_aInfoByScore[i].m_pTeeInfo, m_Snap.m_aInfoByScore[i + 1].m_pTeeInfo)))
+			if(Compare(m_aInfoByScore[i].m_pTeeInfo, m_aInfoByScore[i + 1].m_pTeeInfo))
 			{
-				CPlayerInfoItem Tmp = m_Snap.m_aInfoByScore[i];
-				m_Snap.m_aInfoByScore[i] = m_Snap.m_aInfoByScore[i + 1];
-				m_Snap.m_aInfoByScore[i + 1] = Tmp;
+				CPlayerInfoItem Tmp = m_aInfoByScore[i];
+				m_aInfoByScore[i] = m_aInfoByScore[i + 1];
+				m_aInfoByScore[i + 1] = Tmp;
 			}
 		}
 	}
 
 	// calc some player stats, also trigger events
-	for(int i = 0; i < MAX_CLIENTS; ++i)
+	for(int k = 0; k < m_aTeeIDs.size(); ++k)
 	{
-		if(m_Snap.m_aCharacters[i].m_Active)
+		const int i = m_aTeeIDs[k];
+		CSnapState::CCharacterInfo *pCharInfo = GetCharacterInfo(i);
+		if(pCharInfo && pCharInfo->m_Active)
 		{
-			int EvolvePrevTick = minimum(m_Snap.m_aCharacters[i].m_Prev.m_Tick + Client()->GameTickSpeed() * 3, Client()->PrevGameTick());
-			int EvolveCurTick = minimum(m_Snap.m_aCharacters[i].m_Cur.m_Tick + Client()->GameTickSpeed() * 3, Client()->GameTick());
-			if(m_Snap.m_aCharacters[i].m_Prev.m_Tick)
-				EvolveCharacter(&m_Snap.m_aCharacters[i].m_Prev, EvolvePrevTick);
-			if(m_Snap.m_aCharacters[i].m_Cur.m_Tick)
-				EvolveCharacter(&m_Snap.m_aCharacters[i].m_Cur, EvolveCurTick);
+			int EvolvePrevTick = minimum(pCharInfo->m_Prev.m_Tick + Client()->GameTickSpeed() * 3, Client()->PrevGameTick());
+			int EvolveCurTick = minimum(pCharInfo->m_Cur.m_Tick + Client()->GameTickSpeed() * 3, Client()->GameTick());
+			if(pCharInfo->m_Prev.m_Tick)
+				EvolveCharacter(&pCharInfo->m_Prev, EvolvePrevTick);
+			if(pCharInfo->m_Cur.m_Tick)
+				EvolveCharacter(&pCharInfo->m_Cur, EvolveCurTick);
 
-			m_aClients[i].m_Evolved = m_Snap.m_aCharacters[i].m_Cur;
+			CClientData *pClient = GetClientData(i);
+			if(pClient)
+				pClient->m_Evolved = pCharInfo->m_Cur;
 			if(i != m_LocalClientID || !Config()->m_ClPredict || Client()->State() == IClient::STATE_DEMOPLAYBACK || !GameDataPredictInput() || !GameDataPredictEvent())
-				ProcessTriggeredEvents(m_Snap.m_aCharacters[i].m_Cur.m_TriggeredEvents, vec2(m_Snap.m_aCharacters[i].m_Cur.m_X, m_Snap.m_aCharacters[i].m_Cur.m_Y));
+				ProcessTriggeredEvents(pCharInfo->m_Cur.m_TriggeredEvents, vec2(pCharInfo->m_Cur.m_X, pCharInfo->m_Cur.m_Y));
 		}
 
-		if(!m_Snap.m_apTeeInfos[i])
+		const CNetObj_TeeInfo *pTeeInfo = GetTeeInfo(i);
+		CClientData *pClient = GetClientData(i);
+		if(!pTeeInfo || !pClient)
 			continue;
 
 		// count not ready players
 		if(m_Snap.m_pGameData && (m_Snap.m_pGameData->m_GameStateFlags & (GAMESTATEFLAG_STARTCOUNTDOWN | GAMESTATEFLAG_PAUSED | GAMESTATEFLAG_WARMUP)) &&
-			m_Snap.m_pGameData->m_GameStateEndTick == 0 && m_aClients[i].m_Team != TEAM_SPECTATORS && !(m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_READY))
+			m_Snap.m_pGameData->m_GameStateEndTick == 0 && pClient->m_Team != TEAM_SPECTATORS && !(pTeeInfo->m_Flag & TEEFLAG_READY))
 			m_Snap.m_NotReadyCount++;
 
 		// count alive players per team
-		if((m_GameInfo.m_GameFlags & GAMEFLAG_SURVIVAL) && m_aClients[i].m_Team != TEAM_SPECTATORS && !(m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_DEAD))
-			m_Snap.m_AliveCount[m_aClients[i].m_Team]++;
+		if((m_GameInfo.m_GameFlags & GAMEFLAG_SURVIVAL) && pClient->m_Team != TEAM_SPECTATORS && !(pTeeInfo->m_Flag & TEEFLAG_DEAD))
+			m_Snap.m_AliveCount[pClient->m_Team]++;
 	}
 
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
+		for(int k = 0; k < m_aTeeIDs.size(); ++k)
 		{
-			if(m_Snap.m_apTeeInfos[i])
-				m_aClients[i].UpdateRenderInfo(this, i, true);
+			const int i = m_aTeeIDs[k];
+			CClientData *pClient = GetClientData(i);
+			if(pClient)
+				pClient->UpdateRenderInfo(this, i, true);
 		}
 	}
 
@@ -1498,19 +1526,25 @@ void CGameClient::OnPredict()
 	// high latencies. For non-local players, we predict what will happen if
 	// they don't apply any inputs. In both cases we are extrapolating
 	// (predicting) what will happen between `GameTick` and `PredGameTick`.
+	//
+	// Every Tee in the snapshot is predicted, real clients and bots alike, so
+	// that hooking a bot drags the local player along the server's path.
 
 	// don't predict anything if we are paused or round/game is over
 	if(IsWorldPaused())
 	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
+		for(int k = 0; k < m_aTeeIDs.size(); k++)
 		{
-			if(!m_Snap.m_aCharacters[i].m_Active)
+			const int i = m_aTeeIDs[k];
+			CSnapState::CCharacterInfo *pCharInfo = GetCharacterInfo(i);
+			CClientData *pClient = GetClientData(i);
+			if(!pCharInfo || !pClient || !pCharInfo->m_Active)
 				continue;
 
 			// instead of predicting into the future, just use the current and
 			// previous snapshots that we already have
-			m_aClients[i].m_PrevPredicted.Read(&m_Snap.m_aCharacters[i].m_Prev);
-			m_aClients[i].m_Predicted.Read(&m_Snap.m_aCharacters[i].m_Cur);
+			pClient->m_PrevPredicted.Read(&pCharInfo->m_Prev);
+			pClient->m_Predicted.Read(&pCharInfo->m_Cur);
 		}
 
 		return;
@@ -1520,62 +1554,74 @@ void CGameClient::OnPredict()
 	CWorldCore World;
 	World.m_Tuning = m_Tuning;
 
-	// search for players
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	// search for players, binding every Tee to its own core in the world
+	for(int k = 0; k < m_aTeeIDs.size(); k++)
 	{
-		if(!m_Snap.m_aCharacters[i].m_Active)
+		const int i = m_aTeeIDs[k];
+		CSnapState::CCharacterInfo *pCharInfo = GetCharacterInfo(i);
+		CClientData *pClient = GetClientData(i);
+		if(!pCharInfo || !pClient || !pCharInfo->m_Active)
 			continue;
 
-		m_aClients[i].m_Predicted.Init(&World, Collision());
-		World.m_apCharacters[i] = &m_aClients[i].m_Predicted;
-		m_aClients[i].m_Predicted.Read(&m_Snap.m_aCharacters[i].m_Cur);
+		pClient->m_Predicted.Init(&World, Collision());
+		World.SetCharacter(i, &pClient->m_Predicted);
+		pClient->m_Predicted.Read(&pCharInfo->m_Cur);
 	}
 
+	// The world keeps its own list of bound ids, so the tick loop walks that
+	// instead of re-scanning the sparse containers.
 	// predict
 	for(int Tick = Client()->GameTick() + 1;
 		Tick <= Client()->PredGameTick();
 		Tick++)
 	{
 		// first calculate where everyone should move
-		for(int c = 0; c < MAX_CLIENTS; c++)
+		for(int k = 0; k < World.m_aCharacterIDs.size(); k++)
 		{
-			if(!World.m_apCharacters[c])
+			const int c = World.m_aCharacterIDs[k];
+			CCharacterCore *pCore = World.GetCharacter(c);
+			if(!pCore)
 				continue;
 
 			// Before running the last iteration, store our predictions. We use
 			// `Prev` because we haven't run the last iteration yet, so our
 			// data is from the previous tick.
 			if(Tick == Client()->PredGameTick())
-				m_aClients[c].m_PrevPredicted = *World.m_apCharacters[c];
+			{
+				CClientData *pClient = GetClientData(c);
+				if(pClient)
+					pClient->m_PrevPredicted = *pCore;
+			}
 
-			mem_zero(&World.m_apCharacters[c]->m_Input, sizeof(World.m_apCharacters[c]->m_Input));
+			mem_zero(&pCore->m_Input, sizeof(pCore->m_Input));
 
 			if(m_LocalClientID == c && GameDataPredictInput())
 			{
 				// apply player input
 				const int *pInput = Client()->GetInput(Tick);
 				if(pInput)
-					World.m_apCharacters[c]->m_Input = *((const CNetObj_PlayerInput *) pInput);
+					pCore->m_Input = *((const CNetObj_PlayerInput *) pInput);
 
-				World.m_apCharacters[c]->Tick(true);
+				pCore->Tick(true);
 			}
 			else
 			{
 				// don't apply inputs for non-local players
-				World.m_apCharacters[c]->Tick(false);
+				pCore->Tick(false);
 			}
 		}
 
 		// move all players and quantize their data
-		for(int c = 0; c < MAX_CLIENTS; c++)
+		for(int k = 0; k < World.m_aCharacterIDs.size(); k++)
 		{
-			if(!World.m_apCharacters[c])
+			CCharacterCore *pCore = World.GetCharacter(World.m_aCharacterIDs[k]);
+			if(!pCore)
 				continue;
 
-			World.m_apCharacters[c]->AddDragVelocity();
-			World.m_apCharacters[c]->ResetDragVelocity();
-			World.m_apCharacters[c]->Move();
-			World.m_apCharacters[c]->Quantize();
+			pCore->AddDragVelocity();
+			pCore->ResetDragVelocity();
+			pCore->Move();
+			pCore->Quantize();
 		}
 
 		// check if we want to trigger effects
@@ -1589,11 +1635,12 @@ void CGameClient::OnPredict()
 			// necessary to trigger events for them here. Also, our predictions
 			// for other players will often be wrong, so it's safer not to
 			// trigger events here.
-			if(m_LocalClientID != -1 && World.m_apCharacters[m_LocalClientID] && Config()->m_ClPredict && GameDataPredictInput() && GameDataPredictEvent())
+			CCharacterCore *pLocal = m_LocalClientID != -1 ? World.GetCharacter(m_LocalClientID) : 0;
+			if(pLocal && Config()->m_ClPredict && GameDataPredictInput() && GameDataPredictEvent())
 			{
 				ProcessTriggeredEvents(
-					World.m_apCharacters[m_LocalClientID]->m_TriggeredEvents,
-					World.m_apCharacters[m_LocalClientID]->m_Pos);
+					pLocal->m_TriggeredEvents,
+					pLocal->m_Pos);
 			}
 		}
 	}
@@ -1637,8 +1684,11 @@ bool CGameClient::ShouldUsePredicted() const
 
 bool CGameClient::ShouldUsePredictedChar(int ClientID) const
 {
-	// bots are never predicted, they only have snapshot state
-	if(ClientID < 0 || ClientID >= MAX_CLIENTS)
+	// Every known Tee is predicted, bots included, so a valid TeeID can use the
+	// predicted state as long as we have one for it.
+	if(ClientID < 0 || ClientID >= MAX_TEES)
+		return false;
+	if(!GetClientData(ClientID))
 		return false;
 	return ClientID == m_LocalClientID || Config()->m_ClPredictPlayers;
 }
@@ -1649,18 +1699,23 @@ void CGameClient::UsePredictedChar(
 	float *IntraTick,
 	int ClientID) const
 {
-	m_aClients[ClientID].m_PrevPredicted.Write(pPrevChar);
-	m_aClients[ClientID].m_Predicted.Write(pPlayerChar);
+	const CClientData *pClientData = GetClientData(ClientID);
+	if(!pClientData)
+		return;
+
+	pClientData->m_PrevPredicted.Write(pPrevChar);
+	pClientData->m_Predicted.Write(pPlayerChar);
 	*IntraTick = Client()->PredIntraGameTick();
 }
 
 vec2 CGameClient::GetCharPos(int ClientID, bool Predicted) const
 {
-	if(Predicted && ClientID >= 0 && ClientID < MAX_CLIENTS)
+	const CClientData *pClientData = GetClientData(ClientID);
+	if(Predicted && pClientData)
 	{
 		return mix(
-			m_aClients[ClientID].m_PrevPredicted.m_Pos,
-			m_aClients[ClientID].m_Predicted.m_Pos,
+			pClientData->m_PrevPredicted.m_Pos,
+			pClientData->m_Predicted.m_Pos,
 			Client()->PredIntraGameTick());
 	}
 	else
@@ -1797,6 +1852,7 @@ void CGameClient::CClientData::Reset(CGameClient *pGameClient, int ClientID)
 	m_Friend = false;
 	m_Evolved.m_Tick = -1;
 	m_TeeInfoID = ClientID;
+	m_Initialized = true;
 	for(int p = 0; p < NUM_SKINPARTS; p++)
 	{
 		m_SkinPartIDs[p] = 0;
@@ -1910,9 +1966,10 @@ void CGameClient::CopyScreenshot(const char *pPath)
 
 int CGameClient::GetClientID(const char *pName)
 {
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	for(int k = 0; k < m_aTeeIDs.size(); k++)
 	{
-		if(!m_Snap.m_apTeeInfos[i] || i == m_LocalClientID) // skip local user
+		const int i = m_aTeeIDs[k];
+		if(i == m_LocalClientID) // skip local user
 			continue;
 
 		if(!str_comp(m_aClients[i].m_aName, pName))
@@ -1931,60 +1988,80 @@ int CGameClient::GetRealClientID(int SnapClientID)
 
 CGameClient::CClientData *CGameClient::GetClientData(int TeeInfoID)
 {
-	if(TeeInfoID >= 0 && TeeInfoID < MAX_CLIENTS)
-		return &m_aClients[TeeInfoID];
-	return m_BotClients.get(TeeInfoID);
+	return m_aClients.get(TeeInfoID);
 }
 
 const CGameClient::CClientData *CGameClient::GetClientData(int TeeInfoID) const
 {
-	if(TeeInfoID >= 0 && TeeInfoID < MAX_CLIENTS)
-		return &m_aClients[TeeInfoID];
-	return m_BotClients.get(TeeInfoID);
+	return m_aClients.get(TeeInfoID);
+}
+
+bool CGameClient::HasClientData(int TeeInfoID) const
+{
+	// An addressable slot may still be uninitialised, and such an entry reads
+	// its m_TeeInfoID as 0; only m_Initialized marks a real identity.
+	const CClientData *pClient = m_aClients.get(TeeInfoID);
+	return pClient && pClient->m_Initialized;
 }
 
 CGameClient::CClientData *CGameClient::GetOrCreateClientData(int TeeInfoID)
 {
-	CClientData *pClient = GetClientData(TeeInfoID);
-	if(pClient || TeeInfoID < 0)
-		return pClient;
+	if(TeeInfoID < 0 || TeeInfoID >= MAX_TEES)
+		return 0;
 
-	CClientData Data;
-	mem_zero(&Data, sizeof(Data));
-	Data.Reset(this, TeeInfoID);
-	return m_BotClients.set(TeeInfoID, Data);
+	// An empty entry must be initialised before use, and an addressable slot is
+	// not necessarily initialised.
+	if(HasClientData(TeeInfoID))
+		return m_aClients.get(TeeInfoID);
+
+	CClientData *pClient = &m_aClients[TeeInfoID];
+	mem_zero(pClient, sizeof(*pClient));
+	pClient->Reset(this, TeeInfoID);
+	return pClient;
+}
+
+bool CGameClient::RemoveIdentity(int TeeInfoID)
+{
+	for(int i = 0; i < m_aKnownTeeIDs.size(); i++)
+	{
+		if(m_aKnownTeeIDs[i] != TeeInfoID)
+			continue;
+
+		m_aKnownTeeIDs.remove_index(i);
+
+		// Only this entry is cleared: other tees may share its part, and
+		// partial_array::remove_index would drop the whole part.
+		CClientData *pClient = m_aClients.get(TeeInfoID);
+		if(pClient)
+		{
+			mem_zero(pClient, sizeof(*pClient));
+			pClient->m_TeeInfoID = -1;
+		}
+		return true;
+	}
+	return false;
 }
 
 CGameClient::CSnapState::CCharacterInfo *CGameClient::GetCharacterInfo(int TeeInfoID)
 {
-	if(TeeInfoID >= 0 && TeeInfoID < MAX_CLIENTS)
-		return &m_Snap.m_aCharacters[TeeInfoID];
-	return m_BotCharacters.get(TeeInfoID);
+	return m_aCharacters.get(TeeInfoID);
 }
 
 const CGameClient::CSnapState::CCharacterInfo *CGameClient::GetCharacterInfo(int TeeInfoID) const
 {
-	if(TeeInfoID >= 0 && TeeInfoID < MAX_CLIENTS)
-		return &m_Snap.m_aCharacters[TeeInfoID];
-	return m_BotCharacters.get(TeeInfoID);
+	return m_aCharacters.get(TeeInfoID);
 }
 
 CGameClient::CSnapState::CCharacterInfo *CGameClient::GetOrCreateCharacterInfo(int TeeInfoID)
 {
-	CSnapState::CCharacterInfo *pCharInfo = GetCharacterInfo(TeeInfoID);
-	if(pCharInfo || TeeInfoID < 0)
-		return pCharInfo;
-
-	CSnapState::CCharacterInfo CharInfo;
-	mem_zero(&CharInfo, sizeof(CharInfo));
-	return m_BotCharacters.set(TeeInfoID, CharInfo);
+	if(TeeInfoID < 0 || TeeInfoID >= MAX_TEES)
+		return 0;
+	return &m_aCharacters[TeeInfoID];
 }
 
 const CNetObj_TeeInfo *CGameClient::GetTeeInfo(int TeeInfoID) const
 {
-	if(TeeInfoID >= 0 && TeeInfoID < MAX_CLIENTS)
-		return m_Snap.m_apTeeInfos[TeeInfoID];
-	const CNetObj_TeeInfo *const *ppTeeInfo = m_BotTeeInfos.get(TeeInfoID);
+	const CNetObj_TeeInfo *const *ppTeeInfo = m_apTeeInfos.get(TeeInfoID);
 	return ppTeeInfo ? *ppTeeInfo : 0;
 }
 
@@ -1992,19 +2069,14 @@ void CGameClient::CollectActiveTeeIDs(array<int> &IDs) const
 {
 	IDs.clear_size();
 
-	// real clients are dense
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	// Only the Tees of the current snapshot are considered, which also skips
+	// bot slots filled in an earlier one. A tee needs all three: character,
+	// TeeInfo and identity.
+	for(int i = 0; i < m_aTeeIDs.size(); i++)
 	{
-		if(m_Snap.m_aCharacters[i].m_Active && m_Snap.m_apTeeInfos[i])
-			IDs.add(i);
-	}
-
-	// bots are sparse, so only the ones seen in this snapshot are considered
-	for(int i = 0; i < m_aBotTeeInfoIDs.size(); i++)
-	{
-		const int TeeInfoID = m_aBotTeeInfoIDs[i];
+		const int TeeInfoID = m_aTeeIDs[i];
 		const CSnapState::CCharacterInfo *pCharInfo = GetCharacterInfo(TeeInfoID);
-		if(pCharInfo && pCharInfo->m_Active && GetTeeInfo(TeeInfoID))
+		if(pCharInfo && pCharInfo->m_Active && GetTeeInfo(TeeInfoID) && GetClientData(TeeInfoID))
 			IDs.add(TeeInfoID);
 	}
 }
@@ -2058,10 +2130,10 @@ void CGameClient::ConchainFriendUpdate(IConsole::IResult *pResult, void *pUserDa
 {
 	pfnCallback(pResult, pCallbackUserData);
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
-	for(int i = 0; i < MAX_CLIENTS; ++i)
+	for(int k = 0; k < pClient->m_aTeeIDs.size(); ++k)
 	{
-		if(pClient->m_Snap.m_apTeeInfos[i])
-			pClient->m_aClients[i].m_Friend = pClient->Friends()->IsFriend(pClient->m_aClients[i].m_aName, pClient->m_aClients[i].m_aClan, true);
+		const int i = pClient->m_aTeeIDs[k];
+		pClient->m_aClients[i].m_Friend = pClient->Friends()->IsFriend(pClient->m_aClients[i].m_aName, pClient->m_aClients[i].m_aClan, true);
 	}
 }
 
@@ -2069,10 +2141,10 @@ void CGameClient::ConchainBlacklistUpdate(IConsole::IResult *pResult, void *pUse
 {
 	pfnCallback(pResult, pCallbackUserData);
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
-	for(int i = 0; i < MAX_CLIENTS; ++i)
+	for(int k = 0; k < pClient->m_aTeeIDs.size(); ++k)
 	{
-		if(pClient->m_Snap.m_apTeeInfos[i])
-			pClient->m_aClients[i].m_ChatIgnore = pClient->Blacklist()->IsIgnored(pClient->m_aClients[i].m_aName, pClient->m_aClients[i].m_aClan, true);
+		const int i = pClient->m_aTeeIDs[k];
+		pClient->m_aClients[i].m_ChatIgnore = pClient->Blacklist()->IsIgnored(pClient->m_aClients[i].m_aName, pClient->m_aClients[i].m_aClan, true);
 	}
 }
 
@@ -2083,10 +2155,10 @@ void CGameClient::ConchainXmasHatUpdate(IConsole::IResult *pResult, void *pUserD
 	if(pClient->Client()->State() != IClient::STATE_ONLINE)
 		return;
 
-	for(int i = 0; i < MAX_CLIENTS; ++i)
+	for(int k = 0; k < pClient->m_aTeeIDs.size(); ++k)
 	{
-		if(pClient->m_Snap.m_apTeeInfos[i])
-			pClient->m_aClients[i].UpdateRenderInfo(pClient, i, true);
+		const int i = pClient->m_aTeeIDs[k];
+		pClient->m_aClients[i].UpdateRenderInfo(pClient, i, true);
 	}
 }
 

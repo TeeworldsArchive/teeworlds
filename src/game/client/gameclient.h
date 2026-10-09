@@ -4,7 +4,7 @@
 #ifndef GAME_CLIENT_GAMECLIENT_H
 #define GAME_CLIENT_GAMECLIENT_H
 
-#include <base/tl/hashtable.h>
+#include <base/tl/partial_array.h>
 #include <base/vmath.h>
 #include <engine/client.h>
 #include <engine/console.h>
@@ -167,8 +167,8 @@ public:
 		int m_NotReadyCount;
 		int m_AliveCount[NUM_TEAMS];
 
-		const CNetObj_TeeInfo *m_apTeeInfos[MAX_CLIENTS];
-		CPlayerInfoItem m_aInfoByScore[MAX_CLIENTS];
+		// TeeID-indexed snapshot state lives in CGameClient, not here, because
+		// CSnapState is cleared with mem_zero and those containers own storage.
 
 		// spectate data
 		struct CSpectateInfo
@@ -192,8 +192,6 @@ public:
 			// interpolated position
 			vec2 m_Position;
 		};
-
-		CCharacterInfo m_aCharacters[MAX_CLIENTS];
 	};
 
 	CSnapState m_Snap;
@@ -212,6 +210,10 @@ public:
 		int m_Emoticon;
 		int m_EmoticonStart;
 		CCharacterCore m_Predicted;
+		// Snapshotted from m_Predicted just before the final predicted tick, so
+		// the two bracket [PredGameTick - 1, PredGameTick], the interval
+		// PredIntraGameTick interpolates over. Applying that tick's input only
+		// to m_Predicted is why the two can disagree about the hook state.
 		CCharacterCore m_PrevPredicted;
 
 		CTeeRenderInfo m_SkinInfo; // this is what the server reports
@@ -226,45 +228,87 @@ public:
 		bool m_ChatIgnore;
 		bool m_Friend;
 
-		// TeeInfoID of this Tee. For real clients it equals the client slot;
-		// for bots it is the id the hash table entry is keyed by.
+		// TeeInfoID of this Tee. Real clients use [0, MAX_CLIENTS), bots the
+		// sparse [MAX_CLIENTS, MAX_TEES) range.
 		int m_TeeInfoID;
+
+		// Whether this entry holds a real identity. A whole part is handed out
+		// at once, so an entry can be addressable while still uninitialised,
+		// and m_TeeInfoID defaults to 0 so it cannot tell the two apart.
+		bool m_Initialized;
 
 		void UpdateRenderInfo(CGameClient *pGameClient, int ClientID, bool UpdateSkinInfo);
 		void UpdateBotRenderInfo(CGameClient *pGameClient, const CNetObj_TeeInfo *pTeeInfo);
 		void Reset(CGameClient *pGameClient, int CLientID);
 	};
 
-	CClientData m_aClients[MAX_CLIENTS];
-
-	// Bots use TeeInfoID in [MAX_CLIENTS, MAX_TEES), which is far too sparse for
-	// the fixed m_aClients/m_aCharacters arrays. Their identity and snapshot
-	// state are kept here, keyed by TeeInfoID, while real clients stay in the
-	// fixed arrays.
+	// Every array indexed by a TeeID has to cover the whole id space, because
+	// TeeIDs are not limited to MAX_CLIENTS: bots occupy the sparse
+	// [MAX_CLIENTS, MAX_TEES) range and ids arrive straight from the network
+	// (TeeInfo, Character, Sv_KillMsg, Sv_Emoticon, Sv_RaceFinish, ...).
+	// partial_array keeps that affordable by allocating a part only once an
+	// index inside it is touched.
 	enum
 	{
-		BOT_HASH_TABLE_SIZE = 64,
+		TEE_PART_SIZE = 1024,
+		TEE_PARTS = 64,
 	};
-	hash_table<int, CClientData, BOT_HASH_TABLE_SIZE> m_BotClients;
-	hash_table<int, CSnapState::CCharacterInfo, BOT_HASH_TABLE_SIZE> m_BotCharacters;
-	hash_table<int, const CNetObj_TeeInfo *, BOT_HASH_TABLE_SIZE> m_BotTeeInfos;
-	// TeeInfoIDs of the bots present in the current snapshot, for iteration
-	array<int> m_aBotTeeInfoIDs;
+	static_assert(TEE_PARTS * TEE_PART_SIZE >= MAX_TEES, "TeeID storage must cover the whole TeeID space");
 
-	// Returns the identity data for any TeeInfoID, real client or bot.
-	// Returns 0 when no Tee with that id is currently known.
+	typedef partial_array<CClientData, TEE_PARTS, TEE_PART_SIZE> CTeeClientDataArray;
+	typedef partial_array<CSnapState::CCharacterInfo, TEE_PARTS, TEE_PART_SIZE> CTeeCharacterArray;
+	// The snapshot owns the TeeInfo objects, so only the pointers are borrowed.
+	typedef partial_array<const CNetObj_TeeInfo *, TEE_PARTS, TEE_PART_SIZE, allocator_non_owning<const CNetObj_TeeInfo *>> CTeeInfoArray;
+
+	CTeeClientDataArray m_aClients;
+	CTeeCharacterArray m_aCharacters;
+	CTeeInfoArray m_apTeeInfos;
+
+	// Player infos ordered by score, rebuilt every snapshot. Dense on purpose:
+	// the scoreboard and HUD walk it front to back, and TeeIDs are too sparse
+	// to walk directly.
+	array<CPlayerInfoItem> m_aInfoByScore;
+
+	// TeeInfoIDs seen in the current snapshot, for iteration.
+	array<int> m_aTeeIDs;
+
+	// TeeInfoIDs that had an identity when the current snapshot started, i.e.
+	// the tees of the previous one. m_aTeeIDs is cleared and refilled while the
+	// snapshot is being read, so it cannot answer which ids went away; this is
+	// the set that gets marked inactive first and then expired.
+	//
+	// Both real clients and bots live here. Nothing distinguishes them: a tee
+	// exists exactly as long as its TeeInfo is being snapped, which is the same
+	// rule the server follows and the only one that also covers a bot's display
+	// id being recycled to a different bot.
+	array<int> m_aKnownTeeIDs;
+
+	// Returns the identity data for any TeeInfoID, real client or bot, or 0
+	// when no Tee with that id is known. Never allocates.
 	CClientData *GetClientData(int TeeInfoID);
 	const CClientData *GetClientData(int TeeInfoID) const;
 
-	// Same, but creates the identity for a bot on first use.
+	// Whether an identity actually exists for TeeInfoID. The slot merely being
+	// addressable is not enough: a part is handed out as a whole, so the part
+	// holding real clients also covers every bot id in it, still empty.
+	bool HasClientData(int TeeInfoID) const;
+
+	// Same, but creates the identity on first use. Unlike GetClientData this
+	// allocates the part holding TeeInfoID, so it needs a checked id. Only the
+	// TeeInfo pass calls it, which is also what records the id in m_aTeeIDs; an
+	// identity created without that would never be marked inactive or expired.
 	CClientData *GetOrCreateClientData(int TeeInfoID);
 
-	// Returns the snapshot Character state for any TeeInfoID, real client or
-	// bot. Returns 0 when no Character with that id is currently known.
+	// Drops the identity of a tee that is no longer in the snapshot, real
+	// client or bot alike. Returns whether the tee was known. Only the one
+	// entry is cleared, because other tees may share its part.
+	bool RemoveIdentity(int TeeInfoID);
+
+	// Returns the snapshot Character state for any TeeInfoID, or 0.
 	CSnapState::CCharacterInfo *GetCharacterInfo(int TeeInfoID);
 	const CSnapState::CCharacterInfo *GetCharacterInfo(int TeeInfoID) const;
 
-	// Same, but creates the Character state for a bot on first use.
+	// Same, but creates the Character state on first use.
 	CSnapState::CCharacterInfo *GetOrCreateCharacterInfo(int TeeInfoID);
 
 	// Returns the TeeInfo snapshot object for any TeeInfoID, or 0.
