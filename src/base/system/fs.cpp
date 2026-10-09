@@ -21,8 +21,9 @@
 
 #elif defined(CONF_FAMILY_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
-#include <direct.h>
 #include <windows.h>
+
+#include <direct.h>
 #else
 #error NOT IMPLEMENTED
 #endif
