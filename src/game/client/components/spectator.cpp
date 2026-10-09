@@ -39,15 +39,20 @@ bool CSpectator::SpecModePossible(int SpecMode, int SpectatorID)
 	switch(SpecMode)
 	{
 		case SPEC_PLAYER:
-			if(!m_pClient->m_aClients[SpectatorID].m_Active || m_pClient->m_aClients[SpectatorID].m_Team == TEAM_SPECTATORS)
+		{
+			// SpectatorID comes from Sv_SpectatorInfo, so it may name a bot we
+			// have no identity for.
+			const CGameClient::CClientData *pSpecClient = m_pClient->GetClientData(SpectatorID);
+			if(!pSpecClient || !pSpecClient->m_Active || pSpecClient->m_Team == TEAM_SPECTATORS)
 			{
 				return false;
 			}
-			if(m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS && (SpectatorID == m_pClient->m_LocalClientID || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != m_pClient->m_aClients[SpectatorID].m_Team || (m_pClient->m_Snap.m_apTeeInfos[SpectatorID] && (m_pClient->m_Snap.m_apTeeInfos[SpectatorID]->m_Flag & TEEFLAG_DEAD))))
+			if(m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS && (SpectatorID == m_pClient->m_LocalClientID || m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != pSpecClient->m_Team || (m_pClient->GetTeeInfo(SpectatorID) && (m_pClient->GetTeeInfo(SpectatorID)->m_Flag & TEEFLAG_DEAD))))
 			{
 				return false;
 			}
 			return true;
+		}
 		case SPEC_FLAGRED:
 		case SPEC_FLAGBLUE:
 			return m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_FLAGS;
@@ -277,7 +282,8 @@ void CSpectator::OnRender()
 	{
 		if(!SpecModePossible(SPEC_PLAYER, i))
 			continue;
-		if(m_pClient->m_Snap.m_apTeeInfos[i] && m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
+		const CNetObj_TeeInfo *pTeeInfo = m_pClient->GetTeeInfo(i);
+		if(pTeeInfo && pTeeInfo->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
 			continue;
 
 		if(Count != 0 && Count % ColumnSize == 0)

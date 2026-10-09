@@ -82,7 +82,7 @@ IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayer
 			CMapItemLayer *pCandidate = pLayers->GetLayer(pGroup->m_StartLayer + l);
 			if(pCandidate->m_Type != LAYERTYPE_TILES)
 				continue;
-			CMapItemLayerTilemap *pTilemap = (CMapItemLayerTilemap *)pCandidate;
+			CMapItemLayerTilemap *pTilemap = (CMapItemLayerTilemap *) pCandidate;
 			if(pTilemap->m_Width != Tex.m_Width || pTilemap->m_Height != Tex.m_Height || pTilemap->m_Data < 0)
 				continue;
 			Tex.m_lLayers.add(pTilemap);
@@ -95,14 +95,14 @@ IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayer
 
 	// CTile's first two bytes are the index and flags, uploaded as R8G8 (SDL_GPU
 	// has no RGB8). TEXLOAD_NORESAMPLE keeps them from being averaged.
-	const size_t LayerSize = (size_t)Tex.m_Width * Tex.m_Height * 2;
-	unsigned char *pData = (unsigned char *)mem_alloc(LayerSize * NumLayers);
+	const size_t LayerSize = (size_t) Tex.m_Width * Tex.m_Height * 2;
+	unsigned char *pData = (unsigned char *) mem_alloc(LayerSize * NumLayers);
 	if(!pData)
 		return IGraphics::CTextureHandle();
 
 	for(int l = 0; l < NumLayers; l++)
 	{
-		const CTile *pTiles = (const CTile *)pLayers->Map()->GetData(Tex.m_lLayers[l]->m_Data);
+		const CTile *pTiles = (const CTile *) pLayers->Map()->GetData(Tex.m_lLayers[l]->m_Data);
 		unsigned char *pOut = pData + l * LayerSize;
 		const int NumTiles = Tex.m_Width * Tex.m_Height;
 		for(int t = 0; t < NumTiles; t++)

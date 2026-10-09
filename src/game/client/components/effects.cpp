@@ -188,23 +188,26 @@ void CEffects::PlayerDeath(vec2 Pos, int ClientID)
 {
 	vec3 BloodColor(1.0f, 1.0f, 1.0f);
 
-	if(ClientID >= 0)
+	// The death event carries a TeeID that may name a bot we have no identity
+	// for, so this has to be a non-allocating lookup.
+	const CGameClient::CClientData *pClientData = m_pClient->GetClientData(ClientID);
+	if(pClientData)
 	{
 		if(m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS)
 		{
 			int ColorVal = m_pClient->m_pSkins->GetTeamColor(
-				m_pClient->m_aClients[ClientID].m_aUseCustomColors[SKINPART_BODY],
-				m_pClient->m_aClients[ClientID].m_aSkinPartColors[SKINPART_BODY],
-				m_pClient->m_aClients[ClientID].m_Team, SKINPART_BODY);
+				pClientData->m_aUseCustomColors[SKINPART_BODY],
+				pClientData->m_aSkinPartColors[SKINPART_BODY],
+				pClientData->m_Team, SKINPART_BODY);
 			BloodColor = m_pClient->m_pSkins->GetColorV3(ColorVal);
 		}
 		else
 		{
-			if(m_pClient->m_aClients[ClientID].m_aUseCustomColors[SKINPART_BODY])
-				BloodColor = m_pClient->m_pSkins->GetColorV3(m_pClient->m_aClients[ClientID].m_aSkinPartColors[SKINPART_BODY]);
+			if(pClientData->m_aUseCustomColors[SKINPART_BODY])
+				BloodColor = m_pClient->m_pSkins->GetColorV3(pClientData->m_aSkinPartColors[SKINPART_BODY]);
 			else
 			{
-				const CSkins::CSkinPart *pSkinPart = m_pClient->m_pSkins->GetSkinPart(SKINPART_BODY, m_pClient->m_aClients[ClientID].m_SkinPartIDs[SKINPART_BODY]);
+				const CSkins::CSkinPart *pSkinPart = m_pClient->m_pSkins->GetSkinPart(SKINPART_BODY, pClientData->m_SkinPartIDs[SKINPART_BODY]);
 				if(pSkinPart)
 					BloodColor = pSkinPart->m_BloodColor;
 			}

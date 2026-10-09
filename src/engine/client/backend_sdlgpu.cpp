@@ -16,10 +16,10 @@ static const char *PresentModeName(SDL_GPUPresentMode Mode)
 {
 	switch(Mode)
 	{
-	case SDL_GPU_PRESENTMODE_VSYNC: return "vsync";
-	case SDL_GPU_PRESENTMODE_IMMEDIATE: return "immediate";
-	case SDL_GPU_PRESENTMODE_MAILBOX: return "mailbox";
-	default: return "unknown";
+		case SDL_GPU_PRESENTMODE_VSYNC: return "vsync";
+		case SDL_GPU_PRESENTMODE_IMMEDIATE: return "immediate";
+		case SDL_GPU_PRESENTMODE_MAILBOX: return "mailbox";
+		default: return "unknown";
 	}
 }
 
@@ -43,9 +43,9 @@ static Uint64 GetDisplayRefreshIntervalNS(SDL_Window *pWindow)
 	if(!pMode)
 		return 0;
 	if(pMode->refresh_rate_numerator > 0 && pMode->refresh_rate_denominator > 0)
-		return 1000000000ull * (Uint64)pMode->refresh_rate_denominator / (Uint64)pMode->refresh_rate_numerator;
+		return 1000000000ull * (Uint64) pMode->refresh_rate_denominator / (Uint64) pMode->refresh_rate_numerator;
 	if(pMode->refresh_rate > 0.0f)
-		return (Uint64)(1000000000.0 / pMode->refresh_rate);
+		return (Uint64) (1000000000.0 / pMode->refresh_rate);
 	return 0;
 }
 
@@ -112,14 +112,14 @@ SDL_GPUTextureFormat CCommandProcessorFragment_SDLGPU::TexFormatToSDLGPUFormat(i
 {
 	switch(TexFormat)
 	{
-	case CCommandBuffer::TEXFORMAT_ALPHA:
-		return SDL_GPU_TEXTUREFORMAT_R8_UNORM;
-	case CCommandBuffer::TEXFORMAT_RG:
-		return SDL_GPU_TEXTUREFORMAT_R8G8_UNORM;
-	case CCommandBuffer::TEXFORMAT_RGB:
-	case CCommandBuffer::TEXFORMAT_RGBA:
-	default:
-		return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+		case CCommandBuffer::TEXFORMAT_ALPHA:
+			return SDL_GPU_TEXTUREFORMAT_R8_UNORM;
+		case CCommandBuffer::TEXFORMAT_RG:
+			return SDL_GPU_TEXTUREFORMAT_R8G8_UNORM;
+		case CCommandBuffer::TEXFORMAT_RGB:
+		case CCommandBuffer::TEXFORMAT_RGBA:
+		default:
+			return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
 	}
 }
 
@@ -195,7 +195,7 @@ bool CCommandProcessorFragment_SDLGPU::EnsureStagingCapacity(unsigned Required)
 	if(m_StagingCapacity > 0)
 		NewCapacity = maximum(NewCapacity, m_StagingCapacity + m_StagingCapacity / 2);
 
-	unsigned char *pNew = (unsigned char *)mem_alloc(NewCapacity);
+	unsigned char *pNew = (unsigned char *) mem_alloc(NewCapacity);
 	if(!pNew)
 		return false;
 	if(m_pStagingData)
@@ -217,7 +217,7 @@ bool CCommandProcessorFragment_SDLGPU::EnsurePendingDrawCapacity(unsigned Requir
 	if(m_PendingDrawCapacity > 0)
 		NewCapacity = maximum(NewCapacity, m_PendingDrawCapacity * 2);
 
-	CPendingDraw *pNew = (CPendingDraw *)mem_alloc(sizeof(CPendingDraw) * NewCapacity);
+	CPendingDraw *pNew = (CPendingDraw *) mem_alloc(sizeof(CPendingDraw) * NewCapacity);
 	if(!pNew)
 		return false;
 	if(m_pPendingDraws)
@@ -293,7 +293,7 @@ bool CCommandProcessorFragment_SDLGPU::UploadTexture(SDL_GPUTexture *pTexture, i
 	if(!EnsureCommandBuffer())
 		return false;
 
-	const unsigned Size = (unsigned)(Width * Height * Layers * BytesPerPixel);
+	const unsigned Size = (unsigned) (Width * Height * Layers * BytesPerPixel);
 	SDL_GPUTransferBufferCreateInfo TransferInfo;
 	mem_zero(&TransferInfo, sizeof(TransferInfo));
 	TransferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
@@ -317,8 +317,8 @@ bool CCommandProcessorFragment_SDLGPU::UploadTexture(SDL_GPUTexture *pTexture, i
 	mem_zero(&Src, sizeof(Src));
 	Src.transfer_buffer = pTransferBuffer;
 	// tightly packed data, so spell out the row/layer strides or later layers desync
-	Src.pixels_per_row = (Uint32)Width;
-	Src.rows_per_layer = (Uint32)Height;
+	Src.pixels_per_row = (Uint32) Width;
+	Src.rows_per_layer = (Uint32) Height;
 
 	SDL_GPUTextureRegion Dst;
 	mem_zero(&Dst, sizeof(Dst));
@@ -332,10 +332,10 @@ bool CCommandProcessorFragment_SDLGPU::UploadTexture(SDL_GPUTexture *pTexture, i
 	Dst.d = 1;
 
 	// upload layer by layer, multi-layer regions are not handled reliably
-	const unsigned LayerSize = (unsigned)(Width * Height * BytesPerPixel);
+	const unsigned LayerSize = (unsigned) (Width * Height * BytesPerPixel);
 	for(int l = 0; l < Layers; l++)
 	{
-		Src.offset = (Uint32)(l * LayerSize);
+		Src.offset = (Uint32) (l * LayerSize);
 		Dst.layer = Z + l;
 		SDL_UploadToGPUTexture(pCopyPass, &Src, &Dst, false);
 	}
@@ -585,23 +585,23 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 
 			switch(j)
 			{
-			case SAMPLER2D_REPEAT_REPEAT:
-				SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-				SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-				break;
-			case SAMPLER2D_REPEAT_CLAMP:
-				SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-				SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-				break;
-			case SAMPLER2D_CLAMP_CLAMP:
-				SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-				SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-				break;
-			case SAMPLER2D_CLAMP_REPEAT:
-			default:
-				SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-				SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-				break;
+				case SAMPLER2D_REPEAT_REPEAT:
+					SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+					SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+					break;
+				case SAMPLER2D_REPEAT_CLAMP:
+					SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+					SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+					break;
+				case SAMPLER2D_CLAMP_CLAMP:
+					SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+					SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+					break;
+				case SAMPLER2D_CLAMP_REPEAT:
+				default:
+					SamplerInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+					SamplerInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+					break;
 			}
 			SamplerInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 
@@ -637,7 +637,7 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 
 	// static quad index buffer
 	m_IndexBufferNumIndices = CCommandBuffer::MAX_VERTICES / 4 * 6;
-	unsigned int *pIndices = (unsigned int *)mem_alloc(m_IndexBufferNumIndices * sizeof(unsigned int));
+	unsigned int *pIndices = (unsigned int *) mem_alloc(m_IndexBufferNumIndices * sizeof(unsigned int));
 	BuildQuadIndexBuffer(pIndices, m_IndexBufferNumIndices);
 
 	SDL_GPUBufferCreateInfo BufferInfo;
@@ -681,7 +681,7 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 
 	if(pCommand->m_FsaaSamples > 1)
 		dbg_msg("gfx", "SDL_GPU backend does not support FSAA yet, ignoring %d samples", pCommand->m_FsaaSamples);
-	dbg_msg("gfx", "SDL_GPU backend initialized (swapchain format %d)", (int)m_FrameFormat);
+	dbg_msg("gfx", "SDL_GPU backend initialized (swapchain format %d)", (int) m_FrameFormat);
 }
 
 void CCommandProcessorFragment_SDLGPU::Cmd_Shutdown([[maybe_unused]] const CShutdownCommand *pCommand)
@@ -905,8 +905,8 @@ void CCommandProcessorFragment_SDLGPU::ApplyDraw(SDL_GPURenderPass *pPass, const
 			float m_MapSizeTileSize[4];
 			int m_Params[4];
 		} Uniforms;
-		Uniforms.m_MapSizeTileSize[0] = (float)pDraw->m_TilemapWidth;
-		Uniforms.m_MapSizeTileSize[1] = (float)pDraw->m_TilemapHeight;
+		Uniforms.m_MapSizeTileSize[0] = (float) pDraw->m_TilemapWidth;
+		Uniforms.m_MapSizeTileSize[1] = (float) pDraw->m_TilemapHeight;
 		Uniforms.m_MapSizeTileSize[2] = 32.0f;
 		Uniforms.m_MapSizeTileSize[3] = 0.0f;
 		Uniforms.m_Params[0] = pDraw->m_TilemapPassMode;
@@ -992,13 +992,13 @@ void CCommandProcessorFragment_SDLGPU::ApplyDraw(SDL_GPURenderPass *pPass, const
 	{
 		if(!m_pIndexBuffer)
 			return;
-		SDL_DrawGPUIndexedPrimitives(pPass, 6, 1, 0, (Sint32)BaseVertex, 0);
+		SDL_DrawGPUIndexedPrimitives(pPass, 6, 1, 0, (Sint32) BaseVertex, 0);
 	}
 	else if(pDraw->m_PrimType == CCommandBuffer::PRIMTYPE_QUADS)
 	{
 		if(!m_pIndexBuffer)
 			return;
-		SDL_DrawGPUIndexedPrimitives(pPass, pDraw->m_PrimCount * 6, 1, 0, (Sint32)BaseVertex, 0);
+		SDL_DrawGPUIndexedPrimitives(pPass, pDraw->m_PrimCount * 6, 1, 0, (Sint32) BaseVertex, 0);
 	}
 	else
 	{
@@ -1055,7 +1055,7 @@ void CCommandProcessorFragment_SDLGPU::FlushDraws()
 			ClearPendingDraws();
 			return;
 		}
-		mem_copy((unsigned char *)pMapped + UploadStart, m_pStagingData + UploadStart, UploadSize);
+		mem_copy((unsigned char *) pMapped + UploadStart, m_pStagingData + UploadStart, UploadSize);
 		SDL_UnmapGPUTransferBuffer(m_pDevice, m_pVertexTransferBuffer);
 
 		SDL_GPUCopyPass *pCopyPass = SDL_BeginGPUCopyPass(m_pCommandBuffer);
@@ -1104,15 +1104,15 @@ void CCommandProcessorFragment_SDLGPU::FlushDraws()
 void CCommandProcessorFragment_SDLGPU::Cmd_Texture_Update(const CCommandBuffer::CTextureUpdateCommand *pCommand)
 {
 	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA)
-		PremultiplyAlpha((unsigned char *)pCommand->m_pData, pCommand->m_Width * pCommand->m_Height);
+		PremultiplyAlpha((unsigned char *) pCommand->m_pData, pCommand->m_Width * pCommand->m_Height);
 
 	void *pUploadData = pCommand->m_pData;
 	int BytesPerPixel = GetPixelSize(pCommand->m_Format);
 	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB)
 	{
 		const int NumPixels = pCommand->m_Width * pCommand->m_Height;
-		const unsigned char *pSrc = (const unsigned char *)pCommand->m_pData;
-		unsigned char *pDst = (unsigned char *)mem_alloc((size_t)NumPixels * 4);
+		const unsigned char *pSrc = (const unsigned char *) pCommand->m_pData;
+		unsigned char *pDst = (unsigned char *) mem_alloc((size_t) NumPixels * 4);
 		for(int i = 0; i < NumPixels; i++)
 		{
 			pDst[i * 4 + 0] = pSrc[i * 3 + 0];
@@ -1177,8 +1177,8 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Texture_Create(const CCommandBuffer::
 	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGB)
 	{
 		const int NumPixels = Width * Height * Layers;
-		const unsigned char *pSrc = (const unsigned char *)pTexData;
-		unsigned char *pDst = (unsigned char *)mem_alloc((size_t)NumPixels * 4);
+		const unsigned char *pSrc = (const unsigned char *) pTexData;
+		unsigned char *pDst = (unsigned char *) mem_alloc((size_t) NumPixels * 4);
 		for(int i = 0; i < NumPixels; i++)
 		{
 			pDst[i * 4 + 0] = pSrc[i * 3 + 0];
@@ -1329,10 +1329,10 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Screenshot(const CCommandBuffer::CScr
 		SDL_ReleaseGPUFence(m_pDevice, pFence);
 	}
 
-	unsigned char *pData = (unsigned char *)SDL_MapGPUTransferBuffer(m_pDevice, pTransferBuffer, false);
+	unsigned char *pData = (unsigned char *) SDL_MapGPUTransferBuffer(m_pDevice, pTransferBuffer, false);
 	if(pData)
 	{
-		unsigned char *pPixels = (unsigned char *)mem_alloc(w * h * 4);
+		unsigned char *pPixels = (unsigned char *) mem_alloc(w * h * 4);
 		// SDL_GPU textures use a top-left origin, so no vertical flip is needed
 		mem_copy(pPixels, pData, w * h * 4);
 		SDL_UnmapGPUTransferBuffer(m_pDevice, pTransferBuffer);
@@ -1431,8 +1431,8 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Swap(const CCommandBuffer::CSwapComma
 		{
 			// draw straight into the swapchain image, no offscreen pass and no blit
 			m_pRenderTarget = pSwapchainTexture;
-			m_RenderTargetWidth = (int)SwapchainWidth;
-			m_RenderTargetHeight = (int)SwapchainHeight;
+			m_RenderTargetWidth = (int) SwapchainWidth;
+			m_RenderTargetHeight = (int) SwapchainHeight;
 			FlushDraws();
 		}
 	}
@@ -1500,19 +1500,19 @@ bool CCommandProcessorFragment_SDLGPU::RunCommand(const CCommandBuffer::CCommand
 {
 	switch(pBaseCommand->m_Cmd)
 	{
-	case CMD_INIT: Cmd_Init(static_cast<const CInitCommand *>(pBaseCommand)); break;
-	case CMD_GPU_SHUTDOWN: Cmd_Shutdown(static_cast<const CShutdownCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_WINDOWRESIZED: Cmd_WindowResized(static_cast<const CCommandBuffer::CWindowResizedCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_TEXTURE_CREATE: Cmd_Texture_Create(static_cast<const CCommandBuffer::CTextureCreateCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_TEXTURE_DESTROY: Cmd_Texture_Destroy(static_cast<const CCommandBuffer::CTextureDestroyCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_TEXTURE_UPDATE: Cmd_Texture_Update(static_cast<const CCommandBuffer::CTextureUpdateCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_CLEAR: Cmd_Clear(static_cast<const CCommandBuffer::CClearCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_RENDER: Cmd_Render(static_cast<const CCommandBuffer::CRenderCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_RENDER_TILEMAP_TEXTURE: Cmd_RenderTilemapTexture(static_cast<const CCommandBuffer::CRenderTilemapTextureCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_SCREENSHOT: Cmd_Screenshot(static_cast<const CCommandBuffer::CScreenshotCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_SWAP: Cmd_Swap(static_cast<const CCommandBuffer::CSwapCommand *>(pBaseCommand)); break;
-	case CCommandBuffer::CMD_VSYNC: Cmd_VSync(static_cast<const CCommandBuffer::CVSyncCommand *>(pBaseCommand)); break;
-	default: return false;
+		case CMD_INIT: Cmd_Init(static_cast<const CInitCommand *>(pBaseCommand)); break;
+		case CMD_GPU_SHUTDOWN: Cmd_Shutdown(static_cast<const CShutdownCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_WINDOWRESIZED: Cmd_WindowResized(static_cast<const CCommandBuffer::CWindowResizedCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_TEXTURE_CREATE: Cmd_Texture_Create(static_cast<const CCommandBuffer::CTextureCreateCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_TEXTURE_DESTROY: Cmd_Texture_Destroy(static_cast<const CCommandBuffer::CTextureDestroyCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_TEXTURE_UPDATE: Cmd_Texture_Update(static_cast<const CCommandBuffer::CTextureUpdateCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_CLEAR: Cmd_Clear(static_cast<const CCommandBuffer::CClearCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_RENDER: Cmd_Render(static_cast<const CCommandBuffer::CRenderCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_RENDER_TILEMAP_TEXTURE: Cmd_RenderTilemapTexture(static_cast<const CCommandBuffer::CRenderTilemapTextureCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_SCREENSHOT: Cmd_Screenshot(static_cast<const CCommandBuffer::CScreenshotCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_SWAP: Cmd_Swap(static_cast<const CCommandBuffer::CSwapCommand *>(pBaseCommand)); break;
+		case CCommandBuffer::CMD_VSYNC: Cmd_VSync(static_cast<const CCommandBuffer::CVSyncCommand *>(pBaseCommand)); break;
+		default: return false;
 	}
 	return true;
 }
@@ -1601,9 +1601,9 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 		dbg_msg("gfx", "SDL_GPU: failed to set present mode %s: %s", PresentModeName(PresentMode), SDL_GetError());
 
 	// load the shaders from the data directory
-	if(!m_pStorage->ReadFile(pVertexShaderFile, IStorage::TYPE_ALL, (void **)&m_pVertexShaderCode, &m_VertexShaderSize) ||
-		!m_pStorage->ReadFile(pFragmentShaderFile, IStorage::TYPE_ALL, (void **)&m_pFragmentShaderCode, &m_FragmentShaderSize) ||
-		!m_pStorage->ReadFile(pTilemapFragmentShaderFile, IStorage::TYPE_ALL, (void **)&m_pTilemapFragmentShaderCode, &m_TilemapFragmentShaderSize))
+	if(!m_pStorage->ReadFile(pVertexShaderFile, IStorage::TYPE_ALL, (void **) &m_pVertexShaderCode, &m_VertexShaderSize) ||
+		!m_pStorage->ReadFile(pFragmentShaderFile, IStorage::TYPE_ALL, (void **) &m_pFragmentShaderCode, &m_FragmentShaderSize) ||
+		!m_pStorage->ReadFile(pTilemapFragmentShaderFile, IStorage::TYPE_ALL, (void **) &m_pTilemapFragmentShaderCode, &m_TilemapFragmentShaderSize))
 	{
 		dbg_msg("gfx", "unable to load SDL_GPU shaders");
 		SDL_ReleaseWindowFromGPUDevice(m_pDevice, m_pWindow);

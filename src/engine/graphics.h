@@ -4,8 +4,8 @@
 #ifndef ENGINE_GRAPHICS_H
 #define ENGINE_GRAPHICS_H
 
-#include <base/vmath.h>
 #include <base/system/time.h>
+#include <base/vmath.h>
 
 #include "kernel.h"
 
@@ -165,8 +165,7 @@ public:
 		vec4 m_OutlineColor;
 
 		CTextSDFParams() :
-			m_Enable(false), m_Gain(1.0f), m_OutlineOffset(0.0f),
-			m_OutlineColor(0.0f, 0.0f, 0.0f, 0.0f) {}
+			m_Enable(false), m_Gain(1.0f), m_OutlineOffset(0.0f), m_OutlineColor(0.0f, 0.0f, 0.0f, 0.0f) {}
 	};
 	virtual void SetTextSDF(const CTextSDFParams &Params) = 0;
 

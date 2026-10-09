@@ -7,16 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <base/system/aio.h>
 #include <base/system/base.h>
 #include <base/system/debug.h>
-#include <base/system/aio.h>
 #include <base/system/io.h>
 #include <base/system/string.h>
 #if defined(CONF_FAMILY_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
-
 
 typedef struct
 {
@@ -27,8 +26,6 @@ typedef struct
 
 static DBG_LOGGER_DATA loggers[16];
 static int num_loggers = 0;
-
-
 
 static void dbg_logger_finish(void)
 {
@@ -191,7 +188,7 @@ static void logger_win_console(const char *line, [[maybe_unused]] void *user)
 
 static void logger_stdout(const char *line, void *user)
 {
-	(void)user;
+	(void) user;
 	printf("%s\n", line);
 	fflush(stdout);
 }

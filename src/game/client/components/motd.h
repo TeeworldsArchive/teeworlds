@@ -3,8 +3,8 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef GAME_CLIENT_COMPONENTS_MOTD_H
 #define GAME_CLIENT_COMPONENTS_MOTD_H
-#include <game/client/component.h>
 #include <base/system/time.h>
+#include <game/client/component.h>
 
 class CMotd : public CComponent
 {

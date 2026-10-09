@@ -195,7 +195,8 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 			if(pMsg->m_ClientID != -1)
 			{
 				char aLabel[64];
-				m_pClient->GetPlayerLabel(aLabel, sizeof(aLabel), pMsg->m_ClientID, m_pClient->m_aClients[pMsg->m_ClientID].m_aName);
+				const CGameClient::CClientData *pCaller = m_pClient->GetClientData(pMsg->m_ClientID);
+				m_pClient->GetPlayerLabel(aLabel, sizeof(aLabel), pMsg->m_ClientID, pCaller ? pCaller->m_aName : "");
 				switch(pMsg->m_Type)
 				{
 					case VOTE_START_OP:

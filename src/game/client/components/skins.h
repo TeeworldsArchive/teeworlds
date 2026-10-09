@@ -3,8 +3,8 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef GAME_CLIENT_COMPONENTS_SKINS_H
 #define GAME_CLIENT_COMPONENTS_SKINS_H
-#include <base/tl/sorted_array.h>
 #include <base/system/mem.h>
+#include <base/tl/sorted_array.h>
 #include <base/vmath.h>
 #include <game/client/component.h>
 

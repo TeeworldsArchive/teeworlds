@@ -1437,6 +1437,7 @@ set_src(BASE GLOB_RECURSE src/base
   tl/array.h
   tl/hashtable.h
   tl/inplace_array.h
+  tl/partial_array.h
   tl/range.h
   tl/sorted_array.h
   tl/stream.h

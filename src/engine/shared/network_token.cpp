@@ -4,9 +4,9 @@
 
 #include <base/hash_ctxt.h>
 #include <base/math.h>
-#include <base/system/time.h>
-#include <base/system/net.h>
 #include <base/system/misc.h>
+#include <base/system/net.h>
+#include <base/system/time.h>
 
 #include "network.h"
 

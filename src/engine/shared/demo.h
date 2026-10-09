@@ -4,8 +4,8 @@
 #ifndef ENGINE_SHARED_DEMO_H
 #define ENGINE_SHARED_DEMO_H
 
-#include <engine/demo.h>
 #include <base/system/time.h>
+#include <engine/demo.h>
 #include <engine/shared/protocol.h>
 
 #include "huffman.h"

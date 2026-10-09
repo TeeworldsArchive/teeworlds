@@ -44,7 +44,14 @@ void CTees::RenderHook(
 	vec2 Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), IntraTick);
 
 	// draw hook
-	if(Prev.m_HookState > 0 && Cur.m_HookState > 0)
+	//
+	// Prediction applies this tick's input to Cur only, so on the tick a hook
+	// is fired Prev is still HOOK_IDLE while Cur is HOOK_FLYING. Requiring both
+	// to be out would hide that hook, so Cur decides and Prev only supplies the
+	// earlier segment to interpolate from when it agrees.
+	const bool HookOut = Cur.m_HookState > 0;
+	const bool HookInterpolated = HookOut && Prev.m_HookState > 0;
+	if(HookOut)
 	{
 		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Id);
 		Graphics()->QuadsBegin();
@@ -58,10 +65,15 @@ void CTees::RenderHook(
 			bool Predicted = m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(Cur.m_HookedPlayer);
 			HookPos = m_pClient->GetCharPos(Cur.m_HookedPlayer, Predicted);
 		}
-		else
+		else if(HookInterpolated)
 		{
 			// The hook is in the air, on a hookable tile or the hooked player is out of range
 			HookPos = mix(vec2(Prev.m_HookX, Prev.m_HookY), vec2(Cur.m_HookX, Cur.m_HookY), IntraTick);
+		}
+		else
+		{
+			// Just fired, so there is no earlier segment to interpolate from
+			HookPos = vec2(Cur.m_HookX, Cur.m_HookY);
 		}
 
 		const float HookDistance = distance(Position, HookPos);
@@ -374,6 +386,9 @@ void CTees::OnRender()
 		const int i = s_aTeeIDs[Index];
 		const CGameClient::CSnapState::CCharacterInfo *pCharInfo = m_pClient->GetCharacterInfo(i);
 		const CGameClient::CClientData *pClientData = m_pClient->GetClientData(i);
+		if(!pCharInfo || !pClientData)
+			continue;
+
 		CTeeRenderInfo RenderInfo = pClientData->m_RenderInfo;
 
 		if(pCharInfo->m_Cur.m_Weapon == WEAPON_NINJA)

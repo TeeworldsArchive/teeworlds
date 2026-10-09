@@ -2,10 +2,10 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system/mem.h>
 #include <base/system/lock.h>
-#include <base/system/time.h>
+#include <base/system/mem.h>
 #include <base/system/net.h>
+#include <base/system/time.h>
 
 #include <engine/engine.h>
 

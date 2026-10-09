@@ -4,8 +4,8 @@
 #ifndef ENGINE_SERVER_REGISTER_H
 #define ENGINE_SERVER_REGISTER_H
 
-#include <engine/shared/network.h>
 #include <base/system/time.h>
+#include <engine/shared/network.h>
 
 class CRegister
 {

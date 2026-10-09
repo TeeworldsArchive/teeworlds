@@ -7,9 +7,9 @@
 
 #include <engine/console.h>
 
+#include "config.h"
 #include "netban.h"
 #include "network.h"
-#include "config.h"
 #include "protocol.h"
 
 bool CNetServer::Open(NETADDR BindAddr, CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, CNetBan *pNetBan,

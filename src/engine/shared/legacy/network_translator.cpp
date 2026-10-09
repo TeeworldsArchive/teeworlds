@@ -366,7 +366,7 @@ namespace legacy
 				pOut->m_HookY = pIn->m_HookY;
 				pOut->m_HookDx = pIn->m_HookDx;
 				pOut->m_HookDy = pIn->m_HookDy;
-			
+
 				// character
 				pOut->m_Health = pIn->m_Health;
 				pOut->m_Armor = pIn->m_Armor;

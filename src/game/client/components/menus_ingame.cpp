@@ -275,11 +275,13 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	int Teams[3] = {TEAM_RED, TEAM_BLUE, TEAM_SPECTATORS};
 	for(int Team = 0, Count = 0; Team < 3; ++Team)
 	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
+		for(int k = 0; k < m_pClient->m_aTeeIDs.size(); ++k)
 		{
+			const int i = m_pClient->m_aTeeIDs[k];
 			if(i == m_pClient->m_LocalClientID || !m_pClient->m_aClients[i].m_Active || m_pClient->m_aClients[i].m_Team != Teams[Team])
 				continue;
-			if(m_pClient->m_Snap.m_apTeeInfos[i] && m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
+			const CNetObj_TeeInfo *pTeeInfo = m_pClient->GetTeeInfo(i);
+			if(pTeeInfo && pTeeInfo->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
 				continue;
 
 			MainView.HSplitTop(ButtonHeight, &Row, &MainView);
@@ -551,13 +553,15 @@ void CMenus::RenderServerControlKick(CUIRect MainView, bool FilterSpectators)
 	int Teams[3] = {TEAM_RED, TEAM_BLUE, TEAM_SPECTATORS};
 	for(int Team = 0; Team < 3; ++Team)
 	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
+		for(int k = 0; k < m_pClient->m_aTeeIDs.size(); k++)
 		{
+			const int i = m_pClient->m_aTeeIDs[k];
+			const CNetObj_TeeInfo *pTeeInfo = m_pClient->GetTeeInfo(i);
 			if(i == m_pClient->m_LocalClientID || !m_pClient->m_aClients[i].m_Active || m_pClient->m_aClients[i].m_Team != Teams[Team] ||
 				(FilterSpectators && m_pClient->m_aClients[i].m_Team == TEAM_SPECTATORS) ||
-				(!FilterSpectators && m_pClient->m_Snap.m_apTeeInfos[i] && (m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_ADMIN)))
+				(!FilterSpectators && pTeeInfo && (pTeeInfo->m_Flag & TEEFLAG_ADMIN)))
 				continue;
-			if(m_pClient->m_Snap.m_apTeeInfos[i] && m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
+			if(pTeeInfo && pTeeInfo->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
 				continue;
 			if(m_CallvoteSelectedPlayer == i)
 				Selected = NumOptions;
@@ -638,8 +642,8 @@ void CMenus::HandleCallvote(int Page, bool Force)
 	}
 	else if(Page == 1)
 	{
-		if(m_CallvoteSelectedPlayer >= 0 && m_CallvoteSelectedPlayer < MAX_CLIENTS &&
-			m_pClient->m_aClients[m_CallvoteSelectedPlayer].m_Active)
+		const CGameClient::CClientData *pSelected = m_pClient->GetClientData(m_CallvoteSelectedPlayer);
+		if(pSelected && pSelected->m_Active)
 		{
 			m_pClient->m_pVoting->CallvoteKick(m_CallvoteSelectedPlayer, m_CallvoteReasonInput.GetString(), Force);
 			SetActive(false);
@@ -647,8 +651,8 @@ void CMenus::HandleCallvote(int Page, bool Force)
 	}
 	else if(Page == 2)
 	{
-		if(m_CallvoteSelectedPlayer >= 0 && m_CallvoteSelectedPlayer < MAX_CLIENTS &&
-			m_pClient->m_aClients[m_CallvoteSelectedPlayer].m_Active)
+		const CGameClient::CClientData *pSelected = m_pClient->GetClientData(m_CallvoteSelectedPlayer);
+		if(pSelected && pSelected->m_Active)
 		{
 			m_pClient->m_pVoting->CallvoteSpectate(m_CallvoteSelectedPlayer, m_CallvoteReasonInput.GetString(), Force);
 			SetActive(false);

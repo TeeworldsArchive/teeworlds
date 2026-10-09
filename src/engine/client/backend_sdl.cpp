@@ -2,8 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/detect.h>
-#include <base/system/thread.h>
 #include <base/system/aio.h>
+#include <base/system/thread.h>
 #include <base/tl/threading.h>
 
 #include <engine/storage.h>
@@ -346,13 +346,13 @@ bool CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::CState &St
 	}
 
 	const bool SDFChanged = !m_LastSDFValid ||
-		m_LastSDFParams.m_Enable != State.m_IsSDF ||
-		m_LastSDFParams.m_Gain != State.m_SDFGain ||
-		m_LastSDFParams.m_OutlineOffset != State.m_SDFOutlineOffset ||
-		m_LastSDFParams.m_OutlineColor.r != State.m_SDFOutlineColor.r ||
-		m_LastSDFParams.m_OutlineColor.g != State.m_SDFOutlineColor.g ||
-		m_LastSDFParams.m_OutlineColor.b != State.m_SDFOutlineColor.b ||
-		m_LastSDFParams.m_OutlineColor.a != State.m_SDFOutlineColor.a;
+				m_LastSDFParams.m_Enable != State.m_IsSDF ||
+				m_LastSDFParams.m_Gain != State.m_SDFGain ||
+				m_LastSDFParams.m_OutlineOffset != State.m_SDFOutlineOffset ||
+				m_LastSDFParams.m_OutlineColor.r != State.m_SDFOutlineColor.r ||
+				m_LastSDFParams.m_OutlineColor.g != State.m_SDFOutlineColor.g ||
+				m_LastSDFParams.m_OutlineColor.b != State.m_SDFOutlineColor.b ||
+				m_LastSDFParams.m_OutlineColor.a != State.m_SDFOutlineColor.a;
 	if(SDFChanged)
 	{
 		glUniform1i(m_RenderShader.m_IsSDFLoc, State.m_IsSDF ? 1 : 0);
@@ -709,7 +709,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTilemapTexture(const CCommandBu
 	float aOrthoMatrix[16];
 	ComputeOrthoMatrix(pCommand->m_State, aOrthoMatrix);
 	glUniformMatrix4fv(m_TilemapShader.m_ProjectionLoc, 1, GL_FALSE, aOrthoMatrix);
-	glUniform2f(m_TilemapShader.m_MapSizeLoc, (float)pCommand->m_Width, (float)pCommand->m_Height);
+	glUniform2f(m_TilemapShader.m_MapSizeLoc, (float) pCommand->m_Width, (float) pCommand->m_Height);
 	glUniform1i(m_TilemapShader.m_PassModeLoc, pCommand->m_PassMode);
 	glUniform1i(m_TilemapShader.m_LayerIndexLoc, pCommand->m_Layer);
 	glUniform1i(m_TilemapShader.m_ColorOpaqueLoc, pCommand->m_ColorOpaque ? 1 : 0);

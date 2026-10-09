@@ -17,6 +17,8 @@
 #include <generated/client_data.h>
 #include <generated/protocol.h>
 
+#include <algorithm>
+
 #include <game/localization.h>
 #include <game/version.h>
 #include "lineinput.h"
@@ -1066,22 +1068,6 @@ void CGameClient::ProcessTriggeredEvents(int Events, vec2 Pos)
 		m_pSounds->PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_JUMP, 1.0f, Pos);*/
 }
 
-typedef bool (*FCompareFunc)(const CNetObj_TeeInfo *, const CNetObj_TeeInfo *);
-
-bool CompareScore(const CNetObj_TeeInfo *Pl1, const CNetObj_TeeInfo *Pl2)
-{
-	return Pl1->m_Score < Pl2->m_Score;
-}
-
-bool CompareTime(const CNetObj_TeeInfo *Pl1, const CNetObj_TeeInfo *Pl2)
-{
-	if(Pl1->m_Score < 0)
-		return true;
-	if(Pl2->m_Score < 0)
-		return false;
-	return Pl1->m_Score > Pl2->m_Score;
-}
-
 void CGameClient::OnNewSnapshot()
 {
 	// clear out the invalid pointers
@@ -1362,15 +1348,14 @@ void CGameClient::OnNewSnapshot()
 	// being snapped has to stop being drawn even if that message never comes.
 	//
 	// The ids come from the previous snapshot, which is the set marked inactive
-	// above; the ones that stayed active are still there. Iterate backwards
-	// because RemoveIdentity shifts the list.
+	// above; the ones that stayed active are still there. Iterate backwards so
+	// removing an index does not disturb the ones still to visit.
 	for(int i = m_aKnownTeeIDs.size() - 1; i >= 0; i--)
 	{
-		const int TeeInfoID = m_aKnownTeeIDs[i];
-		const CClientData *pClient = GetClientData(TeeInfoID);
+		const CClientData *pClient = GetClientData(m_aKnownTeeIDs[i]);
 		if(pClient && pClient->m_Active)
 			continue;
-		RemoveIdentity(TeeInfoID);
+		RemoveIdentity(i);
 	}
 
 	// Carry this snapshot's tees into the next one, which is the set that will
@@ -1438,21 +1423,24 @@ void CGameClient::OnNewSnapshot()
 			m_GameInfo.m_aTeamSize[pClient->m_Team]++;
 	}
 
-	// sort player infos by score
-	FCompareFunc Compare = (m_GameInfo.m_GameFlags & GAMEFLAG_RACE) ? CompareTime : CompareScore;
-
-	for(int k = 0; k < m_aInfoByScore.size() - 1; k++) // ffs, bubblesort
-	{
-		for(int i = 0; i < m_aInfoByScore.size() - k - 1; i++)
-		{
-			if(Compare(m_aInfoByScore[i].m_pTeeInfo, m_aInfoByScore[i + 1].m_pTeeInfo))
-			{
-				CPlayerInfoItem Tmp = m_aInfoByScore[i];
-				m_aInfoByScore[i] = m_aInfoByScore[i + 1];
-				m_aInfoByScore[i + 1] = Tmp;
-			}
-		}
-	}
+	// sort player infos by score: best on top, and in race mode entries without
+	// a time yet last. Written as one strict weak ordering rather than reusing
+	// the old pointer comparators, because CompareTime reported "sorts first"
+	// for two entries that both had no time, which std::sort does not allow.
+	const bool Race = (m_GameInfo.m_GameFlags & GAMEFLAG_RACE) != 0;
+	if(m_aInfoByScore.size() > 1)
+		std::sort(&m_aInfoByScore[0], &m_aInfoByScore[0] + m_aInfoByScore.size(),
+			[Race](const CPlayerInfoItem &a, const CPlayerInfoItem &b) {
+				const int ScoreA = a.m_pTeeInfo->m_Score;
+				const int ScoreB = b.m_pTeeInfo->m_Score;
+				if(Race)
+				{
+					if(ScoreA < 0 || ScoreB < 0)
+						return ScoreA >= 0 && ScoreB < 0;
+					return ScoreA < ScoreB;
+				}
+				return ScoreA > ScoreB;
+			});
 
 	// calc some player stats, also trigger events
 	for(int k = 0; k < m_aTeeIDs.size(); ++k)
@@ -2020,26 +2008,22 @@ CGameClient::CClientData *CGameClient::GetOrCreateClientData(int TeeInfoID)
 	return pClient;
 }
 
-bool CGameClient::RemoveIdentity(int TeeInfoID)
+void CGameClient::RemoveIdentity(int Index)
 {
-	for(int i = 0; i < m_aKnownTeeIDs.size(); i++)
+	if(Index < 0 || Index >= m_aKnownTeeIDs.size())
+		return;
+
+	const int TeeInfoID = m_aKnownTeeIDs[Index];
+	m_aKnownTeeIDs.remove_index(Index);
+
+	// Only this entry is cleared: other tees may share its part, and
+	// partial_array::remove_index would drop the whole part.
+	CClientData *pClient = m_aClients.get(TeeInfoID);
+	if(pClient)
 	{
-		if(m_aKnownTeeIDs[i] != TeeInfoID)
-			continue;
-
-		m_aKnownTeeIDs.remove_index(i);
-
-		// Only this entry is cleared: other tees may share its part, and
-		// partial_array::remove_index would drop the whole part.
-		CClientData *pClient = m_aClients.get(TeeInfoID);
-		if(pClient)
-		{
-			mem_zero(pClient, sizeof(*pClient));
-			pClient->m_TeeInfoID = -1;
-		}
-		return true;
+		mem_zero(pClient, sizeof(*pClient));
+		pClient->m_TeeInfoID = -1;
 	}
-	return false;
 }
 
 CGameClient::CSnapState::CCharacterInfo *CGameClient::GetCharacterInfo(int TeeInfoID)

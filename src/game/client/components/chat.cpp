@@ -142,7 +142,8 @@ void CChat::ConWhisper(IConsole::IResult *pResult, void *pUserData)
 	CChat *pChat = (CChat *) pUserData;
 
 	int Target = pResult->GetInteger(0);
-	if(Target < 0 || Target >= MAX_CLIENTS || !pChat->m_pClient->m_aClients[Target].m_Active || pChat->m_pClient->m_LocalClientID == Target)
+	const CGameClient::CClientData *pTarget = pChat->m_pClient->GetClientData(Target);
+	if(!pTarget || !pTarget->m_Active || pChat->m_pClient->m_LocalClientID == Target)
 		pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", "please enter a valid ClientID");
 	else
 	{
@@ -171,14 +172,16 @@ void CChat::ConChat(IConsole::IResult *pResult, void *pUserData)
 			for(int i = 0; i < MAX_CLIENTS; i++)
 			{
 				int ClientID = (Target + i) % MAX_CLIENTS;
-				if(pChat->m_pClient->m_aClients[ClientID].m_Active && pChat->m_pClient->m_LocalClientID != ClientID)
+				const CGameClient::CClientData *pCandidate = pChat->m_pClient->GetClientData(ClientID);
+				if(pCandidate && pCandidate->m_Active && pChat->m_pClient->m_LocalClientID != ClientID)
 				{
 					Target = ClientID;
 					break;
 				}
 			}
 		}
-		if(Target < 0 || Target >= MAX_CLIENTS || !pChat->m_pClient->m_aClients[Target].m_Active || pChat->m_pClient->m_LocalClientID == Target)
+		const CGameClient::CClientData *pTarget = pChat->m_pClient->GetClientData(Target);
+		if(!pTarget || !pTarget->m_Active || pChat->m_pClient->m_LocalClientID == Target)
 		{
 			if(pResult->NumArguments() == 2)
 				pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", "please enter a valid ClientID");
@@ -317,7 +320,8 @@ bool CChat::OnInput(IInput::CEvent Event)
 					ClientID = (m_WhisperTarget + MAX_CLIENTS - i) % MAX_CLIENTS; // pick previous player as target
 				else
 					ClientID = (m_WhisperTarget + i) % MAX_CLIENTS; // pick next player as target
-				if(m_pClient->m_aClients[ClientID].m_Active && m_WhisperTarget != ClientID && m_pClient->m_LocalClientID != ClientID)
+				const CGameClient::CClientData *pCandidate = m_pClient->GetClientData(ClientID);
+				if(pCandidate && pCandidate->m_Active && m_WhisperTarget != ClientID && m_pClient->m_LocalClientID != ClientID)
 				{
 					m_WhisperTarget = ClientID;
 					break;
@@ -368,22 +372,23 @@ bool CChat::OnInput(IInput::CEvent Event)
 					Index = (m_CompletionChosen + i) % MAX_CLIENTS;
 				}
 
-				if(!m_pClient->m_aClients[Index].m_Active)
+				const CGameClient::CClientData *pCandidate = m_pClient->GetClientData(Index);
+				if(!pCandidate || !pCandidate->m_Active)
 					continue;
 
 				bool Found = false;
 				if(SearchType == 1)
 				{
-					if(!str_startswith_nocase(m_pClient->m_aClients[Index].m_aName, m_aCompletionBuffer) &&
-						str_find_nocase(m_pClient->m_aClients[Index].m_aName, m_aCompletionBuffer))
+					if(!str_startswith_nocase(pCandidate->m_aName, m_aCompletionBuffer) &&
+						str_find_nocase(pCandidate->m_aName, m_aCompletionBuffer))
 						Found = true;
 				}
-				else if(str_startswith_nocase(m_pClient->m_aClients[Index].m_aName, m_aCompletionBuffer))
+				else if(str_startswith_nocase(pCandidate->m_aName, m_aCompletionBuffer))
 					Found = true;
 
 				if(Found)
 				{
-					pCompletionString = m_pClient->m_aClients[Index].m_aName;
+					pCompletionString = pCandidate->m_aName;
 					m_CompletionChosen = Index + SearchType * MAX_CLIENTS;
 					m_CompletionFav = m_CompletionChosen % MAX_CLIENTS;
 					break;
@@ -588,7 +593,8 @@ bool CChat::LineShouldHighlight(const char *pLine, const char *pName)
 
 bool CChat::IsClientIgnored(int ClientID)
 {
-	return !Config()->m_ClShowsocial || !m_pClient->m_aClients[ClientID].m_Active || m_pClient->m_aClients[ClientID].m_ChatIgnore || Config()->m_ClFilterchat == 2 || (m_pClient->m_LocalClientID != ClientID && Config()->m_ClFilterchat == 1 && !m_pClient->m_aClients[ClientID].m_Friend);
+	const CGameClient::CClientData *pClient = m_pClient->GetClientData(ClientID);
+	return !Config()->m_ClShowsocial || !pClient || !pClient->m_Active || pClient->m_ChatIgnore || Config()->m_ClFilterchat == 2 || (m_pClient->m_LocalClientID != ClientID && Config()->m_ClFilterchat == 1 && !pClient->m_Friend);
 }
 
 void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
@@ -658,8 +664,12 @@ void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
 
 		if(ClientID >= 0)
 		{
-			pCurLine->m_RenderInfo = m_pClient->m_aClients[(Mode == CHAT_WHISPER && ClientID == m_pClient->m_LocalClientID) ? TargetID : ClientID].m_RenderInfo;
-			pCurLine->m_RenderInfo.m_Size = 9.f;
+			const CGameClient::CClientData *pRenderClient = m_pClient->GetClientData((Mode == CHAT_WHISPER && ClientID == m_pClient->m_LocalClientID) ? TargetID : ClientID);
+			if(pRenderClient)
+			{
+				pCurLine->m_RenderInfo = pRenderClient->m_RenderInfo;
+				pCurLine->m_RenderInfo.m_Size = 9.f;
+			}
 		}
 
 		// check for highlighted name
@@ -692,18 +702,22 @@ void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
 		}
 		else
 		{
-			if(m_pClient->m_aClients[ClientID].m_Team == TEAM_SPECTATORS)
+			// ClientID and NameCID come from Sv_Chat and may name a bot, so
+			// they are resolved without allocating an identity.
+			const CGameClient::CClientData *pLineClient = m_pClient->GetClientData(ClientID);
+			const CGameClient::CClientData *pNameClient = m_pClient->GetClientData(NameCID);
+			if(pLineClient && pLineClient->m_Team == TEAM_SPECTATORS)
 				pCurLine->m_NameColor = TEAM_SPECTATORS;
 
-			if(m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS)
+			if(m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS && pLineClient)
 			{
-				if(m_pClient->m_aClients[ClientID].m_Team == TEAM_RED)
+				if(pLineClient->m_Team == TEAM_RED)
 					pCurLine->m_NameColor = TEAM_RED;
-				else if(m_pClient->m_aClients[ClientID].m_Team == TEAM_BLUE)
+				else if(pLineClient->m_Team == TEAM_BLUE)
 					pCurLine->m_NameColor = TEAM_BLUE;
 			}
 
-			str_copy(pCurLine->m_aName, m_pClient->m_aClients[NameCID].m_aName, sizeof(pCurLine->m_aName));
+			str_copy(pCurLine->m_aName, pNameClient ? pNameClient->m_aName : "", sizeof(pCurLine->m_aName));
 			str_copy(pCurLine->m_aText, pLine, sizeof(pCurLine->m_aText));
 		}
 
@@ -808,7 +822,8 @@ void CChat::OnRender()
 
 	float CategoryWidth = 0;
 
-	if(m_Mode == CHAT_WHISPER && !m_pClient->m_aClients[m_WhisperTarget].m_Active)
+	const CGameClient::CClientData *pWhisperTarget = m_pClient->GetClientData(m_WhisperTarget);
+	if(m_Mode == CHAT_WHISPER && (!pWhisperTarget || !pWhisperTarget->m_Active))
 		Disable();
 	else if(m_Mode != CHAT_NONE || m_ChatBufferMode != CHAT_NONE)
 	{
@@ -838,7 +853,7 @@ void CChat::OnRender()
 		else if(ChatMode == CHAT_WHISPER)
 		{
 			CategoryWidth += UI()->GetClientIDRectWidth(CategoryFontSize, m_pClient->GetRealClientID(m_WhisperTarget));
-			TextRender()->TextDeferred(&s_CategoryCursor, m_pClient->m_aClients[m_WhisperTarget].m_aName, -1);
+			TextRender()->TextDeferred(&s_CategoryCursor, pWhisperTarget ? pWhisperTarget->m_aName : "", -1);
 		}
 		else
 			TextRender()->TextDeferred(&s_CategoryCursor, Localize("Chat"), -1);
@@ -1138,7 +1153,8 @@ void CChat::OnRender()
 					EndReached = true;
 					break;
 				}
-				if(pLine->m_ClientID >= 0 && m_pClient->m_aClients[pLine->m_ClientID].m_ChatIgnore)
+				const CGameClient::CClientData *pIgnoreClient = m_pClient->GetClientData(pLine->m_ClientID);
+				if(pLine->m_ClientID >= 0 && pIgnoreClient && pIgnoreClient->m_ChatIgnore)
 					continue;
 				if(PageY < HeightLimit)
 					break;
@@ -1177,7 +1193,8 @@ void CChat::OnRender()
 		if(pLine->m_aText[0] == 0)
 			break;
 
-		if(pLine->m_ClientID >= 0 && m_pClient->m_aClients[pLine->m_ClientID].m_ChatIgnore)
+		const CGameClient::CClientData *pIgnoreClient = m_pClient->GetClientData(pLine->m_ClientID);
+		if(pLine->m_ClientID >= 0 && pIgnoreClient && pIgnoreClient->m_ChatIgnore)
 			continue;
 
 		if(Now > pLine->m_Time + 16 * TimeFreq && !m_Show)
@@ -1667,17 +1684,21 @@ void CChat::Com_Mute(IConsole::IResult *pResult, void *pContext)
 	int TargetID = pChatData->m_pClient->GetClientID(pResult->GetString(0));
 	if(TargetID != -1)
 	{
-		bool IsMuted = pChatData->m_pClient->m_aClients[TargetID].m_ChatIgnore;
+		// GetClientID only returns TeeIDs we know, so the entry exists.
+		CGameClient::CClientData *pTarget = pChatData->m_pClient->GetClientData(TargetID);
+		if(!pTarget)
+			return;
+		bool IsMuted = pTarget->m_ChatIgnore;
 		if(IsMuted)
-			pChatData->m_pClient->Blacklist()->RemoveIgnoredPlayer(pChatData->m_pClient->m_aClients[TargetID].m_aName, pChatData->m_pClient->m_aClients[TargetID].m_aClan);
+			pChatData->m_pClient->Blacklist()->RemoveIgnoredPlayer(pTarget->m_aName, pTarget->m_aClan);
 		else
-			pChatData->m_pClient->Blacklist()->AddIgnoredPlayer(pChatData->m_pClient->m_aClients[TargetID].m_aName, pChatData->m_pClient->m_aClients[TargetID].m_aClan);
-		pChatData->m_pClient->m_aClients[TargetID].m_ChatIgnore ^= 1;
+			pChatData->m_pClient->Blacklist()->AddIgnoredPlayer(pTarget->m_aName, pTarget->m_aClan);
+		pTarget->m_ChatIgnore ^= 1;
 
 		pChatData->ClearInput();
 
 		char aMsg[128];
-		str_format(aMsg, sizeof(aMsg), !IsMuted ? Localize("'%s' was muted") : Localize("'%s' was unmuted"), pChatData->m_pClient->m_aClients[TargetID].m_aName);
+		str_format(aMsg, sizeof(aMsg), !IsMuted ? Localize("'%s' was muted") : Localize("'%s' was unmuted"), pTarget->m_aName);
 		pChatData->AddLine(aMsg, CLIENT_MSG, CHAT_ALL);
 	}
 	pChatData->Disable();
@@ -1692,7 +1713,10 @@ void CChat::Com_Befriend(IConsole::IResult *pResult, void *pContext)
 	int TargetID = pChatData->m_pClient->GetClientID(pResult->GetString(0));
 	if(TargetID != -1)
 	{
-		CGameClient::CClientData *pTarget = &pChatData->m_pClient->m_aClients[TargetID];
+		CGameClient::CClientData *pTarget = pChatData->m_pClient->GetClientData(TargetID);
+		if(!pTarget)
+			return;
+
 		bool IsFriend = pTarget->m_Friend;
 		if(IsFriend)
 			pChatData->m_pClient->Friends()->RemoveFriend(pTarget->m_aName, pTarget->m_aClan);

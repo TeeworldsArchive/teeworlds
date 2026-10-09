@@ -4,11 +4,11 @@
 #include <stdlib.h> // srand
 
 #include <base/math.h>
-#include <base/system/thread.h>
-#include <base/system/lock.h>
-#include <base/system/time.h>
-#include <base/system/net.h>
 #include <base/system/fs.h>
+#include <base/system/lock.h>
+#include <base/system/net.h>
+#include <base/system/thread.h>
+#include <base/system/time.h>
 
 #include <engine/console.h>
 #include <engine/engine.h>

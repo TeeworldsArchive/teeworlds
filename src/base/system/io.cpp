@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 #include <base/system/base.h>
-#include <base/system/io.h>
 #include <base/system/debug.h>
+#include <base/system/io.h>
 #include <base/system/mem.h>
 #include <base/system/string.h>
 #if defined(CONF_FAMILY_WINDOWS)
@@ -17,12 +17,9 @@
 #include <share.h>
 #endif
 
-
 IOHANDLE io_stdin() { return (IOHANDLE) stdin; }
 IOHANDLE io_stdout() { return (IOHANDLE) stdout; }
 IOHANDLE io_stderr() { return (IOHANDLE) stderr; }
-
-
 
 static IOHANDLE io_open_impl(const char *filename, int flags)
 {

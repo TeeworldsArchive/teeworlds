@@ -9,9 +9,9 @@
 #include <time.h>
 
 #include <base/system/base.h>
-#include <base/system/string.h>
 #include <base/system/debug.h>
 #include <base/system/mem.h>
+#include <base/system/string.h>
 #if defined(CONF_FAMILY_WINDOWS)
 #include <process.h> // _vsprintf_p
 #endif

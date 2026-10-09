@@ -2,9 +2,9 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/system/debug.h>
-#include <base/system/string.h>
 #include <base/system/fs.h>
 #include <base/system/misc.h>
+#include <base/system/string.h>
 #include <engine/shared/datafile.h>
 #include <engine/storage.h>
 

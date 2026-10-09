@@ -72,7 +72,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_Core.Reset();
 	m_Core.Init(&GameWorld()->m_Core, GameServer()->Collision());
 	m_Core.m_Pos = m_Pos;
-	GameWorld()->m_Core.m_apCharacters[m_pPlayer->GetCID()] = &m_Core;
+	GameWorld()->m_Core.SetCharacter(m_pPlayer->GetCID(), &m_Core);
 
 	m_ReckoningTick = 0;
 	mem_zero(&m_SendCore, sizeof(m_SendCore));
@@ -98,7 +98,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 void CCharacter::Destroy()
 {
-	GameWorld()->m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
+	GameWorld()->m_Core.SetCharacter(m_pPlayer->GetCID(), 0);
 	m_Alive = false;
 }
 
@@ -655,7 +655,7 @@ void CCharacter::Die(int Killer, int Weapon)
 	m_pPlayer->m_DieTick = Server()->Tick();
 
 	GameWorld()->RemoveEntity(this);
-	GameWorld()->m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
+	GameWorld()->m_Core.SetCharacter(m_pPlayer->GetCID(), 0);
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
 }
 

@@ -299,10 +299,10 @@ public:
 	// identity created without that would never be marked inactive or expired.
 	CClientData *GetOrCreateClientData(int TeeInfoID);
 
-	// Drops the identity of a tee that is no longer in the snapshot, real
-	// client or bot alike. Returns whether the tee was known. Only the one
-	// entry is cleared, because other tees may share its part.
-	bool RemoveIdentity(int TeeInfoID);
+	// Drops the identity of the tee at Index in m_aKnownTeeIDs. Takes the index
+	// because callers already have it, and re-finding it by id would make
+	// expiring many tees quadratic.
+	void RemoveIdentity(int Index);
 
 	// Returns the snapshot Character state for any TeeInfoID, or 0.
 	CSnapState::CCharacterInfo *GetCharacterInfo(int TeeInfoID);

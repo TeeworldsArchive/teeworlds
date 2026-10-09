@@ -2,8 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
-#include <base/system/semaphore.h>
 #include <base/system/mem.h>
+#include <base/system/semaphore.h>
 
 #include <condition_variable>
 #include <mutex>

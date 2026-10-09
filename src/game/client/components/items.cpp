@@ -178,7 +178,7 @@ void CItems::RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent,
 			FlagCarrier = pCurGameDataFlag->m_FlagCarrierBlue;
 
 		// make sure to use predicted position
-		if(FlagCarrier >= 0 && FlagCarrier < MAX_CLIENTS && m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(FlagCarrier))
+		if(FlagCarrier >= 0 && FlagCarrier < MAX_TEES && m_pClient->ShouldUsePredicted() && m_pClient->ShouldUsePredictedChar(FlagCarrier))
 			Pos = m_pClient->GetCharPos(FlagCarrier, true);
 	}
 

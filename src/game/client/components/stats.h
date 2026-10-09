@@ -4,8 +4,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_STATS_H
 #define GAME_CLIENT_COMPONENTS_STATS_H
 
-#include <game/client/component.h>
 #include <base/system/time.h>
+#include <game/client/component.h>
 
 enum
 {

@@ -4,9 +4,9 @@
 #ifndef ENGINE_SERVERBROWSER_H
 #define ENGINE_SERVERBROWSER_H
 
-#include <engine/shared/protocol.h>
-#include <base/system/time.h>
 #include <base/system/net.h>
+#include <base/system/time.h>
+#include <engine/shared/protocol.h>
 
 #include "kernel.h"
 

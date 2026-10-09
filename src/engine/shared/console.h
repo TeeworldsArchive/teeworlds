@@ -4,8 +4,8 @@
 #ifndef ENGINE_SHARED_CONSOLE_H
 #define ENGINE_SHARED_CONSOLE_H
 
-#include <engine/console.h>
 #include <base/system/mem.h>
+#include <engine/console.h>
 #include "memheap.h"
 #include <new>
 

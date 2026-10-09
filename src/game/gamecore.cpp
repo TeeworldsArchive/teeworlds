@@ -213,9 +213,10 @@ void CCharacterCore::Tick(bool UseInput)
 		if(m_pWorld && m_pWorld->m_Tuning.m_PlayerHooking)
 		{
 			float Distance = 0.0f;
-			for(int i = 0; i < MAX_CLIENTS; i++)
+			for(int k = 0; k < m_pWorld->m_aCharacterIDs.size(); k++)
 			{
-				CCharacterCore *pCharCore = m_pWorld->m_apCharacters[i];
+				const int TeeID = m_pWorld->m_aCharacterIDs[k];
+				CCharacterCore *pCharCore = m_pWorld->GetCharacter(TeeID);
 				if(!pCharCore || pCharCore == this)
 					continue;
 
@@ -226,7 +227,7 @@ void CCharacterCore::Tick(bool UseInput)
 					{
 						m_TriggeredEvents |= COREEVENTFLAG_HOOK_ATTACH_PLAYER;
 						m_HookState = HOOK_GRABBED;
-						m_HookedPlayer = i;
+						m_HookedPlayer = TeeID;
 						Distance = distance(m_HookPos, pCharCore->m_Pos);
 					}
 				}
@@ -255,7 +256,7 @@ void CCharacterCore::Tick(bool UseInput)
 	{
 		if(m_HookedPlayer != -1)
 		{
-			CCharacterCore *pCharCore = m_pWorld->m_apCharacters[m_HookedPlayer];
+			CCharacterCore *pCharCore = m_pWorld->GetCharacter(m_HookedPlayer);
 			if(pCharCore)
 				m_HookPos = pCharCore->m_Pos;
 			else
@@ -296,7 +297,7 @@ void CCharacterCore::Tick(bool UseInput)
 
 		// release hook (max hook time is 1.25
 		m_HookTick++;
-		if(m_HookedPlayer != -1 && (m_HookTick > SERVER_TICK_SPEED + SERVER_TICK_SPEED / 5 || !m_pWorld->m_apCharacters[m_HookedPlayer]))
+		if(m_HookedPlayer != -1 && (m_HookTick > SERVER_TICK_SPEED + SERVER_TICK_SPEED / 5 || !m_pWorld->GetCharacter(m_HookedPlayer)))
 		{
 			m_HookedPlayer = -1;
 			m_HookState = HOOK_RETRACTED;
@@ -306,9 +307,10 @@ void CCharacterCore::Tick(bool UseInput)
 
 	if(m_pWorld)
 	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
+		for(int k = 0; k < m_pWorld->m_aCharacterIDs.size(); k++)
 		{
-			CCharacterCore *pCharCore = m_pWorld->m_apCharacters[i];
+			const int TeeID = m_pWorld->m_aCharacterIDs[k];
+			CCharacterCore *pCharCore = m_pWorld->GetCharacter(TeeID);
 			if(!pCharCore)
 				continue;
 
@@ -334,7 +336,7 @@ void CCharacterCore::Tick(bool UseInput)
 			}
 
 			// handle hook influence
-			if(m_HookedPlayer == i && m_pWorld->m_Tuning.m_PlayerHooking)
+			if(m_HookedPlayer == TeeID && m_pWorld->m_Tuning.m_PlayerHooking)
 			{
 				if(Distance > PHYS_SIZE * 1.50f) // TODO: fix tweakable variable
 				{
@@ -393,20 +395,25 @@ void CCharacterCore::Move()
 		{
 			float a = i / Distance;
 			vec2 Pos = mix(m_Pos, NewPos, a);
-			for(int p = 0; p < MAX_CLIENTS; p++)
+			bool Hit = false;
+			bool UseNewPos = false;
+			for(int k = 0; k < m_pWorld->m_aCharacterIDs.size() && !Hit; k++)
 			{
-				CCharacterCore *pCharCore = m_pWorld->m_apCharacters[p];
+				CCharacterCore *pCharCore = m_pWorld->GetCharacter(m_pWorld->m_aCharacterIDs[k]);
 				if(!pCharCore || pCharCore == this)
 					continue;
 				float D = distance(Pos, pCharCore->m_Pos);
 				if(D < PHYS_SIZE && D >= 0.0f)
 				{
-					if(a > 0.0f)
-						m_Pos = LastPos;
-					else if(distance(NewPos, pCharCore->m_Pos) > D)
-						m_Pos = NewPos;
-					return;
+					Hit = true;
+					UseNewPos = a > 0.0f ? false : distance(NewPos, pCharCore->m_Pos) > D;
+					break;
 				}
+			}
+			if(Hit)
+			{
+				m_Pos = UseNewPos ? NewPos : LastPos;
+				return;
 			}
 			LastPos = Pos;
 		}

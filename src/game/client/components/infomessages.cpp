@@ -52,27 +52,32 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		// unpack messages
 		CInfoMsg Kill;
 		Kill.m_Player1ID = pMsg->m_Victim;
-		if(Config()->m_ClShowsocial)
+		// Victim, killer and assist are TeeIDs from the message and may name a
+		// bot we have no identity for, so resolve them non-allocating.
+		const CGameClient::CClientData *pVictim = m_pClient->GetClientData(Kill.m_Player1ID);
+		if(Config()->m_ClShowsocial && pVictim)
 		{
 			Kill.m_Player1NameCursor.m_FontSize = 36.0f;
-			TextRender()->TextDeferred(&Kill.m_Player1NameCursor, m_pClient->m_aClients[Kill.m_Player1ID].m_aName, -1);
+			TextRender()->TextDeferred(&Kill.m_Player1NameCursor, pVictim->m_aName, -1);
 		}
 
-		Kill.m_Player1RenderInfo = m_pClient->m_aClients[Kill.m_Player1ID].m_RenderInfo;
+		if(pVictim)
+			Kill.m_Player1RenderInfo = pVictim->m_RenderInfo;
 
 		Kill.m_Player2ID = pMsg->m_Killer;
 		Kill.m_Player3ID = pMsg->m_Assist;
 
 		float FontSize = Kill.m_Player3ID >= 0 ? 20.0f : 36.0f;
-		if(Kill.m_Player2ID >= 0)
+		const CGameClient::CClientData *pKiller = m_pClient->GetClientData(Kill.m_Player2ID);
+		if(Kill.m_Player2ID >= 0 && pKiller)
 		{
 			if(Config()->m_ClShowsocial)
 			{
 				Kill.m_Player2NameCursor.m_FontSize = FontSize;
-				TextRender()->TextDeferred(&Kill.m_Player2NameCursor, m_pClient->m_aClients[Kill.m_Player2ID].m_aName, -1);
+				TextRender()->TextDeferred(&Kill.m_Player2NameCursor, pKiller->m_aName, -1);
 			}
 
-			Kill.m_Player2RenderInfo = m_pClient->m_aClients[Kill.m_Player2ID].m_RenderInfo;
+			Kill.m_Player2RenderInfo = pKiller->m_RenderInfo;
 		}
 		else
 		{
@@ -97,15 +102,16 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 				Kill.m_Player2RenderInfo.m_Size = 64.0f;
 			}
 		}
-		if(Kill.m_Player2ID >= 0 && Kill.m_Player3ID >= 0)
+		const CGameClient::CClientData *pAssist = m_pClient->GetClientData(Kill.m_Player3ID);
+		if(Kill.m_Player2ID >= 0 && Kill.m_Player3ID >= 0 && pAssist)
 		{
 			if(Config()->m_ClShowsocial)
 			{
 				Kill.m_Player3NameCursor.m_FontSize = FontSize;
-				TextRender()->TextDeferred(&Kill.m_Player3NameCursor, m_pClient->m_aClients[Kill.m_Player3ID].m_aName, -1);
+				TextRender()->TextDeferred(&Kill.m_Player3NameCursor, pAssist->m_aName, -1);
 			}
 
-			Kill.m_Player3RenderInfo = m_pClient->m_aClients[Kill.m_Player3ID].m_RenderInfo;
+			Kill.m_Player3RenderInfo = pAssist->m_RenderInfo;
 		}
 		else
 		{
@@ -145,10 +151,14 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		char aTime[32];
 		char aLabel[64];
 
-		FormatTime(aTime, sizeof(aTime), pMsg->m_Time, m_pClient->RacePrecision());
-		m_pClient->GetPlayerLabel(aLabel, sizeof(aLabel), pMsg->m_ClientID, m_pClient->m_aClients[pMsg->m_ClientID].m_aName);
+		// m_ClientID is a TeeID and may name a bot, so resolve it safely.
+		const CGameClient::CClientData *pFinisher = m_pClient->GetClientData(pMsg->m_ClientID);
+		const char *pFinisherName = pFinisher ? pFinisher->m_aName : "";
 
-		str_format(aBuf, sizeof(aBuf), "%2d: %s: finished in %s", pMsg->m_ClientID, m_pClient->m_aClients[pMsg->m_ClientID].m_aName, aTime);
+		FormatTime(aTime, sizeof(aTime), pMsg->m_Time, m_pClient->RacePrecision());
+		m_pClient->GetPlayerLabel(aLabel, sizeof(aLabel), pMsg->m_ClientID, pFinisherName);
+
+		str_format(aBuf, sizeof(aBuf), "%2d: %s: finished in %s", pMsg->m_ClientID, pFinisherName, aTime);
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "race", aBuf);
 
 		if(pMsg->m_RecordPersonal || pMsg->m_RecordServer)
@@ -182,7 +192,9 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 		{
 			CInfoMsg Finish;
 			Finish.m_Player1ID = pMsg->m_ClientID;
-			Finish.m_Player1RenderInfo = m_pClient->m_aClients[Finish.m_Player1ID].m_RenderInfo;
+			const CGameClient::CClientData *pFinishData = m_pClient->GetClientData(Finish.m_Player1ID);
+			if(pFinishData)
+				Finish.m_Player1RenderInfo = pFinishData->m_RenderInfo;
 
 			Finish.m_TimeCursor.m_FontSize = 36.0f;
 			if(pMsg->m_RecordServer)
@@ -191,10 +203,10 @@ void CInfoMessages::OnMessage(int MsgType, void *pRawMsg)
 				TextRender()->TextColor(0.2f, 0.6f, 1.0f, 1.0f);
 			TextRender()->TextDeferred(&Finish.m_TimeCursor, aTime, -1);
 
-			if(Config()->m_ClShowsocial)
+			if(Config()->m_ClShowsocial && pFinishData)
 			{
 				Finish.m_Player1NameCursor.m_FontSize = 36.0f;
-				TextRender()->TextDeferred(&Finish.m_Player1NameCursor, m_pClient->m_aClients[pMsg->m_ClientID].m_aName, -1);
+				TextRender()->TextDeferred(&Finish.m_Player1NameCursor, pFinishData->m_aName, -1);
 			}
 
 			FormatTimeDiff(aTime, sizeof(aTime), pMsg->m_Diff, m_pClient->RacePrecision());

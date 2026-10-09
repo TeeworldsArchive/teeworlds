@@ -4,9 +4,9 @@
 #ifndef GAME_CLIENT_COMPONENTS_MENUS_H
 #define GAME_CLIENT_COMPONENTS_MENUS_H
 
-#include <base/tl/hashtable.h>
 #include <base/system/misc.h>
 #include <base/system/time.h>
+#include <base/tl/hashtable.h>
 #include <base/tl/sorted_array.h>
 #include <base/tl/string.h>
 #include <base/vmath.h>

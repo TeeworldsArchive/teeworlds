@@ -7,17 +7,17 @@
 
 #include <math.h>
 
+#include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/textrender.h>
-#include <engine/engine.h>
 
-#include <engine/shared/jsonparser.h>
 #include <engine/shared/config.h>
+#include <engine/shared/jsonparser.h>
 
 #include <hb-ft.h>
 
-#include "textrender.h"
 #include "font_download.h"
+#include "textrender.h"
 
 // false once the glyph map is gone; static cursors may still be destroyed later
 static bool g_GlyphsAlive = false;
@@ -1578,7 +1578,7 @@ void CTextRender::Update()
 	dbg_msg("textstats",
 		"fps=%.0f frames=%d drawcalls=%d/frame passes=%.1f/frame textdraws=%.1f/frame glyphs=%.0f/frame quadpx=%.2fM/frame "
 		"layoutcalls=%.1f/frame cachehit=%.0f%% layout=%.3fms draw=%.3fms (setup=%.3f loop=%.3f end=%.3f) "
-		"rasterized=%.1f/frame recycles=%d renderthread=%.3fms", 
+		"rasterized=%.1f/frame recycles=%d renderthread=%.3fms",
 		Fps, Frames, Commands / Frames, (double) m_StatDrawPasses / Frames,
 		(double) m_StatDrawCalls / Frames, (double) m_StatGlyphs / Frames, (double) m_StatQuadPixels / Frames / 1.0e6,
 		(double) m_StatLayoutCalls / Frames,

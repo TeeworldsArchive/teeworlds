@@ -298,8 +298,12 @@ float CCamera::FollowedVelocity() const
 
 	if(Snap.m_pLocalCharacter)
 		pCharacter = Snap.m_pLocalCharacter;
-	else if(Snap.m_SpecInfo.m_Active && Snap.m_SpecInfo.m_SpectatorID >= 0 && Snap.m_SpecInfo.m_SpectatorID < MAX_CLIENTS && Snap.m_aCharacters[Snap.m_SpecInfo.m_SpectatorID].m_Active)
-		pCharacter = &Snap.m_aCharacters[Snap.m_SpecInfo.m_SpectatorID].m_Cur;
+	else if(Snap.m_SpecInfo.m_Active && Snap.m_SpecInfo.m_SpectatorID >= 0)
+	{
+		const CGameClient::CSnapState::CCharacterInfo *pCharInfo = m_pClient->GetCharacterInfo(Snap.m_SpecInfo.m_SpectatorID);
+		if(pCharInfo && pCharInfo->m_Active)
+			pCharacter = &pCharInfo->m_Cur;
+	}
 
 	if(!pCharacter)
 		return 0.0f;

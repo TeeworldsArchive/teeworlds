@@ -4,10 +4,10 @@
 #include "test.h"
 #include <gtest/gtest.h>
 
-#include <base/system/mem.h>
 #include <base/system/aio.h>
-#include <base/system/string.h>
 #include <base/system/fs.h>
+#include <base/system/mem.h>
+#include <base/system/string.h>
 
 void TestFileRead(const char *pWritten, bool SkipBom, const char *pRead)
 {

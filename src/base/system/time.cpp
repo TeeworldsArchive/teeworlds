@@ -17,7 +17,6 @@ int64 time_get()
 	return (int64) ts.tv_sec * 1000000 + (int64) ts.tv_nsec / 1000;
 }
 
-
 int time_timestamp()
 {
 	return time(0);

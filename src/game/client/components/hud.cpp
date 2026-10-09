@@ -292,9 +292,10 @@ void CHud::RenderScoreHud()
 						static CTextCursor s_CarrierCursor(8.0f);
 						s_CarrierCursor.Reset();
 
-						int ID = FlagCarrier[t] % MAX_CLIENTS;
+						int ID = FlagCarrier[t];
+						const CGameClient::CClientData *pCarrier = m_pClient->GetClientData(ID);
 						char aName[64];
-						str_format(aName, sizeof(aName), "%s", Config()->m_ClShowsocial ? m_pClient->m_aClients[ID].m_aName : "");
+						str_format(aName, sizeof(aName), "%s", Config()->m_ClShowsocial && pCarrier ? pCarrier->m_aName : "");
 
 						TextRender()->TextDeferred(&s_CarrierCursor, aName, -1);
 
@@ -307,10 +308,13 @@ void CHud::RenderScoreHud()
 						TextRender()->DrawTextOutlined(&s_CarrierCursor);
 
 						// draw tee of the flag holder
-						CTeeRenderInfo Info = m_pClient->m_aClients[ID].m_RenderInfo;
-						Info.m_Size = 18.0f;
-						RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0),
-							vec2(Whole - ScoreWidthMax - Info.m_Size / 2 - Split, StartY + 1.0f + Info.m_Size / 2 + t * TeamOffset));
+						if(pCarrier)
+						{
+							CTeeRenderInfo Info = pCarrier->m_RenderInfo;
+							Info.m_Size = 18.0f;
+							RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0),
+								vec2(Whole - ScoreWidthMax - Info.m_Size / 2 - Split, StartY + 1.0f + Info.m_Size / 2 + t * TeamOffset));
+						}
 					}
 					StartY += 8.0f * Graphics()->ScreenUIScale();
 				}
@@ -322,11 +326,11 @@ void CHud::RenderScoreHud()
 			int aPos[2] = {1, 2};
 			CGameClient::CPlayerInfoItem aPlayerInfo[2] = {{0}};
 			int i = 0;
-			for(int t = 0; t < 2 && i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pTeeInfo; ++i)
+			for(int t = 0; t < 2 && i < m_pClient->m_aInfoByScore.size() && m_pClient->m_aInfoByScore[i].m_pTeeInfo; ++i)
 			{
-				if(m_pClient->m_aClients[m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
+				if(m_pClient->m_aClients[m_pClient->m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
 				{
-					aPlayerInfo[t] = m_pClient->m_Snap.m_aInfoByScore[i];
+					aPlayerInfo[t] = m_pClient->m_aInfoByScore[i];
 					if(aPlayerInfo[t].m_ClientID == m_pClient->m_LocalClientID)
 						Local = t;
 					++t;
@@ -335,13 +339,13 @@ void CHud::RenderScoreHud()
 			// search local player info if not a spectator, nor within top2 scores
 			if(Local == -1 && m_pClient->m_LocalClientID != -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS)
 			{
-				for(; i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pTeeInfo; ++i)
+				for(; i < m_pClient->m_aInfoByScore.size() && m_pClient->m_aInfoByScore[i].m_pTeeInfo; ++i)
 				{
-					if(m_pClient->m_aClients[m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
+					if(m_pClient->m_aClients[m_pClient->m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
 						++aPos[1];
-					if(m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID == m_pClient->m_LocalClientID)
+					if(m_pClient->m_aInfoByScore[i].m_ClientID == m_pClient->m_LocalClientID)
 					{
-						aPlayerInfo[1] = m_pClient->m_Snap.m_aInfoByScore[i];
+						aPlayerInfo[1] = m_pClient->m_aInfoByScore[i];
 						Local = 1;
 						break;
 					}
@@ -413,8 +417,9 @@ void CHud::RenderScoreHud()
 					s_NameCursor.Reset();
 
 					int ID = aPlayerInfo[t].m_ClientID;
+					const CGameClient::CClientData *pInfoClient = m_pClient->GetClientData(ID);
 					char aName[64];
-					str_format(aName, sizeof(aName), "%s", Config()->m_ClShowsocial ? m_pClient->m_aClients[ID].m_aName : "");
+					str_format(aName, sizeof(aName), "%s", Config()->m_ClShowsocial && pInfoClient ? pInfoClient->m_aName : "");
 
 					TextRender()->TextDeferred(&s_NameCursor, aName, -1);
 
@@ -427,10 +432,13 @@ void CHud::RenderScoreHud()
 					TextRender()->DrawTextOutlined(&s_NameCursor);
 
 					// draw tee
-					CTeeRenderInfo Info = m_pClient->m_aClients[ID].m_RenderInfo;
-					Info.m_Size = 18.0f;
-					RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0),
-						vec2(Whole - ScoreWidthMax - Info.m_Size / 2 - Split, StartY + 1.0f + Info.m_Size / 2 + t * TeamOffset));
+					if(pInfoClient)
+					{
+						CTeeRenderInfo Info = pInfoClient->m_RenderInfo;
+						Info.m_Size = 18.0f;
+						RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0),
+							vec2(Whole - ScoreWidthMax - Info.m_Size / 2 - Split, StartY + 1.0f + Info.m_Size / 2 + t * TeamOffset));
+					}
 				}
 
 				// draw position
@@ -720,22 +728,22 @@ void CHud::RenderTwoLayerIcon(int EmptySpriteID, int FullSpriteID, float x, floa
 	const CDataSprite *pSprite = &g_pData->m_aSprites[FullSpriteID];
 	const int GridX = pSprite->m_pSet->m_Gridx;
 	const int GridY = pSprite->m_pSet->m_Gridy;
-	const float PadX = 0.5f / (float)(GridX * 32);
+	const float PadX = 0.5f / (float) (GridX * 32);
 	// half a texel expressed in sprite grid cells
 	const float PadCell = 0.5f / 32.0f;
 
-	const float x1 = pSprite->m_X / (float)GridX + PadX;
-	const float x2 = (pSprite->m_X + pSprite->m_W) / (float)GridX - PadX;
+	const float x1 = pSprite->m_X / (float) GridX + PadX;
+	const float x2 = (pSprite->m_X + pSprite->m_W) / (float) GridX - PadX;
 	const float SpriteTop = pSprite->m_Y + pSprite->m_H * (1.0f - Progress);
 	const float SpriteBottom = pSprite->m_Y + pSprite->m_H;
-	float y1 = SpriteTop / (float)GridY;
-	const float y2 = (SpriteBottom - PadCell) / (float)GridY;
+	float y1 = SpriteTop / (float) GridY;
+	const float y2 = (SpriteBottom - PadCell) / (float) GridY;
 	// keep the regular top padding when the whole sprite is shown
 	if(Progress >= 1.0f)
-		y1 = (SpriteTop + PadCell) / (float)GridY;
+		y1 = (SpriteTop + PadCell) / (float) GridY;
 	// a very small fraction can be thinner than the bottom padding
 	if(y2 <= y1)
-		y1 = y2 - 1.0f / (float)(GridY * 32);
+		y1 = y2 - 1.0f / (float) (GridY * 32);
 
 	Graphics()->QuadsSetSubset(x1, y1, x2, y2);
 	IGraphics::CQuadItem FullQuad(x, y + Size * (1.0f - Progress), Size, Size * Progress);
@@ -771,10 +779,10 @@ void CHud::RenderHealthAndAmmo(const CNetObj_Character *pCharacter)
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// render health
-	RenderTwoLayerIcon(SPRITE_HEALTH_EMPTY, SPRITE_HEALTH_FULL, x, HealthY, IconSize, pCharacter->m_Health / (float)MaxHealth);
+	RenderTwoLayerIcon(SPRITE_HEALTH_EMPTY, SPRITE_HEALTH_FULL, x, HealthY, IconSize, pCharacter->m_Health / (float) MaxHealth);
 
 	// render armor
-	RenderTwoLayerIcon(SPRITE_ARMOR_EMPTY, SPRITE_ARMOR_FULL, x, ArmorY, IconSize, pCharacter->m_Armor / (float)MaxArmor);
+	RenderTwoLayerIcon(SPRITE_ARMOR_EMPTY, SPRITE_ARMOR_FULL, x, ArmorY, IconSize, pCharacter->m_Armor / (float) MaxArmor);
 
 	// render ammo
 	if(pCharacter->m_Weapon == WEAPON_HAMMER || pCharacter->m_Weapon == WEAPON_NINJA)
@@ -844,7 +852,8 @@ void CHud::RenderSpectatorHud()
 	Rect.Draw(vec4(0.0f, 0.0f, 0.0f, 0.4f), 5.0f, CUIRect::CORNER_TL);
 
 	// draw the text
-	const char *pName = Config()->m_ClShowsocial && SpecID != -1 ? m_pClient->m_aClients[SpecID].m_aName : "";
+	const CGameClient::CClientData *pSpecClient = m_pClient->GetClientData(SpecID);
+	const char *pName = Config()->m_ClShowsocial && pSpecClient ? pSpecClient->m_aName : "";
 	char aBuf[128];
 
 	static CTextCursor s_SpectateLabelCursor(8.0f);
@@ -908,7 +917,7 @@ void CHud::RenderSpectatorNotification()
 
 void CHud::RenderReadyUpNotification()
 {
-	if(m_pClient->m_LocalClientID != -1 && !(m_pClient->m_Snap.m_apTeeInfos[m_pClient->m_LocalClientID]->m_Flag & TEEFLAG_READY))
+	if(m_pClient->m_LocalClientID != -1 && !(m_pClient->GetTeeInfo(m_pClient->m_LocalClientID)->m_Flag & TEEFLAG_READY))
 	{
 		static CTextCursor s_Cursor(16.0f);
 
@@ -1048,7 +1057,7 @@ void CHud::OnRender()
 			RenderHealthAndAmmo(m_pClient->m_Snap.m_pLocalCharacter);
 			if(Race && m_pClient->m_LocalClientID != -1)
 			{
-				RenderRaceTime(m_pClient->m_Snap.m_apTeeInfos[m_pClient->m_LocalClientID]);
+				RenderRaceTime(m_pClient->GetTeeInfo(m_pClient->m_LocalClientID));
 				RenderCheckpoint();
 			}
 		}

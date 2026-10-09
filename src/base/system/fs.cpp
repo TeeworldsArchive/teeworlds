@@ -9,10 +9,10 @@
 #include <stdlib.h>
 
 #include <base/system/base.h>
+#include <base/system/debug.h>
 #include <base/system/fs.h>
 #include <base/system/io.h>
 #include <base/system/string.h>
-#include <base/system/debug.h>
 #include <sys/stat.h>
 #if defined(CONF_FAMILY_UNIX)
 
@@ -21,8 +21,8 @@
 
 #elif defined(CONF_FAMILY_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <direct.h>
+#include <windows.h>
 #else
 #error NOT IMPLEMENTED
 #endif
@@ -42,7 +42,6 @@ static inline time_t filetime_to_unixtime(LPFILETIME filetime)
 	return t == (time_t) li.QuadPart ? t : (time_t) -1;
 }
 #endif
-
 
 void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
 {

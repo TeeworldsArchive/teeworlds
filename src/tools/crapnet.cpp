@@ -4,9 +4,9 @@
 #include <base/math.h>
 #include <base/system/debug.h>
 #include <base/system/mem.h>
+#include <base/system/net.h>
 #include <base/system/thread.h>
 #include <base/system/time.h>
-#include <base/system/net.h>
 
 struct CPacket
 {

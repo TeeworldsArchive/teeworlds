@@ -4,9 +4,9 @@
 #include "test.h"
 #include <gtest/gtest.h>
 
+#include <base/system/misc.h>
 #include <base/system/net.h>
 #include <base/system/string.h>
-#include <base/system/misc.h>
 
 CTestInfo::CTestInfo()
 {

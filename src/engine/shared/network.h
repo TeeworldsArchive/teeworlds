@@ -4,13 +4,12 @@
 #ifndef ENGINE_SHARED_NETWORK_H
 #define ENGINE_SHARED_NETWORK_H
 
-#include <base/system/net.h>
-#include <base/system/time.h>
 #include <base/system/debug.h>
-#include <base/system/mem.h>
-#include <base/system/io.h>
-#include <base/system/string.h>
 #include <base/system/fs.h>
+#include <base/system/io.h>
+#include <base/system/mem.h>
+#include <base/system/net.h>
+#include <base/system/string.h>
 #include <base/system/time.h>
 
 #include "net_queue.h"

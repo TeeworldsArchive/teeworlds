@@ -3,8 +3,8 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef ENGINE_TEXTRENDER_H
 #define ENGINE_TEXTRENDER_H
-#include <base/tl/array.h>
 #include <base/system/time.h>
+#include <base/tl/array.h>
 #include <base/vmath.h>
 #include <engine/console.h>
 #include <engine/graphics.h>

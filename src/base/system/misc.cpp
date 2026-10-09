@@ -6,12 +6,12 @@
 #include <stdlib.h>
 
 #include <base/system/base.h>
-#include <base/system/misc.h>
+#include <base/system/debug.h>
 #include <base/system/io.h>
 #include <base/system/mem.h>
+#include <base/system/misc.h>
 #include <base/system/net.h>
 #include <base/system/net_internal.h>
-#include <base/system/debug.h>
 #include <base/system/string.h>
 #if defined(CONF_FAMILY_UNIX)
 
@@ -19,20 +19,18 @@
 
 #elif defined(CONF_FAMILY_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <process.h>
 #include <shellapi.h>
 #include <wincrypt.h>
+#include <windows.h>
 #else
 #error NOT IMPLEMENTED
 #endif
-
 
 void net_stats(NETSTATS *stats_inout)
 {
 	*stats_inout = network_stats_get();
 }
-
 
 int str_isspace(char c) { return c == ' ' || c == '\n' || c == '\t'; }
 
@@ -45,7 +43,6 @@ char str_uppercase(char c)
 
 int str_toint(const char *str) { return atoi(str); }
 float str_tofloat(const char *str) { return atof(str); }
-
 
 int str_utf8_is_whitespace(int code)
 {
@@ -305,7 +302,6 @@ unsigned str_quickhash(const char *str)
 	return hash;
 }
 
-
 struct SECURE_RANDOM_DATA
 {
 	int initialized;
@@ -399,7 +395,6 @@ void secure_random_fill(void *bytes, unsigned length)
 #endif
 }
 
-
 int pid()
 {
 #if defined(CONF_FAMILY_WINDOWS)
@@ -444,8 +439,8 @@ void cmdline_fix(int *argc, const char ***argv)
 	*argc = wide_argc;
 	*argv = (const char **) new_argv;
 #else
-	(void)argc;
-	(void)argv;
+	(void) argc;
+	(void) argv;
 #endif
 }
 
@@ -455,8 +450,8 @@ void cmdline_free([[maybe_unused]] int argc, const char **argv)
 	free((void *) *argv);
 	free((char **) argv);
 #else
-	(void)argc;
-	(void)argv;
+	(void) argc;
+	(void) argv;
 #endif
 }
 

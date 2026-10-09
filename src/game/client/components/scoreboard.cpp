@@ -131,10 +131,10 @@ float CScoreboard::RenderSpectators(float x, float y, float w)
 		s_SpectatorCursors[i].Reset();
 		s_SpectatorCursors[i].m_FontSize = FontSize;
 
-		const CNetObj_TeeInfo *pInfo = m_pClient->m_Snap.m_apTeeInfos[0];
+		const CNetObj_TeeInfo *pInfo = m_pClient->GetTeeInfo(i);
 		if(!pInfo || m_pClient->m_aClients[i].m_Team != TEAM_SPECTATORS || Lines > MaxLines)
 			continue;
-		if(m_pClient->m_Snap.m_apTeeInfos[i] && m_pClient->m_Snap.m_apTeeInfos[i]->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
+		if(pInfo && pInfo->m_Flag & TEEFLAG_HIDDEN_IN_BOARD)
 			continue;
 
 		if(pLastCursor)
@@ -250,20 +250,22 @@ float CScoreboard::RenderScoreboard(float x, float y, float w)
 		if(TeamPlay)
 		{
 			int PlayerID = m_pClient->m_LocalClientID;
-			if(m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_Snap.m_SpecInfo.m_SpectatorID >= 0 && m_pClient->m_aClients[m_pClient->m_Snap.m_SpecInfo.m_SpectatorID].m_Active)
+			const CGameClient::CClientData *pSpecClient = 0;
+			if(m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_Snap.m_SpecInfo.m_SpectatorID >= 0)
+				pSpecClient = m_pClient->GetClientData(m_pClient->m_Snap.m_SpecInfo.m_SpectatorID);
+			if(pSpecClient && pSpecClient->m_Active)
 				PlayerID = m_pClient->m_Snap.m_SpecInfo.m_SpectatorID;
-			int CheckTeam = m_pClient->m_aClients[PlayerID].m_Team;
-			if(m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_Snap.m_SpecInfo.m_SpectatorID >= 0 &&
-				m_pClient->m_aClients[m_pClient->m_Snap.m_SpecInfo.m_SpectatorID].m_Active)
-			{
-				CheckTeam = m_pClient->m_aClients[m_pClient->m_Snap.m_SpecInfo.m_SpectatorID].m_Team;
-			}
+
+			// PlayerID is the local client unless a valid spectated tee was
+			// found above.
+			const CGameClient::CClientData *pPlayer = m_pClient->GetClientData(PlayerID);
+			const int CheckTeam = pPlayer ? pPlayer->m_Team : TEAM_SPECTATORS;
 			Score = CheckTeam == TEAM_RED ? m_pClient->m_Snap.m_pGameDataTeam->m_TeamscoreRed : m_pClient->m_Snap.m_pGameDataTeam->m_TeamscoreBlue;
 		}
 		else if(m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_Snap.m_SpecInfo.m_SpectatorID >= 0 &&
-			m_pClient->m_Snap.m_apTeeInfos[m_pClient->m_Snap.m_SpecInfo.m_SpectatorID])
+			m_pClient->GetTeeInfo(m_pClient->m_Snap.m_SpecInfo.m_SpectatorID))
 		{
-			Score = m_pClient->m_Snap.m_apTeeInfos[m_pClient->m_Snap.m_SpecInfo.m_SpectatorID]->m_Score;
+			Score = m_pClient->GetTeeInfo(m_pClient->m_Snap.m_SpecInfo.m_SpectatorID)->m_Score;
 		}
 		else if(m_pClient->m_Snap.m_pLocalInfo)
 		{
@@ -312,9 +314,9 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 	const vec4 TeamRectColor = Team == TEAM_RED ? vec4(1.0f, 0.0f, 0.0f, 0.25f) : vec4(0.0f, 0.0f, 1.0f, 0.25f);
 
 	const bool ReadyMode = m_pClient->m_Snap.m_pGameData && m_pClient->m_Snap.m_pGameData->m_GameStateEndTick == 0;
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	for(int i = 0; i < m_pClient->m_aInfoByScore.size(); i++)
 	{
-		const CGameClient::CPlayerInfoItem *pInfo = &m_pClient->m_Snap.m_aInfoByScore[i];
+		const CGameClient::CPlayerInfoItem *pInfo = &m_pClient->m_aInfoByScore[i];
 		const CGameClient::CClientData *pData = &m_pClient->m_aClients[pInfo->m_ClientID];
 		if(!pInfo->m_pTeeInfo || pData->m_Team == TEAM_SPECTATORS)
 			continue;

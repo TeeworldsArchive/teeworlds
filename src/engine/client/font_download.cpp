@@ -1,12 +1,12 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
+#include <base/system/fs.h>
+#include <base/system/string.h>
 #include <base/system/thread.h>
 #include <base/system/time.h>
-#include <base/system/string.h>
-#include <base/system/fs.h>
-#include <engine/engine.h>
-#include <engine/storage.h>
 #include <engine/console.h>
+#include <engine/engine.h>
 #include <engine/shared/http_request.h>
+#include <engine/storage.h>
 
 #include "font_download.h"
 

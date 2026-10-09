@@ -3,11 +3,11 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
 #include <base/math.h>
-#include <base/system/lock.h>
-#include <base/system/time.h>
-#include <base/system/net.h>
 #include <base/system/fs.h>
+#include <base/system/lock.h>
 #include <base/system/misc.h>
+#include <base/system/net.h>
+#include <base/system/time.h>
 
 #include <engine/config.h>
 #include <engine/console.h>

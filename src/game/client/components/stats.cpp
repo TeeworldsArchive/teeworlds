@@ -178,31 +178,33 @@ void CStats::OnRender()
 	else if(m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_Snap.m_SpecInfo.m_SpectatorID != -1)
 		LocalOrSpectatedClient = m_pClient->m_Snap.m_SpecInfo.m_SpectatorID;
 
-	int aPlayers[MAX_CLIENTS] = {0};
-	int NumPlayers = 0;
-	if(LocalOrSpectatedClient != -1)
-	{
-		aPlayers[NumPlayers] = LocalOrSpectatedClient;
-		NumPlayers++;
-	}
+	// TeeIDs are sparse, so the board walks the snapshot's id list; bots are
+	// shown like any other tee. A MAX_TEES-sized stack array would zero 256 KB
+	// on every frame the board is drawn.
+	static array<int> s_aPlayers;
+	s_aPlayers.clear_size();
+	const CGameClient::CClientData *pLocalOrSpectated = m_pClient->GetClientData(LocalOrSpectatedClient);
+	if(pLocalOrSpectated)
+		s_aPlayers.add(LocalOrSpectatedClient);
 
 	// order other clients by team, starting with the team of our player
 	int aTeams[] = {TEAM_RED, TEAM_BLUE};
-	if(LocalOrSpectatedClient != -1 && m_pClient->m_aClients[LocalOrSpectatedClient].m_Team != aTeams[0])
+	if(pLocalOrSpectated && pLocalOrSpectated->m_Team != aTeams[0])
 		std::swap(aTeams[0], aTeams[1]);
 	for(unsigned t = 0; t < sizeof(aTeams) / sizeof(aTeams[0]); ++t)
 	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
+		for(int k = 0; k < m_pClient->m_aTeeIDs.size(); k++)
 		{
+			const int i = m_pClient->m_aTeeIDs[k];
 			if(i == LocalOrSpectatedClient)
 				continue;
-			if(!m_pClient->m_aClients[i].m_Active)
+			const CGameClient::CClientData *pClient = m_pClient->GetClientData(i);
+			if(!pClient || !pClient->m_Active)
 				continue;
-			if(m_pClient->m_aClients[i].m_Team != aTeams[t])
+			if(pClient->m_Team != aTeams[t])
 				continue;
 
-			aPlayers[NumPlayers] = i;
-			NumPlayers++;
+			s_aPlayers.add(i);
 		}
 	}
 
@@ -234,9 +236,9 @@ void CStats::OnRender()
 	bool NoDisplayedWeapon = true;
 	if(Config()->m_ClStatboardInfos & TC_STATS_WEAPS)
 	{
-		for(int i = 0; i < NumPlayers; i++)
+		for(int i = 0; i < s_aPlayers.size(); i++)
 		{
-			const CPlayerStats *pStats = &m_aStats[aPlayers[i]];
+			const CPlayerStats *pStats = &m_aStats[s_aPlayers[i]];
 			for(int j = 0; j < NUM_WEAPONS; j++)
 				aDisplayWeapon[j] = aDisplayWeapon[j] || pStats->m_aKillsWith[j] || pStats->m_aDeathsFrom[j];
 		}
@@ -358,7 +360,7 @@ void CStats::OnRender()
 	float TeeSizemod = 1.0f;
 	float TeeOffset = 1.0f;
 
-	if(NumPlayers > 14)
+	if(s_aPlayers.size() > 14)
 	{
 		FontSize = 30.0f;
 		LineHeight = 40.0f;
@@ -368,14 +370,14 @@ void CStats::OnRender()
 
 	s_Cursor.m_FontSize = FontSize;
 	int LastTeam = -1;
-	for(int j = 0; j < NumPlayers; j++)
+	for(int j = 0; j < s_aPlayers.size(); j++)
 	{
 		s_Cursor.m_Align = TEXTALIGN_ML;
 		// workaround
 		if(j == 16)
 		{
 			char aBuf[64];
-			str_format(aBuf, sizeof(aBuf), Localize("%d other players"), NumPlayers - j);
+			str_format(aBuf, sizeof(aBuf), Localize("%d other players"), s_aPlayers.size() - j);
 
 			s_Cursor.Reset();
 			s_Cursor.MoveTo(x + 64, y + LineHeight / 2.0f);
@@ -386,7 +388,7 @@ void CStats::OnRender()
 			break;
 		}
 
-		const int CurrentTeam = m_pClient->m_aClients[aPlayers[j]].m_Team;
+		const int CurrentTeam = m_pClient->m_aClients[s_aPlayers[j]].m_Team;
 		if(m_pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS && LastTeam != CurrentTeam)
 		{
 			vec4 Color;
@@ -420,8 +422,8 @@ void CStats::OnRender()
 			LastTeam = CurrentTeam;
 		}
 
-		const CPlayerStats *pStats = &m_aStats[aPlayers[j]];
-		const bool HighlightedLine = aPlayers[j] == m_pClient->m_LocalClientID || (m_pClient->m_Snap.m_SpecInfo.m_Active && aPlayers[j] == m_pClient->m_Snap.m_SpecInfo.m_SpectatorID);
+		const CPlayerStats *pStats = &m_aStats[s_aPlayers[j]];
+		const bool HighlightedLine = s_aPlayers[j] == m_pClient->m_LocalClientID || (m_pClient->m_Snap.m_SpecInfo.m_Active && s_aPlayers[j] == m_pClient->m_Snap.m_SpecInfo.m_SpectatorID);
 
 		// background so it's easy to find the local player or the followed one in spectator mode
 		if(HighlightedLine)
@@ -430,7 +432,7 @@ void CStats::OnRender()
 			Rect.Draw(vec4(1, 1, 1, 0.25f), RoundingSize);
 		}
 
-		CTeeRenderInfo Teeinfo = m_pClient->m_aClients[aPlayers[j]].m_RenderInfo;
+		CTeeRenderInfo Teeinfo = m_pClient->m_aClients[s_aPlayers[j]].m_RenderInfo;
 		Teeinfo.m_Size *= TeeSizemod;
 		RenderTools()->RenderTee(CAnimState::GetIdle(), &Teeinfo, EMOTE_NORMAL, vec2(1, 0), vec2(x + 28, y + 28 + TeeOffset));
 
@@ -439,7 +441,7 @@ void CStats::OnRender()
 		s_Cursor.Reset();
 		s_Cursor.m_MaxWidth = 220;
 		s_Cursor.MoveTo(x + 64, y + LineHeight / 2.0f);
-		TextRender()->TextDeferredCached(&s_Cursor, m_pClient->m_aClients[aPlayers[j]].m_aName, -1);
+		TextRender()->TextDeferredCached(&s_Cursor, m_pClient->m_aClients[s_aPlayers[j]].m_aName, -1);
 		TextRender()->DrawTextOutlined(&s_Cursor);
 
 		s_Cursor.m_MaxWidth = -1;
@@ -604,7 +606,7 @@ void CStats::OnRender()
 				for(int n = 0; n < DisplayedFlagsCount; n++)
 				{
 					Graphics()->QuadsSetRotation(0.18f);
-					Graphics()->SetColor(m_pClient->m_aClients[aPlayers[j]].m_Team == TEAM_RED ? gs_BlueTeamColor : gs_RedTeamColor);
+					Graphics()->SetColor(m_pClient->m_aClients[s_aPlayers[j]].m_Team == TEAM_RED ? gs_BlueTeamColor : gs_RedTeamColor);
 					RenderTools()->SelectSprite(SPRITE_FLAG_WHITE, SPRITE_FLAG_STAINED_ONLY);
 					RenderTools()->DrawSprite(x + TempX, y + 25, 48);
 					TempX += Space;

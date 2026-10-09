@@ -4,8 +4,8 @@
 #include <SDL3/SDL.h>
 
 #include <base/system/mem.h>
-#include <base/system/time.h>
 #include <base/system/string.h>
+#include <base/system/time.h>
 #include <engine/console.h>
 #include <engine/graphics.h>
 #include <engine/input.h>

@@ -8,6 +8,7 @@
 #include <base/system/debug.h>
 #include <base/system/fs.h>
 #include <base/system/mem.h>
+#include <base/tl/partial_array.h>
 
 #include <engine/console.h>
 #include <engine/shared/protocol.h>
@@ -143,13 +144,70 @@ enum
 class CWorldCore
 {
 public:
-	CWorldCore()
+	// Bots use the sparse [MAX_CLIENTS, MAX_TEES) range and ids such as
+	// m_HookedPlayer arrive straight from the snapshot, so characters are kept
+	// in a container covering the whole id space.
+	enum
 	{
-		mem_zero(m_apCharacters, sizeof(m_apCharacters));
-	}
+		CHARACTER_PART_SIZE = 1024,
+		CHARACTER_PARTS = 64,
+	};
+	static_assert(CHARACTER_PARTS * CHARACTER_PART_SIZE >= MAX_TEES, "character storage must cover the whole TeeID space");
 
 	CTuningParams m_Tuning;
-	class CCharacterCore *m_apCharacters[MAX_CLIENTS];
+	// The world only borrows the character cores.
+	partial_array<class CCharacterCore *, CHARACTER_PARTS, CHARACTER_PART_SIZE, allocator_non_owning<class CCharacterCore *>> m_apCharacters;
+
+	// TeeIDs currently bound in m_apCharacters, so the physics loops cost the
+	// number of characters rather than the size of the id space.
+	array<int> m_aCharacterIDs;
+
+	// Returns the character core for a TeeID, or 0 when there is none.
+	class CCharacterCore *GetCharacter(int TeeID) const
+	{
+		class CCharacterCore *const *ppChar = m_apCharacters.get(TeeID);
+		return ppChar ? *ppChar : 0;
+	}
+
+	// Binds a character core to a TeeID, or unbinds it when pCharacter is 0.
+	void SetCharacter(int TeeID, class CCharacterCore *pCharacter)
+	{
+		if(TeeID < 0 || TeeID >= MAX_TEES)
+			return;
+
+		const bool WasBound = GetCharacter(TeeID) != 0;
+		if(pCharacter)
+		{
+			m_apCharacters[TeeID] = pCharacter;
+			if(!WasBound)
+				m_aCharacterIDs.add(TeeID);
+		}
+		else
+		{
+			if(WasBound)
+			{
+				// Drop the id from the iteration list. The slot keeps its part
+				// allocated, because other ids in that part may still be used.
+				for(int i = 0; i < m_aCharacterIDs.size(); i++)
+				{
+					if(m_aCharacterIDs[i] == TeeID)
+					{
+						m_aCharacterIDs.remove_index(i);
+						break;
+					}
+				}
+				m_apCharacters[TeeID] = 0;
+			}
+		}
+	}
+
+	// Removes every binding, so the world can be reused for a new prediction.
+	void ClearCharacters()
+	{
+		for(int i = 0; i < m_aCharacterIDs.size(); i++)
+			m_apCharacters[m_aCharacterIDs[i]] = 0;
+		m_aCharacterIDs.clear_size();
+	}
 };
 
 class CCharacterCore
