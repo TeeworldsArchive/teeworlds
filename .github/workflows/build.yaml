@@ -94,7 +94,7 @@ jobs:
           opus:p
           opusfile:p
           openssl:p
-          curl:p
+          curl-winssl:p
           libspng:p
           glslang:p
           7zip:p
@@ -263,7 +263,7 @@ jobs:
           opus:p
           opusfile:p
           openssl:p
-          curl:p
+          curl-winssl:p
           libspng:p
           glslang:p
           7zip:p
