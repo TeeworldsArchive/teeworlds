@@ -230,7 +230,7 @@ jobs:
             opus:p
             opusfile:p
             openssl:p
-            curl:p
+            curl-winssl:p
             libspng:p
             shaderc:p
 
@@ -292,7 +292,6 @@ jobs:
             'libfreetype-*.dll' \
             'libharfbuzz-*.dll' \
             'libz-ng*.dll' \
-            'libssl-*.dll' \
             'libcrypto-*.dll' \
             'libcurl-*.dll' \
             'libgcc_s_*.dll' \
