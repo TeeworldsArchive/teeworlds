@@ -213,7 +213,7 @@ float CScoreboard::RenderScoreboard(float x, float y, float w)
 	float HeadlineHeight = 40.0f;
 	float LineHeight = 24.0f;
 
-	int NumPlayers = m_pClient->m_GameInfo.m_aTeamSize[TEAM_RED] + m_pClient->m_GameInfo.m_aTeamSize[TEAM_BLUE];
+	int NumPlayers = m_pClient->m_aInfoByScore.size();
 	int PlayerLines = maximum(1, minimum(NumPlayers, (int) (12 * Graphics()->ScreenUIScale())));
 
 	// background

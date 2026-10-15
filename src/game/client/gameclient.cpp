@@ -1170,10 +1170,15 @@ void CGameClient::OnNewSnapshot()
 					// and after the next snapshot see the same set of ids.
 					m_aTeeIDs.add(TeeInfoID);
 
-					CPlayerInfoItem Info;
-					Info.m_pTeeInfo = pInfo;
-					Info.m_ClientID = TeeInfoID;
-					m_aInfoByScore.add(Info);
+					// Tees hidden in the board are skipped: the scoreboard and
+					// the HUD top-score display both walk this list.
+					if(!(pInfo->m_Flag & TEEFLAG_HIDDEN_IN_BOARD))
+					{
+						CPlayerInfoItem Info;
+						Info.m_pTeeInfo = pInfo;
+						Info.m_ClientID = TeeInfoID;
+						m_aInfoByScore.add(Info);
+					}
 
 					// A TeeInfo in the snapshot is what makes a player exist.
 					// Sv_ClientEnter is only a hint and may never arrive (e.g. a

@@ -266,7 +266,7 @@ public:
 
 	// Player infos ordered by score, rebuilt every snapshot. Dense on purpose:
 	// the scoreboard and HUD walk it front to back, and TeeIDs are too sparse
-	// to walk directly.
+	// to walk directly. Tees hidden in the board are not added.
 	array<CPlayerInfoItem> m_aInfoByScore;
 
 	// TeeInfoIDs seen in the current snapshot, for iteration.
