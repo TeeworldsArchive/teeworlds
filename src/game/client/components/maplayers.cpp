@@ -25,11 +25,12 @@ CMapLayers::CMapLayers(int Type)
 {
 	m_Type = Type;
 	m_OnlineStartTime = 0;
+	m_pEngineMap = 0;
 
 	for(int i = 0; i < MAX_MENU_MAP_SLOTS; i++)
 	{
-		m_aMenuMaps[i].m_pMap = 0;
 		m_aMenuMaps[i].m_pLayers = 0;
+		m_aMenuMaps[i].m_MapIndex = IEngineMap::SLOT_MENU_FIRST + i;
 		m_aMenuMaps[i].m_ImageType = CMapImages::MAP_TYPE_MENU + i;
 		m_aMenuMaps[i].m_Alpha = 0.0f;
 		m_aMenuMaps[i].m_Loaded = false;
@@ -97,20 +98,23 @@ bool CMapLayers::LoadMenuMap(int Slot)
 	const int HourOfTheDay = time_houroftheday();
 	const bool IsDaytime = HourOfTheDay >= 6 && HourOfTheDay < 18;
 
-	IEngineMap *pMap = m_aMenuMaps[Slot].m_pMap;
+	if(!m_pEngineMap)
+		return false;
+
+	const int MapIndex = m_aMenuMaps[Slot].m_MapIndex;
 
 	char aBuf[128];
 	// check for the appropriate day/night map
 	str_format(aBuf, sizeof(aBuf), "ui/themes/%s_%s.map", pMenuMap, IsDaytime ? "day" : "night");
-	if(!pMap->Load(aBuf, m_pClient->Storage()))
+	if(!m_pEngineMap->Load(aBuf, m_pClient->Storage(), MapIndex))
 	{
 		// fall back on generic map
 		str_format(aBuf, sizeof(aBuf), "ui/themes/%s.map", pMenuMap);
-		if(!pMap->Load(aBuf, m_pClient->Storage()))
+		if(!m_pEngineMap->Load(aBuf, m_pClient->Storage(), MapIndex))
 		{
 			// fall back on day/night alternative map
 			str_format(aBuf, sizeof(aBuf), "ui/themes/%s_%s.map", pMenuMap, IsDaytime ? "night" : "day");
-			if(!pMap->Load(aBuf, m_pClient->Storage()))
+			if(!m_pEngineMap->Load(aBuf, m_pClient->Storage(), MapIndex))
 			{
 				str_format(aBuf, sizeof(aBuf), "map '%s' not found", pMenuMap);
 				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
@@ -122,8 +126,10 @@ bool CMapLayers::LoadMenuMap(int Slot)
 	str_format(aBuf, sizeof(aBuf), "loaded map '%s'", pMenuMap);
 	Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
 
-	m_aMenuMaps[Slot].m_pLayers->Init(Kernel(), pMap);
-	m_pClient->m_pMapComponent->Images()->OnMenuMapLoad(pMap, m_aMenuMaps[Slot].m_ImageType);
+	m_aMenuMaps[Slot].m_pLayers->Init(Kernel(), m_pEngineMap, MapIndex);
+	if(!m_aMenuMaps[Slot].m_pLayers->Map())
+		return false;
+	m_pClient->m_pMapComponent->Images()->OnMenuMapLoad(m_pEngineMap, MapIndex, m_aMenuMaps[Slot].m_ImageType);
 	LoadEnvPoints(m_aMenuMaps[Slot].m_pLayers, m_aMenuMaps[Slot].m_lEnvPoints);
 	m_aMenuMaps[Slot].m_Loaded = true;
 	return true;
@@ -134,8 +140,8 @@ void CMapLayers::UnloadMenuMap(int Slot)
 	if(Slot < 0 || Slot >= MAX_MENU_MAP_SLOTS)
 		return;
 
-	if(m_aMenuMaps[Slot].m_pMap)
-		m_aMenuMaps[Slot].m_pMap->Unload();
+	if(m_pEngineMap)
+		m_pEngineMap->Unload(m_aMenuMaps[Slot].m_MapIndex);
 	m_pClient->m_pMapComponent->Images()->UnloadMap(m_aMenuMaps[Slot].m_ImageType);
 	m_aMenuMaps[Slot].m_lEnvPoints.clear();
 	m_aMenuMaps[Slot].m_Loaded = false;
@@ -195,10 +201,12 @@ void CMapLayers::OnInit()
 {
 	if(m_Type == TYPE_BACKGROUND)
 	{
+		static_assert(IEngineMap::SLOT_FADE == IEngineMap::SLOT_MENU_FIRST + MAX_MENU_MAP_SLOTS, "engine map slots do not match the menu map count");
+		m_pEngineMap = Kernel()->RequestInterface<IEngineMap>();
 		for(int i = 0; i < MAX_MENU_MAP_SLOTS; i++)
 		{
 			m_aMenuMaps[i].m_pLayers = new CLayers;
-			m_aMenuMaps[i].m_pMap = CreateEngineMap();
+			m_aMenuMaps[i].m_MapIndex = IEngineMap::SLOT_MENU_FIRST + i;
 		}
 
 		m_pClient->m_pMenus->RenderLoading(1);
@@ -256,23 +264,23 @@ void CMapLayers::LoadEnvPoints(const CLayers *pLayers, array<CEnvPoint> &lEnvPoi
 	CEnvPoint *pPoints = 0x0;
 	{
 		int Start, Num;
-		pLayers->Map()->GetType(MAPITEMTYPE_ENVPOINTS, &Start, &Num);
+		pLayers->GetType(MAPITEMTYPE_ENVPOINTS, &Start, &Num);
 
 		if(!Num)
 			return;
 
-		pPoints = (CEnvPoint *) pLayers->Map()->GetItem(Start, 0, 0);
+		pPoints = (CEnvPoint *) pLayers->GetItem(Start, 0, 0);
 	}
 
 	// get envelopes
 	int Start, Num;
-	pLayers->Map()->GetType(MAPITEMTYPE_ENVELOPE, &Start, &Num);
+	pLayers->GetType(MAPITEMTYPE_ENVELOPE, &Start, &Num);
 	if(!Num)
 		return;
 
 	for(int env = 0; env < Num; env++)
 	{
-		CMapItemEnvelope *pItem = (CMapItemEnvelope *) pLayers->Map()->GetItem(Start + env, 0, 0);
+		CMapItemEnvelope *pItem = (CMapItemEnvelope *) pLayers->GetItem(Start + env, 0, 0);
 
 		if(pItem->m_Version >= 3)
 		{
@@ -336,12 +344,12 @@ void CMapLayers::EnvelopeEval(float TimeOffset, int Env, float *pChannels, void 
 		return;
 
 	int Start, Num;
-	pLayers->Map()->GetType(MAPITEMTYPE_ENVELOPE, &Start, &Num);
+	pLayers->GetType(MAPITEMTYPE_ENVELOPE, &Start, &Num);
 
 	if(Env >= Num)
 		return;
 
-	const CMapItemEnvelope *pItem = (CMapItemEnvelope *) pLayers->Map()->GetItem(Start + Env, 0, 0);
+	const CMapItemEnvelope *pItem = (CMapItemEnvelope *) pLayers->GetItem(Start + Env, 0, 0);
 	CEnvPoint *pItemPoints = pPoints + pItem->m_StartPoint;
 
 	static float s_Time = 0.0f;
@@ -451,7 +459,7 @@ void CMapLayers::RenderLayers(CLayers *pLayers, array<CEnvPoint> *pEnvPoints, in
 				if(pLayer->m_Type == LAYERTYPE_TILES && Input()->KeyIsPressed(KEY_LCTRL) && Input()->KeyIsPressed(KEY_LSHIFT) && UI()->KeyPress(KEY_KP_0))
 				{
 					CMapItemLayerTilemap *pTMap = (CMapItemLayerTilemap *) pLayer;
-					CTile *pTiles = (CTile *) pLayers->Map()->GetData(pTMap->m_Data);
+					CTile *pTiles = (CTile *) pLayers->GetData(pTMap->m_Data);
 					CServerInfo CurrentServerInfo;
 					Client()->GetServerInfo(&CurrentServerInfo);
 					char aFilename[IO_MAX_PATH_LENGTH];
@@ -532,7 +540,7 @@ void CMapLayers::RenderLayers(CLayers *pLayers, array<CEnvPoint> *pEnvPoints, in
 						else
 						{
 							// CPU fallback for backends without the tilemap shader
-							CTile *pTiles = (CTile *) pLayers->Map()->GetData(pTMap->m_Data);
+							CTile *pTiles = (CTile *) pLayers->GetData(pTMap->m_Data);
 							vec4 BaseColor = vec4(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f);
 							if(Fade < 1.0f)
 								Graphics()->BlendNormal();
@@ -553,7 +561,7 @@ void CMapLayers::RenderLayers(CLayers *pLayers, array<CEnvPoint> *pEnvPoints, in
 						else
 							Graphics()->TextureSet(m_pClient->m_pMapComponent->Images()->Get(pQLayer->m_Image, true, ImageType));
 
-						CQuad *pQuads = (CQuad *) pLayers->Map()->GetDataSwapped(pQLayer->m_Data);
+						CQuad *pQuads = (CQuad *) pLayers->GetDataSwapped(pQLayer->m_Data);
 
 						// Graphics()->BlendNone();
 						// RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, EnvelopeEval, this);
@@ -706,7 +714,7 @@ void CMapLayers::OnConsoleInit()
 
 void CMapLayers::BackgroundMapUpdate()
 {
-	if(m_Type != TYPE_BACKGROUND || !m_aMenuMaps[0].m_pMap)
+	if(m_Type != TYPE_BACKGROUND || !m_pEngineMap)
 		return;
 
 	const bool Online = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
@@ -816,7 +824,7 @@ void CMapLayers::PlaceEasterEggs(const CLayers *pLayers)
 	int DataSize = sizeof(CTile) * m_EggLayerWidth * m_EggLayerHeight;
 	m_pEggTiles = (CTile *) mem_alloc(DataSize);
 	mem_zero(m_pEggTiles, DataSize);
-	CTile *pGameLayerTiles = (CTile *) pLayers->Map()->GetData(pGameLayer->m_Data);
+	CTile *pGameLayerTiles = (CTile *) pLayers->GetData(pGameLayer->m_Data);
 
 	// first pass: baskets
 	static const int s_aBasketIDs[] = {

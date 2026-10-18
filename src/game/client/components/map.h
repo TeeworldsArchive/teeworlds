@@ -22,7 +22,6 @@ class CMapComponent : public CComponent
 	// the map we just left, drawn with the view offset between the two maps
 	struct SFadeMap
 	{
-		IEngineMap *m_pMap;
 		class CLayers *m_pLayers;
 		array<CEnvPoint> m_lEnvPoints;
 		int m_ImageType;
@@ -37,6 +36,8 @@ class CMapComponent : public CComponent
 		float m_PendingTime;
 	};
 	SFadeMap m_FadeMap;
+	// the engine map the process owns; the fade is one of its slots
+	IEngineMap *m_pEngineMap;
 
 	CMapImages m_Images;
 	CMapLayers m_LayersBackground;

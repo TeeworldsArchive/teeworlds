@@ -19,7 +19,7 @@ CMapComponent::CMapComponent() :
 	m_GameMapFading = false;
 	m_GameMapAlpha = 0.0f;
 
-	m_FadeMap.m_pMap = 0;
+	m_pEngineMap = 0;
 	m_FadeMap.m_pLayers = 0;
 	m_FadeMap.m_ImageType = CMapImages::MAP_TYPE_GAME_FADE;
 	m_FadeMap.m_Alpha = 0.0f;
@@ -63,18 +63,19 @@ void CMapComponent::BeginGameMapFade(const char *pMapPath, bool HoldOnly)
 	if(!pMapPath || !pMapPath[0])
 		return;
 
-	if(!m_FadeMap.m_pMap)
-		m_FadeMap.m_pMap = CreateEngineMap();
+	if(!m_pEngineMap)
+		m_pEngineMap = Kernel()->RequestInterface<IEngineMap>();
+	if(!m_pEngineMap)
+		return;
 	if(!m_FadeMap.m_pLayers)
 		m_FadeMap.m_pLayers = new CLayers;
-	if(!m_FadeMap.m_pMap || !m_FadeMap.m_pLayers)
+	if(!m_pEngineMap->Load(pMapPath, Storage(), IEngineMap::SLOT_FADE))
 		return;
 
-	if(!m_FadeMap.m_pMap->Load(pMapPath, Storage()))
+	m_FadeMap.m_pLayers->Init(Kernel(), m_pEngineMap, IEngineMap::SLOT_FADE);
+	if(!m_FadeMap.m_pLayers->Map())
 		return;
-
-	m_FadeMap.m_pLayers->Init(Kernel(), m_FadeMap.m_pMap);
-	m_Images.OnMenuMapLoad(m_FadeMap.m_pMap, CMapImages::MAP_TYPE_GAME_FADE);
+	m_Images.OnMenuMapLoad(m_pEngineMap, IEngineMap::SLOT_FADE, CMapImages::MAP_TYPE_GAME_FADE);
 	CMapLayers::LoadEnvPoints(m_FadeMap.m_pLayers, m_FadeMap.m_lEnvPoints);
 
 	m_FadeMap.m_Alpha = 1.0f;
@@ -121,7 +122,7 @@ float CMapComponent::FadeMapZoom() const
 
 void CMapComponent::EndGameMapFade()
 {
-	if(!m_FadeMap.m_pMap)
+	if(!m_FadeMap.m_pLayers)
 	{
 		m_FadeMap.m_Alpha = 0.0f;
 		m_FadeMap.m_Loaded = false;
@@ -134,7 +135,8 @@ void CMapComponent::EndGameMapFade()
 		// the cached tile data textures reference the map data being unloaded
 		ReleaseTilemapTextures(m_FadeMap.m_pLayers);
 		m_Images.UnloadMap(CMapImages::MAP_TYPE_GAME_FADE);
-		m_FadeMap.m_pMap->Unload();
+		if(m_pEngineMap)
+			m_pEngineMap->Unload(IEngineMap::SLOT_FADE);
 		m_FadeMap.m_Loaded = false;
 	}
 
@@ -218,7 +220,7 @@ IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayer
 
 	for(int l = 0; l < NumLayers; l++)
 	{
-		const CTile *pTiles = (const CTile *) pLayers->Map()->GetData(Tex.m_lLayers[l]->m_Data);
+		const CTile *pTiles = (const CTile *) pLayers->GetData(Tex.m_lLayers[l]->m_Data);
 		unsigned char *pOut = pData + l * LayerSize;
 		const int NumTiles = Tex.m_Width * Tex.m_Height;
 		for(int t = 0; t < NumTiles; t++)

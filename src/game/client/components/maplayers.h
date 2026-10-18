@@ -7,6 +7,8 @@
 #include <game/client/component.h>
 #include <game/mapitems.h>
 
+class IEngineMap;
+
 class CMapLayers : public CComponent
 {
 	enum
@@ -20,14 +22,16 @@ class CMapLayers : public CComponent
 
 	struct SMenuMapSlot
 	{
-		IEngineMap *m_pMap;
 		CLayers *m_pLayers;
+		int m_MapIndex;
 		int m_ImageType;
 		array<CEnvPoint> m_lEnvPoints;
 		float m_Alpha;
 		bool m_Loaded;
 	};
 
+	// the one engine map the process owns; the menu maps are extra slots in it
+	IEngineMap *m_pEngineMap;
 	SMenuMapSlot m_aMenuMaps[MAX_MENU_MAP_SLOTS];
 	int m_CurrentMenuMap; // index of the visible menu map, -1 if none
 	int m_PrevMenuMap; // index of the menu map fading out, -1 if none

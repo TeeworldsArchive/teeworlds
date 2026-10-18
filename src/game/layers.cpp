@@ -12,13 +12,15 @@ CLayers::CLayers()
 	m_pGameGroup = 0;
 	m_pGameLayer = 0;
 	m_pMap = 0;
+	m_MapIndex = 0;
 }
 
-void CLayers::Init(class IKernel *pKernel, IMap *pMap)
+void CLayers::Init(class IKernel *pKernel, IMap *pMap, int MapIndex)
 {
 	m_pMap = pMap ? pMap : pKernel->RequestInterface<IMap>();
-	m_pMap->GetType(MAPITEMTYPE_GROUP, &m_GroupsStart, &m_GroupsNum);
-	m_pMap->GetType(MAPITEMTYPE_LAYER, &m_LayersStart, &m_LayersNum);
+	m_MapIndex = pMap ? MapIndex : 0;
+	m_pMap->GetType(m_MapIndex, MAPITEMTYPE_GROUP, &m_GroupsStart, &m_GroupsNum);
+	m_pMap->GetType(m_MapIndex, MAPITEMTYPE_LAYER, &m_LayersStart, &m_LayersNum);
 
 	InitGameLayer();
 	InitTilemapSkip();
@@ -73,7 +75,7 @@ void CLayers::InitTilemapSkip()
 			if(pLayer->m_Type == LAYERTYPE_TILES)
 			{
 				CMapItemLayerTilemap *pTilemap = (CMapItemLayerTilemap *) pLayer;
-				CTile *pTiles = (CTile *) Map()->GetData(pTilemap->m_Data);
+				CTile *pTiles = (CTile *) GetData(pTilemap->m_Data);
 				for(int y = 0; y < pTilemap->m_Height; y++)
 				{
 					for(int x = 1; x < pTilemap->m_Width;)
@@ -96,10 +98,10 @@ void CLayers::InitTilemapSkip()
 
 CMapItemGroup *CLayers::GetGroup(int Index) const
 {
-	return static_cast<CMapItemGroup *>(m_pMap->GetItem(m_GroupsStart + Index, 0, 0));
+	return static_cast<CMapItemGroup *>(m_pMap->GetItem(m_MapIndex, m_GroupsStart + Index, 0, 0));
 }
 
 CMapItemLayer *CLayers::GetLayer(int Index) const
 {
-	return static_cast<CMapItemLayer *>(m_pMap->GetItem(m_LayersStart + Index, 0, 0));
+	return static_cast<CMapItemLayer *>(m_pMap->GetItem(m_MapIndex, m_LayersStart + Index, 0, 0));
 }

@@ -37,8 +37,6 @@ void CMapSounds::PlayAt(int Channel, int SoundId, vec2 Position)
 
 void CMapSounds::OnMapLoad()
 {
-	IMap *pMap = Kernel()->RequestInterface<IMap>();
-
 	Clear();
 
 	if(!Sound()->IsSoundEnabled())
@@ -46,7 +44,7 @@ void CMapSounds::OnMapLoad()
 
 	// load samples
 	int Start;
-	pMap->GetType(MAPITEMTYPE_SOUND, &Start, &m_Count);
+	Layers()->GetType(MAPITEMTYPE_SOUND, &Start, &m_Count);
 
 	m_Count = clamp<int>(m_Count, 0, MAX_MAPSOUNDS);
 
@@ -54,8 +52,8 @@ void CMapSounds::OnMapLoad()
 	bool ShowWarning = false;
 	for(int i = 0; i < m_Count; i++)
 	{
-		CMapItemSound *pSound = (CMapItemSound *) pMap->GetItem(Start + i, 0, 0);
-		const char *pName = (char *) pMap->GetData(pSound->m_SoundName);
+		CMapItemSound *pSound = (CMapItemSound *) Layers()->GetItem(Start + i, 0, 0);
+		const char *pName = (char *) Layers()->GetData(pSound->m_SoundName);
 		if(pName == nullptr || pName[0] == '\0')
 		{
 			if(pSound->m_External)
@@ -72,20 +70,20 @@ void CMapSounds::OnMapLoad()
 			char aBuf[IO_MAX_PATH_LENGTH];
 			str_format(aBuf, sizeof(aBuf), "mapres/%s.opus", pName);
 			m_aSounds[i] = Sound()->LoadOpus(aBuf);
-			pMap->UnloadData(pSound->m_SoundName);
+			Layers()->UnloadData(pSound->m_SoundName);
 		}
 		else
 		{
-			const unsigned char *pData = (unsigned char *) pMap->GetData(pSound->m_SoundData);
+			const unsigned char *pData = (unsigned char *) Layers()->GetData(pSound->m_SoundData);
 			if(pData == nullptr)
 			{
 				dbg_msg("mapsounds", "Failed to load map sound %d: failed to load data.", i);
 				ShowWarning = true;
 				continue;
 			}
-			const int SoundDataSize = pMap->GetDataSize(pSound->m_SoundData);
+			const int SoundDataSize = Layers()->GetDataSize(pSound->m_SoundData);
 			m_aSounds[i] = Sound()->LoadOpusMemory(pName, pData, SoundDataSize);
-			pMap->UnloadData(pSound->m_SoundData);
+			Layers()->UnloadData(pSound->m_SoundData);
 		}
 		ShowWarning = ShowWarning || !m_aSounds[i].IsValid();
 	}
@@ -115,11 +113,11 @@ void CMapSounds::OnMapLoad()
 			if(pSoundLayer->m_Sound < 0 || pSoundLayer->m_Sound >= m_Count || !m_aSounds[pSoundLayer->m_Sound].IsValid())
 				continue;
 
-			const CSoundSource *pSources = static_cast<CSoundSource *>(pMap->GetDataSwapped(pSoundLayer->m_Data));
+			const CSoundSource *pSources = static_cast<CSoundSource *>(Layers()->GetDataSwapped(pSoundLayer->m_Data));
 			if(!pSources)
 				continue;
 
-			const int NumSources = minimum<int>(pSoundLayer->m_NumSources, pMap->GetDataSize(pSoundLayer->m_Data) / sizeof(CSoundSource));
+			const int NumSources = minimum<int>(pSoundLayer->m_NumSources, Layers()->GetDataSize(pSoundLayer->m_Data) / sizeof(CSoundSource));
 			for(int SourceIndex = 0; SourceIndex < NumSources; SourceIndex++)
 			{
 				CSourceQueueEntry &Source = m_lSourceQueue.emplace();

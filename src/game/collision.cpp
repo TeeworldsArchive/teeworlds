@@ -26,7 +26,7 @@ void CCollision::Init(class CLayers *pLayers)
 	m_pLayers = pLayers;
 	m_Width = m_pLayers->GameLayer()->m_Width;
 	m_Height = m_pLayers->GameLayer()->m_Height;
-	CTile *pTiles = static_cast<CTile *>(m_pLayers->Map()->GetData(m_pLayers->GameLayer()->m_Data));
+	CTile *pTiles = static_cast<CTile *>(m_pLayers->GetData(m_pLayers->GameLayer()->m_Data));
 	m_lTiles.set_size(m_Width * m_Height);
 
 	for(int i = 0; i < m_Width * m_Height; i++)
