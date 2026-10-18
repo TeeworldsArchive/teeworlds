@@ -75,6 +75,13 @@ enum
 	NETMSG_MAPLIST_ENTRY_REM,
 };
 
+// flags appended to NETMSG_MAP_CHANGE after the map sha256, ignored by older clients
+enum
+{
+	MAP_CHANGE_FLAG_SILENT = 0x1, // load the map in place, no READY
+	MAP_CHANGE_FLAG_NO_FADE = 0x2, // swap at once, no cross-fade
+};
+
 // this should be revised
 enum
 {

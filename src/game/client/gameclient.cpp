@@ -496,8 +496,29 @@ void CGameClient::OnConnected()
 	SendStartInfo();
 }
 
+void CGameClient::OnMapActivated(const char *pPreviousMapPath, bool NoFade)
+{
+	// rebuild the map but keep the session: no reset, no start info, no state change
+
+	// keep the old map visible; NoFade drops it once the new world is known
+	if(pPreviousMapPath && pPreviousMapPath[0])
+		m_pMapComponent->BeginGameMapFade(pPreviousMapPath, NoFade);
+
+	m_Layers.Init(Kernel());
+	m_Collision.Init(Layers());
+
+	for(int i = 0; i < m_All.m_Num; i++)
+		m_All.m_apComponents[i]->OnMapLoad();
+
+	m_NewWorldPending = true;
+
+	m_ServerMode = SERVERMODE_PURE;
+}
+
 void CGameClient::OnReset()
 {
+	m_NewWorldPending = false;
+
 	if(Client()->State() < IClient::STATE_ONLINE)
 	{
 		// clear out the invalid pointers
@@ -1070,6 +1091,10 @@ void CGameClient::ProcessTriggeredEvents(int Events, vec2 Pos)
 
 void CGameClient::OnNewSnapshot()
 {
+	// the first snapshot of a new world: no interpolation from the old one
+	const bool NewWorld = m_NewWorldPending;
+	m_NewWorldPending = false;
+
 	// clear out the invalid pointers
 	mem_zero(&m_Snap, sizeof(m_Snap));
 
@@ -1259,10 +1284,16 @@ void CGameClient::OnNewSnapshot()
 					CClientData *pClient = GetClientData(TeeInfoID);
 					if(pCharInfo && pClient)
 					{
-						const void *pOld = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, TeeInfoID);
+						// no previous position across a world switch
+						const void *pOld = NewWorld ? 0 : Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, TeeInfoID);
 						pCharInfo->m_Cur = *((const CNetObj_Character *) pData);
 
-						if(pOld)
+						if(NewWorld)
+						{
+							pCharInfo->m_Prev = pCharInfo->m_Cur;
+							pCharInfo->m_Active = true;
+						}
+						else if(pOld)
 						{
 							pCharInfo->m_Active = true;
 							pCharInfo->m_Prev = *((const CNetObj_Character *) pOld);
@@ -1284,7 +1315,7 @@ void CGameClient::OnNewSnapshot()
 			else if(Item.m_Type == NETOBJTYPE_SPECTATORINFO)
 			{
 				m_Snap.m_pSpectatorInfo = (const CNetObj_SpectatorInfo *) pData;
-				m_Snap.m_pPrevSpectatorInfo = (const CNetObj_SpectatorInfo *) Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_SPECTATORINFO, Item.m_ID);
+				m_Snap.m_pPrevSpectatorInfo = NewWorld ? 0 : (const CNetObj_SpectatorInfo *) Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_SPECTATORINFO, Item.m_ID);
 				m_Snap.m_SpecInfo.m_Active = true;
 				m_Snap.m_SpecInfo.m_SpecMode = m_Snap.m_pSpectatorInfo->m_SpecMode;
 				m_Snap.m_SpecInfo.m_SpectatorID = m_Snap.m_pSpectatorInfo->m_SpectatorID;
@@ -1503,6 +1534,14 @@ void CGameClient::OnNewSnapshot()
 		m_ServerMode = SERVERMODE_PURE;
 	else
 		m_ServerMode = SERVERMODE_PUREMOD;
+
+	if(NewWorld)
+	{
+		// the new world is known, the old map may go
+		m_pMapComponent->StartGameMapFade();
+		// snap, do not pan across the seam
+		m_pCamera->OnMapTransition();
+	}
 }
 
 void CGameClient::OnDemoRecSnap()

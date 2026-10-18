@@ -181,6 +181,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	int m_ReceivedSnapshots;
 	array<unsigned char> m_SnapshotIncomingData;
+	// drop snapshots until the map of a silent switch is downloaded
+	bool m_SuppressSnapshots;
 
 	class CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
 	array<unsigned char> m_aDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2];
@@ -266,8 +268,8 @@ public:
 
 	virtual const char *ErrorString() const override;
 
-	const char *LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc);
-	const char *LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc);
+	const char *LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc, bool Silent = false, bool NoFade = false);
+	const char *LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc, bool Silent = false, bool NoFade = false);
 
 	int UnpackServerInfo(CUnpacker *pUnpacker, CServerInfo *pInfo, int *pToken);
 	int UnpackServerInfoPlayer(CUnpacker *pUnpacker, CServerInfo *pInfo, int *pToken);

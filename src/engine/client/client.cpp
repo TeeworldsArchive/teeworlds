@@ -308,6 +308,7 @@ CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotD
 	mem_zero(m_aSnapshots, sizeof(m_aSnapshots));
 	m_SnapshotStorage.Init();
 	m_ReceivedSnapshots = 0;
+	m_SuppressSnapshots = false;
 
 	m_pVersionRequest = 0;
 
@@ -641,6 +642,7 @@ void CClient::DisconnectWithReason(const char *pReason)
 	m_aSnapshots[SNAP_CURRENT] = 0;
 	m_aSnapshots[SNAP_PREV] = 0;
 	m_ReceivedSnapshots = 0;
+	m_SuppressSnapshots = false;
 }
 
 void CClient::Disconnect()
@@ -826,11 +828,19 @@ void CClient::UnloadMap()
 	GameClient()->OnMapUnload();
 }
 
-const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc)
+const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc, bool Silent, bool NoFade)
 {
 	static char aErrorMsg[512];
 
-	SetState(IClient::STATE_LOADING);
+	// a silent switch must not enter LOADING: that resets the client
+	if(!Silent)
+		SetState(IClient::STATE_LOADING);
+
+	// the game client fades the old map, grab its path before it is overwritten
+	char aPreviousMapPath[IO_MAX_PATH_LENGTH];
+	aPreviousMapPath[0] = 0;
+	if(Silent)
+		str_copy(aPreviousMapPath, m_aCurrentMapPath, sizeof(aPreviousMapPath));
 
 	// the previous map may still be loaded while it fades out
 	UnloadMap();
@@ -868,12 +878,25 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "loaded map '%s'", pFilename);
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
-	m_ReceivedSnapshots = 0;
+	// stay online: restarting the counter would stall rendering for two snapshots
+	if(!Silent)
+		m_ReceivedSnapshots = 0;
 
 	str_copy(m_aCurrentMap, pName, sizeof(m_aCurrentMap));
 	str_copy(m_aCurrentMapPath, pFilename, sizeof(m_aCurrentMapPath));
 	m_CurrentMapSha256 = m_pMap->Sha256();
 	m_CurrentMapCrc = m_pMap->Crc();
+
+	// the map matches the server again
+	m_SuppressSnapshots = false;
+
+	if(Silent)
+	{
+		// activate in place; the old map fades out over this one
+		GameClient()->OnMapActivated(aPreviousMapPath, NoFade);
+		// the demo restarts on the new map
+		DemoRecorder_HandleAutoStart();
+	}
 
 	return 0x0;
 }
@@ -902,7 +925,7 @@ static void FormatMapDownloadFilename(const char *pName, const SHA256_DIGEST *pS
 	}
 }
 
-const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc)
+const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc, bool Silent, bool NoFade)
 {
 	const char *pError = 0;
 	char aBuf[512];
@@ -916,17 +939,18 @@ const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pW
 	}
 	str_format(aBuf, sizeof(aBuf), "loading map, map=%s wanted %scrc=%08x", pMapName, aWanted, WantedCrc);
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
-	SetState(IClient::STATE_LOADING);
+	if(!Silent)
+		SetState(IClient::STATE_LOADING);
 
 	// try the normal maps folder
 	str_format(aBuf, sizeof(aBuf), "maps/%s.map", pMapName);
-	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc);
+	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
 	if(!pError)
 		return pError;
 
 	// try the downloaded maps
 	FormatMapDownloadFilename(pMapName, pWantedSha256, WantedCrc, false, aBuf, sizeof(aBuf));
-	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc);
+	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
 	if(!pError)
 		return pError;
 
@@ -934,7 +958,7 @@ const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pW
 	if(pWantedSha256)
 	{
 		FormatMapDownloadFilename(pMapName, 0, WantedCrc, false, aBuf, sizeof(aBuf));
-		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc);
+		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
 		if(!pError)
 			return pError;
 	}
@@ -943,7 +967,7 @@ const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pW
 	char aFilename[128];
 	str_format(aFilename, sizeof(aFilename), "%s.map", pMapName);
 	if(Storage()->FindFile(aFilename, "maps", IStorage::TYPE_ALL, aBuf, sizeof(aBuf)))
-		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc);
+		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
 
 	return pError;
 }
@@ -1149,7 +1173,21 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			if(Unpacker.Error())
 				return;
 			const SHA256_DIGEST *pMapSha256 = (const SHA256_DIGEST *) Unpacker.GetRaw(sizeof(*pMapSha256));
+			// older servers end the message at the sha256; only an online client is switched
+			const int MapFlags = Unpacker.GetIntOrDefault(0);
+			const bool Silent = State() == IClient::STATE_ONLINE && (MapFlags & MAP_CHANGE_FLAG_SILENT) != 0;
+			const bool NoFade = (MapFlags & MAP_CHANGE_FLAG_NO_FADE) != 0;
 			const char *pError = 0;
+
+			// a transfer still running belongs to the previous map
+			if(m_MapdownloadFileTemp)
+			{
+				io_close(m_MapdownloadFileTemp);
+				Storage()->RemoveFile(m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
+				m_MapdownloadFileTemp = 0;
+			}
+			m_MapdownloadTotalsize = -1;
+			m_MapdownloadAmount = 0;
 
 			// protect the player from nasty map names
 			for(int i = 0; pMap[i]; i++)
@@ -1163,21 +1201,33 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 
 			if(pError)
 				DisconnectWithReason(pError);
+			else if(!Silent && m_pMap->IsLoaded() && (unsigned) MapCrc == m_pMap->Crc() && str_comp(pMap, m_aCurrentMap) == 0)
+			{
+				// same map as the one loaded (a fast switch left an announcement behind)
+				if(State() < IClient::STATE_LOADING)
+					SetState(IClient::STATE_LOADING);
+				m_SuppressSnapshots = false;
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "map already loaded");
+				SendReady();
+			}
 			else
 			{
-				pError = LoadMapSearch(pMap, pMapSha256, MapCrc);
+				pError = LoadMapSearch(pMap, pMapSha256, MapCrc, Silent, NoFade);
 
 				if(!pError)
 				{
 					m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
-					SendReady();
+					// a silent switch is already activated, it must not answer READY
+					if(!Silent)
+						SendReady();
 				}
 				else
 				{
-					if(m_MapdownloadFileTemp)
+					if(Silent)
 					{
-						io_close(m_MapdownloadFileTemp);
-						Storage()->RemoveFile(m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE);
+						// no local copy: fall back to the visible download and drop snapshots
+						m_SuppressSnapshots = true;
+						SetState(IClient::STATE_LOADING);
 					}
 
 					// start map download
@@ -1352,7 +1402,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		else if(Unpacker.Type() == NETMSG_SNAP || Unpacker.Type() == NETMSG_SNAPSINGLE || Unpacker.Type() == NETMSG_SNAPEMPTY)
 		{
 			// we are not allowed to process snapshot yet
-			if(State() < IClient::STATE_LOADING)
+			if(State() < IClient::STATE_LOADING || m_SuppressSnapshots)
 				return;
 
 			const int GameTick = Unpacker.GetInt();

@@ -47,7 +47,6 @@ class CMapLayers : public CComponent
 	int m_EggLayerWidth;
 	int m_EggLayerHeight;
 
-	void LoadEnvPoints(const CLayers *pLayers, array<CEnvPoint> &lEnvPoints);
 	bool LoadMenuMap(int Slot);
 	void UnloadMenuMap(int Slot);
 	void FinalizeMenuMapFade();
@@ -67,6 +66,10 @@ public:
 	};
 
 	CMapLayers(int Type);
+
+	// read a map's envelope points (used by the fade slot)
+	static void LoadEnvPoints(const CLayers *pLayers, array<CEnvPoint> &lEnvPoints);
+
 	virtual void OnStateChange(int NewState, int OldState) override;
 	virtual int GetInitAmount() const override;
 	virtual void OnInit() override;

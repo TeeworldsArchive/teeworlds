@@ -41,6 +41,9 @@ public:
 	CCamera();
 	virtual void OnRender() override;
 
+	// snap to the followed tee on the next frame (a world switch)
+	void OnMapTransition() { m_SnapNextFrame = true; }
+
 	void ChangePosition(int PositionNumber);
 	int GetCurrentPosition() const { return m_CurrentPosition; }
 
@@ -100,6 +103,9 @@ private:
 	float m_JoinTransitionTime;
 	vec2 m_JoinTransitionStartCenter;
 	float m_JoinTransitionStartZoom;
+
+	// set by OnMapTransition
+	bool m_SnapNextFrame;
 
 	// camera transition when the followed position jumps (respawn, teleport)
 	vec2 m_PrevFollowPos;

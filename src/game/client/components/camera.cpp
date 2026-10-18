@@ -10,6 +10,7 @@
 
 #include "camera.h"
 #include "controls.h"
+#include "map.h"
 
 CCamera::CCamera()
 {
@@ -34,6 +35,7 @@ CCamera::CCamera()
 	m_JoinTransitionStartCenter = vec2(0.0f, 0.0f);
 	m_JoinTransitionStartZoom = 1.0f;
 
+	m_SnapNextFrame = false;
 	m_PrevFollowPos = vec2(0.0f, 0.0f);
 	m_PositionJumpActive = false;
 	m_PositionJumpTime = 0.0f;
@@ -126,43 +128,56 @@ void CCamera::OnRender()
 				TargetCenter = m_pClient->m_LocalCharacterPos + s_CurrentCameraOffset;
 		}
 
-		// A jump the current velocity cannot explain is a respawn, a teleport
-		// or a switch of the spectated tee: smooth it out instead of snapping.
-		const float Ticks = maximum(Client()->RenderFrameTime() * Client()->GameTickSpeed(), 1.0f);
-		const float MaxStep = maximum(FollowedVelocity() * 4.0f, POSITION_JUMP_MIN_DISTANCE) * Ticks;
-		if(!m_JoinTransitionActive && distance(m_pClient->m_LocalCharacterPos, m_PrevFollowPos) > MaxStep)
+		if(m_SnapNextFrame)
 		{
-			m_PositionJumpActive = true;
-			m_PositionJumpTime = 0.0f;
-			m_PositionJumpStartCenter = m_PrevCenter;
-		}
-		m_PrevFollowPos = m_pClient->m_LocalCharacterPos;
-
-		// when joining a game the camera flies in from where the menu was
-		if(m_JoinTransitionActive)
-		{
-			m_JoinTransitionTime += Client()->RenderFrameTime();
-			const float T = clamp(m_JoinTransitionTime * 1000.0f / JOIN_TRANSITION_TIME, 0.0f, 1.0f);
-			const float Eased = 1.0f - powf(1.0f - T, 3.0f);
-			m_Center = mix(m_JoinTransitionStartCenter, TargetCenter, Eased);
-			m_Zoom = mix(m_JoinTransitionStartZoom, 1.0f, Eased);
-			if(T >= 1.0f)
-				m_JoinTransitionActive = false;
-		}
-		else if(m_PositionJumpActive)
-		{
-			m_PositionJumpTime += Client()->RenderFrameTime();
-			const float T = clamp(m_PositionJumpTime * 1000.0f / POSITION_JUMP_TRANSITION_TIME, 0.0f, 1.0f);
-			const float Eased = 1.0f - powf(1.0f - T, 3.0f);
-			m_Center = mix(m_PositionJumpStartCenter, TargetCenter, Eased);
+			// a world switch: hand the view offset to the fading map and snap
+			m_pClient->m_pMapComponent->SetFadeMapOffset(TargetCenter - m_Center);
+			m_SnapNextFrame = false;
+			m_PositionJumpActive = false;
+			m_PrevFollowPos = m_pClient->m_LocalCharacterPos;
+			m_Center = TargetCenter;
 			m_Zoom = 1.0f;
-			if(T >= 1.0f)
-				m_PositionJumpActive = false;
 		}
 		else
 		{
-			m_Center = TargetCenter;
-			m_Zoom = 1.0f;
+			// A jump the current velocity cannot explain is a respawn, a teleport
+			// or a switch of the spectated tee: smooth it out instead of snapping.
+			const float Ticks = maximum(Client()->RenderFrameTime() * Client()->GameTickSpeed(), 1.0f);
+			const float MaxStep = maximum(FollowedVelocity() * 4.0f, POSITION_JUMP_MIN_DISTANCE) * Ticks;
+			if(!m_JoinTransitionActive && distance(m_pClient->m_LocalCharacterPos, m_PrevFollowPos) > MaxStep)
+			{
+				m_PositionJumpActive = true;
+				m_PositionJumpTime = 0.0f;
+				m_PositionJumpStartCenter = m_PrevCenter;
+			}
+			m_PrevFollowPos = m_pClient->m_LocalCharacterPos;
+
+			// when joining a game the camera flies in from where the menu was
+			if(m_JoinTransitionActive)
+			{
+				m_JoinTransitionTime += Client()->RenderFrameTime();
+				const float T = clamp(m_JoinTransitionTime * 1000.0f / JOIN_TRANSITION_TIME, 0.0f, 1.0f);
+				const float Eased = 1.0f - powf(1.0f - T, 3.0f);
+				m_Center = mix(m_JoinTransitionStartCenter, TargetCenter, Eased);
+				m_Zoom = mix(m_JoinTransitionStartZoom, 1.0f, Eased);
+				if(T >= 1.0f)
+					m_JoinTransitionActive = false;
+			}
+			else if(m_PositionJumpActive)
+			{
+				m_PositionJumpTime += Client()->RenderFrameTime();
+				const float T = clamp(m_PositionJumpTime * 1000.0f / POSITION_JUMP_TRANSITION_TIME, 0.0f, 1.0f);
+				const float Eased = 1.0f - powf(1.0f - T, 3.0f);
+				m_Center = mix(m_PositionJumpStartCenter, TargetCenter, Eased);
+				m_Zoom = 1.0f;
+				if(T >= 1.0f)
+					m_PositionJumpActive = false;
+			}
+			else
+			{
+				m_Center = TargetCenter;
+				m_Zoom = 1.0f;
+			}
 		}
 	}
 	else

@@ -15,6 +15,7 @@ public:
 		MAP_TYPE_GAME = 0,
 		MAP_TYPE_MENU, // first menu map slot (cross-fade)
 		MAP_TYPE_MENU_B, // second menu map slot (cross-fade)
+		MAP_TYPE_GAME_FADE, // the map the fade keeps
 		NUM_MAP_TYPES
 	};
 

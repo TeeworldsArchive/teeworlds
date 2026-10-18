@@ -182,6 +182,8 @@ public:
 	virtual void OnUpdate() = 0;
 	virtual void OnStateChange(int NewState, int OldState) = 0;
 	virtual void OnConnected() = 0;
+	// swap a map in place; pPreviousMapPath may be empty, NoFade drops it at once
+	virtual void OnMapActivated(const char *pPreviousMapPath, bool NoFade) = 0;
 	virtual void OnMapUnload() = 0;
 	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker) = 0;
 	virtual void OnPredict() = 0;

@@ -1,11 +1,14 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include <base/math.h>
 #include <engine/graphics.h>
+#include <engine/map.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
 #include <game/client/gameclient.h>
+#include <game/layers.h>
 
+#include "camera.h"
 #include "map.h"
 
 CMapComponent::CMapComponent() :
@@ -15,6 +18,17 @@ CMapComponent::CMapComponent() :
 	m_GameMapLoaded = false;
 	m_GameMapFading = false;
 	m_GameMapAlpha = 0.0f;
+
+	m_FadeMap.m_pMap = 0;
+	m_FadeMap.m_pLayers = 0;
+	m_FadeMap.m_ImageType = CMapImages::MAP_TYPE_GAME_FADE;
+	m_FadeMap.m_Alpha = 0.0f;
+	m_FadeMap.m_Offset = vec2(0.0f, 0.0f);
+	m_FadeMap.m_HasOffset = false;
+	m_FadeMap.m_Loaded = false;
+	m_FadeMap.m_StartPending = false;
+	m_FadeMap.m_HoldOnly = false;
+	m_FadeMap.m_PendingTime = 0.0f;
 }
 
 void CMapComponent::ReleaseGameMap()
@@ -28,6 +42,108 @@ void CMapComponent::ReleaseGameMap()
 		m_GameMapLoaded = false;
 		Client()->UnloadMap();
 	}
+}
+
+void CMapComponent::ReleaseTilemapTextures(const CLayers *pLayers)
+{
+	for(int i = m_lTilemapTextures.size() - 1; i >= 0; i--)
+	{
+		if(m_lTilemapTextures[i].m_pLayers != pLayers)
+			continue;
+		if(m_lTilemapTextures[i].m_Texture.IsValid())
+			Graphics()->UnloadTexture(&m_lTilemapTextures[i].m_Texture);
+		m_lTilemapTextures.remove_index_fast(i);
+	}
+}
+
+void CMapComponent::BeginGameMapFade(const char *pMapPath, bool HoldOnly)
+{
+	EndGameMapFade();
+
+	if(!pMapPath || !pMapPath[0])
+		return;
+
+	if(!m_FadeMap.m_pMap)
+		m_FadeMap.m_pMap = CreateEngineMap();
+	if(!m_FadeMap.m_pLayers)
+		m_FadeMap.m_pLayers = new CLayers;
+	if(!m_FadeMap.m_pMap || !m_FadeMap.m_pLayers)
+		return;
+
+	if(!m_FadeMap.m_pMap->Load(pMapPath, Storage()))
+		return;
+
+	m_FadeMap.m_pLayers->Init(Kernel(), m_FadeMap.m_pMap);
+	m_Images.OnMenuMapLoad(m_FadeMap.m_pMap, CMapImages::MAP_TYPE_GAME_FADE);
+	CMapLayers::LoadEnvPoints(m_FadeMap.m_pLayers, m_FadeMap.m_lEnvPoints);
+
+	m_FadeMap.m_Alpha = 1.0f;
+	m_FadeMap.m_Offset = vec2(0.0f, 0.0f);
+	m_FadeMap.m_HasOffset = false;
+	m_FadeMap.m_Loaded = true;
+	m_FadeMap.m_StartPending = true;
+	m_FadeMap.m_HoldOnly = HoldOnly;
+	m_FadeMap.m_PendingTime = 0.0f;
+}
+
+void CMapComponent::StartGameMapFade()
+{
+	if(!m_FadeMap.m_Loaded)
+		return;
+	if(m_FadeMap.m_HoldOnly)
+	{
+		EndGameMapFade();
+		return;
+	}
+	m_FadeMap.m_StartPending = false;
+}
+
+void CMapComponent::SetFadeMapOffset(const vec2 &Offset)
+{
+	if(!m_FadeMap.m_Loaded)
+		return;
+	m_FadeMap.m_Offset = Offset;
+	m_FadeMap.m_HasOffset = true;
+}
+
+vec2 CMapComponent::FadeMapCenter() const
+{
+	const vec2 Center = *m_pClient->m_pCamera->GetCenter();
+	if(!m_FadeMap.m_HasOffset)
+		return Center;
+	return Center - m_FadeMap.m_Offset;
+}
+
+float CMapComponent::FadeMapZoom() const
+{
+	return m_pClient->m_pCamera->GetZoom();
+}
+
+void CMapComponent::EndGameMapFade()
+{
+	if(!m_FadeMap.m_pMap)
+	{
+		m_FadeMap.m_Alpha = 0.0f;
+		m_FadeMap.m_Loaded = false;
+		m_FadeMap.m_StartPending = false;
+		return;
+	}
+
+	if(m_FadeMap.m_Loaded)
+	{
+		// the cached tile data textures reference the map data being unloaded
+		ReleaseTilemapTextures(m_FadeMap.m_pLayers);
+		m_Images.UnloadMap(CMapImages::MAP_TYPE_GAME_FADE);
+		m_FadeMap.m_pMap->Unload();
+		m_FadeMap.m_Loaded = false;
+	}
+
+	m_FadeMap.m_lEnvPoints.clear();
+	m_FadeMap.m_Alpha = 0.0f;
+	m_FadeMap.m_Offset = vec2(0.0f, 0.0f);
+	m_FadeMap.m_HasOffset = false;
+	m_FadeMap.m_StartPending = false;
+	m_FadeMap.m_HoldOnly = false;
 }
 
 void CMapComponent::OnMapLoad()
@@ -153,6 +269,9 @@ void CMapComponent::OnStateChange(int NewState, int OldState)
 {
 	if(OldState >= IClient::STATE_ONLINE && NewState < IClient::STATE_ONLINE)
 	{
+		// the old map no longer needs to fade
+		EndGameMapFade();
+
 		// keep the map loaded while it fades out over the menu map
 		if(m_GameMapLoaded)
 		{
@@ -174,6 +293,29 @@ void CMapComponent::OnStateChange(int NewState, int OldState)
 
 void CMapComponent::OnRender()
 {
+	if(m_FadeMap.m_Loaded)
+	{
+		const float Delta = clamp(Client()->RenderFrameTime(), 0.0f, 0.1f);
+		if(m_FadeMap.m_StartPending)
+		{
+			// never hold the old map for more than a tick or two
+			m_FadeMap.m_PendingTime += Delta;
+			if(m_FadeMap.m_PendingTime > 1.0f)
+			{
+				if(m_FadeMap.m_HoldOnly)
+					EndGameMapFade();
+				else
+					m_FadeMap.m_StartPending = false;
+			}
+		}
+		else
+		{
+			m_FadeMap.m_Alpha = maximum(0.0f, m_FadeMap.m_Alpha - Delta * 1000.0f / GAME_MAP_FADE_TIME);
+			if(m_FadeMap.m_Alpha <= 0.0f)
+				EndGameMapFade();
+		}
+	}
+
 	if(!m_GameMapFading)
 		return;
 
@@ -181,6 +323,11 @@ void CMapComponent::OnRender()
 	m_GameMapAlpha = maximum(0.0f, m_GameMapAlpha - Delta * 1000.0f / GAME_MAP_FADE_TIME);
 	if(m_GameMapAlpha <= 0.0f)
 		ReleaseGameMap();
+}
+
+void CMapComponent::OnShutdown()
+{
+	EndGameMapFade();
 }
 
 void CMapComponent::RenderBackground(float Time)

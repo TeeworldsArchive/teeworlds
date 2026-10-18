@@ -644,6 +644,11 @@ void CMapLayers::OnRender()
 		// game map first, it must leave the screen mapped to the game group
 		RenderLayers(Layers(), &m_lEnvPoints, CMapImages::MAP_TYPE_GAME, false, *m_pClient->m_pCamera->GetCenter(), m_pClient->m_pCamera->GetZoom(), 1.0f, m_Type == TYPE_BACKGROUND);
 
+		// the map of the world we just left fades out on top of the new one,
+		// drawn with the view it was last seen with
+		if(pMap->FadeMapVisible())
+			RenderLayers(pMap->FadeMapLayers(), pMap->FadeMapEnvPoints(), pMap->FadeMapImageType(), false, pMap->FadeMapCenter(), pMap->FadeMapZoom(), pMap->FadeMapAlpha(), false);
+
 		// the menu map is still visible while it fades out over the game map
 		if(m_Type == TYPE_BACKGROUND)
 		{
