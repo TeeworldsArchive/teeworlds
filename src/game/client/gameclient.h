@@ -409,6 +409,7 @@ public:
 	// ----- gamedata prediction helper -----
 	bool GameDataPredictInput() { return !m_Snap.m_pGameData || m_Snap.m_pGameData->m_PredictionFlags & GAMEPREDICTIONFLAG_INPUT; }
 	bool GameDataPredictEvent() { return !m_Snap.m_pGameData || m_Snap.m_pGameData->m_PredictionFlags & GAMEPREDICTIONFLAG_EVENT; }
+	bool GameDataNoSmoothCamera() { return m_Snap.m_pGameData && (m_Snap.m_pGameData->m_PredictionFlags & GAMEPREDICTIONFLAG_NO_SMOOTH_CAMERA); }
 
 	// ----- send functions -----
 	// TODO: move these

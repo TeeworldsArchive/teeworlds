@@ -22,7 +22,7 @@ GameMsgIDs = Enum("GAMEMSG", ["TEAM_SWAP", "SPEC_INVALID_ID", "TEAM_SHUFFLE", "T
                             
 							"GAME_CANCELLED"])
 
-GamePredictionFlags = Flags("GAMEPREDICTIONFLAG", ["EVENT", "INPUT"])
+GamePredictionFlags = Flags("GAMEPREDICTIONFLAG", ["EVENT", "INPUT", "NO_SMOOTH_CAMERA"])
 
 # Number of tuning parameters in CTuningParams. Kept in sync with src/game/tuning.h
 # by a static_assert in src/game/gamecore.cpp.

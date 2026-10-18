@@ -141,10 +141,14 @@ void CCamera::OnRender()
 		else
 		{
 			// A jump the current velocity cannot explain is a respawn, a teleport
-			// or a switch of the spectated tee: smooth it out instead of snapping.
+			// or a switch of the spectated tee: smooth it out instead of snapping,
+			// unless the game data asks for an unsmoothed camera.
+			const bool NoSmoothCamera = m_pClient->GameDataNoSmoothCamera();
+			if(NoSmoothCamera)
+				m_PositionJumpActive = false;
 			const float Ticks = maximum(Client()->RenderFrameTime() * Client()->GameTickSpeed(), 1.0f);
 			const float MaxStep = maximum(FollowedVelocity() * 4.0f, POSITION_JUMP_MIN_DISTANCE) * Ticks;
-			if(!m_JoinTransitionActive && distance(m_pClient->m_LocalCharacterPos, m_PrevFollowPos) > MaxStep)
+			if(!m_JoinTransitionActive && !NoSmoothCamera && distance(m_pClient->m_LocalCharacterPos, m_PrevFollowPos) > MaxStep)
 			{
 				m_PositionJumpActive = true;
 				m_PositionJumpTime = 0.0f;
