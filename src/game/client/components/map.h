@@ -49,25 +49,27 @@ class CMapComponent : public CComponent
 	bool m_GameMapFading;
 	float m_GameMapAlpha;
 
-	// tile data: one 2D array per (width, height), one layer per tile layer
+	// one 2D array per size, tagged with the map generation
 	struct STilemapTexture
 	{
-		const CLayers *m_pLayers;
+		unsigned m_Generation;
 		int m_Width;
 		int m_Height;
 		IGraphics::CTextureHandle m_Texture;
 		array<const CMapItemLayerTilemap *> m_lLayers;
 	};
 	array<STilemapTexture> m_lTilemapTextures;
+	// generation of the game map
+	unsigned m_GameGeneration;
 
 	void ReleaseGameMap();
-	void ReleaseTilemapTextures(const CLayers *pLayers);
+	void ReleaseTilemapTextures(unsigned Generation);
 
 public:
 	CMapComponent();
 
-	// keep the old map visible; HoldOnly drops it at the new-world snapshot
-	void BeginGameMapFade(const char *pMapPath, bool HoldOnly);
+	// keep the old map visible; HoldOnly cuts it at the new-world snapshot
+	void BeginGameMapFade(const CLayers &OldLayers, bool HoldOnly);
 	// the first new-world snapshot is in, start the fade
 	void StartGameMapFade();
 	// remember how far the camera view jumped on the switch
@@ -83,7 +85,6 @@ public:
 	vec2 FadeMapCenter() const;
 	float FadeMapZoom() const;
 
-
 	// returns the tile data texture for the layer and writes its array layer index
 	IGraphics::CTextureHandle GetTilemapTexture(const CLayers *pLayers, const CMapItemLayerTilemap *pLayer, int *pLayerIndex);
 	void ClearTilemapTextures();
@@ -92,6 +93,9 @@ public:
 	CMapLayers *LayersBackground() { return &m_LayersBackground; }
 	CMapLayers *LayersForeground() { return &m_LayersForeground; }
 	CMapSounds *Sounds() { return &m_Sounds; }
+
+	// build the current map's tile textures before it is shown
+	void PrepareGameMap();
 
 	// whether the map of the game we are in (or just left) has to be rendered
 	bool GameMapVisible() const { return m_GameMapLoaded && m_GameMapAlpha > 0.0f; }

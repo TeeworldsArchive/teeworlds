@@ -69,6 +69,8 @@ public:
 	virtual void OnMapUnload() override;
 	void OnMenuMapLoad(class IMap *pMap, int MapIndex, int MapType = MAP_TYPE_MENU);
 	void UnloadMap(int MapType);
+	// move textures to another map type without unloading
+	void MoveMapType(int From, int To);
 
 	IGraphics::CTextureHandle GetEasterTexture();
 };

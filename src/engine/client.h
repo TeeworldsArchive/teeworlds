@@ -182,8 +182,11 @@ public:
 	virtual void OnUpdate() = 0;
 	virtual void OnStateChange(int NewState, int OldState) = 0;
 	virtual void OnConnected() = 0;
-	// swap a map in place; pPreviousMapPath may be empty, NoFade drops it at once
-	virtual void OnMapActivated(const char *pPreviousMapPath, bool NoFade) = 0;
+	// prepare the fade slot for a new map
+	virtual void OnMapChangeBegin() = 0;
+	// swap in place; NoFade cuts the old map at once
+	// ViewPosOffset: OldViewPos = NewViewPos - ViewPosOffset
+	virtual void OnMapActivated(bool NoFade, vec2 ViewPosOffset) = 0;
 	virtual void OnMapUnload() = 0;
 	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker) = 0;
 	virtual void OnPredict() = 0;

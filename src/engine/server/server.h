@@ -240,7 +240,8 @@ public:
 	static int NewClientCallback(int ClientID, void *pUser);
 	static int DelClientCallback(int ClientID, const char *pReason, void *pUser);
 
-	void SendMap(int ClientID);
+	// OldViewPos = NewViewPos - ViewPosOffset
+	void SendMap(int ClientID, int ViewPosOffsetX = 0, int ViewPosOffsetY = 0, int MapFlags = 0);
 	void SendConnectionReady(int ClientID);
 	void SendRconLine(int ClientID, const char *pLine);
 	static void SendRconLineAuthed(const char *pLine, void *pUser, bool Highlighted);

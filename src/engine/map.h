@@ -20,6 +20,8 @@ public:
 	virtual void GetType(int MapIndex, int Type, int *pStart, int *pNum) = 0;
 	virtual void *FindItem(int MapIndex, int Type, int ID) = 0;
 	virtual int NumItems(int MapIndex) = 0;
+	// unique per successful load, tags map resources
+	virtual unsigned Generation(int MapIndex) = 0;
 };
 
 class IEngineMap : public IMap
@@ -38,6 +40,8 @@ public:
 	virtual bool Load(const char *pMapName, class IStorage *pStorage = 0, int MapIndex = SLOT_MAIN) = 0;
 	virtual bool IsLoaded(int MapIndex = SLOT_MAIN) = 0;
 	virtual void Unload(int MapIndex = SLOT_MAIN) = 0;
+	// exchange two loaded maps in O(1)
+	virtual void SwapSlots(int MapIndexA, int MapIndexB) = 0;
 	virtual SHA256_DIGEST Sha256(int MapIndex = SLOT_MAIN) = 0;
 	virtual unsigned Crc(int MapIndex = SLOT_MAIN) = 0;
 };

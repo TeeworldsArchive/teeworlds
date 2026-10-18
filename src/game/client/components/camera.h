@@ -41,8 +41,12 @@ public:
 	CCamera();
 	virtual void OnRender() override;
 
-	// snap to the followed tee on the next frame (a world switch)
-	void OnMapTransition() { m_SnapNextFrame = true; }
+	// snap to the server view position; OldViewPos = NewViewPos - ViewPosOffset
+	void OnMapTransition(const vec2 &ViewPosOffset)
+	{
+		m_SnapNextFrame = true;
+		m_ViewPosOffset = ViewPosOffset;
+	}
 
 	void ChangePosition(int PositionNumber);
 	int GetCurrentPosition() const { return m_CurrentPosition; }
@@ -106,6 +110,8 @@ private:
 
 	// set by OnMapTransition
 	bool m_SnapNextFrame;
+	// OldViewPos = NewViewPos - m_ViewPosOffset
+	vec2 m_ViewPosOffset;
 
 	// camera transition when the followed position jumps (respawn, teleport)
 	vec2 m_PrevFollowPos;

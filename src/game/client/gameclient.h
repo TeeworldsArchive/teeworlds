@@ -61,6 +61,8 @@ class CGameClient : public IGameClient
 	int m_LastNewPredictedTick;
 	// the next snapshot starts a new world: no interpolation from the old one
 	bool m_NewWorldPending;
+	// OldViewPos = NewViewPos - m_MapViewPosOffset
+	vec2 m_MapViewPosOffset;
 
 	int m_LastGameStartTick;
 	int m_LastFlagCarrierRed;
@@ -361,7 +363,8 @@ public:
 
 	// hooks
 	virtual void OnConnected() override;
-	virtual void OnMapActivated(const char *pPreviousMapPath, bool NoFade) override;
+	virtual void OnMapChangeBegin() override;
+	virtual void OnMapActivated(bool NoFade, vec2 ViewPosOffset) override;
 	virtual void OnRender() override;
 	virtual void OnUpdate() override;
 	virtual void OnRelease();

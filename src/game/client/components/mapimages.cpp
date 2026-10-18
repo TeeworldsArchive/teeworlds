@@ -198,6 +198,21 @@ void CMapImages::OnMapUnload()
 	UnloadMap(MAP_TYPE_GAME);
 }
 
+void CMapImages::MoveMapType(int From, int To)
+{
+	if(From < 0 || From >= NUM_MAP_TYPES || To < 0 || To >= NUM_MAP_TYPES || From == To)
+		return;
+
+	UnloadMap(To);
+	m_Info[To] = m_Info[From];
+	for(int i = 0; i < m_Info[From].m_Count; i++)
+	{
+		m_Info[From].m_aTextures[i].m_Quads = IGraphics::CTextureHandle();
+		m_Info[From].m_aTextures[i].m_Tilemap = IGraphics::CTextureHandle();
+	}
+	m_Info[From].m_Count = 0;
+}
+
 void CMapImages::OnMenuMapLoad(IMap *pMap, int MapIndex, int MapType)
 {
 	CLayers MenuLayers;

@@ -17,6 +17,8 @@ class CLayers
 	CMapItemLayerTilemap *m_pGameLayer;
 	class IMap *m_pMap;
 	int m_MapIndex;
+	unsigned m_MapGeneration;
+	bool m_TilemapSkipComputed;
 
 	void InitGameLayer();
 	void InitTilemapSkip();
@@ -27,6 +29,13 @@ public:
 	int NumGroups() const { return m_GroupsNum; }
 	int NumLayers() const { return m_LayersNum; }
 	class IMap *Map() const { return m_pMap; }
+	int MapIndex() const { return m_MapIndex; }
+	// id of the loaded map this object points into
+	unsigned Generation() const { return m_MapGeneration; }
+	// point at another engine map slot
+	void SetMapIndex(int MapIndex);
+	// CPU tile rendering needs m_Skip, compute it on demand
+	void EnsureTilemapSkip();
 
 	// the map slots in the engine map are indexed, these forward the index
 	int GetDataSize(int Index) const { return m_pMap->GetDataSize(m_MapIndex, Index); }

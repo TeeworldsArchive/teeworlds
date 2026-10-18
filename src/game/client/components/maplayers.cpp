@@ -52,13 +52,11 @@ void CMapLayers::OnStateChange(int NewState, int OldState)
 	if(m_Type != TYPE_BACKGROUND || m_CurrentMenuMap < 0)
 		return;
 
-	// The menu map is the base layer of both transitions: joining fades the
-	// game map in over it, disconnecting restores it and fades the game map
-	// out on top of it.
+	// The menu map backs joining and disconnecting. A map change also passes
+	// LOADING; keep the menu map hidden instead of fading it in again.
 	if(NewState >= IClient::STATE_ONLINE && OldState < IClient::STATE_ONLINE)
 	{
 		m_MenuMapFadeIn = false;
-		m_aMenuMaps[m_CurrentMenuMap].m_Alpha = 1.0f;
 	}
 	else if(NewState == IClient::STATE_OFFLINE && OldState >= IClient::STATE_ONLINE)
 	{
@@ -541,6 +539,8 @@ void CMapLayers::RenderLayers(CLayers *pLayers, array<CEnvPoint> *pEnvPoints, in
 						{
 							// CPU fallback for backends without the tilemap shader
 							CTile *pTiles = (CTile *) pLayers->GetData(pTMap->m_Data);
+							// skip counts are only needed here
+							pLayers->EnsureTilemapSkip();
 							vec4 BaseColor = vec4(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f);
 							if(Fade < 1.0f)
 								Graphics()->BlendNormal();

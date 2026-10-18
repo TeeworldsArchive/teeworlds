@@ -75,7 +75,8 @@ enum
 	NETMSG_MAPLIST_ENTRY_REM,
 };
 
-// flags appended to NETMSG_MAP_CHANGE after the map sha256, ignored by older clients
+// after the map sha256: flags, then the view offset in world pixels
+// (OldViewPos = NewViewPos - ViewPosOffset)
 enum
 {
 	MAP_CHANGE_FLAG_SILENT = 0x1, // load the map in place, no READY

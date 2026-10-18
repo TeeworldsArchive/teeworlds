@@ -719,7 +719,7 @@ void CServer::HandleDelClient(int ClientID, const char *pReason)
 	m_aClients[ClientID].m_Snapshots.PurgeAll();
 }
 
-void CServer::SendMap(int ClientID)
+void CServer::SendMap(int ClientID, int ViewPosOffsetX, int ViewPosOffsetY, int MapFlags)
 {
 	CMsgPacker Msg(NETMSG_MAP_CHANGE, true);
 	Msg.AddString(GetMapName(), 0);
@@ -728,6 +728,10 @@ void CServer::SendMap(int ClientID)
 	Msg.AddInt(m_MapChunksPerRequest);
 	Msg.AddInt(MAP_CHUNK_SIZE);
 	Msg.AddRaw(&m_CurrentMapSha256, sizeof(m_CurrentMapSha256));
+	// normal map changes send zero flags and offset
+	Msg.AddInt(MapFlags);
+	Msg.AddInt(ViewPosOffsetX);
+	Msg.AddInt(ViewPosOffsetY);
 	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientID);
 }
 
@@ -858,7 +862,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				m_aClients[ClientID].m_ServerInfoVersion = Unpacker.GetIntOrDefault(SERVERINFO_VERSION_LEGACY);
 
 				m_aClients[ClientID].m_State = CClient::STATE_CONNECTING;
-				SendMap(ClientID);
+				SendMap(ClientID, 0, 0);
 			}
 		}
 		else if(Unpacker.Type() == NETMSG_REQUEST_MAP_DATA)
@@ -1460,7 +1464,7 @@ int CServer::Run()
 						if(m_aClients[c].m_State <= CClient::STATE_AUTH)
 							continue;
 
-						SendMap(c);
+						SendMap(c, 0, 0);
 						m_aClients[c].Reset();
 						m_aClients[c].m_State = aSpecs[c] ? CClient::STATE_CONNECTING_AS_SPEC : CClient::STATE_CONNECTING;
 					}

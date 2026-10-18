@@ -13,6 +13,8 @@
 class CEngineMap : public IEngineMap
 {
 	CDataFileReader m_aMaps[MAX_MAPS];
+	unsigned m_aGeneration[MAX_MAPS];
+	unsigned m_LastGeneration;
 
 	static bool ValidIndex(int MapIndex) { return MapIndex >= 0 && MapIndex < MAX_MAPS; }
 
@@ -79,10 +81,18 @@ class CEngineMap : public IEngineMap
 			}
 		}
 
+		m_aGeneration[MapIndex] = ++m_LastGeneration;
 		return true;
 	}
 
 public:
+	CEngineMap()
+	{
+		for(int i = 0; i < MAX_MAPS; i++)
+			m_aGeneration[i] = 0;
+		m_LastGeneration = 0;
+	}
+
 	virtual int GetDataSize(int MapIndex, int Index) override { return ValidIndex(MapIndex) ? m_aMaps[MapIndex].GetDataSize(Index) : 0; }
 	virtual void *GetData(int MapIndex, int Index) override { return ValidIndex(MapIndex) ? m_aMaps[MapIndex].GetData(Index) : 0; }
 	virtual void *GetDataSwapped(int MapIndex, int Index) override { return ValidIndex(MapIndex) ? m_aMaps[MapIndex].GetDataSwapped(Index) : 0; }
@@ -114,8 +124,20 @@ public:
 
 	virtual void Unload(int MapIndex) override
 	{
-		if(ValidIndex(MapIndex))
-			m_aMaps[MapIndex].Close();
+		if(!ValidIndex(MapIndex))
+			return;
+		m_aMaps[MapIndex].Close();
+		m_aGeneration[MapIndex] = 0;
+	}
+
+	virtual void SwapSlots(int MapIndexA, int MapIndexB) override
+	{
+		if(!ValidIndex(MapIndexA) || !ValidIndex(MapIndexB) || MapIndexA == MapIndexB)
+			return;
+		m_aMaps[MapIndexA].Swap(m_aMaps[MapIndexB]);
+		const unsigned Generation = m_aGeneration[MapIndexA];
+		m_aGeneration[MapIndexA] = m_aGeneration[MapIndexB];
+		m_aGeneration[MapIndexB] = Generation;
 	}
 
 	virtual SHA256_DIGEST Sha256(int MapIndex) override
@@ -126,6 +148,11 @@ public:
 	virtual unsigned Crc(int MapIndex) override
 	{
 		return ValidIndex(MapIndex) ? m_aMaps[MapIndex].Crc() : 0;
+	}
+
+	virtual unsigned Generation(int MapIndex) override
+	{
+		return ValidIndex(MapIndex) ? m_aGeneration[MapIndex] : 0;
 	}
 };
 

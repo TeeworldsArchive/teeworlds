@@ -828,7 +828,7 @@ void CClient::UnloadMap()
 	GameClient()->OnMapUnload();
 }
 
-const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc, bool Silent, bool NoFade)
+const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc, bool Silent, bool NoFade, vec2 ViewPosOffset)
 {
 	static char aErrorMsg[512];
 
@@ -836,39 +836,52 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA
 	if(!Silent)
 		SetState(IClient::STATE_LOADING);
 
-	// the game client fades the old map, grab its path before it is overwritten
-	char aPreviousMapPath[IO_MAX_PATH_LENGTH];
-	aPreviousMapPath[0] = 0;
+	// load into the unused slot, so a bad map leaves the game untouched
+	const int LoadSlot = Silent ? IEngineMap::SLOT_FADE : IEngineMap::SLOT_MAIN;
 	if(Silent)
-		str_copy(aPreviousMapPath, m_aCurrentMapPath, sizeof(aPreviousMapPath));
+	{
+		// free the slot from the last fade
+		GameClient()->OnMapChangeBegin();
+		m_pMap->Unload(IEngineMap::SLOT_FADE);
+	}
+	else
+	{
+		// the previous map may still be loaded while it fades out
+		UnloadMap();
+	}
 
-	// the previous map may still be loaded while it fades out
-	UnloadMap();
-
-	if(!m_pMap->Load(pFilename))
+	if(!m_pMap->Load(pFilename, Storage(), LoadSlot))
 	{
 		str_format(aErrorMsg, sizeof(aErrorMsg), "map '%s' not found", pFilename);
+		if(Silent)
+			m_pMap->Unload(IEngineMap::SLOT_FADE);
 		return aErrorMsg;
 	}
 
-	if(pWantedSha256 && m_pMap->Sha256() != *pWantedSha256)
+	if(pWantedSha256 && m_pMap->Sha256(LoadSlot) != *pWantedSha256)
 	{
 		char aSha256[SHA256_MAXSTRSIZE];
 		char aWantedSha256[SHA256_MAXSTRSIZE];
-		sha256_str(m_pMap->Sha256(), aSha256, sizeof(aSha256));
+		sha256_str(m_pMap->Sha256(LoadSlot), aSha256, sizeof(aSha256));
 		sha256_str(*pWantedSha256, aWantedSha256, sizeof(aWantedSha256));
 		str_format(aErrorMsg, sizeof(aErrorMsg), "map differs from the server. found = %s wanted = %s", aSha256, aWantedSha256);
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aErrorMsg);
-		UnloadMap();
+		if(Silent)
+			m_pMap->Unload(IEngineMap::SLOT_FADE);
+		else
+			UnloadMap();
 		return aErrorMsg;
 	}
 
 	// get the crc of the map
-	if(m_pMap->Crc() != WantedCrc)
+	if(m_pMap->Crc(LoadSlot) != WantedCrc)
 	{
-		str_format(aErrorMsg, sizeof(aErrorMsg), "map differs from the server. found = %08x wanted = %08x", m_pMap->Crc(), WantedCrc);
+		str_format(aErrorMsg, sizeof(aErrorMsg), "map differs from the server. found = %08x wanted = %08x", m_pMap->Crc(LoadSlot), WantedCrc);
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aErrorMsg);
-		UnloadMap();
+		if(Silent)
+			m_pMap->Unload(IEngineMap::SLOT_FADE);
+		else
+			UnloadMap();
 		return aErrorMsg;
 	}
 
@@ -882,6 +895,12 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA
 	if(!Silent)
 		m_ReceivedSnapshots = 0;
 
+	if(Silent)
+	{
+		// the old map becomes the fade map, data and all
+		m_pMap->SwapSlots(IEngineMap::SLOT_MAIN, IEngineMap::SLOT_FADE);
+	}
+
 	str_copy(m_aCurrentMap, pName, sizeof(m_aCurrentMap));
 	str_copy(m_aCurrentMapPath, pFilename, sizeof(m_aCurrentMapPath));
 	m_CurrentMapSha256 = m_pMap->Sha256();
@@ -893,7 +912,7 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const SHA
 	if(Silent)
 	{
 		// activate in place; the old map fades out over this one
-		GameClient()->OnMapActivated(aPreviousMapPath, NoFade);
+		GameClient()->OnMapActivated(NoFade, ViewPosOffset);
 		// the demo restarts on the new map
 		DemoRecorder_HandleAutoStart();
 	}
@@ -925,7 +944,7 @@ static void FormatMapDownloadFilename(const char *pName, const SHA256_DIGEST *pS
 	}
 }
 
-const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc, bool Silent, bool NoFade)
+const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc, bool Silent, bool NoFade, vec2 ViewPosOffset)
 {
 	const char *pError = 0;
 	char aBuf[512];
@@ -944,13 +963,13 @@ const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pW
 
 	// try the normal maps folder
 	str_format(aBuf, sizeof(aBuf), "maps/%s.map", pMapName);
-	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
+	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade, ViewPosOffset);
 	if(!pError)
 		return pError;
 
 	// try the downloaded maps
 	FormatMapDownloadFilename(pMapName, pWantedSha256, WantedCrc, false, aBuf, sizeof(aBuf));
-	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
+	pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade, ViewPosOffset);
 	if(!pError)
 		return pError;
 
@@ -958,7 +977,7 @@ const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pW
 	if(pWantedSha256)
 	{
 		FormatMapDownloadFilename(pMapName, 0, WantedCrc, false, aBuf, sizeof(aBuf));
-		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
+		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade, ViewPosOffset);
 		if(!pError)
 			return pError;
 	}
@@ -967,7 +986,7 @@ const char *CClient::LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pW
 	char aFilename[128];
 	str_format(aFilename, sizeof(aFilename), "%s.map", pMapName);
 	if(Storage()->FindFile(aFilename, "maps", IStorage::TYPE_ALL, aBuf, sizeof(aBuf)))
-		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade);
+		pError = LoadMap(pMapName, aBuf, pWantedSha256, WantedCrc, Silent, NoFade, ViewPosOffset);
 
 	return pError;
 }
@@ -1175,6 +1194,9 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			const SHA256_DIGEST *pMapSha256 = (const SHA256_DIGEST *) Unpacker.GetRaw(sizeof(*pMapSha256));
 			// older servers end the message at the sha256; only an online client is switched
 			const int MapFlags = Unpacker.GetIntOrDefault(0);
+			const int ViewPosOffsetX = Unpacker.GetIntOrDefault(0);
+			const int ViewPosOffsetY = Unpacker.GetIntOrDefault(0);
+			const vec2 ViewPosOffset((float) ViewPosOffsetX, (float) ViewPosOffsetY);
 			const bool Silent = State() == IClient::STATE_ONLINE && (MapFlags & MAP_CHANGE_FLAG_SILENT) != 0;
 			const bool NoFade = (MapFlags & MAP_CHANGE_FLAG_NO_FADE) != 0;
 			const char *pError = 0;
@@ -1212,7 +1234,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			}
 			else
 			{
-				pError = LoadMapSearch(pMap, pMapSha256, MapCrc, Silent, NoFade);
+				pError = LoadMapSearch(pMap, pMapSha256, MapCrc, Silent, NoFade, ViewPosOffset);
 
 				if(!pError)
 				{

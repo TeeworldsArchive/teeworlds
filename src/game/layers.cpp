@@ -13,16 +13,33 @@ CLayers::CLayers()
 	m_pGameLayer = 0;
 	m_pMap = 0;
 	m_MapIndex = 0;
+	m_MapGeneration = 0;
+	m_TilemapSkipComputed = false;
 }
 
 void CLayers::Init(class IKernel *pKernel, IMap *pMap, int MapIndex)
 {
 	m_pMap = pMap ? pMap : pKernel->RequestInterface<IMap>();
 	m_MapIndex = pMap ? MapIndex : 0;
+	m_MapGeneration = m_pMap ? m_pMap->Generation(m_MapIndex) : 0;
+	m_TilemapSkipComputed = false;
 	m_pMap->GetType(m_MapIndex, MAPITEMTYPE_GROUP, &m_GroupsStart, &m_GroupsNum);
 	m_pMap->GetType(m_MapIndex, MAPITEMTYPE_LAYER, &m_LayersStart, &m_LayersNum);
 
 	InitGameLayer();
+}
+
+void CLayers::SetMapIndex(int MapIndex)
+{
+	m_MapIndex = MapIndex;
+	m_MapGeneration = m_pMap ? m_pMap->Generation(MapIndex) : 0;
+}
+
+void CLayers::EnsureTilemapSkip()
+{
+	if(m_TilemapSkipComputed)
+		return;
+	m_TilemapSkipComputed = true;
 	InitTilemapSkip();
 }
 

@@ -268,8 +268,8 @@ public:
 
 	virtual const char *ErrorString() const override;
 
-	const char *LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc, bool Silent = false, bool NoFade = false);
-	const char *LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc, bool Silent = false, bool NoFade = false);
+	const char *LoadMap(const char *pName, const char *pFilename, const SHA256_DIGEST *pWantedSha256, unsigned WantedCrc, bool Silent = false, bool NoFade = false, vec2 ViewPosOffset = vec2(0.0f, 0.0f));
+	const char *LoadMapSearch(const char *pMapName, const SHA256_DIGEST *pWantedSha256, int WantedCrc, bool Silent = false, bool NoFade = false, vec2 ViewPosOffset = vec2(0.0f, 0.0f));
 
 	int UnpackServerInfo(CUnpacker *pUnpacker, CServerInfo *pInfo, int *pToken);
 	int UnpackServerInfoPlayer(CUnpacker *pUnpacker, CServerInfo *pInfo, int *pToken);

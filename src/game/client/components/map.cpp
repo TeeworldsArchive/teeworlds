@@ -20,6 +20,7 @@ CMapComponent::CMapComponent() :
 	m_GameMapAlpha = 0.0f;
 
 	m_pEngineMap = 0;
+	m_GameGeneration = 0;
 	m_FadeMap.m_pLayers = 0;
 	m_FadeMap.m_ImageType = CMapImages::MAP_TYPE_GAME_FADE;
 	m_FadeMap.m_Alpha = 0.0f;
@@ -44,11 +45,13 @@ void CMapComponent::ReleaseGameMap()
 	}
 }
 
-void CMapComponent::ReleaseTilemapTextures(const CLayers *pLayers)
+void CMapComponent::ReleaseTilemapTextures(unsigned Generation)
 {
+	if(Generation == 0)
+		return;
 	for(int i = m_lTilemapTextures.size() - 1; i >= 0; i--)
 	{
-		if(m_lTilemapTextures[i].m_pLayers != pLayers)
+		if(m_lTilemapTextures[i].m_Generation != Generation)
 			continue;
 		if(m_lTilemapTextures[i].m_Texture.IsValid())
 			Graphics()->UnloadTexture(&m_lTilemapTextures[i].m_Texture);
@@ -56,26 +59,22 @@ void CMapComponent::ReleaseTilemapTextures(const CLayers *pLayers)
 	}
 }
 
-void CMapComponent::BeginGameMapFade(const char *pMapPath, bool HoldOnly)
+void CMapComponent::BeginGameMapFade(const CLayers &OldLayers, bool HoldOnly)
 {
-	EndGameMapFade();
-
-	if(!pMapPath || !pMapPath[0])
-		return;
-
 	if(!m_pEngineMap)
 		m_pEngineMap = Kernel()->RequestInterface<IEngineMap>();
 	if(!m_pEngineMap)
 		return;
 	if(!m_FadeMap.m_pLayers)
 		m_FadeMap.m_pLayers = new CLayers;
-	if(!m_pEngineMap->Load(pMapPath, Storage(), IEngineMap::SLOT_FADE))
-		return;
 
-	m_FadeMap.m_pLayers->Init(Kernel(), m_pEngineMap, IEngineMap::SLOT_FADE);
+	// the old map is already in the fade slot, nothing to reload
+	*m_FadeMap.m_pLayers = OldLayers;
+	m_FadeMap.m_pLayers->SetMapIndex(IEngineMap::SLOT_FADE);
 	if(!m_FadeMap.m_pLayers->Map())
 		return;
-	m_Images.OnMenuMapLoad(m_pEngineMap, IEngineMap::SLOT_FADE, CMapImages::MAP_TYPE_GAME_FADE);
+	// hand the old image table to the fade
+	m_Images.MoveMapType(CMapImages::MAP_TYPE_GAME, CMapImages::MAP_TYPE_GAME_FADE);
 	CMapLayers::LoadEnvPoints(m_FadeMap.m_pLayers, m_FadeMap.m_lEnvPoints);
 
 	m_FadeMap.m_Alpha = 1.0f;
@@ -91,12 +90,12 @@ void CMapComponent::StartGameMapFade()
 {
 	if(!m_FadeMap.m_Loaded)
 		return;
+	m_FadeMap.m_StartPending = false;
 	if(m_FadeMap.m_HoldOnly)
 	{
+		// NO_FADE: tiles are ready, cut now
 		EndGameMapFade();
-		return;
 	}
-	m_FadeMap.m_StartPending = false;
 }
 
 void CMapComponent::SetFadeMapOffset(const vec2 &Offset)
@@ -133,7 +132,7 @@ void CMapComponent::EndGameMapFade()
 	if(m_FadeMap.m_Loaded)
 	{
 		// the cached tile data textures reference the map data being unloaded
-		ReleaseTilemapTextures(m_FadeMap.m_pLayers);
+		ReleaseTilemapTextures(m_FadeMap.m_pLayers->Generation());
 		m_Images.UnloadMap(CMapImages::MAP_TYPE_GAME_FADE);
 		if(m_pEngineMap)
 			m_pEngineMap->Unload(IEngineMap::SLOT_FADE);
@@ -150,6 +149,7 @@ void CMapComponent::EndGameMapFade()
 
 void CMapComponent::OnMapLoad()
 {
+	m_GameGeneration = Layers() ? Layers()->Generation() : 0;
 	m_GameMapLoaded = true;
 	m_GameMapFading = false;
 	m_GameMapAlpha = 0.0f;
@@ -160,7 +160,34 @@ void CMapComponent::OnMapUnload()
 	m_GameMapLoaded = false;
 	m_GameMapFading = false;
 	m_GameMapAlpha = 0.0f;
-	ClearTilemapTextures();
+	// release only the game map, not the fade
+	ReleaseTilemapTextures(m_GameGeneration);
+	m_GameGeneration = 0;
+}
+
+void CMapComponent::PrepareGameMap()
+{
+	if(!Layers() || !Layers()->Map())
+		return;
+	if(!Config()->m_GfxTileBuffering || !Graphics()->TilemapShaderEnabled())
+		return;
+
+	// build the new map's tile arrays before it is shown
+	for(int g = 0; g < Layers()->NumGroups(); g++)
+	{
+		CMapItemGroup *pGroup = Layers()->GetGroup(g);
+		for(int l = 0; l < pGroup->m_NumLayers; l++)
+		{
+			CMapItemLayer *pLayer = Layers()->GetLayer(pGroup->m_StartLayer + l);
+			if(pLayer->m_Type != LAYERTYPE_TILES)
+				continue;
+			CMapItemLayerTilemap *pTMap = (CMapItemLayerTilemap *) pLayer;
+			if(pTMap->m_Image < 0 || pTMap->m_Data < 0)
+				continue;
+			int LayerIndex;
+			GetTilemapTexture(Layers(), pTMap, &LayerIndex);
+		}
+	}
 }
 
 IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayers, const CMapItemLayerTilemap *pLayer, int *pLayerIndex)
@@ -171,10 +198,11 @@ IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayer
 		return IGraphics::CTextureHandle();
 
 	// look for the array that already contains this layer
+	const unsigned Generation = pLayers->Generation();
 	for(int i = 0; i < m_lTilemapTextures.size(); i++)
 	{
 		STilemapTexture &Tex = m_lTilemapTextures[i];
-		if(Tex.m_pLayers != pLayers || Tex.m_Width != pLayer->m_Width || Tex.m_Height != pLayer->m_Height)
+		if(Tex.m_Generation != Generation || Tex.m_Width != pLayer->m_Width || Tex.m_Height != pLayer->m_Height)
 			continue;
 		for(int l = 0; l < Tex.m_lLayers.size(); l++)
 		{
@@ -186,9 +214,9 @@ IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayer
 		}
 	}
 
-	// build a new array with every tile layer of the same size
+	// one array for all drawable tile layers of this size
 	STilemapTexture Tex;
-	Tex.m_pLayers = pLayers;
+	Tex.m_Generation = Generation;
 	Tex.m_Width = pLayer->m_Width;
 	Tex.m_Height = pLayer->m_Height;
 
@@ -201,7 +229,8 @@ IGraphics::CTextureHandle CMapComponent::GetTilemapTexture(const CLayers *pLayer
 			if(pCandidate->m_Type != LAYERTYPE_TILES)
 				continue;
 			CMapItemLayerTilemap *pTilemap = (CMapItemLayerTilemap *) pCandidate;
-			if(pTilemap->m_Width != Tex.m_Width || pTilemap->m_Height != Tex.m_Height || pTilemap->m_Data < 0)
+			// solid-color layers never sample this texture
+			if(pTilemap->m_Width != Tex.m_Width || pTilemap->m_Height != Tex.m_Height || pTilemap->m_Data < 0 || pTilemap->m_Image < 0)
 				continue;
 			Tex.m_lLayers.add(pTilemap);
 		}

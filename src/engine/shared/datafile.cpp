@@ -534,6 +534,13 @@ int CDataFileReader::NumItems() const
 	return m_pDataFile->m_Header.m_NumItems;
 }
 
+void CDataFileReader::Swap(CDataFileReader &Other)
+{
+	struct CDatafile *pDataFile = m_pDataFile;
+	m_pDataFile = Other.m_pDataFile;
+	Other.m_pDataFile = pDataFile;
+}
+
 bool CDataFileReader::Close()
 {
 	if(!m_pDataFile)

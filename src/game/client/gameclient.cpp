@@ -496,19 +496,30 @@ void CGameClient::OnConnected()
 	SendStartInfo();
 }
 
-void CGameClient::OnMapActivated(const char *pPreviousMapPath, bool NoFade)
+void CGameClient::OnMapChangeBegin()
+{
+	// free the slot the new map will be loaded into
+	m_pMapComponent->EndGameMapFade();
+}
+
+void CGameClient::OnMapActivated(bool NoFade, vec2 ViewPosOffset)
 {
 	// rebuild the map but keep the session: no reset, no start info, no state change
 
-	// keep the old map visible; NoFade drops it once the new world is known
-	if(pPreviousMapPath && pPreviousMapPath[0])
-		m_pMapComponent->BeginGameMapFade(pPreviousMapPath, NoFade);
+	// old view position mapping for the transition
+	m_MapViewPosOffset = ViewPosOffset;
+
+	// adopt the old layers before Init replaces them
+	m_pMapComponent->BeginGameMapFade(m_Layers, NoFade);
 
 	m_Layers.Init(Kernel());
 	m_Collision.Init(Layers());
 
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_apComponents[i]->OnMapLoad();
+
+	// build the new map's tiles before the switch
+	m_pMapComponent->PrepareGameMap();
 
 	m_NewWorldPending = true;
 
@@ -518,6 +529,7 @@ void CGameClient::OnMapActivated(const char *pPreviousMapPath, bool NoFade)
 void CGameClient::OnReset()
 {
 	m_NewWorldPending = false;
+	m_MapViewPosOffset = vec2(0.0f, 0.0f);
 
 	if(Client()->State() < IClient::STATE_ONLINE)
 	{
@@ -1540,7 +1552,7 @@ void CGameClient::OnNewSnapshot()
 		// the new world is known, the old map may go
 		m_pMapComponent->StartGameMapFade();
 		// snap, do not pan across the seam
-		m_pCamera->OnMapTransition();
+		m_pCamera->OnMapTransition(m_MapViewPosOffset);
 	}
 }
 

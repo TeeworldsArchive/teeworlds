@@ -36,6 +36,7 @@ CCamera::CCamera()
 	m_JoinTransitionStartZoom = 1.0f;
 
 	m_SnapNextFrame = false;
+	m_ViewPosOffset = vec2(0.0f, 0.0f);
 	m_PrevFollowPos = vec2(0.0f, 0.0f);
 	m_PositionJumpActive = false;
 	m_PositionJumpTime = 0.0f;
@@ -130,6 +131,9 @@ void CCamera::OnRender()
 
 		if(m_SnapNextFrame)
 		{
+			// keep the old view: Old = New - Offset
+			TargetCenter = m_Center + m_ViewPosOffset;
+
 			// a world switch: hand the view offset to the fading map and snap
 			m_pClient->m_pMapComponent->SetFadeMapOffset(TargetCenter - m_Center);
 			m_SnapNextFrame = false;
