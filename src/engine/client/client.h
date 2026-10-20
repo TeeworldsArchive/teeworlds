@@ -218,6 +218,8 @@ public:
 	void SendInfo();
 	void SendEnterGame();
 	void SendReady();
+	// reports the outcome of a silent map change
+	void SendSilentMapStatus(int Status, const SHA256_DIGEST *pMapSha256);
 	void SendInput();
 	virtual void SendRconAuth(const char *pName, const char *pPassword) override;
 	virtual void SendRcon(const char *pCmd) override;

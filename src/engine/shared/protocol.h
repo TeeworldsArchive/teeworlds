@@ -73,6 +73,9 @@ enum
 
 	NETMSG_MAPLIST_ENTRY_ADD,
 	NETMSG_MAPLIST_ENTRY_REM,
+
+	// client -> server: outcome of a silent MAP_CHANGE
+	NETMSG_SILENT_MAP_STATUS,
 };
 
 // after the map sha256: flags, then the view offset in world pixels
@@ -81,6 +84,20 @@ enum
 {
 	MAP_CHANGE_FLAG_SILENT = 0x1, // load the map in place, no READY
 	MAP_CHANGE_FLAG_NO_FADE = 0x2, // swap at once, no cross-fade
+};
+
+// NETMSG_SILENT_MAP_STATUS payload: status, then the map sha256
+enum
+{
+	SILENT_MAP_STATUS_LOADED = 0, // applied in place
+	SILENT_MAP_STATUS_NEED_DOWNLOAD = 1, // no local map, loading it now
+	SILENT_MAP_STATUS_REGULAR = 2, // not online, using READY instead
+};
+
+// optional flags appended to NETMSG_INFO after the server info version
+enum
+{
+	CLIENT_INFO_FLAG_SILENT_MAP_STATUS = 0x1, // answers silent map changes
 };
 
 // this should be revised

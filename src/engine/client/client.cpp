@@ -373,6 +373,9 @@ void CClient::SendInfo()
 	Msg.AddString(m_aServerPassword, 128);
 	Msg.AddInt(m_LegacyConnection ? PREV_CLIENT_VERSION : GameClient()->ClientVersion());
 	Msg.AddInt(SERVERINFO_VERSION_CURRENT);
+	// 0.7 servers do not use the silent map handshake
+	if(!m_LegacyConnection)
+		Msg.AddInt(CLIENT_INFO_FLAG_SILENT_MAP_STATUS);
 	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
 }
 
@@ -385,6 +388,18 @@ void CClient::SendEnterGame()
 void CClient::SendReady()
 {
 	CMsgPacker Msg(NETMSG_READY, true);
+	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
+}
+
+void CClient::SendSilentMapStatus(int Status, const SHA256_DIGEST *pMapSha256)
+{
+	// silent switches are a 0.8 feature
+	if(m_LegacyConnection)
+		return;
+
+	CMsgPacker Msg(NETMSG_SILENT_MAP_STATUS, true);
+	Msg.AddInt(Status);
+	Msg.AddRaw(pMapSha256 ? pMapSha256 : &SHA256_ZEROED, sizeof(SHA256_DIGEST));
 	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
 }
 
@@ -1197,7 +1212,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 			const int ViewPosOffsetX = Unpacker.GetIntOrDefault(0);
 			const int ViewPosOffsetY = Unpacker.GetIntOrDefault(0);
 			const vec2 ViewPosOffset((float) ViewPosOffsetX, (float) ViewPosOffsetY);
-			const bool Silent = State() == IClient::STATE_ONLINE && (MapFlags & MAP_CHANGE_FLAG_SILENT) != 0;
+			const bool SilentRequested = (MapFlags & MAP_CHANGE_FLAG_SILENT) != 0;
+			const bool Silent = State() == IClient::STATE_ONLINE && SilentRequested;
 			const bool NoFade = (MapFlags & MAP_CHANGE_FLAG_NO_FADE) != 0;
 			const char *pError = 0;
 
@@ -1223,11 +1239,9 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 
 			if(pError)
 				DisconnectWithReason(pError);
-			else if(!Silent && m_pMap->IsLoaded() && (unsigned) MapCrc == m_pMap->Crc() && str_comp(pMap, m_aCurrentMap) == 0)
+			else if(!Silent && State() == IClient::STATE_ONLINE && m_pMap->IsLoaded() && (unsigned) MapCrc == m_pMap->Crc() && str_comp(pMap, m_aCurrentMap) == 0)
 			{
 				// same map as the one loaded (a fast switch left an announcement behind)
-				if(State() < IClient::STATE_LOADING)
-					SetState(IClient::STATE_LOADING);
 				m_SuppressSnapshots = false;
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "map already loaded");
 				SendReady();
@@ -1239,17 +1253,40 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				if(!pError)
 				{
 					m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "loading done");
+					// answer explicitly instead of letting the server infer it from map data requests
+					if(Silent)
+					{
+						SendSilentMapStatus(SILENT_MAP_STATUS_LOADED, pMapSha256);
+					}
 					// a silent switch is already activated, it must not answer READY
-					if(!Silent)
+					else
+					{
+						// a silent request that could not be applied in place still needs an answer
+						if(SilentRequested)
+						{
+							SendSilentMapStatus(SILENT_MAP_STATUS_REGULAR, pMapSha256);
+							// drop in-flight snapshots until the server handles the answer
+							m_SuppressSnapshots = true;
+						}
 						SendReady();
+					}
 				}
 				else
 				{
 					if(Silent)
 					{
-						// no local copy: fall back to the visible download and drop snapshots
+						// answer before requesting chunks so the server enters the loading handshake
+						SendSilentMapStatus(SILENT_MAP_STATUS_NEED_DOWNLOAD, pMapSha256);
+						// fall back to the visible download and drop snapshots
 						m_SuppressSnapshots = true;
 						SetState(IClient::STATE_LOADING);
+					}
+					else if(SilentRequested)
+					{
+						// the server must accept the READY that follows the download
+						SendSilentMapStatus(SILENT_MAP_STATUS_REGULAR, pMapSha256);
+						// LoadMap() clears this once the download is complete
+						m_SuppressSnapshots = true;
 					}
 
 					// start map download
@@ -1343,6 +1380,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		}
 		else if((pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_CON_READY)
 		{
+			// the map is loaded, so dropped snapshots may flow again
+			m_SuppressSnapshots = false;
 			GameClient()->OnConnected();
 		}
 		else if(Unpacker.Type() == NETMSG_PING)
