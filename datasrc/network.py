@@ -236,9 +236,10 @@ Objects = [
 		NetFlag("m_RaceFlags", RaceFlags),
 	]),
 
-	## Tuning (singleton, item id 0). Replaces the Sv_TuneParams message and the
-	## De_TuneParams demo object: tuning travels in the snapshot and is therefore
-	## delta compressed and recorded for free.
+	## Tuning, at most one object per Tee: the item ID is the TeeInfoID it
+	## applies to. Replaces the Sv_TuneParams message and the De_TuneParams demo
+	## object, so tuning travels in the snapshot, delta compressed and recorded
+	## for free.
 	NetObject("Tuning", [
 		NetArray(NetIntAny("m_aTuneParams"), NUM_TUNES),
 	]),

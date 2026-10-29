@@ -545,6 +545,7 @@ void CGameClient::OnReset()
 			m_aClients[ClientID].Reset(this, ClientID);
 		m_aCharacters.clear();
 		m_apTeeInfos.clear();
+		m_aTunings.clear();
 		m_aInfoByScore.clear();
 	}
 
@@ -624,10 +625,10 @@ void CGameClient::UpdatePositions()
 	}
 }
 
-void CGameClient::EvolveCharacter(CNetObj_Character *pCharacter, int Tick)
+void CGameClient::EvolveCharacter(int TeeID, CNetObj_Character *pCharacter, int Tick)
 {
 	CWorldCore TempWorld;
-	TempWorld.m_Tuning = m_Tuning;
+	TempWorld.m_Tuning = *GetTuning(TeeID);
 	CCharacterCore TempCore;
 	mem_zero(&TempCore, sizeof(TempCore));
 	TempCore.Init(&TempWorld, Collision());
@@ -1129,6 +1130,7 @@ void CGameClient::OnNewSnapshot()
 
 	m_aCharacters.clear_size();
 	m_apTeeInfos.clear_size();
+	m_aTunings.clear_size();
 	m_aInfoByScore.clear_size();
 	m_aTeeIDs.clear_size();
 
@@ -1175,10 +1177,6 @@ void CGameClient::OnNewSnapshot()
 #endif
 
 	CTuningParams StandardTuning;
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
-	{
-		m_Tuning = StandardTuning;
-	}
 
 	// go trough all the items in the snapshot and gather the info we want
 	{
@@ -1379,8 +1377,15 @@ void CGameClient::OnNewSnapshot()
 			}
 			else if(Item.m_Type == NETOBJTYPE_TUNING)
 			{
-				const CNetObj_Tuning *pInfo = (const CNetObj_Tuning *) pData;
-				mem_copy(&m_Tuning, pInfo->m_aTuneParams, sizeof(m_Tuning));
+				const int TeeInfoID = Item.m_ID;
+				if(TeeInfoID >= 0 && TeeInfoID < MAX_TEES)
+				{
+					// The item ID is the TeeInfoID this tuning belongs to, so
+					// each Tee is predicted with its own values when it has one.
+					CTuningInfo &Tuning = m_aTunings[TeeInfoID];
+					mem_copy(&Tuning.m_Params, ((const CNetObj_Tuning *) pData)->m_aTuneParams, sizeof(Tuning.m_Params));
+					Tuning.m_Present = true;
+				}
 				m_ServerMode = SERVERMODE_PURE;
 			}
 			else if(Item.m_Type == NETOBJTYPE_FLAG)
@@ -1389,6 +1394,13 @@ void CGameClient::OnNewSnapshot()
 			}
 		}
 	}
+
+	// Every Tee without a Tuning object of its own falls back to the local
+	// player's, or to tuning 0 when the snapshot has no local player (a server
+	// demo), and finally to the client default.
+	const int FallbackID = m_LocalClientID >= 0 ? m_LocalClientID : 0;
+	const CTuningInfo *pFallback = m_aTunings.get(FallbackID);
+	m_Tuning = pFallback && pFallback->m_Present ? pFallback->m_Params : CTuningParams();
 
 	// Drop the identity of every tee whose TeeInfo is not in this snapshot, so
 	// it stops being rendered or listed. Real clients are handled the same way
@@ -1500,9 +1512,9 @@ void CGameClient::OnNewSnapshot()
 			int EvolvePrevTick = minimum(pCharInfo->m_Prev.m_Tick + Client()->GameTickSpeed() * 3, Client()->PrevGameTick());
 			int EvolveCurTick = minimum(pCharInfo->m_Cur.m_Tick + Client()->GameTickSpeed() * 3, Client()->GameTick());
 			if(pCharInfo->m_Prev.m_Tick)
-				EvolveCharacter(&pCharInfo->m_Prev, EvolvePrevTick);
+				EvolveCharacter(i, &pCharInfo->m_Prev, EvolvePrevTick);
 			if(pCharInfo->m_Cur.m_Tick)
-				EvolveCharacter(&pCharInfo->m_Cur, EvolveCurTick);
+				EvolveCharacter(i, &pCharInfo->m_Cur, EvolveCurTick);
 
 			CClientData *pClient = GetClientData(i);
 			if(pClient)
@@ -1594,7 +1606,7 @@ void CGameClient::OnPredict()
 		return;
 	}
 
-	// repredict character
+	// repredict character; per-Tee tuning overrides the world's one below
 	CWorldCore World;
 	World.m_Tuning = m_Tuning;
 
@@ -1608,6 +1620,7 @@ void CGameClient::OnPredict()
 			continue;
 
 		pClient->m_Predicted.Init(&World, Collision());
+		pClient->m_Predicted.SetTuning(GetTuning(i));
 		World.SetCharacter(i, &pClient->m_Predicted);
 		pClient->m_Predicted.Read(&pCharInfo->m_Cur);
 	}
@@ -2103,6 +2116,12 @@ const CNetObj_TeeInfo *CGameClient::GetTeeInfo(int TeeInfoID) const
 {
 	const CNetObj_TeeInfo *const *ppTeeInfo = m_apTeeInfos.get(TeeInfoID);
 	return ppTeeInfo ? *ppTeeInfo : 0;
+}
+
+const CTuningParams *CGameClient::GetTuning(int TeeInfoID) const
+{
+	const CTuningInfo *pTuning = m_aTunings.get(TeeInfoID);
+	return pTuning && pTuning->m_Present ? &pTuning->m_Params : &m_Tuning;
 }
 
 void CGameClient::CollectActiveTeeIDs(array<int> &IDs) const

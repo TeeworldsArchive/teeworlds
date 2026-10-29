@@ -77,7 +77,7 @@ class CGameClient : public IGameClient
 	static void ConchainBlacklistUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainXmasHatUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
-	void EvolveCharacter(CNetObj_Character *pCharacter, int Tick);
+	void EvolveCharacter(int TeeID, CNetObj_Character *pCharacter, int Tick);
 
 	void LoadFonts();
 
@@ -110,7 +110,8 @@ public:
 
 	bool m_SuppressEvents;
 
-	// TODO: move this
+	// Fallback tuning for Tees without their own: the local player's, tuning 0
+	// when there is no local player, or the client default.
 	CTuningParams m_Tuning;
 
 	enum
@@ -263,10 +264,19 @@ public:
 	typedef partial_array<CSnapState::CCharacterInfo, TEE_PARTS, TEE_PART_SIZE> CTeeCharacterArray;
 	// The snapshot owns the TeeInfo objects, so only the pointers are borrowed.
 	typedef partial_array<const CNetObj_TeeInfo *, TEE_PARTS, TEE_PART_SIZE, allocator_non_owning<const CNetObj_TeeInfo *>> CTeeInfoArray;
+	// The Tuning snapshot object of one Tee, keyed by its TeeInfoID. Presence
+	// matters: without it the Tee falls back to the local player's tuning.
+	struct CTuningInfo
+	{
+		bool m_Present;
+		CTuningParams m_Params;
+	};
+	typedef partial_array<CTuningInfo, TEE_PARTS, TEE_PART_SIZE> CTeeTuningArray;
 
 	CTeeClientDataArray m_aClients;
 	CTeeCharacterArray m_aCharacters;
 	CTeeInfoArray m_apTeeInfos;
+	CTeeTuningArray m_aTunings;
 
 	// Player infos ordered by score, rebuilt every snapshot. Dense on purpose:
 	// the scoreboard and HUD walk it front to back, and TeeIDs are too sparse
@@ -317,6 +327,10 @@ public:
 
 	// Returns the TeeInfo snapshot object for any TeeInfoID, or 0.
 	const CNetObj_TeeInfo *GetTeeInfo(int TeeInfoID) const;
+
+	// Returns the tuning that applies to any TeeInfoID: its own Tuning object,
+	// else the fallback in m_Tuning (local player, tuning 0, or default).
+	const CTuningParams *GetTuning(int TeeInfoID) const;
 
 	// Appends the TeeInfoID of every Tee with an active Character in the
 	// current snapshot, real clients and bots alike.

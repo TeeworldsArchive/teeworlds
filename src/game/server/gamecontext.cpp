@@ -1726,9 +1726,10 @@ void CGameContext::OnShutdown()
 
 void CGameContext::OnSnap(int ClientID)
 {
-	// Tuning is a singleton snapshot object (item id 0). It changes rarely, so
-	// the delta makes it free in the common case, and demos record it for free.
-	CNetObj_Tuning *pTuning = static_cast<CNetObj_Tuning *>(Server()->SnapNewItem(NETOBJTYPE_TUNING, 0, sizeof(CNetObj_Tuning)));
+	// One Tuning object per snapshot, keyed by the target's TeeInfoID. A server
+	// demo has no target, so it keeps id 0.
+	const int TuningID = ClientID >= 0 ? ClientID : 0;
+	CNetObj_Tuning *pTuning = static_cast<CNetObj_Tuning *>(Server()->SnapNewItem(NETOBJTYPE_TUNING, TuningID, sizeof(CNetObj_Tuning)));
 	if(pTuning)
 		mem_copy(pTuning->m_aTuneParams, &m_Tuning, sizeof(pTuning->m_aTuneParams));
 

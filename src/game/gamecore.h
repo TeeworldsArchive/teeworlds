@@ -214,6 +214,8 @@ class CCharacterCore
 {
 	CWorldCore *m_pWorld;
 	CCollision *m_pCollision;
+	// Per-Tee tuning used by client prediction; 0 means the world's tuning.
+	const CTuningParams *m_pTuning;
 
 public:
 	static const float PHYS_SIZE;
@@ -243,6 +245,10 @@ public:
 	void Reset();
 	void Tick(bool UseInput);
 	void Move();
+
+	// Overrides the world's tuning, which the server and non-predicted cores use.
+	void SetTuning(const CTuningParams *pTuning) { m_pTuning = pTuning; }
+	const CTuningParams *Tuning() const { return m_pTuning ? m_pTuning : &m_pWorld->m_Tuning; }
 
 	void AddDragVelocity();
 	void ResetDragVelocity();

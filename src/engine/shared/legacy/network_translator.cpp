@@ -420,10 +420,20 @@ namespace legacy
 			mem_copy(pTeeInfo->m_aSkinPartColors, pState->m_aSkinPartColors, sizeof(pTeeInfo->m_aSkinPartColors));
 		}
 
-		// Tuning is a singleton snapshot object; prefix copy of the 0.7 values.
+		// 0.7 has one server-wide tuning: attach it to the local Tee, which is
+		// the target these translated snapshots are built for.
 		if(m_TuningValid)
 		{
-			CNetObj_Tuning *pTuning = (CNetObj_Tuning *) Builder.NewItem(NETOBJTYPE_TUNING, 0, sizeof(CNetObj_Tuning));
+			int TuningID = 0;
+			for(int i = 0; i < MAX_CLIENTS7; i++)
+			{
+				if(m_aClients7[i].m_Active && m_aClients7[i].m_Local)
+				{
+					TuningID = i;
+					break;
+				}
+			}
+			CNetObj_Tuning *pTuning = (CNetObj_Tuning *) Builder.NewItem(NETOBJTYPE_TUNING, TuningID, sizeof(CNetObj_Tuning));
 			if(!pTuning)
 				return -1;
 			mem_copy(pTuning->m_aTuneParams, m_aTuneParams7, sizeof(pTuning->m_aTuneParams));
