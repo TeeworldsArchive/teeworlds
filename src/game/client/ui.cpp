@@ -63,6 +63,9 @@ CUI::CUI()
 	m_MouseButtons = 0;
 	m_LastMouseButtons = 0;
 	m_Enabled = true;
+	m_InputBlocked = false;
+
+	m_PageOffset = vec2(0.0f, 0.0f);
 
 	m_HotkeysPressed = 0;
 
@@ -90,10 +93,41 @@ void CUI::Init(class IKernel *pKernel)
 	CUIElementBase::Init(this);
 }
 
+void CUI::SetInputBlocked(bool Blocked)
+{
+	m_InputBlocked = Blocked;
+	if(Blocked)
+	{
+		// drop any input that was captured before the transition started
+		m_MouseButtons = 0;
+		m_LastMouseButtons = 0;
+		m_HotkeysPressed = 0;
+		m_pHotItem = 0;
+		m_pBecommingHotItem = 0;
+		SetActiveItem(0);
+	}
+}
+
+void CUI::SetPageTransform(const vec2 &Offset)
+{
+	m_PageOffset = Offset;
+	const CUIRect *pScreen = Screen();
+
+	// shift the whole UI by Offset without changing its size
+	Graphics()->MapScreen(-m_PageOffset.x, -m_PageOffset.y,
+		-m_PageOffset.x + pScreen->w, -m_PageOffset.y + pScreen->h);
+}
+
+void CUI::ClearPageTransform()
+{
+	m_PageOffset = vec2(0.0f, 0.0f);
+	MapScreen();
+}
+
 void CUI::Update(float MouseX, float MouseY, float MouseWorldX, float MouseWorldY)
 {
 	unsigned MouseButtons = 0;
-	if(Enabled())
+	if(Enabled() && !InputBlocked())
 	{
 		if(Input()->KeyIsPressed(KEY_MOUSE_1))
 			MouseButtons |= 1;
@@ -124,16 +158,18 @@ void CUI::Update(float MouseX, float MouseY, float MouseWorldX, float MouseWorld
 
 bool CUI::KeyPress(int Key) const
 {
-	return Enabled() && Input()->KeyPress(Key);
+	return Enabled() && !InputBlocked() && Input()->KeyPress(Key);
 }
 
 bool CUI::KeyIsPressed(int Key) const
 {
-	return Enabled() && Input()->KeyIsPressed(Key);
+	return Enabled() && !InputBlocked() && Input()->KeyIsPressed(Key);
 }
 
 bool CUI::ConsumeHotkey(unsigned Hotkey)
 {
+	if(InputBlocked())
+		return false;
 	bool Pressed = m_HotkeysPressed & Hotkey;
 	m_HotkeysPressed &= ~Hotkey;
 	return Pressed;
@@ -141,7 +177,7 @@ bool CUI::ConsumeHotkey(unsigned Hotkey)
 
 bool CUI::OnInput(const IInput::CEvent &e)
 {
-	if(!Enabled())
+	if(!Enabled() || InputBlocked())
 		return false;
 
 	CLineInput *pActiveInput = CLineInput::GetActiveInput();
@@ -243,7 +279,9 @@ void CUI::UpdateClipping()
 		const CUIRect *pRect = ClipArea();
 		const float XScale = Graphics()->ScreenWidth() / Screen()->w;
 		const float YScale = Graphics()->ScreenHeight() / Screen()->h;
-		Graphics()->ClipEnable((int) (pRect->x * XScale), (int) (pRect->y * YScale), (int) (pRect->w * XScale), (int) (pRect->h * YScale));
+		const float X = m_PageOffset.x + pRect->x;
+		const float Y = m_PageOffset.y + pRect->y;
+		Graphics()->ClipEnable((int) (X * XScale), (int) (Y * YScale), (int) (pRect->w * XScale), (int) (pRect->h * YScale));
 	}
 	else
 	{
@@ -253,6 +291,9 @@ void CUI::UpdateClipping()
 
 bool CUI::DoButtonLogic(const void *pID, const CUIRect *pRect, int Button)
 {
+	if(InputBlocked())
+		return false;
+
 	// logic
 	bool Clicked = false;
 	static int s_LastButton = -1;
@@ -285,6 +326,9 @@ bool CUI::DoButtonLogic(const void *pID, const CUIRect *pRect, int Button)
 
 bool CUI::DoPickerLogic(const void *pID, const CUIRect *pRect, float *pX, float *pY)
 {
+	if(InputBlocked())
+		return false;
+
 	if(CheckActiveItem(pID))
 	{
 		if(!MouseButton(0))

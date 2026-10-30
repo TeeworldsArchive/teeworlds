@@ -39,6 +39,14 @@
 #include "menus.h"
 #include "skins.h"
 
+// menu transitions that do not move the camera follow the same quick
+// ease-out curve as the camera transitions
+static float MenuTransitionEase(float T)
+{
+	const float U = 1.0f - clamp(T, 0.0f, 1.0f);
+	return 1.0f - U * U * U;
+}
+
 CMenus::CMenus()
 {
 	m_Popup = POPUP_NONE;
@@ -48,6 +56,7 @@ CMenus::CMenus()
 	m_SidebarTab = 0;
 	m_SidebarActive = true;
 	m_ShowServerDetails = true;
+	m_BrowserLocal = false;
 	m_LastBrowserType = -1;
 	m_AddressSelection = 0;
 	for(int Type = 0; Type < IServerBrowser::NUM_TYPES; Type++)
@@ -74,8 +83,23 @@ CMenus::CMenus()
 	m_KeyReaderWasActive = false;
 	m_KeyReaderIsActive = false;
 
-	SetMenuPage(PAGE_START);
+	// Config() and the camera are not available yet during construction, so
+	// this must not go through SetMenuPage()
+	m_MenuPage = PAGE_START;
 	m_MenuPageOld = PAGE_START;
+	m_PendingMenuPage = -1;
+	m_PendingSettingsPage = -1;
+	m_InRender = false;
+
+	m_MenuTransitionActive = false;
+	m_MenuTransitionMode = MENU_TRANSITION_NONE;
+	m_MenuTransitionOldPage = PAGE_START;
+	m_MenuTransitionOldSettings = SETTINGS_GENERAL;
+	m_MenuTransitionNewPage = PAGE_START;
+	m_MenuTransitionNewSettings = SETTINGS_GENERAL;
+	m_MenuTransitionStartView = vec2(0.0f, 0.0f);
+	m_MenuTransitionTargetView = vec2(0.0f, 0.0f);
+	m_MenuTransitionTime = 0.0f;
 
 	m_aDemoLoadingFile[0] = 0;
 	m_DemoLoadingPopupRendered = false;
@@ -535,8 +559,7 @@ void CMenus::RenderMenubar(CUIRect Rect)
 		if(DoButton_MenuTabTop(&s_GeneralButton, Localize("General"), Client()->State() == IClient::STATE_OFFLINE && Config()->m_UiSettingsPage == SETTINGS_GENERAL, &Button,
 			   Config()->m_UiSettingsPage == SETTINGS_GENERAL ? 1.0f : NotActiveAlpha, 1.0f, Corners))
 		{
-			m_pClient->m_pCamera->ChangePosition(CCamera::POS_SETTINGS_GENERAL);
-			Config()->m_UiSettingsPage = SETTINGS_GENERAL;
+			SetSettingsPage(SETTINGS_GENERAL);
 		}
 
 		Box.VSplitLeft(Spacing, 0, &Box); // little space
@@ -546,8 +569,7 @@ void CMenus::RenderMenubar(CUIRect Rect)
 			if(DoButton_MenuTabTop(&s_PlayerButton, Localize("Player"), Client()->State() == IClient::STATE_OFFLINE && Config()->m_UiSettingsPage == SETTINGS_PLAYER, &Button,
 				   Config()->m_UiSettingsPage == SETTINGS_PLAYER ? 1.0f : NotActiveAlpha, 1.0f, Corners))
 			{
-				m_pClient->m_pCamera->ChangePosition(CCamera::POS_SETTINGS_PLAYER);
-				Config()->m_UiSettingsPage = SETTINGS_PLAYER;
+				SetSettingsPage(SETTINGS_PLAYER);
 			}
 		}
 
@@ -557,8 +579,7 @@ void CMenus::RenderMenubar(CUIRect Rect)
 		if(DoButton_MenuTabTop(&s_ControlsButton, Localize("Controls"), Client()->State() == IClient::STATE_OFFLINE && Config()->m_UiSettingsPage == SETTINGS_CONTROLS, &Button,
 			   Config()->m_UiSettingsPage == SETTINGS_CONTROLS ? 1.0f : NotActiveAlpha, 1.0f, Corners))
 		{
-			m_pClient->m_pCamera->ChangePosition(CCamera::POS_SETTINGS_CONTROLS);
-			Config()->m_UiSettingsPage = SETTINGS_CONTROLS;
+			SetSettingsPage(SETTINGS_CONTROLS);
 		}
 
 		Box.VSplitLeft(Spacing, 0, &Box); // little space
@@ -567,8 +588,7 @@ void CMenus::RenderMenubar(CUIRect Rect)
 		if(DoButton_MenuTabTop(&s_GraphicsButton, Localize("Graphics"), Client()->State() == IClient::STATE_OFFLINE && Config()->m_UiSettingsPage == SETTINGS_GRAPHICS, &Button,
 			   Config()->m_UiSettingsPage == SETTINGS_GRAPHICS ? 1.0f : NotActiveAlpha, 1.0f, Corners))
 		{
-			m_pClient->m_pCamera->ChangePosition(CCamera::POS_SETTINGS_GRAPHICS);
-			Config()->m_UiSettingsPage = SETTINGS_GRAPHICS;
+			SetSettingsPage(SETTINGS_GRAPHICS);
 		}
 
 		Box.VSplitLeft(Spacing, 0, &Box); // little space
@@ -577,8 +597,7 @@ void CMenus::RenderMenubar(CUIRect Rect)
 		if(DoButton_MenuTabTop(&s_SoundButton, Localize("Sound"), Client()->State() == IClient::STATE_OFFLINE && Config()->m_UiSettingsPage == SETTINGS_SOUND, &Button,
 			   Config()->m_UiSettingsPage == SETTINGS_SOUND ? 1.0f : NotActiveAlpha, 1.0f, Corners))
 		{
-			m_pClient->m_pCamera->ChangePosition(CCamera::POS_SETTINGS_SOUND);
-			Config()->m_UiSettingsPage = SETTINGS_SOUND;
+			SetSettingsPage(SETTINGS_SOUND);
 		}
 	}
 	else if((Client()->State() == IClient::STATE_OFFLINE && m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_LAN) || (Client()->State() == IClient::STATE_ONLINE && m_GamePage >= PAGE_INTERNET && m_GamePage <= PAGE_LAN))
@@ -603,7 +622,6 @@ void CMenus::RenderMenubar(CUIRect Rect)
 			   m_ActivePage == PAGE_INTERNET ? 1.0f : NotActiveAlpha, 1.0f, Corners) ||
 			CheckHotKey(KEY_G))
 		{
-			m_pClient->m_pCamera->ChangePosition(CCamera::POS_INTERNET);
 			ServerBrowser()->SetType(IServerBrowser::TYPE_INTERNET);
 			NewPage = PAGE_INTERNET;
 			Config()->m_UiBrowserPage = PAGE_INTERNET;
@@ -616,7 +634,6 @@ void CMenus::RenderMenubar(CUIRect Rect)
 			   m_ActivePage == PAGE_LAN ? 1.0f : NotActiveAlpha, 1.0f, Corners) ||
 			CheckHotKey(KEY_L))
 		{
-			m_pClient->m_pCamera->ChangePosition(CCamera::POS_LAN);
 			ServerBrowser()->SetType(IServerBrowser::TYPE_LAN);
 			NewPage = PAGE_LAN;
 			Config()->m_UiBrowserPage = PAGE_LAN;
@@ -1059,8 +1076,120 @@ void CMenus::PopupCountry(int Selection, FPopupButtonCallback pfnOkButtonCallbac
 	m_Popup = POPUP_COUNTRY;
 }
 
+void CMenus::RenderTabbedMenuChrome(CUIRect Screen, CUIRect *pMainView)
+{
+	// do tab bar
+	// the server browser has no title anymore, but keeps the original top
+	// padding so the list does not stick to the screen edge
+	float BarHeight = 60.0f;
+	if(Client()->State() == IClient::STATE_ONLINE && m_GamePage == PAGE_SETTINGS)
+		BarHeight += 3.0f + 25.0f;
+	float VMargin = minimum(Screen.w / 2 - 365.0f, 60.0f);
+
+	CUIRect TabBar, MainView;
+	Screen.VMargin(VMargin, &MainView);
+	MainView.HSplitTop(BarHeight, &TabBar, &MainView);
+	RenderMenubar(TabBar);
+
+	// render top buttons
+	{
+		// quit button
+		CUIRect Button, Row;
+		float TopOffset = 27.0f;
+		Screen.HSplitTop(TopOffset, &Row, 0);
+		Row.VSplitRight(TopOffset /* - 3.0f*/, &Row, &Button);
+		static CButtonContainer s_QuitButton;
+
+		// draw red-blending button
+		vec4 Color = mix(vec4(0.f, 0.f, 0.f, 0.25f), vec4(1.f / 0xff * 0xf9, 1.f / 0xff * 0x2b, 1.f / 0xff * 0x2b, 0.75f), s_QuitButton.GetFade());
+		Button.Draw(Color, 5.0f, CUIRect::CORNER_BL);
+
+		// draw non-blending X
+		UI()->DoLabel(&Button, "✕", Button.h * CUI::ms_FontmodHeight, TEXTALIGN_CENTER);
+		if(UI()->DoButtonLogic(&s_QuitButton, &Button))
+			m_Popup = POPUP_QUIT;
+
+		// settings button
+		if(Client()->State() == IClient::STATE_OFFLINE && (m_MenuPage == PAGE_INTERNET || m_MenuPage == PAGE_LAN || m_MenuPage == PAGE_DEMOS))
+		{
+			Row.VSplitRight(5.0f, &Row, 0);
+			Row.VSplitRight(TopOffset, &Row, &Button);
+			static CButtonContainer s_SettingsButton;
+			if(DoButton_MenuTabTop(&s_SettingsButton, "⚙", false, &Button, 1.0f, 1.0f, CUIRect::CORNER_B))
+			{
+				m_MenuPageOld = m_MenuPage;
+				SetMenuPage(PAGE_SETTINGS);
+			}
+		}
+	}
+
+	*pMainView = MainView;
+}
+
+void CMenus::RenderTabbedMenuBody(CUIRect MainView)
+{
+	if(Client()->State() != IClient::STATE_OFFLINE)
+	{
+		if(m_GamePage == PAGE_GAME)
+			RenderGame(MainView);
+		else if(m_GamePage == PAGE_PLAYERS)
+			RenderPlayers(MainView);
+		else if(m_GamePage == PAGE_SERVER_INFO)
+			RenderServerInfo(MainView);
+		else if(m_GamePage == PAGE_CALLVOTE)
+			RenderServerControl(MainView);
+		else if(m_GamePage == PAGE_SETTINGS)
+			RenderSettings(MainView);
+		else if(m_GamePage == PAGE_INTERNET)
+			RenderServerbrowser(MainView);
+		else if(m_GamePage == PAGE_LAN)
+			RenderServerbrowser(MainView);
+	}
+	else
+	{
+		if(m_MenuPage == PAGE_NEWS)
+			RenderNews(MainView);
+		else if(m_MenuPage == PAGE_INTERNET)
+			RenderServerbrowser(MainView);
+		else if(m_MenuPage == PAGE_LAN)
+			RenderServerbrowser(MainView);
+		else if(m_MenuPage == PAGE_DEMOS)
+			RenderDemoList(MainView);
+		else if(m_MenuPage == PAGE_SETTINGS)
+			RenderSettings(MainView);
+	}
+}
+
+void CMenus::RenderTabbedMenu(CUIRect Screen)
+{
+	CUIRect MainView;
+	RenderTabbedMenuChrome(Screen, &MainView);
+	RenderTabbedMenuBody(MainView);
+}
+
 void CMenus::RenderMenu(CUIRect Screen)
 {
+	m_InRender = true;
+
+	// advance transitions started on an earlier frame before a newly pending
+	// page starts one, so its first frame is still at progress 0
+	UpdateMenuTransition();
+
+	// page switches requested while the last frame was rendered are applied
+	// here, so old and new page can be drawn together for the transition
+	if(m_PendingMenuPage != -1)
+	{
+		const int Page = m_PendingMenuPage;
+		m_PendingMenuPage = -1;
+		ApplyMenuPage(Page);
+	}
+	if(m_PendingSettingsPage != -1)
+	{
+		const int Page = m_PendingSettingsPage;
+		m_PendingSettingsPage = -1;
+		ApplySettingsPage(Page);
+	}
+
 	static int s_InitTick = 5;
 	if(s_InitTick > 0)
 	{
@@ -1099,7 +1228,11 @@ void CMenus::RenderMenu(CUIRect Screen)
 
 	if(m_Popup == POPUP_NONE)
 	{
-		if(m_MenuPage == PAGE_START && Client()->State() == IClient::STATE_OFFLINE)
+		if(m_MenuTransitionActive && Client()->State() == IClient::STATE_OFFLINE)
+		{
+			RenderMenuTransition(Screen);
+		}
+		else if(m_MenuPage == PAGE_START && Client()->State() == IClient::STATE_OFFLINE)
 		{
 			UpdateGalleryFade();
 
@@ -1132,10 +1265,11 @@ void CMenus::RenderMenu(CUIRect Screen)
 			// background map and the gallery button remain
 			if(m_GalleryFade > 0.0f)
 			{
+				const float PreviousAlpha = Graphics()->GetGlobalAlpha();
 				if(m_GalleryFade < 1.0f)
-					Graphics()->SetGlobalAlpha(m_GalleryFade);
+					Graphics()->SetGlobalAlpha(PreviousAlpha * m_GalleryFade);
 				RenderStartMenu(Screen);
-				Graphics()->SetGlobalAlpha(1.0f);
+				Graphics()->SetGlobalAlpha(PreviousAlpha);
 			}
 			RenderGalleryButton(Screen);
 		}
@@ -1144,83 +1278,7 @@ void CMenus::RenderMenu(CUIRect Screen)
 			// leaving the start menu always leaves gallery mode
 			m_GalleryMode = false;
 			m_GalleryFade = 1.0f;
-
-			// do tab bar
-			float BarHeight = 60.0f;
-			if(Client()->State() == IClient::STATE_ONLINE && m_GamePage == PAGE_SETTINGS)
-				BarHeight += 3.0f + 25.0f;
-			else if(Client()->State() == IClient::STATE_ONLINE && m_GamePage >= PAGE_INTERNET && m_GamePage <= PAGE_LAN)
-				BarHeight += 3.0f + 25.0f;
-			float VMargin = minimum(Screen.w / 2 - 365.0f, 60.0f);
-
-			CUIRect TabBar, MainView;
-			Screen.VMargin(VMargin, &MainView);
-			MainView.HSplitTop(BarHeight, &TabBar, &MainView);
-			RenderMenubar(TabBar);
-
-			// render top buttons
-			{
-				// quit button
-				CUIRect Button, Row;
-				float TopOffset = 27.0f;
-				Screen.HSplitTop(TopOffset, &Row, 0);
-				Row.VSplitRight(TopOffset /* - 3.0f*/, &Row, &Button);
-				static CButtonContainer s_QuitButton;
-
-				// draw red-blending button
-				vec4 Color = mix(vec4(0.f, 0.f, 0.f, 0.25f), vec4(1.f / 0xff * 0xf9, 1.f / 0xff * 0x2b, 1.f / 0xff * 0x2b, 0.75f), s_QuitButton.GetFade());
-				Button.Draw(Color, 5.0f, CUIRect::CORNER_BL);
-
-				// draw non-blending X
-				UI()->DoLabel(&Button, "✕", Button.h * CUI::ms_FontmodHeight, TEXTALIGN_CENTER);
-				if(UI()->DoButtonLogic(&s_QuitButton, &Button))
-					m_Popup = POPUP_QUIT;
-
-				// settings button
-				if(Client()->State() == IClient::STATE_OFFLINE && (m_MenuPage == PAGE_INTERNET || m_MenuPage == PAGE_LAN || m_MenuPage == PAGE_DEMOS))
-				{
-					Row.VSplitRight(5.0f, &Row, 0);
-					Row.VSplitRight(TopOffset, &Row, &Button);
-					static CButtonContainer s_SettingsButton;
-					if(DoButton_MenuTabTop(&s_SettingsButton, "⚙", false, &Button, 1.0f, 1.0f, CUIRect::CORNER_B))
-					{
-						m_MenuPageOld = m_MenuPage;
-						m_MenuPage = PAGE_SETTINGS;
-					}
-				}
-			}
-
-			// render current page
-			if(Client()->State() != IClient::STATE_OFFLINE)
-			{
-				if(m_GamePage == PAGE_GAME)
-					RenderGame(MainView);
-				else if(m_GamePage == PAGE_PLAYERS)
-					RenderPlayers(MainView);
-				else if(m_GamePage == PAGE_SERVER_INFO)
-					RenderServerInfo(MainView);
-				else if(m_GamePage == PAGE_CALLVOTE)
-					RenderServerControl(MainView);
-				else if(m_GamePage == PAGE_SETTINGS)
-					RenderSettings(MainView);
-				else if(m_GamePage == PAGE_INTERNET)
-					RenderServerbrowser(MainView);
-				else if(m_GamePage == PAGE_LAN)
-					RenderServerbrowser(MainView);
-			}
-			else
-			{
-				if(m_MenuPage == PAGE_NEWS)
-					RenderNews(MainView);
-				else if(m_MenuPage == PAGE_INTERNET)
-					RenderServerbrowser(MainView);
-				else if(m_MenuPage == PAGE_LAN)
-					RenderServerbrowser(MainView);
-				else if(m_MenuPage == PAGE_DEMOS)
-					RenderDemoList(MainView);
-				else if(m_MenuPage == PAGE_SETTINGS)
-					RenderSettings(MainView);
-			}
+			RenderTabbedMenu(Screen);
 		}
 
 		UI()->RenderPopupMenus();
@@ -1737,6 +1795,8 @@ void CMenus::RenderMenu(CUIRect Screen)
 		if(m_Popup == POPUP_NONE)
 			UI()->SetActiveItem(0);
 	}
+
+	m_InRender = false;
 }
 
 void CMenus::SetActive(bool Active)
@@ -1851,6 +1911,12 @@ void CMenus::OnShutdown()
 
 void CMenus::OnStateChange(int NewState, int OldState)
 {
+	// a state change cuts any pending menu page switch short
+	if(m_MenuTransitionActive)
+		EndMenuTransition();
+	m_PendingMenuPage = -1;
+	m_PendingSettingsPage = -1;
+
 	// reset active item
 	UI()->SetActiveItem(0);
 
@@ -2028,7 +2094,31 @@ void CMenus::SetMenuPage(int NewPage)
 	if(NewPage == m_MenuPage)
 		return;
 
+	// applying the page straight away would draw half a frame with the new
+	// state; wait until the next frame instead
+	if(m_InRender)
+	{
+		m_PendingMenuPage = NewPage;
+		return;
+	}
+
+	ApplyMenuPage(NewPage);
+}
+
+void CMenus::ApplyMenuPage(int NewPage)
+{
+	if(NewPage == m_MenuPage)
+		return;
+
+	const int OldPage = m_MenuPage;
+	const int OldSettingsPage = Config()->m_UiSettingsPage;
 	m_MenuPage = NewPage;
+
+	// the browser page and the browser type are two views of the same list
+	if(m_MenuPage == PAGE_INTERNET)
+		ServerBrowser()->SetType(IServerBrowser::TYPE_INTERNET);
+	else if(m_MenuPage == PAGE_LAN)
+		ServerBrowser()->SetType(IServerBrowser::TYPE_LAN);
 
 	// leaving the start menu always leaves gallery mode
 	if(m_MenuPage != PAGE_START)
@@ -2037,20 +2127,322 @@ void CMenus::SetMenuPage(int NewPage)
 		m_GalleryFade = 1.0f;
 	}
 
-	// update camera position
+	// the global and the local server list are two views of the same page at
+	// the same camera view point, so switching between them must not animate
+	const bool OldIsBrowser = OldPage == PAGE_INTERNET || OldPage == PAGE_LAN;
+	const bool NewIsBrowser = NewPage == PAGE_INTERNET || NewPage == PAGE_LAN;
+	if(OldIsBrowser && NewIsBrowser)
+	{
+		// a running transition already draws this page, only retarget it
+		if(m_MenuTransitionActive)
+			m_MenuTransitionNewPage = NewPage;
+		return;
+	}
+
+	const bool OldIsSettings = OldPage == PAGE_SETTINGS;
+	const bool NewIsSettings = NewPage == PAGE_SETTINGS;
+
+	int TransitionMode = MENU_TRANSITION_CAMERA;
+	if(OldIsSettings || NewIsSettings)
+	{
+		// settings are an overlay: the camera keeps looking at the page below
+		TransitionMode = MENU_TRANSITION_FADE;
+		if(NewIsSettings)
+			m_MenuPageOld = OldPage;
+	}
+
+	if(TransitionMode == MENU_TRANSITION_CAMERA)
 	{
 		int CameraPos = -1;
-
 		switch(m_MenuPage)
 		{
 			case PAGE_START: CameraPos = CCamera::POS_START; break;
 			case PAGE_DEMOS: CameraPos = CCamera::POS_DEMOS; break;
-			case PAGE_SETTINGS: CameraPos = CCamera::POS_SETTINGS_GENERAL + Config()->m_UiSettingsPage; break;
-			case PAGE_INTERNET: CameraPos = CCamera::POS_INTERNET; break;
-			case PAGE_LAN: CameraPos = CCamera::POS_LAN;
+			case PAGE_INTERNET:
+			case PAGE_LAN: CameraPos = CCamera::POS_SERVERS; break;
 		}
 
 		if(CameraPos != -1 && m_pClient && m_pClient->m_pCamera)
 			m_pClient->m_pCamera->ChangePosition(CameraPos);
 	}
+
+	StartMenuTransition(OldPage, OldSettingsPage, m_MenuPage, Config()->m_UiSettingsPage, TransitionMode);
+}
+
+void CMenus::SetSettingsPage(int NewPage)
+{
+	if(NewPage == Config()->m_UiSettingsPage)
+		return;
+
+	if(m_InRender)
+	{
+		m_PendingSettingsPage = NewPage;
+		return;
+	}
+
+	ApplySettingsPage(NewPage);
+}
+
+void CMenus::ApplySettingsPage(int NewPage)
+{
+	if(NewPage == Config()->m_UiSettingsPage)
+		return;
+
+	const int OldSettingsPage = Config()->m_UiSettingsPage;
+	Config()->m_UiSettingsPage = NewPage;
+
+	// settings pages never move the camera; the body of the page slides
+	StartMenuTransition(m_MenuPage, OldSettingsPage, m_MenuPage, NewPage, MENU_TRANSITION_SETTINGS);
+}
+
+void CMenus::StartMenuTransition(int OldPage, int OldSettings, int NewPage, int NewSettings, int Mode)
+{
+	if(m_MenuTransitionActive)
+		EndMenuTransition();
+
+	if(OldPage == NewPage && OldSettings == NewSettings)
+		return;
+	if(Client()->State() != IClient::STATE_OFFLINE || m_Popup != POPUP_NONE)
+		return;
+	if(!m_pClient || !m_pClient->m_pCamera || !m_pClient->m_InitComplete)
+		return;
+	if(Mode == MENU_TRANSITION_CAMERA && !m_pClient->m_pCamera->IsMenuTransitionActive())
+		return;
+
+	if(Mode == MENU_TRANSITION_CAMERA)
+	{
+		// the pages stay pinned to the camera view points they belong to. The
+		// camera itself supplies the movement, the cross-fade only changes alpha.
+		m_MenuTransitionStartView = *m_pClient->m_pCamera->GetCenter();
+		m_MenuTransitionTargetView = m_pClient->m_pCamera->GetMenuTransitionTarget();
+	}
+	else
+	{
+		// overlay/list transitions keep the camera where it is and use their
+		// own timer instead
+		m_MenuTransitionStartView = vec2(0.0f, 0.0f);
+		m_MenuTransitionTargetView = vec2(0.0f, 0.0f);
+		m_MenuTransitionTime = 0.0f;
+	}
+
+	m_MenuTransitionMode = Mode;
+	m_MenuTransitionOldPage = OldPage;
+	m_MenuTransitionOldSettings = OldSettings;
+	m_MenuTransitionNewPage = NewPage;
+	m_MenuTransitionNewSettings = NewSettings;
+	m_MenuTransitionActive = true;
+
+	UI()->SetInputBlocked(true);
+}
+
+float CMenus::MenuTransitionProgress() const
+{
+	if(m_MenuTransitionMode == MENU_TRANSITION_CAMERA && m_pClient && m_pClient->m_pCamera)
+		return m_pClient->m_pCamera->GetMenuTransitionProgress();
+	return MenuTransitionEase(m_MenuTransitionTime);
+}
+
+void CMenus::UpdateMenuTransition()
+{
+	if(!m_MenuTransitionActive)
+		return;
+
+	if(m_Popup != POPUP_NONE || Client()->State() != IClient::STATE_OFFLINE ||
+		!m_pClient || !m_pClient->m_pCamera)
+	{
+		EndMenuTransition();
+		return;
+	}
+
+	if(m_MenuTransitionMode == MENU_TRANSITION_CAMERA)
+	{
+		if(!m_pClient->m_pCamera->IsMenuTransitionActive())
+			EndMenuTransition();
+	}
+	else
+	{
+		// fades and slides do not wait for the camera. The transition is ended
+		// after its last frame was drawn, so progress 1 is rendered as well.
+		const float Rate = (float) Config()->m_ClCameraSpeed / 1.5f;
+		m_MenuTransitionTime = minimum(1.0f, m_MenuTransitionTime + Client()->RenderFrameTime() * Rate);
+	}
+}
+
+void CMenus::EndMenuTransition()
+{
+	m_MenuTransitionActive = false;
+	m_MenuTransitionMode = MENU_TRANSITION_NONE;
+	m_MenuTransitionTime = 0.0f;
+	UI()->SetInputBlocked(false);
+	UI()->ClearPageTransform();
+	Graphics()->SetGlobalAlpha(1.0f);
+}
+
+void CMenus::RenderMenuTransitionPass(float Alpha, const vec2 &Offset)
+{
+	if(Alpha <= 0.001f)
+		return;
+
+	Graphics()->SetGlobalAlpha(Alpha);
+	UI()->SetPageTransform(Offset);
+}
+
+void CMenus::RenderMenuFrame(CUIRect Screen, int MenuPage, int SettingsPage)
+{
+	const int SavedMenuPage = m_MenuPage;
+	const int SavedSettingsPage = Config()->m_UiSettingsPage;
+	const int SavedActivePage = m_ActivePage;
+	const int SavedBrowserType = ServerBrowser()->GetType();
+
+	m_MenuPage = MenuPage;
+	Config()->m_UiSettingsPage = SettingsPage;
+	if(MenuPage == PAGE_INTERNET)
+		ServerBrowser()->SetType(IServerBrowser::TYPE_INTERNET);
+	else if(MenuPage == PAGE_LAN)
+		ServerBrowser()->SetType(IServerBrowser::TYPE_LAN);
+
+	if(MenuPage == PAGE_START)
+	{
+		UpdateGalleryFade();
+
+		// gallery mode: keep the view inside the game layer of the menu map
+		if(m_GalleryMode)
+		{
+			vec2 MapMin, MapMax;
+			if(m_pClient->m_pMapComponent->LayersBackground()->GetMenuMapGameBounds(&MapMin, &MapMax))
+			{
+				float aPoints[4];
+				RenderTools()->MapScreenToWorld(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+					Graphics()->ScreenAspect(), m_pClient->m_pCamera->GetZoom(), aPoints);
+				const vec2 ViewSize = vec2(aPoints[2] - aPoints[0], aPoints[3] - aPoints[1]);
+				const vec2 MapCenter = (MapMin + MapMax) * 0.5f;
+				const bool SmallX = MapMax.x - MapMin.x <= ViewSize.x;
+				const bool SmallY = MapMax.y - MapMin.y <= ViewSize.y;
+				const vec2 CenterMin = vec2(
+					SmallX ? MapCenter.x : MapMin.x + ViewSize.x * 0.5f,
+					SmallY ? MapCenter.y : MapMin.y + ViewSize.y * 0.5f);
+				const vec2 CenterMax = vec2(
+					SmallX ? MapCenter.x : MapMax.x - ViewSize.x * 0.5f,
+					SmallY ? MapCenter.y : MapMax.y - ViewSize.y * 0.5f);
+				m_pClient->m_pCamera->SetMenuPanBounds(CenterMin, CenterMax);
+			}
+			else
+				m_pClient->m_pCamera->ClearMenuPanBounds();
+		}
+
+		if(m_GalleryFade > 0.0f)
+		{
+			const float PreviousAlpha = Graphics()->GetGlobalAlpha();
+			if(m_GalleryFade < 1.0f)
+				Graphics()->SetGlobalAlpha(PreviousAlpha * m_GalleryFade);
+			RenderStartMenu(Screen);
+			Graphics()->SetGlobalAlpha(PreviousAlpha);
+		}
+		RenderGalleryButton(Screen);
+	}
+	else
+	{
+		RenderTabbedMenu(Screen);
+	}
+
+	m_MenuPage = SavedMenuPage;
+	Config()->m_UiSettingsPage = SavedSettingsPage;
+	m_ActivePage = SavedActivePage;
+	ServerBrowser()->SetType(SavedBrowserType);
+}
+
+void CMenus::RenderMenuTransition(CUIRect Screen)
+{
+	const float Progress = MenuTransitionProgress();
+
+	const int OldPage = m_MenuTransitionOldPage;
+	const int OldSettings = m_MenuTransitionOldSettings;
+	const int NewPage = m_MenuTransitionNewPage;
+	const int NewSettings = m_MenuTransitionNewSettings;
+
+	UI()->SetInputBlocked(true);
+
+	if(m_MenuTransitionMode == MENU_TRANSITION_CAMERA)
+	{
+		// convert a camera view point into the screen offset that keeps a menu
+		// page nailed to it while the camera flies between the pages
+		float aPoints[4];
+		RenderTools()->MapScreenToWorld(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+			Graphics()->ScreenAspect(), m_pClient->m_pCamera->GetZoom(), aPoints);
+		const float ViewHeight = maximum(aPoints[3] - aPoints[1], 1.0f);
+		const float UiPerWorld = UI()->Screen()->h / ViewHeight;
+		const vec2 ViewCenter = *m_pClient->m_pCamera->GetCenter();
+
+		const vec2 OldOffset(
+			(m_MenuTransitionStartView.x - ViewCenter.x) * UiPerWorld,
+			-(m_MenuTransitionStartView.y - ViewCenter.y) * UiPerWorld);
+		const vec2 NewOffset(
+			(m_MenuTransitionTargetView.x - ViewCenter.x) * UiPerWorld,
+			-(m_MenuTransitionTargetView.y - ViewCenter.y) * UiPerWorld);
+
+		if(1.0f - Progress > 0.001f)
+		{
+			RenderMenuTransitionPass(1.0f - Progress, OldOffset);
+			RenderMenuFrame(Screen, OldPage, OldSettings);
+		}
+		if(Progress > 0.001f)
+		{
+			RenderMenuTransitionPass(Progress, NewOffset);
+			RenderMenuFrame(Screen, NewPage, NewSettings);
+		}
+	}
+	else if(m_MenuTransitionMode == MENU_TRANSITION_FADE)
+	{
+		// settings overlay: neither page moves, the camera stays where it is
+		if(1.0f - Progress > 0.001f)
+		{
+			RenderMenuTransitionPass(1.0f - Progress, vec2(0.0f, 0.0f));
+			RenderMenuFrame(Screen, OldPage, OldSettings);
+		}
+		if(Progress > 0.001f)
+		{
+			RenderMenuTransitionPass(Progress, vec2(0.0f, 0.0f));
+			RenderMenuFrame(Screen, NewPage, NewSettings);
+		}
+	}
+	else if(m_MenuTransitionMode == MENU_TRANSITION_SETTINGS)
+	{
+		// the settings frame stays, only the page body slides sideways
+		const int SavedMenuPage = m_MenuPage;
+		const int SavedSettingsPage = Config()->m_UiSettingsPage;
+		const int SavedActivePage = m_ActivePage;
+
+		m_MenuPage = NewPage;
+		Config()->m_UiSettingsPage = NewSettings;
+
+		CUIRect MainView;
+		RenderTabbedMenuChrome(Screen, &MainView);
+
+		const float SlideDistance = Screen.w * 0.16f;
+		const bool Forward = NewSettings > OldSettings;
+		const vec2 OldOffset(Forward ? -SlideDistance * Progress : SlideDistance * Progress, 0.0f);
+		const vec2 NewOffset(Forward ? SlideDistance * (1.0f - Progress) : -SlideDistance * (1.0f - Progress), 0.0f);
+
+		if(1.0f - Progress > 0.001f)
+		{
+			RenderMenuTransitionPass(1.0f - Progress, OldOffset);
+			Config()->m_UiSettingsPage = OldSettings;
+			RenderTabbedMenuBody(MainView);
+		}
+		if(Progress > 0.001f)
+		{
+			RenderMenuTransitionPass(Progress, NewOffset);
+			Config()->m_UiSettingsPage = NewSettings;
+			RenderTabbedMenuBody(MainView);
+		}
+
+		m_MenuPage = SavedMenuPage;
+		Config()->m_UiSettingsPage = SavedSettingsPage;
+		m_ActivePage = SavedActivePage;
+	}
+	UI()->ClearPageTransform();
+	Graphics()->SetGlobalAlpha(1.0f);
+
+	if(m_MenuTransitionMode != MENU_TRANSITION_CAMERA && m_MenuTransitionTime >= 1.0f)
+		EndMenuTransition();
 }

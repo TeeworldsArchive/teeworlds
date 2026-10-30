@@ -26,14 +26,9 @@ public:
 	enum
 	{
 		POS_START = 0,
-		POS_INTERNET,
-		POS_LAN,
+		// shared by the global and local server list pages
+		POS_SERVERS,
 		POS_DEMOS,
-		POS_SETTINGS_GENERAL, // order here should be the same like enum for settings pages in menu
-		POS_SETTINGS_PLAYER,
-		POS_SETTINGS_CONTROLS,
-		POS_SETTINGS_GRAPHICS,
-		POS_SETTINGS_SOUND,
 
 		NUM_POS,
 	};
@@ -50,6 +45,13 @@ public:
 
 	void ChangePosition(int PositionNumber);
 	int GetCurrentPosition() const { return m_CurrentPosition; }
+
+	// menu camera position transition, so the menu page can follow the same
+	// movement while it fades between pages
+	bool IsMenuTransitionActive() const { return m_MenuTransitionActive; }
+	float GetMenuTransitionProgress() const;
+	vec2 GetMenuTransitionStart() const { return m_AnimationStartPos; }
+	vec2 GetMenuTransitionTarget() const { return m_AnimationTarget; }
 
 	// gallery mode: offset the menu camera by a free pan the player dragged
 	void PanMenu(const vec2 &Delta)
@@ -131,6 +133,8 @@ private:
 	vec2 m_Positions[NUM_POS];
 	int m_CurrentPosition;
 	vec2 m_AnimationStartPos;
+	vec2 m_AnimationTarget;
+	bool m_MenuTransitionActive;
 	float m_MoveTime;
 };
 

@@ -138,6 +138,10 @@ class CUI
 	};
 
 	bool m_Enabled;
+	bool m_InputBlocked;
+
+	// optional screen space translation used while a menu page transitions
+	vec2 m_PageOffset;
 
 	const void *m_pHotItem;
 	const void *m_pActiveItem;
@@ -219,7 +223,13 @@ public:
 
 	void SetEnabled(bool Enabled) { m_Enabled = Enabled; }
 	bool Enabled() const { return m_Enabled; }
+	void SetInputBlocked(bool Blocked);
+	bool InputBlocked() const { return m_InputBlocked; }
 	void Update(float MouseX, float MouseY, float MouseWorldX, float MouseWorldY);
+
+	// move everything drawn until ClearPageTransform() is called
+	void SetPageTransform(const vec2 &Offset);
+	void ClearPageTransform();
 
 	float MouseX() const { return m_MouseX; }
 	float MouseY() const { return m_MouseY; }

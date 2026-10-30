@@ -12,6 +12,14 @@
 #include "controls.h"
 #include "map.h"
 
+// menu camera displacement curve: picks up speed immediately and settles
+// softly instead of the symmetric ease-in/ease-out that felt stiff
+static float MenuTransitionEase(float T)
+{
+	const float U = 1.0f - clamp(T, 0.0f, 1.0f);
+	return 1.0f - U * U * U;
+}
+
 CCamera::CCamera()
 {
 	m_CamType = CAMTYPE_UNDEFINED;
@@ -44,17 +52,15 @@ CCamera::CCamera()
 
 	m_Zoom = 0.7f;
 
+	// main row: main menu, server list and demos from left to right. The
+	// settings pages are an overlay and do not own a camera position.
 	m_Positions[POS_START] = vec2(500.0f, 500.0f);
-	m_Positions[POS_INTERNET] = vec2(1000.0f, 1000.0f);
-	m_Positions[POS_LAN] = vec2(1100.0f, 1000.0f);
+	m_Positions[POS_SERVERS] = vec2(1000.0f, 500.0f);
 	m_Positions[POS_DEMOS] = vec2(1500.0f, 500.0f);
-	m_Positions[POS_SETTINGS_GENERAL] = vec2(500.0f, 1000.0f);
-	m_Positions[POS_SETTINGS_PLAYER] = vec2(600.0f, 1000.0f);
-	m_Positions[POS_SETTINGS_CONTROLS] = vec2(800.0f, 1000.0f);
-	m_Positions[POS_SETTINGS_GRAPHICS] = vec2(900.0f, 1000.0f);
-	m_Positions[POS_SETTINGS_SOUND] = vec2(1000.0f, 1000.0f);
 
 	m_CurrentPosition = -1;
+	m_AnimationTarget = vec2(0.0f, 0.0f);
+	m_MenuTransitionActive = false;
 	m_MoveTime = 0.0f;
 }
 
@@ -197,7 +203,21 @@ void CCamera::OnRender()
 		// and the position animation always work with the un-panned center
 		const vec2 BaseCenter = m_Center - m_MenuPan;
 
-		if(distance(BaseCenter, m_RotationCenter) <= (float) Config()->m_ClRotationRadius + 0.5f)
+		if(m_MenuTransitionActive)
+		{
+			// fly from the old view point to the new one on a quick ease-out
+			// curve; the menu page follows this same progress
+			m_MoveTime = minimum(1.0f, m_MoveTime + Client()->RenderFrameTime() * Config()->m_ClCameraSpeed / 1.5f);
+			m_Center = mix(m_AnimationStartPos, m_AnimationTarget, MenuTransitionEase(m_MoveTime));
+			if(m_MoveTime >= 1.0f)
+			{
+				m_MenuTransitionActive = false;
+				const vec2 Dir = m_Center - m_RotationCenter;
+				if(length(Dir) > 0.001f)
+					s_Dir = normalize(Dir);
+			}
+		}
+		else if(distance(BaseCenter, m_RotationCenter) <= (float) Config()->m_ClRotationRadius + 0.5f)
 		{
 			// do little rotation
 			float RotPerTick = 360.0f / (float) Config()->m_ClRotationSpeed * Client()->RenderFrameTime();
@@ -206,17 +226,14 @@ void CCamera::OnRender()
 		}
 		else
 		{
-			// positions for the animation
-			s_Dir = normalize(m_AnimationStartPos - m_RotationCenter);
-			vec2 TargetPos = m_RotationCenter + s_Dir * (float) Config()->m_ClRotationRadius;
-			float Distance = distance(m_AnimationStartPos, TargetPos);
-
-			// move time
-			m_MoveTime += Client()->RenderFrameTime() * Config()->m_ClCameraSpeed / 10.0f;
-			float XVal = 1 - m_MoveTime;
-			XVal = pow(XVal, 7.0f);
-
-			m_Center = TargetPos + s_Dir * (XVal * Distance);
+			// the menu camera is outside its rotation circle (e.g. after a game),
+			// fly back in on the same smooth path
+			m_AnimationStartPos = BaseCenter;
+			vec2 Dir = m_AnimationStartPos - m_RotationCenter;
+			Dir = length(Dir) > 0.001f ? normalize(Dir) : vec2(1.0f, 0.0f);
+			m_AnimationTarget = m_RotationCenter + Dir * (float) Config()->m_ClRotationRadius;
+			m_MoveTime = 0.0f;
+			m_MenuTransitionActive = true;
 		}
 
 		// ease the gallery pan back to the menu origin once gallery mode is left
@@ -253,8 +270,21 @@ void CCamera::ChangePosition(int PositionNumber)
 
 	m_AnimationStartPos = m_Center - m_MenuPan;
 	m_RotationCenter = m_Positions[PositionNumber];
+
+	// end on the rotation circle around the new view point, in the direction
+	// we are coming from, so the idle rotation continues without a jump
+	vec2 Dir = m_AnimationStartPos - m_RotationCenter;
+	Dir = length(Dir) > 0.001f ? normalize(Dir) : vec2(1.0f, 0.0f);
+	m_AnimationTarget = m_RotationCenter + Dir * (float) Config()->m_ClRotationRadius;
+
 	m_CurrentPosition = PositionNumber;
 	m_MoveTime = 0.0f;
+	m_MenuTransitionActive = true;
+}
+
+float CCamera::GetMenuTransitionProgress() const
+{
+	return MenuTransitionEase(m_MoveTime);
 }
 
 void CCamera::ConSetPosition(IConsole::IResult *pResult, void *pUserData)
@@ -276,6 +306,8 @@ void CCamera::OnConsoleInit()
 
 void CCamera::OnStateChange(int NewState, int OldState)
 {
+	m_MenuTransitionActive = false;
+
 	if(OldState == IClient::STATE_OFFLINE)
 	{
 		m_MenuCenter = m_Center;

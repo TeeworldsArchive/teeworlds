@@ -101,6 +101,12 @@ private:
 		ACTLB_NONE = 0,
 		ACTLB_LANG,
 		ACTLB_THEME,
+
+		// how the current page switch is animated
+		MENU_TRANSITION_NONE = 0,
+		MENU_TRANSITION_CAMERA, // camera flies, pages stay pinned to the views
+		MENU_TRANSITION_FADE, // settings overlay, no camera movement
+		MENU_TRANSITION_SETTINGS, // settings tab switch, body slides
 	};
 
 	int m_GamePage;
@@ -108,6 +114,25 @@ private:
 	int m_ActivePage;
 	int m_MenuPage;
 	int m_MenuPageOld;
+	// page switches requested while a frame is being rendered are applied at
+	// the start of the next frame, so old and new page can be drawn together
+	int m_PendingMenuPage;
+	int m_PendingSettingsPage;
+	bool m_InRender;
+
+	// menu page cross-fade that follows the menu camera position transition
+	bool m_MenuTransitionActive;
+	int m_MenuTransitionMode;
+	int m_MenuTransitionOldPage;
+	int m_MenuTransitionOldSettings;
+	int m_MenuTransitionNewPage;
+	int m_MenuTransitionNewSettings;
+	// camera view points the old and new page stay pinned to while the
+	// camera flies between them
+	vec2 m_MenuTransitionStartView;
+	vec2 m_MenuTransitionTargetView;
+	// progress of transitions that are not driven by the camera
+	float m_MenuTransitionTime;
 	bool m_MenuActive;
 	bool m_GalleryMode;
 	bool m_GalleryDragging;
@@ -482,6 +507,8 @@ private:
 	int m_SidebarTab;
 	bool m_SidebarActive;
 	bool m_ShowServerDetails;
+	// show the local (LAN) server list instead of the internet list
+	bool m_BrowserLocal;
 	int m_LastBrowserType; // -1 if not initialized
 	int m_aSelectedFilters[IServerBrowser::NUM_TYPES]; // -1 if none selected, -2 if not initialized
 	int m_aSelectedServers[IServerBrowser::NUM_TYPES]; // -1 if none selected
@@ -572,6 +599,9 @@ private:
 
 	// found in menus_browser.cpp
 	void RenderServerbrowserServerList(CUIRect View);
+	void RenderServerbrowserServerListFrame(CUIRect View, CUIRect *pContent, CUIRect *pStatus);
+	void RenderServerbrowserServerListBody(CUIRect View);
+	void RenderServerbrowserServerListStatus(CUIRect Status);
 	void RenderServerbrowserSidebar(CUIRect View);
 	void RenderServerbrowserFriendTab(CUIRect View);
 	void PopupConfirmRemoveFriend();
@@ -643,6 +673,20 @@ private:
 	int m_LoadTotal;
 
 	void SetMenuPage(int NewPage);
+	void ApplyMenuPage(int NewPage);
+	void SetSettingsPage(int NewPage);
+	void ApplySettingsPage(int NewPage);
+
+	void StartMenuTransition(int OldPage, int OldSettings, int NewPage, int NewSettings, int Mode);
+	float MenuTransitionProgress() const;
+	void UpdateMenuTransition();
+	void EndMenuTransition();
+	void RenderMenuTransition(CUIRect Screen);
+	void RenderMenuTransitionPass(float Alpha, const vec2 &Offset);
+	void RenderMenuFrame(CUIRect Screen, int MenuPage, int SettingsPage);
+	void RenderTabbedMenu(CUIRect Screen);
+	void RenderTabbedMenuChrome(CUIRect Screen, CUIRect *pMainView);
+	void RenderTabbedMenuBody(CUIRect MainView);
 
 	bool CheckHotKey(int Key) const;
 
