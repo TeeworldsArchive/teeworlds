@@ -1619,7 +1619,7 @@ int CMenus::DoAudioDevicesList(CUIRect *pRect, CListBox *pListBox, const array<C
 
 void CMenus::RenderSettingsGraphics(CUIRect MainView)
 {
-	static const int s_GfxFsaaSamples = Config()->m_GfxFsaaSamples;
+	static int s_GfxFsaaSamples = Config()->m_GfxFsaaSamples;
 	static const int s_GfxBackend = Config()->m_GfxBackend;
 	static const int s_GfxTextureQuality = Config()->m_GfxTextureQuality;
 	static int s_GfxScreenWidth = Config()->m_GfxScreenWidth;
@@ -1711,18 +1711,31 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Anti Aliasing"));
 		UI()->DoLabel(&Text, aBuf, Text.h * CUI::ms_FontmodHeight * 0.8f, TEXTALIGN_ML);
 
+		// only offer sample counts the active backend can actually create
+		int MaxFsaaSamples = 0;
+		for(int Samples = 2; Samples <= Graphics()->MaxFsaaSamples(); Samples *= 2)
+			MaxFsaaSamples = Samples;
+		int FsaaSamples = 0;
+		for(int Samples = 2; Samples <= MaxFsaaSamples && Samples <= Config()->m_GfxFsaaSamples; Samples *= 2)
+			FsaaSamples = Samples;
+
 		Button.VSplitLeft(70.0f, &Button, 0);
-		str_format(aBuf, sizeof(aBuf), "%dx", Config()->m_GfxFsaaSamples);
+		str_format(aBuf, sizeof(aBuf), "%dx", FsaaSamples);
 		static CButtonContainer s_ButtonGfxFsaaSamples;
 		if(DoButton_Menu(&s_ButtonGfxFsaaSamples, aBuf, 0, &Button))
 		{
-			if(!Config()->m_GfxFsaaSamples)
-				Config()->m_GfxFsaaSamples = 2;
-			else if(Config()->m_GfxFsaaSamples == 16)
+			if(FsaaSamples < 2)
+				Config()->m_GfxFsaaSamples = MaxFsaaSamples >= 2 ? 2 : 0;
+			else if(FsaaSamples >= MaxFsaaSamples)
 				Config()->m_GfxFsaaSamples = 0;
 			else
-				Config()->m_GfxFsaaSamples *= 2;
-			m_CheckVideoSettings = true;
+				Config()->m_GfxFsaaSamples = minimum(FsaaSamples * 2, MaxFsaaSamples);
+
+			// SDL_GPU can switch at runtime, other backends need a restart
+			if(Graphics()->SetFsaaSamples(Config()->m_GfxFsaaSamples))
+				s_GfxFsaaSamples = Config()->m_GfxFsaaSamples;
+			else
+				m_CheckVideoSettings = true;
 		}
 	}
 

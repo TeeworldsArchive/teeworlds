@@ -371,6 +371,12 @@ public:
 	// largest texture the device supports, reported by the backend after init
 	virtual int MaxTextureSize() const = 0;
 
+	// maximum supported MSAA sample count, 1 means no MSAA
+	virtual int MaxFsaaSamples() const = 0;
+
+	// switches MSAA at runtime, returns false if the backend needs a restart
+	virtual bool SetFsaaSamples(int) { return false; }
+
 	// time the render thread spent processing command buffers, in time_get() units
 	virtual int64 TakeRenderThreadTime() { return 0; }
 
@@ -486,6 +492,8 @@ public:
 
 	virtual int MemoryUsage() const override;
 	virtual int MaxTextureSize() const override;
+	virtual int MaxFsaaSamples() const override;
+	virtual bool SetFsaaSamples(int Samples) override;
 	virtual int TakeRenderCommandCount() override;
 	virtual int TakeRenderedFrameCount() override;
 	virtual int64 TakeRenderThreadTime() override;

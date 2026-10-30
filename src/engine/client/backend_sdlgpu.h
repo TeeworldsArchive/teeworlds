@@ -30,6 +30,7 @@ public:
 	{
 		CMD_INIT = CCommandBuffer::CMDGROUP_PLATFORM_SDLGPU,
 		CMD_GPU_SHUTDOWN,
+		CMD_SET_FSAA,
 	};
 
 	struct CInitCommand : public CCommandBuffer::CCommand
@@ -54,6 +55,13 @@ public:
 	{
 		CShutdownCommand() :
 			CCommand(CMD_GPU_SHUTDOWN) {}
+	};
+
+	struct CSetFsaaCommand : public CCommandBuffer::CCommand
+	{
+		CSetFsaaCommand() :
+			CCommand(CMD_SET_FSAA) {}
+		int m_FsaaSamples;
 	};
 
 	// pipeline variants: primitive type x blend mode
@@ -122,6 +130,12 @@ private:
 	SDL_GPUTextureFormat m_FrameFormat;
 	SDL_GPUPresentMode m_PresentMode;
 
+	// active FSAA sample count and the matching SDL_GPU enum
+	int m_FsaaSamples;
+	SDL_GPUSampleCount m_SampleCount;
+	// sample count requested this frame, applied after the swap
+	int m_PendingFsaaSamples;
+
 	CTexture m_aTextures[CCommandBuffer::MAX_TEXTURES];
 	SDL_GPUSampler *m_aaSamplers[NUM_BASIC_SAMPLERS][NUM_WRAP_SAMPLERS];
 	// tile data is read with texelFetch, so it uses exact (nearest) sampling
@@ -130,7 +144,10 @@ private:
 	// current frame state
 	SDL_GPUCommandBuffer *m_pCommandBuffer;
 	SDL_GPUFence *m_pFrameFence;
+	// single sample texture that receives the resolved frame
 	SDL_GPUTexture *m_pFrameTexture;
+	// multisample render target, only created when FSAA is active
+	SDL_GPUTexture *m_pMSAATexture;
 	int m_FrameTextureWidth;
 	int m_FrameTextureHeight;
 	bool m_FrameCleared;
@@ -192,6 +209,9 @@ private:
 	bool UploadTexture(SDL_GPUTexture *pTexture, int X, int Y, int Z, int Width, int Height, int Layers, const void *pData, SDL_GPUTextureFormat Format, int BytesPerPixel);
 	bool CreatePipeline(int Index, SDL_GPUPrimitiveType PrimType, int BlendVariant);
 	bool CreateTilemapPipeline(int Index, int BlendVariant);
+	void CreatePipelines();
+	void ReleasePipelines();
+	void ApplyPendingFsaa();
 
 	static SDL_GPUTextureFormat TexFormatToSDLGPUFormat(int TexFormat);
 
@@ -205,6 +225,7 @@ private:
 	void Cmd_RenderTilemapTexture(const CCommandBuffer::CRenderTilemapTextureCommand *pCommand);
 	void Cmd_Screenshot(const CCommandBuffer::CScreenshotCommand *pCommand);
 	void Cmd_Swap(const CCommandBuffer::CSwapCommand *pCommand);
+	void Cmd_SetFsaa(const CSetFsaaCommand *pCommand);
 	void Cmd_VSync(const CCommandBuffer::CVSyncCommand *pCommand);
 	void Cmd_WindowResized(const CCommandBuffer::CWindowResizedCommand *pCommand);
 
@@ -238,6 +259,7 @@ public:
 	CGraphicsBackend_SDL_GPU(class IStorage *pStorage);
 	virtual int Init(const char *pName, int *pScreen, int *pWindowWidth, int *pWindowHeight, int *pScreenWidth, int *pScreenHeight, int FsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight) override;
 	virtual int Shutdown() override;
+	virtual bool SetFsaaSamples(int Samples) override;
 };
 
 #endif // ENGINE_CLIENT_BACKEND_SDLGPU_H

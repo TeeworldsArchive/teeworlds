@@ -144,6 +144,12 @@ public:
 	// largest texture the active device can create, used to size the glyph atlas
 	virtual int MaxTextureSize() const { return 2048; }
 
+	// maximum MSAA sample count the active backend supports, 1 means no MSAA
+	virtual int MaxFsaaSamples() const { return 1; }
+
+	// switches MSAA at runtime, returns false if the backend needs a restart
+	virtual bool SetFsaaSamples(int) { return false; }
+
 	// render commands emitted since the previous call, and resets the counter
 	virtual int TakeRenderCommandCount() { return 0; }
 

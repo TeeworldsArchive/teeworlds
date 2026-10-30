@@ -57,6 +57,7 @@ public:
 
 	// conservative default, overridden once the device has been created
 	virtual int MaxTextureSize() const override { return 2048; }
+	virtual int MaxFsaaSamples() const override { return 1; }
 
 	// time the render thread spent inside RunBuffer() since the last call
 	virtual int64 TakeRenderThreadTime() override
@@ -308,6 +309,8 @@ protected:
 	volatile int m_TextureMemoryUsage;
 	// reported by the render thread during init, else stays at the default
 	volatile int m_MaxTextureSize;
+	// maximum MSAA sample count supported by the created device/context
+	int m_MaxFsaaSamples;
 	int m_NumScreens;
 	class IStorage *m_pStorage;
 
@@ -327,6 +330,7 @@ public:
 	virtual int MemoryUsage() const override;
 
 	virtual int MaxTextureSize() const override { return m_MaxTextureSize; }
+	virtual int MaxFsaaSamples() const override { return m_MaxFsaaSamples; }
 
 	virtual int GetNumScreens() const override { return m_NumScreens; }
 

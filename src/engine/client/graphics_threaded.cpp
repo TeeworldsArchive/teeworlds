@@ -322,6 +322,18 @@ int CGraphics_Threaded::MaxTextureSize() const
 	return m_pBackend->MaxTextureSize();
 }
 
+int CGraphics_Threaded::MaxFsaaSamples() const
+{
+	return m_pBackend->MaxFsaaSamples();
+}
+
+bool CGraphics_Threaded::SetFsaaSamples(int Samples)
+{
+	if(Samples < 0 || Samples > MaxFsaaSamples())
+		return false;
+	return m_pBackend->SetFsaaSamples(Samples);
+}
+
 int CGraphics_Threaded::TakeRenderCommandCount()
 {
 	const int Count = m_RenderCommandCount;

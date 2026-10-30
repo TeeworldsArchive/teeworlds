@@ -49,6 +49,45 @@ static Uint64 GetDisplayRefreshIntervalNS(SDL_Window *pWindow)
 	return 0;
 }
 
+// maps a sample count as configured by the game to the SDL_GPU enum
+static SDL_GPUSampleCount SampleCountFromInt(int Samples)
+{
+	switch(Samples)
+	{
+		case 8: return SDL_GPU_SAMPLECOUNT_8;
+		case 4: return SDL_GPU_SAMPLECOUNT_4;
+		case 2: return SDL_GPU_SAMPLECOUNT_2;
+		default: return SDL_GPU_SAMPLECOUNT_1;
+	}
+}
+
+// highest sample count the swapchain format supports
+static int GetMaxFsaaSamples(SDL_GPUDevice *pDevice, SDL_GPUTextureFormat Format)
+{
+	static const int s_aCandidates[] = {8, 4, 2};
+	for(const int Samples : s_aCandidates)
+	{
+		if(SDL_GPUTextureSupportsSampleCount(pDevice, Format, SampleCountFromInt(Samples)))
+			return Samples;
+	}
+	return 1;
+}
+
+// picks the highest supported sample count that does not exceed the request
+static int ChooseFsaaSamples(SDL_GPUDevice *pDevice, SDL_GPUTextureFormat Format, int Requested)
+{
+	if(Requested <= 1)
+		return 1;
+
+	static const int s_aCandidates[] = {8, 4, 2};
+	for(const int Samples : s_aCandidates)
+	{
+		if(Requested >= Samples && SDL_GPUTextureSupportsSampleCount(pDevice, Format, SampleCountFromInt(Samples)))
+			return Samples;
+	}
+	return 1;
+}
+
 // ------------ CCommandProcessorFragment_SDLGPU
 
 CCommandProcessorFragment_SDLGPU::CCommandProcessorFragment_SDLGPU()
@@ -63,12 +102,16 @@ CCommandProcessorFragment_SDLGPU::CCommandProcessorFragment_SDLGPU()
 	m_IndexBufferNumIndices = 0;
 	m_FrameFormat = SDL_GPU_TEXTUREFORMAT_INVALID;
 	m_PresentMode = SDL_GPU_PRESENTMODE_VSYNC;
+	m_FsaaSamples = 1;
+	m_SampleCount = SDL_GPU_SAMPLECOUNT_1;
+	m_PendingFsaaSamples = 0;
 	m_PresentIntervalNS = 0;
 	m_LastPresentNS = 0;
 	m_MaxTexSize = 16384;
 	m_pCommandBuffer = 0;
 	m_pFrameFence = 0;
 	m_pFrameTexture = 0;
+	m_pMSAATexture = 0;
 	m_FrameTextureWidth = 0;
 	m_FrameTextureHeight = 0;
 	m_FrameCleared = false;
@@ -154,13 +197,41 @@ bool CCommandProcessorFragment_SDLGPU::EnsureFrameTexture()
 	if(Width <= 0 || Height <= 0)
 		return false;
 
-	if(m_pFrameTexture && Width == m_FrameTextureWidth && Height == m_FrameTextureHeight)
+	const bool NeedsMSAA = m_SampleCount != SDL_GPU_SAMPLECOUNT_1;
+	if(m_pFrameTexture && Width == m_FrameTextureWidth && Height == m_FrameTextureHeight && (!NeedsMSAA || m_pMSAATexture))
 		return true;
 
 	if(m_pFrameTexture)
 	{
 		AddDeferredTexture(m_pFrameTexture);
 		m_pFrameTexture = 0;
+	}
+	if(m_pMSAATexture)
+	{
+		AddDeferredTexture(m_pMSAATexture);
+		m_pMSAATexture = 0;
+	}
+
+	// draws go into the multisample target, which resolves into the frame texture
+	if(NeedsMSAA)
+	{
+		SDL_GPUTextureCreateInfo MsaaInfo;
+		mem_zero(&MsaaInfo, sizeof(MsaaInfo));
+		MsaaInfo.type = SDL_GPU_TEXTURETYPE_2D;
+		MsaaInfo.format = m_FrameFormat;
+		MsaaInfo.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
+		MsaaInfo.width = Width;
+		MsaaInfo.height = Height;
+		MsaaInfo.layer_count_or_depth = 1;
+		MsaaInfo.num_levels = 1;
+		MsaaInfo.sample_count = m_SampleCount;
+
+		m_pMSAATexture = SDL_CreateGPUTexture(m_pDevice, &MsaaInfo);
+		if(!m_pMSAATexture)
+		{
+			dbg_msg("gfx", "failed to create %d-sample frame texture: %s", m_FsaaSamples, SDL_GetError());
+			return false;
+		}
 	}
 
 	SDL_GPUTextureCreateInfo Info;
@@ -178,6 +249,11 @@ bool CCommandProcessorFragment_SDLGPU::EnsureFrameTexture()
 	if(!m_pFrameTexture)
 	{
 		dbg_msg("gfx", "failed to create frame texture: %s", SDL_GetError());
+		if(m_pMSAATexture)
+		{
+			AddDeferredTexture(m_pMSAATexture);
+			m_pMSAATexture = 0;
+		}
 		return false;
 	}
 	m_FrameTextureWidth = Width;
@@ -385,7 +461,7 @@ bool CCommandProcessorFragment_SDLGPU::CreateTilemapPipeline(int Index, int Blen
 
 	SDL_GPUMultisampleState MultisampleState;
 	mem_zero(&MultisampleState, sizeof(MultisampleState));
-	MultisampleState.sample_count = SDL_GPU_SAMPLECOUNT_1;
+	MultisampleState.sample_count = m_SampleCount;
 
 	SDL_GPUDepthStencilState DepthStencilState;
 	mem_zero(&DepthStencilState, sizeof(DepthStencilState));
@@ -473,7 +549,7 @@ bool CCommandProcessorFragment_SDLGPU::CreatePipeline(int Index, SDL_GPUPrimitiv
 
 	SDL_GPUMultisampleState MultisampleState;
 	mem_zero(&MultisampleState, sizeof(MultisampleState));
-	MultisampleState.sample_count = SDL_GPU_SAMPLECOUNT_1;
+	MultisampleState.sample_count = m_SampleCount;
 
 	SDL_GPUDepthStencilState DepthStencilState;
 	mem_zero(&DepthStencilState, sizeof(DepthStencilState));
@@ -522,6 +598,84 @@ bool CCommandProcessorFragment_SDLGPU::CreatePipeline(int Index, SDL_GPUPrimitiv
 	return m_apPipelines[Index] != 0;
 }
 
+void CCommandProcessorFragment_SDLGPU::CreatePipelines()
+{
+	CreatePipeline(PIPELINE_QUADS_NONE, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 0);
+	CreatePipeline(PIPELINE_QUADS_ALPHA_PREMULTIPLIED, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 1);
+	CreatePipeline(PIPELINE_QUADS_ALPHA, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 2);
+	CreatePipeline(PIPELINE_LINES_NONE, SDL_GPU_PRIMITIVETYPE_LINELIST, 0);
+	CreatePipeline(PIPELINE_LINES_ALPHA_PREMULTIPLIED, SDL_GPU_PRIMITIVETYPE_LINELIST, 1);
+	CreatePipeline(PIPELINE_LINES_ALPHA, SDL_GPU_PRIMITIVETYPE_LINELIST, 2);
+
+	CreateTilemapPipeline(PIPELINE_TILEMAP_NONE, PIPELINE_TILEMAP_NONE);
+	CreateTilemapPipeline(PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED, PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED);
+}
+
+void CCommandProcessorFragment_SDLGPU::ReleasePipelines()
+{
+	for(int i = 0; i < NUM_PIPELINES; i++)
+	{
+		if(m_apPipelines[i])
+			SDL_ReleaseGPUGraphicsPipeline(m_pDevice, m_apPipelines[i]);
+		m_apPipelines[i] = 0;
+	}
+	for(int i = 0; i < NUM_TILEMAP_PIPELINES; i++)
+	{
+		if(m_apTilemapPipelines[i])
+			SDL_ReleaseGPUGraphicsPipeline(m_pDevice, m_apTilemapPipelines[i]);
+		m_apTilemapPipelines[i] = 0;
+	}
+}
+
+void CCommandProcessorFragment_SDLGPU::ApplyPendingFsaa()
+{
+	if(m_PendingFsaaSamples <= 0)
+		return;
+
+	const int Samples = m_PendingFsaaSamples;
+	m_PendingFsaaSamples = 0;
+	if(Samples == m_FsaaSamples)
+		return;
+
+	m_FsaaSamples = Samples;
+	m_SampleCount = SampleCountFromInt(Samples);
+
+	// the caller waited for the last submitted frame, so the old pipelines and
+	// targets are no longer in use
+	ReleasePipelines();
+	if(m_pMSAATexture)
+	{
+		SDL_ReleaseGPUTexture(m_pDevice, m_pMSAATexture);
+		m_pMSAATexture = 0;
+	}
+	if(m_pFrameTexture)
+	{
+		SDL_ReleaseGPUTexture(m_pDevice, m_pFrameTexture);
+		m_pFrameTexture = 0;
+	}
+	m_FrameTextureWidth = 0;
+	m_FrameTextureHeight = 0;
+	m_FrameCleared = false;
+
+	int WindowWidth = 0;
+	int WindowHeight = 0;
+	SDL_GetWindowSizeInPixels(m_pWindow, &WindowWidth, &WindowHeight);
+	EnsureFrameTexture();
+	if(WindowWidth > 0 && WindowHeight > 0 && m_SampleCount != SDL_GPU_SAMPLECOUNT_1 && !m_pMSAATexture)
+	{
+		dbg_msg("gfx", "SDL_GPU: multisample frame texture unavailable, disabling FSAA");
+		m_FsaaSamples = 1;
+		m_SampleCount = SDL_GPU_SAMPLECOUNT_1;
+	}
+
+	CreatePipelines();
+	ResetRenderStateCache();
+	if(m_FsaaSamples > 1)
+		dbg_msg("gfx", "SDL_GPU FSAA changed to %dx MSAA", m_FsaaSamples);
+	else
+		dbg_msg("gfx", "SDL_GPU FSAA disabled");
+}
+
 void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 {
 	m_pDevice = pCommand->m_pDevice;
@@ -533,6 +687,16 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 	m_PresentMode = pCommand->m_PresentMode;
 	m_PresentIntervalNS = GetDisplayRefreshIntervalNS(m_pWindow);
 	m_LastPresentNS = 0;
+	m_PendingFsaaSamples = 0;
+
+	// FSAA is implemented with a multisampled offscreen target that is resolved
+	// into the single sample frame texture before it is presented
+	m_FsaaSamples = ChooseFsaaSamples(m_pDevice, m_FrameFormat, pCommand->m_FsaaSamples);
+	m_SampleCount = SampleCountFromInt(m_FsaaSamples);
+	if(m_FsaaSamples > 1)
+		dbg_msg("gfx", "SDL_GPU FSAA enabled: %dx MSAA", m_FsaaSamples);
+	else if(pCommand->m_FsaaSamples > 1)
+		dbg_msg("gfx", "SDL_GPU: %dx FSAA is not supported, disabling FSAA", pCommand->m_FsaaSamples);
 
 	// shaders, MSL entry points are named main0
 	const char *pEntrypoint = pCommand->m_ShaderFormat == SDL_GPU_SHADERFORMAT_MSL ? "main0" : "main";
@@ -624,16 +788,21 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 		m_pTileDataSampler = SDL_CreateGPUSampler(m_pDevice, &SamplerInfo);
 	}
 
-	// pipelines
-	CreatePipeline(PIPELINE_QUADS_NONE, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 0);
-	CreatePipeline(PIPELINE_QUADS_ALPHA_PREMULTIPLIED, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 1);
-	CreatePipeline(PIPELINE_QUADS_ALPHA, SDL_GPU_PRIMITIVETYPE_TRIANGLELIST, 2);
-	CreatePipeline(PIPELINE_LINES_NONE, SDL_GPU_PRIMITIVETYPE_LINELIST, 0);
-	CreatePipeline(PIPELINE_LINES_ALPHA_PREMULTIPLIED, SDL_GPU_PRIMITIVETYPE_LINELIST, 1);
-	CreatePipeline(PIPELINE_LINES_ALPHA, SDL_GPU_PRIMITIVETYPE_LINELIST, 2);
+	// create the offscreen targets first, so a failed multisample allocation can
+	// fall back to single sample pipelines instead of rendering into a mismatch
+	int WindowWidth = 0;
+	int WindowHeight = 0;
+	SDL_GetWindowSizeInPixels(m_pWindow, &WindowWidth, &WindowHeight);
+	EnsureFrameTexture();
+	if(WindowWidth > 0 && WindowHeight > 0 && m_FsaaSamples > 1 && !m_pMSAATexture)
+	{
+		dbg_msg("gfx", "SDL_GPU: multisample frame texture unavailable, disabling FSAA");
+		m_FsaaSamples = 1;
+		m_SampleCount = SDL_GPU_SAMPLECOUNT_1;
+	}
 
-	CreateTilemapPipeline(PIPELINE_TILEMAP_NONE, PIPELINE_TILEMAP_NONE);
-	CreateTilemapPipeline(PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED, PIPELINE_TILEMAP_ALPHA_PREMULTIPLIED);
+	// pipelines
+	CreatePipelines();
 
 	// static quad index buffer
 	m_IndexBufferNumIndices = CCommandBuffer::MAX_VERTICES / 4 * 6;
@@ -676,11 +845,6 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Init(const CInitCommand *pCommand)
 	}
 	mem_free(pIndices);
 
-	// frame texture is created lazily on first use
-	EnsureFrameTexture();
-
-	if(pCommand->m_FsaaSamples > 1)
-		dbg_msg("gfx", "SDL_GPU backend does not support FSAA yet, ignoring %d samples", pCommand->m_FsaaSamples);
 	dbg_msg("gfx", "SDL_GPU backend initialized (swapchain format %d)", (int) m_FrameFormat);
 }
 
@@ -700,18 +864,8 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Shutdown([[maybe_unused]] const CShut
 	ReleaseDeferred();
 	ResetFrameStaging();
 
-	for(int i = 0; i < NUM_PIPELINES; i++)
-	{
-		if(m_apPipelines[i])
-			SDL_ReleaseGPUGraphicsPipeline(m_pDevice, m_apPipelines[i]);
-		m_apPipelines[i] = 0;
-	}
-	for(int i = 0; i < NUM_TILEMAP_PIPELINES; i++)
-	{
-		if(m_apTilemapPipelines[i])
-			SDL_ReleaseGPUGraphicsPipeline(m_pDevice, m_apTilemapPipelines[i]);
-		m_apTilemapPipelines[i] = 0;
-	}
+	ReleasePipelines();
+	m_PendingFsaaSamples = 0;
 	if(m_pVertexShader)
 		SDL_ReleaseGPUShader(m_pDevice, m_pVertexShader);
 	m_pVertexShader = 0;
@@ -755,6 +909,9 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Shutdown([[maybe_unused]] const CShut
 	if(m_pFrameTexture)
 		SDL_ReleaseGPUTexture(m_pDevice, m_pFrameTexture);
 	m_pFrameTexture = 0;
+	if(m_pMSAATexture)
+		SDL_ReleaseGPUTexture(m_pDevice, m_pMSAATexture);
+	m_pMSAATexture = 0;
 	for(int i = 0; i < CCommandBuffer::MAX_TEXTURES; i++)
 	{
 		if(m_aTextures[i].m_Valid && m_aTextures[i].m_pTexture)
@@ -1020,6 +1177,9 @@ void CCommandProcessorFragment_SDLGPU::FlushDraws()
 	// use the swapchain image when given, otherwise the offscreen frame texture
 	SDL_GPUTexture *pTarget = m_pRenderTarget;
 	const bool TargetIsFrameTexture = pTarget == 0;
+	// with FSAA the draws go into the multisample target and are resolved into
+	// the frame texture at the end of the render pass
+	SDL_GPUTexture *pResolveTarget = 0;
 	if(TargetIsFrameTexture)
 	{
 		if(!EnsureFrameTexture())
@@ -1028,6 +1188,11 @@ void CCommandProcessorFragment_SDLGPU::FlushDraws()
 			return;
 		}
 		pTarget = m_pFrameTexture;
+		if(m_SampleCount != SDL_GPU_SAMPLECOUNT_1)
+		{
+			pResolveTarget = m_pFrameTexture;
+			pTarget = m_pMSAATexture;
+		}
 		m_RenderTargetWidth = m_FrameTextureWidth;
 		m_RenderTargetHeight = m_FrameTextureHeight;
 		m_RenderToFrameTexture = true;
@@ -1080,9 +1245,17 @@ void CCommandProcessorFragment_SDLGPU::FlushDraws()
 	Target.layer_or_depth_plane = 0;
 	Target.clear_color = m_ClearColor;
 	Target.load_op = m_FrameCleared ? SDL_GPU_LOADOP_LOAD : SDL_GPU_LOADOP_CLEAR;
-	Target.store_op = SDL_GPU_STOREOP_STORE;
+	Target.store_op = pResolveTarget ? SDL_GPU_STOREOP_RESOLVE_AND_STORE : SDL_GPU_STOREOP_STORE;
 	// cycling lets an in-flight frame keep the old texture; swapchain images are fresh
 	Target.cycle = TargetIsFrameTexture && !m_FrameCleared;
+	if(pResolveTarget)
+	{
+		// keep the multisample contents, a frame may flush more than once
+		Target.resolve_texture = pResolveTarget;
+		Target.resolve_mip_level = 0;
+		Target.resolve_layer = 0;
+		Target.cycle_resolve_texture = TargetIsFrameTexture && !m_FrameCleared;
+	}
 
 	SDL_GPURenderPass *pPass = SDL_BeginGPURenderPass(m_pCommandBuffer, &Target, 1, 0);
 	if(!pPass)
@@ -1356,6 +1529,14 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Screenshot(const CCommandBuffer::CScr
 	SDL_ReleaseGPUTransferBuffer(m_pDevice, pTransferBuffer);
 }
 
+void CCommandProcessorFragment_SDLGPU::Cmd_SetFsaa(const CSetFsaaCommand *pCommand)
+{
+	// clamp to what the current swapchain format supports; the rebuild runs
+	// after the frame has been submitted
+	const int Samples = ChooseFsaaSamples(m_pDevice, m_FrameFormat, pCommand->m_FsaaSamples);
+	m_PendingFsaaSamples = Samples == m_FsaaSamples ? 0 : Samples;
+}
+
 void CCommandProcessorFragment_SDLGPU::Cmd_Swap(const CCommandBuffer::CSwapCommand *pCommand)
 {
 	// a screenshot may have submitted the frame already, acquire a new command buffer
@@ -1394,10 +1575,11 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Swap(const CCommandBuffer::CSwapComma
 	{
 		m_LastPresentNS = SDL_GetTicksNS();
 
-		if(m_RenderToFrameTexture)
+		const bool RenderOffscreen = m_RenderToFrameTexture || m_SampleCount != SDL_GPU_SAMPLECOUNT_1;
+		if(RenderOffscreen)
 		{
-			// the frame is already in the offscreen texture, finish it there and
-			// present it with a blit
+			// the frame is already in the offscreen texture, or FSAA needs the
+			// multisample resolve before it can be presented
 			m_pRenderTarget = 0;
 			FlushDraws();
 
@@ -1459,12 +1641,13 @@ void CCommandProcessorFragment_SDLGPU::Cmd_Swap(const CCommandBuffer::CSwapComma
 	// the next frame waits on this fence before reusing the staging and vertex buffer
 	ResetFrameStaging();
 
-	if(pCommand->m_Finish && m_pFrameFence)
+	if(m_pFrameFence && (pCommand->m_Finish || m_PendingFsaaSamples > 0))
 	{
 		SDL_WaitForGPUFences(m_pDevice, true, &m_pFrameFence, 1);
 		SDL_ReleaseGPUFence(m_pDevice, m_pFrameFence);
 		m_pFrameFence = 0;
 		ReleaseDeferred();
+		ApplyPendingFsaa();
 	}
 }
 
@@ -1511,6 +1694,7 @@ bool CCommandProcessorFragment_SDLGPU::RunCommand(const CCommandBuffer::CCommand
 		case CCommandBuffer::CMD_RENDER_TILEMAP_TEXTURE: Cmd_RenderTilemapTexture(static_cast<const CCommandBuffer::CRenderTilemapTextureCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_SCREENSHOT: Cmd_Screenshot(static_cast<const CCommandBuffer::CScreenshotCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_SWAP: Cmd_Swap(static_cast<const CCommandBuffer::CSwapCommand *>(pBaseCommand)); break;
+		case CMD_SET_FSAA: Cmd_SetFsaa(static_cast<const CSetFsaaCommand *>(pBaseCommand)); break;
 		case CCommandBuffer::CMD_VSYNC: Cmd_VSync(static_cast<const CCommandBuffer::CVSyncCommand *>(pBaseCommand)); break;
 		default: return false;
 	}
@@ -1600,6 +1784,14 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 	else
 		dbg_msg("gfx", "SDL_GPU: failed to set present mode %s: %s", PresentModeName(PresentMode), SDL_GetError());
 
+	// resolve the configured sample count against what the swapchain format supports
+	const SDL_GPUTextureFormat SwapchainFormat = SDL_GetGPUSwapchainTextureFormat(m_pDevice, m_pWindow);
+	m_MaxFsaaSamples = GetMaxFsaaSamples(m_pDevice, SwapchainFormat);
+	dbg_msg("gfx", "SDL_GPU max FSAA samples: %d", m_MaxFsaaSamples);
+	const int ActualFsaaSamples = ChooseFsaaSamples(m_pDevice, SwapchainFormat, FsaaSamples);
+	if(ActualFsaaSamples != FsaaSamples)
+		dbg_msg("gfx", "SDL_GPU: %dx FSAA requested, using %dx", FsaaSamples, ActualFsaaSamples);
+
 	// load the shaders from the data directory
 	if(!m_pStorage->ReadFile(pVertexShaderFile, IStorage::TYPE_ALL, (void **) &m_pVertexShaderCode, &m_VertexShaderSize) ||
 		!m_pStorage->ReadFile(pFragmentShaderFile, IStorage::TYPE_ALL, (void **) &m_pFragmentShaderCode, &m_FragmentShaderSize) ||
@@ -1624,7 +1816,7 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 	Cmd.m_pDevice = m_pDevice;
 	Cmd.m_pWindow = m_pWindow;
 	Cmd.m_pTextureMemoryUsage = &m_TextureMemoryUsage;
-	Cmd.m_FsaaSamples = FsaaSamples;
+	Cmd.m_FsaaSamples = ActualFsaaSamples;
 	Cmd.m_PresentMode = PresentMode;
 	Cmd.m_ShaderFormat = ShaderFormat;
 	Cmd.m_pVertexShaderCode = m_pVertexShaderCode;
@@ -1638,6 +1830,20 @@ int CGraphicsBackend_SDL_GPU::Init(const char *pName, int *pScreen, int *pWindow
 	WaitForIdle();
 
 	return 0;
+}
+
+bool CGraphicsBackend_SDL_GPU::SetFsaaSamples(int Samples)
+{
+	if(Samples < 0 || Samples > m_MaxFsaaSamples)
+		return false;
+
+	CCommandBuffer CmdBuffer(1024, 512);
+	CCommandProcessorFragment_SDLGPU::CSetFsaaCommand Cmd;
+	Cmd.m_FsaaSamples = Samples;
+	CmdBuffer.AddCommand(Cmd);
+	RunBuffer(&CmdBuffer);
+	WaitForIdle();
+	return true;
 }
 
 int CGraphicsBackend_SDL_GPU::Shutdown()

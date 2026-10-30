@@ -887,6 +887,7 @@ CGraphicsBackend_SDL::CGraphicsBackend_SDL(IStorage *pStorage)
 	m_pProcessor = 0;
 	m_TextureMemoryUsage = 0;
 	m_MaxTextureSize = 2048;
+	m_MaxFsaaSamples = 1;
 	m_NumScreens = 0;
 	m_pStorage = pStorage;
 }
@@ -1161,6 +1162,12 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 		return -1;
 	}
 	dbg_msg("gfx", "using %s (%s)", glGetString(GL_VERSION), glGetString(GL_VENDOR));
+
+	// the driver decides how many samples the default framebuffer can actually use
+	GLint MaxSamples = 0;
+	glGetIntegerv(GL_MAX_SAMPLES, &MaxSamples);
+	m_MaxFsaaSamples = MaxSamples > 0 ? (int) MaxSamples : 1;
+	dbg_msg("gfx", "OpenGL ES max FSAA samples: %d", m_MaxFsaaSamples);
 
 	SDL_GL_SetSwapInterval(Flags & IGraphicsBackend::INITFLAG_VSYNC ? 1 : 0);
 
