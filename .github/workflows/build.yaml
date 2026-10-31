@@ -121,6 +121,7 @@ jobs:
     - name: Prepare MacOS
       if: contains(matrix.os, 'macOS')
       run: |
+        brew unlink openssl@3
         brew update || true
         brew install pkg-config ccache sdl3 python3 ninja opus opusfile openssl curl libspng zlib-ng zstd glslang harfbuzz || true
         brew upgrade freetype
