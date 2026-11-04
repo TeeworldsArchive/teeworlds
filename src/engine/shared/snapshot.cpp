@@ -441,9 +441,24 @@ int CSnapshotDelta::UnpackDelta(const CSnapshot *pFrom, CSnapshot *pTo, const vo
 		const int *pPreviousData = HasPrevious ? pFrom->GetItem(FromIndex)->Data() : 0;
 
 		int *pNewData = 0;
+		// The builder item is allocated once from the first update of the group,
+		// and UndiffItem() reads and writes ItemSize words, so every update for a
+		// key has to agree on the item size. A delta that grows an item would
+		// otherwise run past the slot and, when the key exists in the base
+		// snapshot, past the base item it is diffed against.
+		int GroupItemSize = -1;
 		for(; u < aUpdates.size() && aUpdates[u].m_Key == Key; u++)
 		{
 			const CDeltaUpdate &Update = aUpdates[u];
+			if(GroupItemSize == -1)
+			{
+				GroupItemSize = Update.m_ItemSize;
+				if(HasPrevious && GroupItemSize != pFrom->GetItemSize(FromIndex))
+					return -10;
+			}
+			else if(Update.m_ItemSize != GroupItemSize)
+				return -11;
+
 			if(!pNewData)
 			{
 				pNewData = (int *) Builder.NewItem(Update.m_Type, Update.m_ID, Update.m_ItemSize);

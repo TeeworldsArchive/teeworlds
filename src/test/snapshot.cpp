@@ -247,6 +247,113 @@ TEST(Snapshot, DeltaRejectsCorruptData)
 	mem_free(pTo);
 }
 
+static CSnapshot *BuildSingleItemSnapshot(int Words)
+{
+	CSnapshotBuilder Builder;
+	Builder.Init();
+	int aData[64];
+	for(int i = 0; i < Words; i++)
+		aData[i] = i;
+	void *p = Builder.NewItem(1, 0, Words * 4);
+	if(!p)
+		return 0;
+	mem_copy(p, aData, Words * 4);
+	CSnapshot *pSnap = (CSnapshot *) mem_alloc(Builder.RequiredSize());
+	Builder.Finish(pSnap);
+	return pSnap;
+}
+
+TEST(Snapshot, DeltaRejectsGrowingItem)
+{
+	// An update for an existing key has to use the size of the base item:
+	// UndiffItem() reads and writes ItemSize words, so a forged delta could
+	// otherwise read past the base snapshot and write past the builder slot.
+	CSnapshot *pFrom = BuildSingleItemSnapshot(1);
+	ASSERT_TRUE(pFrom);
+
+	int aDelta[64];
+	int *p = aDelta;
+	*p++ = 0; // deleted items
+	*p++ = 1; // update items
+	*p++ = 0; // temp items
+	*p++ = 1; // type
+	*p++ = 0; // id
+	*p++ = 8; // item size in words, larger than the base item
+	for(int i = 0; i < 8; i++)
+		*p++ = 0;
+	const int DeltaSize = (int) ((char *) p - (char *) aDelta);
+
+	CSnapshot *pResult = (CSnapshot *) mem_alloc(4096);
+	CSnapshotDelta Delta;
+	EXPECT_EQ(Delta.UnpackDelta(pFrom, pResult, aDelta, DeltaSize), -10);
+
+	mem_free(pResult);
+	mem_free(pFrom);
+}
+
+TEST(Snapshot, DeltaRejectsGrowingDuplicateKeys)
+{
+	// Repeated updates with the same key reuse one builder item, so a later
+	// update must not be larger than the first one. The base item matches the
+	// first update, so only the duplicate-key check can reject the delta.
+	CSnapshot *pFrom = BuildSingleItemSnapshot(1);
+	ASSERT_TRUE(pFrom);
+
+	int aDelta[64];
+	int *p = aDelta;
+	*p++ = 0; // deleted items
+	*p++ = 2; // update items
+	*p++ = 0; // temp items
+	*p++ = 1; // update 1: type 1, id 0, 1 word
+	*p++ = 0;
+	*p++ = 1;
+	*p++ = 0;
+	*p++ = 1; // update 2: type 1, id 0, 8 words
+	*p++ = 0;
+	*p++ = 8;
+	for(int i = 0; i < 8; i++)
+		*p++ = 0;
+	const int DeltaSize = (int) ((char *) p - (char *) aDelta);
+
+	CSnapshot *pResult = (CSnapshot *) mem_alloc(4096);
+	CSnapshotDelta Delta;
+	EXPECT_EQ(Delta.UnpackDelta(pFrom, pResult, aDelta, DeltaSize), -11);
+
+	mem_free(pResult);
+	mem_free(pFrom);
+}
+
+TEST(Snapshot, DeltaRejectsGrowingDuplicateNewKey)
+{
+	// Same as above for a key that is not in the base snapshot: the first update
+	// creates the builder item and the second one used to fill it past its end.
+	CSnapshot *pFrom = BuildSnapshot(0, 0x1u);
+	ASSERT_TRUE(pFrom);
+
+	int aDelta[64];
+	int *p = aDelta;
+	*p++ = 0; // deleted items
+	*p++ = 2; // update items
+	*p++ = 0; // temp items
+	*p++ = 2; // update 1: type 2, id 5, 1 word
+	*p++ = 5;
+	*p++ = 1;
+	*p++ = 0;
+	*p++ = 2; // update 2: type 2, id 5, 8 words
+	*p++ = 5;
+	*p++ = 8;
+	for(int i = 0; i < 8; i++)
+		*p++ = 0;
+	const int DeltaSize = (int) ((char *) p - (char *) aDelta);
+
+	CSnapshot *pResult = (CSnapshot *) mem_alloc(4096);
+	CSnapshotDelta Delta;
+	EXPECT_EQ(Delta.UnpackDelta(pFrom, pResult, aDelta, DeltaSize), -11);
+
+	mem_free(pResult);
+	mem_free(pFrom);
+}
+
 TEST(Snapshot, DeltaApplyUnsortedLists)
 {
 	// The delta lists are not guaranteed to be ascending on the wire: real 0.7
