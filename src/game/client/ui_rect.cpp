@@ -193,7 +193,7 @@ void CUIRect::Draw(const vec4 &Color, float Rounding, int Corners) const
 
 	IGraphics::CFreeformItem a_FreeformItems[NUM_ROUND_CORNER_SEGMENTS / 2 * 8];
 	int NumFreeformItems = 0;
-	for(int i = 0; i < NUM_ROUND_CORNER_SEGMENTS; i += 2)
+	for(int i = 0; i < NUM_ROUND_CORNER_SEGMENTS && Corners != CORNER_NONE; i += 2)
 	{
 		float a1 = i / s_CornerAnglePerSegment;
 		float a2 = (i + 1) / s_CornerAnglePerSegment;
@@ -291,7 +291,7 @@ void CUIRect::Draw4(const vec4 &ColorTopLeft, const vec4 &ColorTopRight, const v
 
 	const float r = Rounding;
 
-	for(int i = 0; i < NUM_ROUND_CORNER_SEGMENTS; i += 2)
+	for(int i = 0; i < NUM_ROUND_CORNER_SEGMENTS && Corners != CORNER_NONE; i += 2)
 	{
 		float a1 = i / s_CornerAnglePerSegment;
 		float a2 = (i + 1) / s_CornerAnglePerSegment;

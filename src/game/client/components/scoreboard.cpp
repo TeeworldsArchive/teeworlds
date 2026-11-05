@@ -308,6 +308,7 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 	char aBuf[256];
 	const float Spacing = 2.0f;
 	const float LineFontSize = 12.0f;
+	const vec4 BackgroundColor(1.0f, 1.0f, 1.0f, 0.1f);
 	const vec4 GreyTextColor(1.0f, 1.0f, 1.0f, 0.75f);
 	const vec4 FriendHighlightColor(0.4f, 1.0f, 0.4f, 0.4f);
 	const vec4 LocalHighlightColor(1.0f, 1.0f, 1.0f, 0.5f);
@@ -334,8 +335,10 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 			continue;
 		// highlight the line
 		{
+			if(i % 2 == 0)
+				Playerline.Draw(BackgroundColor, 0.0f, CUIRect::CORNER_NONE);
 			if(Team != -1)
-				Playerline.Draw(TeamRectColor);
+				Playerline.Draw(TeamRectColor, 0.0f, CUIRect::CORNER_NONE);
 			if(pInfo->m_ClientID == m_pClient->m_LocalClientID)
 				Playerline.Draw(LocalHighlightColor);
 			else if(m_pClient->Friends()->IsFriend(pData->m_aName, pData->m_aClan, false))
