@@ -2,11 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system/misc.h>
 #include <base/vmath.h>
 
-#include <engine/kernel.h>
-#include <engine/map.h>
 #include <math.h>
 
 #include <game/collision.h>

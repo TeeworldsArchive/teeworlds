@@ -3,10 +3,8 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
-#include <generated/client_data.h>
 #include <generated/protocol.h>
 
-#include <game/client/animstate.h>
 #include <game/client/gameclient.h>
 #include "controls.h"
 #include "nameplates.h"

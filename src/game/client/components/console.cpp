@@ -5,9 +5,6 @@
 
 #include <generated/client_data.h>
 
-#include <base/system/fs.h>
-#include <base/system/misc.h>
-#include <base/system/net.h>
 #include <base/system/time.h>
 
 #include <engine/console.h>
@@ -23,7 +20,6 @@
 #include <game/version.h>
 
 #include <game/client/components/controls.h>
-#include <game/client/components/menus.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
 

@@ -2,7 +2,6 @@
 #ifndef BASE_TL_STREAM_H
 #define BASE_TL_STREAM_H
 
-#include <base/system/fs.h>
 #include <base/system/io.h>
 #include <base/system/mem.h>
 #include "array.h"

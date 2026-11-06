@@ -3,9 +3,6 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef GAME_CLIENT_COMPONENTS_CHAT_H
 #define GAME_CLIENT_COMPONENTS_CHAT_H
-#include <base/system/debug.h>
-#include <base/system/fs.h>
-#include <base/system/io.h>
 #include <base/system/time.h>
 #include <base/tl/array.h>
 #include <engine/shared/ringbuffer.h>

@@ -1,11 +1,8 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include <base/system/debug.h>
 #include <base/system/mem.h>
 
 #include "protocol_ex.h"
 
-#include "config.h"
-#include "protocol.h"
 #include "uuid_manager.h"
 
 void RegisterUuids([[maybe_unused]] class CUuidManager *pManager)

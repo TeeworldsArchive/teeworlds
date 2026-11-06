@@ -5,7 +5,6 @@
 #define _DEFAULT_SOURCE
 #include <stdlib.h>
 
-#include <base/system/base.h>
 #include <base/system/debug.h>
 #include <base/system/io.h>
 #include <base/system/mem.h>

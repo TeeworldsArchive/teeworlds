@@ -1,10 +1,10 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include <base/detect.h>
 #include <base/tl/threading.h>
 
 #include <engine/storage.h>
 
 #include <SDL3/SDL.h>
+
 
 #include "backend_sdl.h"
 #include "backend_sdlgpu.h"

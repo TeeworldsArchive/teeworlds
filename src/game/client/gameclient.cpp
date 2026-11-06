@@ -9,7 +9,7 @@
 #include <engine/map.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
-#include <engine/shared/demo.h>
+#include <engine/shared/snapshot.h>
 #include <engine/sound.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -42,9 +42,6 @@
 #include "components/infomessages.h"
 #include "components/items.h"
 #include "components/map.h"
-#include "components/mapimages.h"
-#include "components/maplayers.h"
-#include "components/mapsounds.h"
 #include "components/menus.h"
 #include "components/motd.h"
 #include "components/nameplates.h"

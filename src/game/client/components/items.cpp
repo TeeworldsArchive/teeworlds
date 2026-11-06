@@ -1,7 +1,6 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <generated/client_data.h>
@@ -9,10 +8,8 @@
 
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
-#include <game/client/ui.h>
 
 #include <game/client/components/effects.h>
-#include <game/client/components/flow.h>
 
 #include "items.h"
 

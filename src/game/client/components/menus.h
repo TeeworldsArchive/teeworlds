@@ -11,7 +11,6 @@
 #include <base/tl/string.h>
 #include <base/vmath.h>
 
-#include <engine/config.h>
 #include <engine/contacts.h>
 #include <engine/demo.h>
 #include <engine/graphics.h>

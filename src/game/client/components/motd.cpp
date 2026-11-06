@@ -7,7 +7,6 @@
 #include <engine/textrender.h>
 
 #include <game/client/gameclient.h>
-#include <generated/client_data.h>
 #include <generated/protocol.h>
 
 #include "menus.h"

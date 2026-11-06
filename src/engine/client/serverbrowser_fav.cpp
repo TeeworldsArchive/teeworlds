@@ -1,22 +1,15 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#include <base/math.h>
 #include <base/system/net.h>
-#include <base/system/time.h>
 
 #include <engine/shared/config.h>
-#include <engine/shared/memheap.h>
 #include <engine/shared/network.h>
-#include <engine/shared/packer.h>
 
 #include <engine/config.h>
 #include <engine/console.h>
-#include <engine/contacts.h>
 #include <engine/engine.h>
-#include <engine/masterserver.h>
 
-#include <mastersrv/mastersrv.h>
 
 #include "serverbrowser_fav.h"
 

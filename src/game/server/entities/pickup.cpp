@@ -3,7 +3,6 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <game/server/gamecontext.h>
 #include <game/server/gamecontroller.h>
-#include <game/server/player.h>
 #include <generated/server_data.h>
 
 #include "character.h"

@@ -4,7 +4,6 @@
 #include <base/math.h>
 #include <base/system/lock.h>
 #include <base/system/mem.h>
-#include <base/system/misc.h>
 
 #include <engine/graphics.h>
 #include <engine/storage.h>
@@ -12,7 +11,6 @@
 #include <engine/shared/config.h>
 
 #include <SDL3/SDL.h>
-#include <opus.h>
 #include <opusfile.h>
 
 #include "sound.h"

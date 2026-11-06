@@ -3,14 +3,12 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/tl/array.h>
 
-#include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
-#include <game/client/component.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/layers.h>

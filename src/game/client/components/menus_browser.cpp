@@ -1,7 +1,6 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#include <algorithm> // sort  TODO: remove this
 
 #include <engine/config.h>
 #include <engine/graphics.h>
@@ -10,18 +9,14 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
-#include <engine/client/contacts.h>
 #include <engine/shared/config.h>
 #include <engine/shared/jsonparser.h>
 #include <engine/shared/jsonwriter.h>
 
 #include <generated/client_data.h>
-#include <generated/protocol.h>
 
 #include <game/client/components/countryflags.h>
-#include <game/client/render.h>
 #include <game/client/ui.h>
-#include <game/version.h>
 
 #include "menus.h"
 

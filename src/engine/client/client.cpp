@@ -1,14 +1,11 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#include <algorithm>
 #include <new>
 
 #include <stdarg.h>
 
 #include <base/math.h>
-#include <base/system/fs.h>
-#include <base/system/lock.h>
 #include <base/system/misc.h>
 #include <base/system/net.h>
 #include <base/system/string.h>
@@ -32,7 +29,6 @@
 
 #include <engine/shared/compression.h>
 #include <engine/shared/config.h>
-#include <engine/shared/datafile.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/filecollection.h>
 #include <engine/shared/http_request.h>
@@ -40,20 +36,19 @@
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
 #include <engine/shared/protocol.h>
-#include <engine/shared/protocol_ex.h>
-#include <engine/shared/ringbuffer.h>
 #include <engine/shared/snapshot.h>
 
 #include <game/version.h>
 
 #include <mastersrv/mastersrv.h>
 
+#include <SDL3/SDL.h>
+
 #include "contacts.h"
 #include "serverbrowser.h"
 
 #include "client.h"
 
-#include <SDL3/SDL.h>
 #ifdef main
 #undef main
 #endif

@@ -2,12 +2,10 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
-#include <base/detect.h>
 #include <base/math.h>
 #include <base/tl/threading.h>
 
 #include <base/system/debug.h>
-#include <base/system/fs.h>
 #include <base/system/mem.h>
 #include <base/system/time.h>
 
@@ -15,7 +13,6 @@
 
 #include <engine/console.h>
 #include <engine/graphics.h>
-#include <engine/keys.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 

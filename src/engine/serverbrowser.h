@@ -5,7 +5,6 @@
 #define ENGINE_SERVERBROWSER_H
 
 #include <base/system/net.h>
-#include <base/system/time.h>
 #include <engine/shared/protocol.h>
 
 #include "kernel.h"

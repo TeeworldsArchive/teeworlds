@@ -3,8 +3,6 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
 #include <base/math.h>
-#include <base/system/fs.h>
-#include <base/system/lock.h>
 #include <base/system/misc.h>
 #include <base/system/net.h>
 #include <base/system/time.h>
@@ -19,7 +17,6 @@
 
 #include <engine/shared/compression.h>
 #include <engine/shared/config.h>
-#include <engine/shared/datafile.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/econ.h>
 #include <engine/shared/filecollection.h>
@@ -27,7 +24,6 @@
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
 #include <engine/shared/protocol.h>
-#include <engine/shared/protocol_ex.h>
 #include <engine/shared/snapshot.h>
 
 #include <mastersrv/mastersrv.h>

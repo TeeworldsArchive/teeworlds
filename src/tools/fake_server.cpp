@@ -6,7 +6,6 @@
 #include <base/system/net.h>
 #include <base/system/thread.h>
 #include <base/system/time.h>
-#include <engine/shared/config.h>
 #include <engine/shared/network.h>
 #include <mastersrv/mastersrv.h>
 

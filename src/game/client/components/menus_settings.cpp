@@ -6,7 +6,6 @@
 #include <base/math.h>
 #include <base/tl/array.h>
 
-#include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/serverbrowser.h>
 #include <engine/storage.h>
@@ -15,7 +14,6 @@
 #include <engine/shared/config.h>
 #include <engine/shared/jsonparser.h>
 
-#include <generated/client_data.h>
 #include <generated/protocol.h>
 
 #include <game/client/animstate.h>

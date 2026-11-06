@@ -2,8 +2,6 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
-#include <base/system/fs.h>
-#include <base/tl/algorithm.h>
 
 #include <engine/console.h>
 #include <engine/storage.h>

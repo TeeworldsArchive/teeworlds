@@ -4,7 +4,6 @@
 #ifndef GAME_SERVER_GAMECONTROLLER_H
 #define GAME_SERVER_GAMECONTROLLER_H
 
-#include <base/tl/array.h>
 #include <base/vmath.h>
 
 #include <game/commands.h>

@@ -4,7 +4,6 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
-#include <generated/client_data.h>
 #include <generated/protocol.h>
 
 #include <game/client/gameclient.h>

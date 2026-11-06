@@ -3,7 +3,6 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
 #include <base/hash_ctxt.h>
-#include <base/math.h>
 #include <base/system/misc.h>
 #include <base/system/net.h>
 #include <base/system/time.h>

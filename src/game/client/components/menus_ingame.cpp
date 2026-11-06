@@ -1,13 +1,11 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#include <base/math.h>
 
 #include <engine/config.h>
 #include <engine/contacts.h>
 #include <engine/demo.h>
 #include <engine/graphics.h>
-#include <engine/keys.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>

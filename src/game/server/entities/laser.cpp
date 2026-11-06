@@ -2,7 +2,6 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <game/server/gamecontext.h>
-#include <generated/server_data.h>
 
 #include "character.h"
 #include "laser.h"

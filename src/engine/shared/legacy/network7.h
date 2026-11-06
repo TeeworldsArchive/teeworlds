@@ -2,10 +2,6 @@
 #ifndef ENGINE_SHARED_LEGACY_NETWORK7_H
 #define ENGINE_SHARED_LEGACY_NETWORK7_H
 
-#include <base/system/debug.h>
-#include <base/system/fs.h>
-#include <base/system/io.h>
-#include <base/system/string.h>
 
 /*
 	Frozen 0.7 connection handshake semantics.

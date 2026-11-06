@@ -1,6 +1,6 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include <base/system/misc.h>
-#include <base/system/string.h>
+
+#include <stddef.h>
 
 #include <engine/shared/packer.h>
 

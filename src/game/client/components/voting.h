@@ -8,7 +8,6 @@
 #include <engine/shared/memheap.h>
 
 #include <game/client/component.h>
-#include <game/client/ui.h>
 #include <game/voting.h>
 
 class CVoting : public CComponent

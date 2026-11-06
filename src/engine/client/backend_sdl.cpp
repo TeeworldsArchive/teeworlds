@@ -2,14 +2,12 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/detect.h>
-#include <base/system/aio.h>
 #include <base/system/thread.h>
 #include <base/tl/threading.h>
 
 #include <engine/storage.h>
 
 #include <engine/external/glad/gl.h>
-#include <SDL3/SDL.h>
 
 #include "backend_sdl.h"
 #include "graphics_threaded.h"

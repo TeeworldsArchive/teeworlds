@@ -4,33 +4,24 @@
 #include <math.h>
 
 #include <base/math.h>
-#include <base/system/fs.h>
-#include <base/system/lock.h>
-#include <base/system/misc.h>
-#include <base/system/net.h>
 #include <base/system/time.h>
 #include <base/vmath.h>
 
 #include <engine/config.h>
-#include <engine/contacts.h>
-#include <engine/engine.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
-#include <game/version.h>
 #include <generated/protocol.h>
 
 #include <game/client/components/binds.h>
 #include <game/client/components/camera.h>
-#include <game/client/components/console.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
 #include <game/client/lineinput.h>
 #include <generated/client_data.h>
-#include <mastersrv/mastersrv.h>
 
 #include "chat.h"
 #include "countryflags.h"

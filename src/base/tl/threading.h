@@ -4,7 +4,6 @@
 #ifndef BASE_TL_THREADING_H
 #define BASE_TL_THREADING_H
 
-#include <base/system/debug.h>
 #include <base/system/lock.h>
 #include <base/system/semaphore.h>
 

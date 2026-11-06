@@ -4,10 +4,9 @@
 
 #include <base/tl/array.h>
 
-#include <engine/engine.h>
+#include <engine/contacts.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
-#include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
@@ -16,14 +15,12 @@
 
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
-#include <game/localization.h>
 
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/sounds.h>
 
 #include "binds.h"
 #include "chat.h"
-#include "menus.h"
 
 void CChat::OnReset()
 {

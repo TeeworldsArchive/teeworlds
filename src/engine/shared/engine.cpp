@@ -4,8 +4,6 @@
 #include <stdlib.h> // srand
 
 #include <base/math.h>
-#include <base/system/fs.h>
-#include <base/system/lock.h>
 #include <base/system/net.h>
 #include <base/system/thread.h>
 #include <base/system/time.h>
@@ -13,7 +11,6 @@
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/shared/config.h>
-#include <engine/shared/network.h>
 #include <engine/storage.h>
 
 static int HostLookupThread(void *pUser)

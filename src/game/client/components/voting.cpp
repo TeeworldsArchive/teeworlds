@@ -5,7 +5,6 @@
 
 #include <engine/shared/config.h>
 
-#include <game/client/render.h>
 #include <generated/protocol.h>
 
 #include "chat.h"

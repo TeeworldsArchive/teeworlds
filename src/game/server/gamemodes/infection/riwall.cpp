@@ -3,7 +3,6 @@
 #include <game/server/entities/character.h>
 #include <game/server/gamecontext.h>
 #include <game/server/gamecontroller.h>
-#include <game/server/player.h>
 #include "riwall.h"
 
 CRIWall::CRIWall(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, int Owner) : CEntity(pGameWorld, CGameWorld::ENTTYPE_RIWALL, Pos)

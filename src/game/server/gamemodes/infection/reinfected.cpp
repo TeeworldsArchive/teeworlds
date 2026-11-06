@@ -1,9 +1,7 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include <base/color.h>
 #include <base/tl/inplace_array.h>
 #include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
-#include <game/localization.h>
 #include <game/server/entities/character.h>
 #include <game/server/gamecontext.h>
 #include <game/server/player.h>

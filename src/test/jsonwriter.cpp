@@ -4,6 +4,8 @@
 #include "test.h"
 #include <gtest/gtest.h>
 
+#include <base/system/fs.h>
+#include <base/system/string.h>
 #include <engine/shared/jsonwriter.h>
 #include <limits.h>
 

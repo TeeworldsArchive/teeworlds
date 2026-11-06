@@ -3,7 +3,6 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
 #include <base/system/mem.h>
-#include <base/system/misc.h>
 #include <base/system/string.h>
 #include <base/system/time.h>
 

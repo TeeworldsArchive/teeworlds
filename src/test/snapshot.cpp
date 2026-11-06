@@ -1,10 +1,8 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include "test.h"
 
 #include <gtest/gtest.h>
 
 #include <base/system/mem.h>
-#include <base/system/time.h>
 #include <engine/shared/snapshot.h>
 
 static unsigned NextRand(unsigned &Seed)

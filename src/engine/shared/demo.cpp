@@ -2,9 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <base/system/fs.h>
+#include <base/system/mem.h>
 #include <base/system/misc.h>
-#include <base/system/net.h>
 #include <base/system/time.h>
 #include <base/uuid.h>
 
@@ -16,7 +15,6 @@
 #include "demo.h"
 #include "legacy/network7.h"
 #include "memheap.h"
-#include "network.h"
 #include "snapshot.h"
 
 const Uuid SHA256_EXTENSION = {{0x6b, 0xe6, 0xda, 0x4a, 0xce, 0xbd, 0x38, 0x0c, 0x9b, 0x5b, 0x12, 0x89, 0xc8, 0x42, 0xd7, 0x80}};

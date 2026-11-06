@@ -12,13 +12,11 @@
 #include <engine/textrender.h>
 
 #include <game/client/gameclient.h>
-#include <game/client/render.h>
 
 #include <game/client/ui.h>
 
 #include <generated/client_data.h>
 
-#include "maplayers.h"
 #include "menus.h"
 
 CMenus::CColumn CMenus::ms_aDemoCols[] = {

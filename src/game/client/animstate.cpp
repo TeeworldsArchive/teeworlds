@@ -4,7 +4,6 @@
 
 #include <base/math.h>
 #include <generated/client_data.h>
-#include <generated/protocol.h>
 
 #include "animstate.h"
 

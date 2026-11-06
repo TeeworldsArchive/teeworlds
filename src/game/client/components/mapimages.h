@@ -3,7 +3,6 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #ifndef GAME_CLIENT_COMPONENTS_MAPIMAGES_H
 #define GAME_CLIENT_COMPONENTS_MAPIMAGES_H
-#include <engine/storage.h>
 
 #include <game/client/component.h>
 

@@ -2,7 +2,6 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
-#include <engine/demo.h>
 #include <engine/graphics.h>
 
 #include <game/client/render.h>

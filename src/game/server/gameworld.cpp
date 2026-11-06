@@ -2,7 +2,6 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
-#include "entities/character.h"
 #include "entity.h"
 #include "gamecontext.h"
 #include "gamecontroller.h"

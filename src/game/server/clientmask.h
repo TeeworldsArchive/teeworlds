@@ -2,11 +2,8 @@
 #ifndef GAME_SERVER_CLIENTMASK_H
 #define GAME_SERVER_CLIENTMASK_H
 
-#include <base/system/debug.h>
-#include <base/system/fs.h>
 #include <stdint.h>
 
-#include <base/system/io.h>
 #include <engine/shared/protocol.h>
 
 // A set of client slots. 0.8 raised MAX_CLIENTS to 128, which no longer fits in

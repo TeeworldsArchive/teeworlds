@@ -2,13 +2,11 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <engine/graphics.h>
-#include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 #include <game/client/animstate.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/scoreboard.h>
-#include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
 #include <generated/client_data.h>
 #include "stats.h"

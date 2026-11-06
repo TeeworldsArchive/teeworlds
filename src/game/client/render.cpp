@@ -7,10 +7,7 @@
 #include <base/math.h>
 
 #include <engine/graphics.h>
-#include <engine/map.h>
 #include <engine/shared/config.h>
-#include <engine/textrender.h>
-#include <game/layers.h>
 #include <generated/client_data.h>
 #include "animstate.h"
 #include "render.h"
