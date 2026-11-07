@@ -137,7 +137,7 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 CListboxItem CListBox::DoNextRow()
 {
 	static CUIRect s_RowView;
-	CListboxItem Item = {0};
+	CListboxItem Item = {};
 
 	if(m_ListBoxItemIndex % m_ListBoxItemsPerRow == 0)
 		m_ListBoxView.HSplitTop(m_ListBoxRowHeight /*-2.0f*/, &s_RowView, &m_ListBoxView);

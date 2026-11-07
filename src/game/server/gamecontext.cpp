@@ -444,7 +444,7 @@ void CGameContext::SendVoteSet(int Type, int ToClientID)
 
 void CGameContext::SendVoteStatus(int ClientID, int Total, int Yes, int No)
 {
-	CNetMsg_Sv_VoteStatus Msg = {0};
+	CNetMsg_Sv_VoteStatus Msg = {};
 	Msg.m_Total = Total;
 	Msg.m_Yes = Yes;
 	Msg.m_No = No;
@@ -626,7 +626,7 @@ void CGameContext::OnTick()
 	{
 		if(m_apPlayers[i] && m_apPlayers[i]->IsDummy())
 		{
-			CNetObj_PlayerInput Input = {0};
+			CNetObj_PlayerInput Input = {};
 			Input.m_Direction = (i & 1) ? -1 : 1;
 			m_apPlayers[i]->OnPredictedInput(&Input);
 		}

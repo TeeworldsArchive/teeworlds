@@ -324,7 +324,7 @@ void CHud::RenderScoreHud()
 		{
 			int Local = -1;
 			int aPos[2] = {1, 2};
-			CGameClient::CPlayerInfoItem aPlayerInfo[2] = {{0}};
+			CGameClient::CPlayerInfoItem aPlayerInfo[2] = {};
 			int i = 0;
 			for(int t = 0; t < 2 && i < m_pClient->m_aInfoByScore.size() && m_pClient->m_aInfoByScore[i].m_pTeeInfo; ++i)
 			{

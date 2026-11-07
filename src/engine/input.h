@@ -61,7 +61,7 @@ public:
 	{
 		if(Index < 0 || Index >= m_NumEvents)
 		{
-			IInput::CEvent e = {0, 0};
+			IInput::CEvent e = {};
 			return e;
 		}
 		return m_aInputEvents[Index];

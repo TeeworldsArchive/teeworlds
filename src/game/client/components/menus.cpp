@@ -1458,7 +1458,7 @@ void CMenus::RenderMenu(CUIRect Screen)
 
 			CUIRect Save;
 			Box.HSplitTop(20.0f, &Save, &Box);
-			CServerInfo ServerInfo = {0};
+			CServerInfo ServerInfo = {};
 			str_copy(ServerInfo.m_aHostname, m_aPasswordPopupServerAddress, sizeof(ServerInfo.m_aHostname));
 			ServerBrowser()->UpdateFavoriteState(&ServerInfo);
 			const bool Favorite = ServerInfo.m_Favorite;

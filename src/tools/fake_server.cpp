@@ -19,7 +19,7 @@ const char *pVersion = "trunk";
 const char *pMap = "somemap";
 const char *pServerName = "unnamed server";
 
-NETADDR aMasterServers[16] = {{0, {0}, 0}};
+NETADDR aMasterServers[16] = {{0, {0}, 0, 0}};
 int NumMasters = 0;
 
 const char *PlayerNames[16] = {0};
@@ -114,7 +114,7 @@ static void SendFWCheckResponse(NETADDR *pAddr)
 static int Run()
 {
 	int64 NextHeartBeat = 0;
-	NETADDR BindAddr = {NETTYPE_IPV4, {0}, 0};
+	NETADDR BindAddr = {NETTYPE_IPV4, {0}, 0, 0};
 
 	if(!pNet->Open(BindAddr, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 		return 0;

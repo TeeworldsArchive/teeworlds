@@ -48,7 +48,7 @@ static int m_ConfigReorder = 0;
 
 void Run(unsigned short Port, NETADDR Dest)
 {
-	NETADDR Src = {NETTYPE_IPV4, {0, 0, 0, 0}, Port};
+	NETADDR Src = {NETTYPE_IPV4, {0, 0, 0, 0}, Port, 0};
 	NETSOCKET Socket = net_udp_create(Src, 0);
 
 	char aBuffer[1024 * 2];
@@ -211,7 +211,7 @@ void Run(unsigned short Port, NETADDR Dest)
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char **argv)
 {
-	NETADDR Addr = {NETTYPE_IPV4, {127, 0, 0, 1}, 8303};
+	NETADDR Addr = {NETTYPE_IPV4, {127, 0, 0, 1}, 8303, 0};
 	dbg_logger_stdout();
 	Run(8302, Addr);
 	return 0;

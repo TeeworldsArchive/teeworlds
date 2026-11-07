@@ -21,9 +21,9 @@
 
 CMenus::CColumn CMenus::ms_aDemoCols[] = {
 	// Localize("Name"); Localize("Length"); Localize("Date"); - these strings are localized within CLocConstString
-	{COL_DEMO_NAME, CMenus::SORT_DEMONAME, "Name", 0, 100.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
-	{COL_DEMO_LENGTH, CMenus::SORT_LENGTH, "Length", 1, 80.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
-	{COL_DEMO_DATE, CMenus::SORT_DATE, "Date", 1, 170.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
+	{COL_DEMO_NAME, CMenus::SORT_DEMONAME, "Name", 0, 100.0f, 0, {}, {}, TEXTALIGN_CENTER},
+	{COL_DEMO_LENGTH, CMenus::SORT_LENGTH, "Length", 1, 80.0f, 0, {}, {}, TEXTALIGN_CENTER},
+	{COL_DEMO_DATE, CMenus::SORT_DATE, "Date", 1, 170.0f, 0, {}, {}, TEXTALIGN_CENTER},
 };
 
 void CMenus::RenderDemoPlayer(CUIRect MainView)

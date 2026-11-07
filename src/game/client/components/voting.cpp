@@ -21,7 +21,7 @@ void CVoting::ConVote(IConsole::IResult *pResult, void *pUserData)
 
 void CVoting::SendCallvote(const char *pType, const char *pValue, const char *pReason, bool ForceVote)
 {
-	CNetMsg_Cl_CallVote Msg = {0};
+	CNetMsg_Cl_CallVote Msg = {};
 	Msg.m_Type = pType;
 	Msg.m_Value = pValue;
 	Msg.m_Reason = pReason;

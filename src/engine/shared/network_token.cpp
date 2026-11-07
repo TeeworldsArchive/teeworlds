@@ -69,7 +69,7 @@ int CNetTokenManager::ProcessMessage(const NETADDR *pAddr, const CNetPacketConst
 
 void CNetTokenManager::GenerateSeed()
 {
-	static const NETADDR NullAddr = {0};
+	static const NETADDR NullAddr = {};
 	m_PrevSeed = m_Seed;
 
 	secure_random_fill(&m_Seed, sizeof(m_Seed));
@@ -87,7 +87,7 @@ TOKEN CNetTokenManager::GenerateToken(const NETADDR *pAddr) const
 
 TOKEN CNetTokenManager::GenerateToken(const NETADDR *pAddr, int64 Seed)
 {
-	static const NETADDR NullAddr = {0};
+	static const NETADDR NullAddr = {};
 	NETADDR Addr;
 	char aBuf[sizeof(NETADDR) + sizeof(int64)];
 	unsigned int Result;
@@ -260,7 +260,7 @@ void CNetTokenCache::AddToken(const NETADDR *pAddr, TOKEN Token, int TokenFLag)
 	bool Found = false;
 	while(pInfo)
 	{
-		NETADDR NullAddr = {0};
+		NETADDR NullAddr = {};
 		NullAddr.type = 7; // cover broadcasts
 		if(net_addr_comp(&pInfo->m_Addr, pAddr, true) == 0 || ((TokenFLag & NET_TOKENFLAG_ALLOWBROADCAST) && net_addr_comp(&pInfo->m_Addr, &NullAddr, false) == 0 && pInfo->m_Addr.port == pAddr->port))
 		{

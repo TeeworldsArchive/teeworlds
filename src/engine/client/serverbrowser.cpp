@@ -436,7 +436,7 @@ void CServerBrowser::SetFavoritePassword(const char *pAddress, const char *pPass
 {
 	if(m_ServerBrowserFavorites.AddFavoriteEx(pAddress, 0, false, pPassword))
 	{
-		NETADDR Addr = {0};
+		NETADDR Addr = {};
 		if(net_addr_from_str(&Addr, pAddress))
 			return;
 		for(int i = 0; i < NUM_TYPES; ++i)
@@ -456,7 +456,7 @@ void CServerBrowser::SetFavoritePassword(const char *pAddress, const char *pPass
 
 const char *CServerBrowser::GetFavoritePassword(const char *pAddress)
 {
-	NETADDR Addr = {0};
+	NETADDR Addr = {};
 	if(net_addr_from_str(&Addr, pAddress))
 		return 0;
 	CServerBrowserFavorites::CFavoriteServer *pFavorite = m_ServerBrowserFavorites.FindFavoriteByAddr(Addr, 0);
@@ -682,7 +682,7 @@ void CServerBrowser::LoadServerlist()
 	{
 		if(rEntry[i].type == json_string)
 		{
-			NETADDR Addr = {0};
+			NETADDR Addr = {};
 			if(!net_addr_from_str(&Addr, rEntry[i]))
 				Set(Addr, SET_MASTER_ADD, -1, 0);
 		}

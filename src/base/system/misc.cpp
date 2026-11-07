@@ -312,7 +312,7 @@ struct SECURE_RANDOM_DATA
 #endif
 };
 
-static struct SECURE_RANDOM_DATA secure_random_data = {0};
+static struct SECURE_RANDOM_DATA secure_random_data = {};
 
 int secure_random_init()
 {

@@ -35,7 +35,7 @@
 #include <sys/filio.h>
 #endif
 
-static NETSTATS network_stats = {0};
+static NETSTATS network_stats = {};
 
 static NETSOCKET invalid_socket = {NETTYPE_INVALID, -1, -1};
 

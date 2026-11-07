@@ -551,7 +551,7 @@ void CClient::OnClientOnline()
 	DemoRecorder_HandleAutoStart();
 
 	// store password and server as favorite if configured, if the server was password protected
-	CServerInfo Info = {0};
+	CServerInfo Info = {};
 	GetServerInfo(&Info);
 	bool ShouldStorePassword = Config()->m_ClSaveServerPasswords == 2 || (Config()->m_ClSaveServerPasswords == 1 && Info.m_Favorite);
 	if(m_aServerPassword[0] && ShouldStorePassword && (Info.m_Flags & IServerBrowser::FLAG_PASSWORD))
@@ -1159,7 +1159,7 @@ void CClient::ProcessConnlessPacket(CNetChunk *pPacket)
 	if(pPacket->m_DataSize >= (int) sizeof(SERVERBROWSE_INFO) && mem_comp(pPacket->m_pData, SERVERBROWSE_INFO, sizeof(SERVERBROWSE_INFO)) == 0)
 	{
 		CUnpacker Up;
-		CServerInfo Info = {0};
+		CServerInfo Info = {};
 		Up.Reset((unsigned char *) pPacket->m_pData + sizeof(SERVERBROWSE_INFO), pPacket->m_DataSize - sizeof(SERVERBROWSE_INFO));
 		net_addr_str(&pPacket->m_Address, Info.m_aAddress, sizeof(Info.m_aAddress), true);
 		int Token;
@@ -1172,7 +1172,7 @@ void CClient::ProcessConnlessPacket(CNetChunk *pPacket)
 	if(pPacket->m_DataSize >= (int) sizeof(SERVERBROWSE_PLAYERSINFO) && mem_comp(pPacket->m_pData, SERVERBROWSE_PLAYERSINFO, sizeof(SERVERBROWSE_PLAYERSINFO)) == 0)
 	{
 		CUnpacker Up;
-		CServerInfo Info = {0};
+		CServerInfo Info = {};
 		Up.Reset((unsigned char *) pPacket->m_pData + sizeof(SERVERBROWSE_PLAYERSINFO), pPacket->m_DataSize - sizeof(SERVERBROWSE_PLAYERSINFO));
 		net_addr_str(&pPacket->m_Address, Info.m_aAddress, sizeof(Info.m_aAddress), true);
 		int Token;
@@ -1364,7 +1364,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		}
 		else if((pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Unpacker.Type() == NETMSG_SERVERINFO)
 		{
-			CServerInfo Info = {0};
+			CServerInfo Info = {};
 			net_addr_str(&m_ServerAddress, Info.m_aAddress, sizeof(Info.m_aAddress), true);
 			if(!UnpackServerInfo(&Unpacker, &Info, 0) && !Unpacker.Error())
 			{

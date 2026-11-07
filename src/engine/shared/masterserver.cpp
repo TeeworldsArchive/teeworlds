@@ -145,7 +145,7 @@ public:
 		LineReader.Init(File);
 		while(1)
 		{
-			CMasterInfo Info = {{0}};
+			CMasterInfo Info = {};
 			const char *pLine = LineReader.Get();
 			if(!pLine)
 				break;

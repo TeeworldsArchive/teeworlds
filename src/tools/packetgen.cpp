@@ -15,7 +15,7 @@ void Run(NETADDR Dest)
 
 	for(int i = 0; i < NUM_SOCKETS; i++)
 	{
-		NETADDR BindAddr = {NETTYPE_IPV4, {0}, 0};
+		NETADDR BindAddr = {NETTYPE_IPV4, {0}, 0, 0};
 		aSockets[i] = net_udp_create(BindAddr, 0);
 	}
 
@@ -35,7 +35,7 @@ void Run(NETADDR Dest)
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char **argv)
 {
-	NETADDR Dest = {NETTYPE_IPV4, {127, 0, 0, 1}, 8303};
+	NETADDR Dest = {NETTYPE_IPV4, {127, 0, 0, 1}, 8303, 0};
 	Run(Dest);
 	return 0;
 }

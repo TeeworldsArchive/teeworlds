@@ -60,8 +60,8 @@ struct CVoice
 	};
 };
 
-static CSample m_aSamples[NUM_SAMPLES] = {{0}};
-static CVoice m_aVoices[NUM_VOICES] = {{0}};
+static CSample m_aSamples[NUM_SAMPLES] = {};
+static CVoice m_aVoices[NUM_VOICES] = {};
 static CChannel m_aChannels[NUM_CHANNELS];
 
 static LOCK m_SoundLock = 0;

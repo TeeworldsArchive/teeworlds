@@ -22,12 +22,12 @@
 
 CMenus::CColumn CMenus::ms_aBrowserCols[] = {
 	// Localize("Server"); Localize("Type"); Localize("Map"); Localize("Players"); Localize("Ping"); - these strings are localized within CLocConstString
-	{COL_BROWSER_FLAG, -1, " ", -1, 5 * 16.0f + 4 * 2.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
-	{COL_BROWSER_NAME, IServerBrowser::SORT_NAME, "Server", 0, 310.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
-	{COL_BROWSER_GAMETYPE, IServerBrowser::SORT_GAMETYPE, "Type", 1, 70.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
-	{COL_BROWSER_MAP, IServerBrowser::SORT_MAP, "Map", 1, 100.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
-	{COL_BROWSER_PLAYERS, IServerBrowser::SORT_NUMPLAYERS, "Players", 1, 50.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
-	{COL_BROWSER_PING, IServerBrowser::SORT_PING, "Ping", 1, 40.0f, 0, {0}, {0}, TEXTALIGN_CENTER},
+	{COL_BROWSER_FLAG, -1, " ", -1, 5 * 16.0f + 4 * 2.0f, 0, {}, {}, TEXTALIGN_CENTER},
+	{COL_BROWSER_NAME, IServerBrowser::SORT_NAME, "Server", 0, 310.0f, 0, {}, {}, TEXTALIGN_CENTER},
+	{COL_BROWSER_GAMETYPE, IServerBrowser::SORT_GAMETYPE, "Type", 1, 70.0f, 0, {}, {}, TEXTALIGN_CENTER},
+	{COL_BROWSER_MAP, IServerBrowser::SORT_MAP, "Map", 1, 100.0f, 0, {}, {}, TEXTALIGN_CENTER},
+	{COL_BROWSER_PLAYERS, IServerBrowser::SORT_NUMPLAYERS, "Players", 1, 50.0f, 0, {}, {}, TEXTALIGN_CENTER},
+	{COL_BROWSER_PING, IServerBrowser::SORT_PING, "Ping", 1, 40.0f, 0, {}, {}, TEXTALIGN_CENTER},
 };
 
 CServerFilterInfo CMenus::CBrowserFilter::ms_FilterRace = {IServerBrowser::FILTER_IGNORE_UNKNOWN, 999, -1, 0, {{"Race"}}, {false}, {0}};

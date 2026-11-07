@@ -299,7 +299,7 @@ int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, c
 	int Stamp = Seconds > 0 ? Time + Seconds : CBanInfo::EXPIRES_NEVER;
 
 	// set up info
-	CBanInfo Info = {0};
+	CBanInfo Info = {};
 	Info.m_Expires = Stamp;
 	Info.m_LastInfoQuery = Time;
 	str_copy(Info.m_aReason, pReason, sizeof(Info.m_aReason));
