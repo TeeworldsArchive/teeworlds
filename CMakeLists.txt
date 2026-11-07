@@ -164,9 +164,7 @@ if(NOT MSVC)
   add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wall)
   add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wextra)
   add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wformat=2) # Warn about format strings.
-  add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -Wno-stringop-truncation)
   add_cxx_compiler_flag_if_supported(OUR_FLAGS_OWN -fno-exceptions)
-  add_cxx_compiler_flag_if_supported(OUR_FLAGS_DEP -Wno-implicit-function-declaration)
 endif()
 
 if(NOT MSVC)
