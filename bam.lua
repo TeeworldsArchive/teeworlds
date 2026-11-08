@@ -157,8 +157,12 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 
 	GenerateCommonSettings(settings, conf, arch, compiler)
 
+	-- bam has no default mapping for Objective-C++ sources; the C++ driver
+	-- lets clang++ select Objective-C++ from the .mm extension.
+	settings.compile.mappings["mm"] = CompileCXX
+
 	-- Build server launcher before adding game stuff
-	local serverlaunch = Link(settings, "serverlaunch", Compile(settings, "src/macoslaunch/server.m"))
+	local serverlaunch = Link(settings, "serverlaunch", Compile(settings, "src/macoslaunch/server.mm"))
 
 	-- Add requirements for Server & Client
 	BuildGameCommon(settings)
@@ -177,9 +181,6 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 	settings.link.frameworks:Add("OpenGL")
 	-- FIXME: the SDL config is applied in BuildClient too but is needed here before so the launcher will compile
 	config.sdl:Apply(settings)
-	-- bam has no default mapping for Objective-C++ sources; clang++ detects
-	-- the dialect from the .mm extension.
-	settings.compile.mappings["mm"] = CompileCXX
 	settings.link.extrafiles:Merge(Compile(settings, "src/macoslaunch/client.mm"))
 	BuildClient(settings)
 
