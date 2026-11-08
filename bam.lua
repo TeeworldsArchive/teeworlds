@@ -177,7 +177,10 @@ function GenerateMacOSSettings(settings, conf, arch, compiler)
 	settings.link.frameworks:Add("OpenGL")
 	-- FIXME: the SDL config is applied in BuildClient too but is needed here before so the launcher will compile
 	config.sdl:Apply(settings)
-	settings.link.extrafiles:Merge(Compile(settings, "src/macoslaunch/client.m"))
+	-- bam has no default mapping for Objective-C++ sources; clang++ detects
+	-- the dialect from the .mm extension.
+	settings.compile.mappings["mm"] = CompileCXX
+	settings.link.extrafiles:Merge(Compile(settings, "src/macoslaunch/client.mm"))
 	BuildClient(settings)
 
 	-- Content
