@@ -294,14 +294,6 @@ void str_utf8_stats(const char *str, int max_size, int max_count, int *size, int
 	}
 }
 
-unsigned str_quickhash(const char *str)
-{
-	unsigned hash = 5381;
-	for(; *str; str++)
-		hash = ((hash << 5) + hash) + (*str); /* hash * 33 + c */
-	return hash;
-}
-
 struct SECURE_RANDOM_DATA
 {
 	int initialized;

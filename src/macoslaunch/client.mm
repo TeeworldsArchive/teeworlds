@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #include <base/system/string.h>
 
-extern int TWMain(int argc, const char **argv);
+extern "C" int TWMain(int argc, const char **argv);
 
 int main(int argc, const char **argv)
 {

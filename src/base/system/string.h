@@ -8,9 +8,6 @@
 #include <base/system/base.h>
 #include <time.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 /* Group: Strings */
 
 /*
@@ -525,7 +522,13 @@ int str_toint(const char *str);
 float str_tofloat(const char *str);
 int str_isspace(char c);
 char str_uppercase(char c);
-unsigned str_quickhash(const char *str);
+constexpr unsigned str_quickhash(const char *str)
+{
+	unsigned hash = 5381;
+	for(; *str; str++)
+		hash = ((hash << 5) + hash) + (*str); /* hash * 33 + c */
+	return hash;
+}
 
 enum
 {
@@ -691,8 +694,5 @@ void str_utf8_stats(const char *str, int max_size, int max_count, int *size, int
 		0 - Initialization succeeded.
 		1 - Initialization failed.
 */
-#ifdef __cplusplus
-}
-#endif
 
 #endif
