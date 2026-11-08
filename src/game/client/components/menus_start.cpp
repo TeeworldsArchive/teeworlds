@@ -13,6 +13,7 @@
 #include <generated/client_data.h>
 
 #include "menus.h"
+#include "steamfriends.h"
 
 void CMenus::RenderStartMenu(CUIRect MainView)
 {
@@ -96,16 +97,76 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	ExtButtons.VSplitLeft(80.0f, &ExtButtons, 0);
 	ExtButtons.HSplitBottom(20.0f, &ExtButtons, &Button);
 
-	// screenshots board
-	CUIRect Screenshotsboard;
-	MainView.VMargin(50.0f, &Screenshotsboard);
-	Screenshotsboard.HSplitBottom(60 * Graphics()->ScreenUIScale(), &Screenshotsboard, 0);
-	Screenshotsboard.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
+	// the screenshots board can be switched to the Steam friends list; the tab
+	// row sits above the board, inside the same panel
+	const bool SteamFriendsAvailable = m_pClient->SteamFriends() && m_pClient->SteamFriends()->Available();
+	if(!SteamFriendsAvailable)
+		m_StartMenuBoard = STARTMENU_BOARD_SCREENSHOTS;
 
-	Screenshotsboard.VMargin(20.0f, &Screenshotsboard);
-	Screenshotsboard.HSplitTop(20.0f, 0, &Screenshotsboard);
-	Screenshotsboard.HSplitBottom(20.0f, &Screenshotsboard, 0);
-	Screenshotsboard.HSplitBottom(20.0f, &Screenshotsboard, &Button);
+	CUIRect Board;
+	MainView.VMargin(50.0f, &Board);
+	Board.HSplitBottom(60 * Graphics()->ScreenUIScale(), &Board, 0);
+	Board.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
+
+	Board.VMargin(20.0f, &Board);
+	Board.HSplitTop(20.0f, 0, &Board);
+	Board.HSplitBottom(20.0f, &Board, 0);
+
+	CUIRect BoardTabs, BoardContent, BoardButton;
+	Board.HSplitBottom(20.0f, &Board, &BoardButton);
+	Board.HSplitTop(20.0f, &BoardTabs, &BoardContent);
+	BoardContent.HSplitTop(4.0f, 0, &BoardContent);
+
+	{
+		CUIRect Tab;
+		const float TabSpacing = 3.0f;
+		const int NumTabs = SteamFriendsAvailable ? 2 : 1;
+		// the panel gets narrow at 4:3, so the tabs have to share what is there
+		const float TabWidth = minimum(100.0f, (BoardTabs.w - TabSpacing * (NumTabs - 1)) / NumTabs);
+
+		BoardTabs.VSplitLeft(TabWidth, &Tab, &BoardTabs);
+		static CButtonContainer s_ScreenshotsTab;
+		if(DoButton_MenuTabTop(&s_ScreenshotsTab, Localize("Screenshots"), m_StartMenuBoard == STARTMENU_BOARD_SCREENSHOTS, &Tab))
+			m_StartMenuBoard = STARTMENU_BOARD_SCREENSHOTS;
+
+		if(SteamFriendsAvailable)
+		{
+			BoardTabs.VSplitLeft(TabSpacing, 0, &BoardTabs);
+			BoardTabs.VSplitLeft(TabWidth, &Tab, &BoardTabs);
+			static CButtonContainer s_SteamFriendsTab;
+			if(DoButton_MenuTabTop(&s_SteamFriendsTab, Localize("Steam friends"), m_StartMenuBoard == STARTMENU_BOARD_STEAM_FRIENDS, &Tab))
+				m_StartMenuBoard = STARTMENU_BOARD_STEAM_FRIENDS;
+		}
+	}
+
+	if(m_StartMenuBoard == STARTMENU_BOARD_STEAM_FRIENDS)
+		RenderStartMenuSteamFriends(BoardContent, BoardButton);
+	else
+		RenderStartMenuScreenshots(BoardContent, BoardButton);
+
+	// render version
+	CUIRect Version;
+	MainView.HSplitBottom(50.0f, 0, &Version);
+	Version.VMargin(50.0f, &Version);
+	UI()->DoLabel(&Version, "Archive " GAME_VERSION, 14.0f, TEXTALIGN_TR);
+
+	if(str_comp(Client()->LatestVersion(), GAME_VERSION) > 0)
+	{
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), Localize("Teeworlds Archive %s is out!"), Client()->LatestVersion());
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+		TextRender()->TextSecondaryColor(0.0f, 0.0f, 0.0f, 0.5f);
+		UI()->DoLabel(&TopMenu, aBuf, 14.0f, TEXTALIGN_MC, TopMenu.w * 0.9f, true);
+		TextRender()->TextColor(CUI::ms_DefaultTextColor);
+		TextRender()->TextSecondaryColor(CUI::ms_DefaultTextOutlineColor);
+	}
+
+	if(NewPage != -1)
+		SetMenuPage(NewPage);
+}
+
+void CMenus::RenderStartMenuScreenshots(CUIRect View, CUIRect Button)
+{
 	Button.VSplitRight(80.0f, 0, &Button);
 
 	static bool s_InitScreenshotsList = true;
@@ -137,7 +198,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 			OldSelected = -1;
 		}
 
-		s_ListBox.DoBegin(&Screenshotsboard);
+		s_ListBox.DoBegin(&View);
 		s_InitScreenshotsList = s_ListBox.DoFilter();
 		s_ListBox.DoStart(60.0f, s_lpList.size(), 3, 1, OldSelected);
 
@@ -188,27 +249,8 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	}
 	else
 	{
-		UI()->DoLabel(&Screenshotsboard, Localize("There's no any thumbnail for screenshots"), 20.0f, TEXTALIGN_MC);
+		UI()->DoLabel(&View, Localize("There's no any thumbnail for screenshots"), 20.0f, TEXTALIGN_MC);
 	}
-	// render version
-	CUIRect Version;
-	MainView.HSplitBottom(50.0f, 0, &Version);
-	Version.VMargin(50.0f, &Version);
-	UI()->DoLabel(&Version, "Archive " GAME_VERSION, 14.0f, TEXTALIGN_TR);
-
-	if(str_comp(Client()->LatestVersion(), GAME_VERSION) > 0)
-	{
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), Localize("Teeworlds Archive %s is out!"), Client()->LatestVersion());
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-		TextRender()->TextSecondaryColor(0.0f, 0.0f, 0.0f, 0.5f);
-		UI()->DoLabel(&TopMenu, aBuf, 14.0f, TEXTALIGN_MC, TopMenu.w * 0.9f, true);
-		TextRender()->TextColor(CUI::ms_DefaultTextColor);
-		TextRender()->TextSecondaryColor(CUI::ms_DefaultTextOutlineColor);
-	}
-
-	if(NewPage != -1)
-		SetMenuPage(NewPage);
 }
 
 bool CMenus::LoadScreenshot(const char *pName)

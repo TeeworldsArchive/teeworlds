@@ -231,6 +231,14 @@ private:
 	static int GameIconScan(const char *pName, int IsDir, int DirType, void *pUser);
 
 	// for start menus
+	enum
+	{
+		STARTMENU_BOARD_SCREENSHOTS = 0,
+		STARTMENU_BOARD_STEAM_FRIENDS,
+		NUM_STARTMENU_BOARDS,
+	};
+	int m_StartMenuBoard;
+
 	class CScreenshot
 	{
 	public:
@@ -586,6 +594,10 @@ private:
 
 	// found in menus_start.cpp
 	void RenderStartMenu(CUIRect MainView);
+	void RenderStartMenuScreenshots(CUIRect View, CUIRect Button);
+
+	// found in menus_steam.cpp
+	void RenderStartMenuSteamFriends(CUIRect View, CUIRect Button);
 
 	// found in menus_ingame.cpp
 	void RenderGame(CUIRect MainView);

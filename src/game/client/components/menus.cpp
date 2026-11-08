@@ -73,6 +73,7 @@ CMenus::CMenus()
 	m_SkinModified = false;
 	m_KeyReaderWasActive = false;
 	m_KeyReaderIsActive = false;
+	m_StartMenuBoard = STARTMENU_BOARD_SCREENSHOTS;
 
 	// Config() and the camera are not available yet during construction, so
 	// this must not go through SetMenuPage()

@@ -232,6 +232,7 @@ jobs:
             openssl:p
             curl-winssl:p
             libspng:p
+            giflib:p
             shaderc:p
 
       - name: Cache SDL3
@@ -287,6 +288,7 @@ jobs:
           for pattern in \
             'SDL3.dll' \
             'libspng*.dll' \
+            'libgif*.dll' \
             'libopus-*.dll' \
             'libopusfile-*.dll' \
             'libfreetype-*.dll' \

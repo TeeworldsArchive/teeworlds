@@ -52,6 +52,7 @@
 #include "components/sounds.h"
 #include "components/spectator.h"
 #include "components/stats.h"
+#include "components/steamfriends.h"
 #include "components/tees.h"
 #include "components/voting.h"
 
@@ -115,6 +116,7 @@ static CDamageInd gsDamageInd;
 static CVoting gs_Voting;
 static CSpectator gs_Spectator;
 static CStats gs_Stats;
+static CSteamFriends gs_SteamFriends;
 
 static CTees gs_Tees;
 static CNamePlates gs_NamePlates;
@@ -254,6 +256,7 @@ void CGameClient::OnConsoleInit()
 	m_pScoreboard = &::gs_Scoreboard;
 	m_pItems = &::gs_Items;
 	m_pStats = &::gs_Stats;
+	m_pSteamFriends = &::gs_SteamFriends;
 
 	// make a list of all the systems, make sure to add them in the corrent render order
 	m_All.Add(m_pMapComponent); // owns the map resources and their lifetime
@@ -290,6 +293,7 @@ void CGameClient::OnConsoleInit()
 	m_All.Add(&gs_Scoreboard);
 	m_All.Add(m_pStats);
 	m_All.Add(m_pMotd);
+	m_All.Add(m_pSteamFriends);
 	m_All.Add(m_pMenus);
 	m_All.Add(&m_pMenus->m_Binder);
 	m_All.Add(m_pGameConsole);

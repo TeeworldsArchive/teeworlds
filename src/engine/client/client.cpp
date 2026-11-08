@@ -24,6 +24,7 @@
 #include <engine/masterserver.h>
 #include <engine/serverbrowser.h>
 #include <engine/sound.h>
+#include <engine/steamfriends.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -2065,6 +2066,7 @@ void CClient::RegisterInterfaces()
 	Kernel()->RegisterInterface(static_cast<IServerBrowser *>(&m_ServerBrowser));
 	Kernel()->RegisterInterface(static_cast<IFriends *>(&m_Friends));
 	Kernel()->RegisterInterface(static_cast<IBlacklist *>(&m_Blacklist));
+	Kernel()->RegisterInterface(static_cast<ISteamFriendList *>(&m_SteamPresence));
 }
 
 void CClient::InitInterfaces()
@@ -2180,7 +2182,7 @@ void CClient::Run()
 
 	// Initialize Steamworks before the graphics context is created so that the
 	// Steam overlay can hook into it. Failure is not fatal.
-	m_SteamPresence.Init();
+	m_SteamPresence.Init(Engine());
 
 	// init SDL
 	{

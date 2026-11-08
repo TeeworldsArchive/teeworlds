@@ -269,6 +269,7 @@ else()
     set(HARFBUZZ_TARGET PkgConfig::HARFBUZZ)
   endif()
 endif()
+find_package(GIF)
 find_package(Git)
 find_package(GTest)
 find_package(SPNG)
@@ -384,6 +385,7 @@ if(TARGET_OS AND TARGET_OS STREQUAL "mac")
 endif()
 show_dependency_status("OpenSSL Crypto" OPENSSL)
 show_dependency_status("Curl" CURL)
+show_dependency_status("GIF" GIF)
 show_dependency_status("spng" spng)
 show_dependency_status("Python3" Python3)
 show_dependency_status("SDL3" SDL3)
@@ -1461,6 +1463,7 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   server.h
   serverbrowser.h
   sound.h
+  steamfriends.h
   storage.h
   textrender.h
   uuid.h
@@ -1652,6 +1655,7 @@ if(CLIENT)
     components/menus_ingame.cpp
     components/menus_settings.cpp
     components/menus_start.cpp
+    components/menus_steam.cpp
     components/motd.cpp
     components/motd.h
     components/nameplates.cpp
@@ -1670,12 +1674,16 @@ if(CLIENT)
     components/spectator.h
     components/stats.cpp
     components/stats.h
+    components/steamfriends.cpp
+    components/steamfriends.h
     components/tees.cpp
     components/tees.h
     components/voting.cpp
     components/voting.h
     gameclient.cpp
     gameclient.h
+    gif_animation.cpp
+    gif_animation.h
     lineinput.cpp
     lineinput.h
     render.cpp
@@ -1732,6 +1740,15 @@ if(CLIENT)
     $<TARGET_OBJECTS:game-shared>
   )
   target_link_libraries(${TARGET_CLIENT} ${LIBS_CLIENT})
+
+  # giflib decodes the animated avatars of the Steam friends list. It is
+  # optional: without it avatars fall back to the still Steam ones.
+  if(GIF_FOUND)
+    target_compile_definitions(${TARGET_CLIENT} PRIVATE CONF_GIFLIB)
+    target_link_libraries(${TARGET_CLIENT} GIF::GIF)
+  else()
+    message(STATUS "giflib not found: animated Steam avatars are disabled")
+  endif()
 
   if(STEAM)
     target_compile_definitions(${TARGET_CLIENT} PRIVATE CONF_STEAM)

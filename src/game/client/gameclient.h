@@ -103,6 +103,7 @@ public:
 	class CCollision *Collision() { return &m_Collision; }
 	class IFriends *Friends() { return m_pFriends; }
 	class IBlacklist *Blacklist() { return m_pBlacklist; }
+	class CSteamFriends *SteamFriends() { return m_pSteamFriends; }
 
 	const char *NetobjFailedOn() { return m_NetObjHandler.FailedObjOn(); }
 	int NetobjNumFailures() { return m_NetObjHandler.NumObjFailures(); }
@@ -458,6 +459,7 @@ public:
 	class CScoreboard *m_pScoreboard;
 	class CStats *m_pStats;
 	class CItems *m_pItems;
+	class CSteamFriends *m_pSteamFriends;
 };
 
 void FormatTime(char *pBuf, int Size, int Time, int Precision);
