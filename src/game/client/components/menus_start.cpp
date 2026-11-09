@@ -134,7 +134,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 			BoardTabs.VSplitLeft(TabSpacing, 0, &BoardTabs);
 			BoardTabs.VSplitLeft(TabWidth, &Tab, &BoardTabs);
 			static CButtonContainer s_SteamFriendsTab;
-			if(DoButton_MenuTabTop(&s_SteamFriendsTab, Localize("Steam friends"), m_StartMenuBoard == STARTMENU_BOARD_STEAM_FRIENDS, &Tab))
+			if(DoButton_MenuTabTop(&s_SteamFriendsTab, Localize("Steam friends", "Steam Friends"), m_StartMenuBoard == STARTMENU_BOARD_STEAM_FRIENDS, &Tab))
 				m_StartMenuBoard = STARTMENU_BOARD_STEAM_FRIENDS;
 		}
 	}

@@ -22,25 +22,25 @@ static void FormatFriendStatus(char *pBuf, int BufSize, const CSteamFriendInfo *
 		else if(pInfo->m_aMap[0])
 			str_format(pBuf, BufSize, Localize("Playing on '%s'", "Playing on '(map)'"), pInfo->m_aMap);
 		else
-			str_copy(pBuf, Localize("In game"), BufSize);
+			str_copy(pBuf, Localize("In game", "Steam Friends"), BufSize);
 		return;
 	}
 
 	if(pInfo->m_PlayingOtherGame)
 	{
-		str_copy(pBuf, Localize("In another game"), BufSize);
+		str_copy(pBuf, Localize("In another game", "Steam Friends"), BufSize);
 		return;
 	}
 
 	switch(pInfo->m_State)
 	{
-		case CSteamFriendInfo::STATE_ONLINE: str_copy(pBuf, Localize("Online"), BufSize); break;
-		case CSteamFriendInfo::STATE_BUSY: str_copy(pBuf, Localize("Busy"), BufSize); break;
-		case CSteamFriendInfo::STATE_AWAY: str_copy(pBuf, Localize("Away"), BufSize); break;
-		case CSteamFriendInfo::STATE_SNOOZE: str_copy(pBuf, Localize("Snoozed"), BufSize); break;
-		case CSteamFriendInfo::STATE_LOOKING_TO_TRADE: str_copy(pBuf, Localize("Looking to trade"), BufSize); break;
-		case CSteamFriendInfo::STATE_LOOKING_TO_PLAY: str_copy(pBuf, Localize("Looking to play"), BufSize); break;
-		default: str_copy(pBuf, Localize("Offline"), BufSize); break;
+		case CSteamFriendInfo::STATE_ONLINE: str_copy(pBuf, Localize("Online", "Steam Friends"), BufSize); break;
+		case CSteamFriendInfo::STATE_BUSY: str_copy(pBuf, Localize("Busy", "Steam Friends"), BufSize); break;
+		case CSteamFriendInfo::STATE_AWAY: str_copy(pBuf, Localize("Away", "Steam Friends"), BufSize); break;
+		case CSteamFriendInfo::STATE_SNOOZE: str_copy(pBuf, Localize("Snoozed", "Steam Friends"), BufSize); break;
+		case CSteamFriendInfo::STATE_LOOKING_TO_TRADE: str_copy(pBuf, Localize("Looking to trade", "Steam Friends"), BufSize); break;
+		case CSteamFriendInfo::STATE_LOOKING_TO_PLAY: str_copy(pBuf, Localize("Looking to play", "Steam Friends"), BufSize); break;
+		default: str_copy(pBuf, Localize("Offline", "Steam Friends"), BufSize); break;
 	}
 }
 
@@ -92,7 +92,7 @@ void CMenus::RenderStartMenuSteamFriends(CUIRect View, CUIRect Button)
 	// checkbox sits in the button row of the panel
 	CUIRect Offline;
 	Button.VSplitLeft(minimum(150.0f, Button.w), &Offline, 0);
-	if(DoButton_CheckBox(&Config()->m_ClShowOfflineSteamFriends, Localize("Show offline friends"), ShowOffline, &Offline))
+	if(DoButton_CheckBox(&Config()->m_ClShowOfflineSteamFriends, Localize("Show offline friends", "Steam Friends"), ShowOffline, &Offline))
 		Config()->m_ClShowOfflineSteamFriends ^= 1;
 
 	// the list is rebuilt while it is drawn, so count the friends first
@@ -118,7 +118,7 @@ void CMenus::RenderStartMenuSteamFriends(CUIRect View, CUIRect Button)
 
 	if(NumFriends == 0)
 	{
-		UI()->DoLabel(&View, ShowOffline ? Localize("No Steam friends") : Localize("No online Steam friends"), 14.0f, TEXTALIGN_MC);
+		UI()->DoLabel(&View, ShowOffline ? Localize("No Steam friends", "Steam Friends") : Localize("No online Steam friends", "Steam Friends"), 14.0f, TEXTALIGN_MC);
 		s_ScrollRegion.End();
 		return;
 	}
