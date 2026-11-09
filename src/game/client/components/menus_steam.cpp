@@ -79,6 +79,8 @@ static void RenderSteamFriendAvatar(CGameClient *pClient, CSteamFriends *pSteamF
 
 void CMenus::RenderStartMenuSteamFriends(CUIRect View, CUIRect Button)
 {
+	View.Draw(vec4(0.0f, 0.0f, 0.0f, Config()->m_ClMenuAlpha / 100.0f), 5.0f, CUIRect::CORNER_ALL);
+
 	CSteamFriends *pSteamFriends = m_pClient->SteamFriends();
 	if(!pSteamFriends)
 		return;
