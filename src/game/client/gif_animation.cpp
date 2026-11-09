@@ -6,6 +6,7 @@
 #include <base/math.h>
 #include <base/system/debug.h>
 #include <base/system/mem.h>
+#include <base/system/thread.h>
 
 // textures kept around the frame being played; the frames beyond that are
 // decoded again when the animation loops
@@ -340,11 +341,286 @@ const unsigned char *CGifStream::NextFrame(int *pDelayMs)
 		return m_pFrame;
 	}
 }
+
+/*
+	A frame that was composed and waits for the menu to upload it. It only
+	lives between the decoder and the menu, nothing else owns it.
+*/
+class CGifFrame
+{
+public:
+	int m_Frame;
+	int m_DelayMs;
+	array<unsigned char> m_lData;
+};
+
+/*
+	One stream the worker decodes. The fields are guarded by CGifDecoder::m_Lock;
+	composing a frame happens without the lock so that the menu never waits for
+	the worker.
+*/
+class CGifJob
+{
+public:
+	CGifAnimation *m_pAnimation;
+	CGifStream *m_pStream;
+	int m_Width;
+	int m_Height;
+	int m_FirstFrame;
+	int m_NextFrame;
+	array<CGifFrame *> m_lFrames;
+	bool m_bBusy;
+	bool m_bStopped;
+	bool m_bBroken;
+
+	CGifJob() :
+		m_pAnimation(0), m_pStream(0), m_Width(0), m_Height(0), m_FirstFrame(0), m_NextFrame(0), m_bBusy(false), m_bStopped(false), m_bBroken(false) {}
+
+	~CGifJob()
+	{
+		delete m_pStream;
+		m_lFrames.delete_all();
+	}
+
+	CGifFrame *DecodeNextFrame();
+};
+
+CGifFrame *CGifJob::DecodeNextFrame()
+{
+	int DelayMs = 100;
+	const unsigned char *pData = m_pStream->NextFrame(&DelayMs);
+	if(!pData)
+	{
+		// The animation is over, start it over. A file with a single frame is
+		// a still image, not an animation; looping it would only burn space.
+		if(m_NextFrame == m_FirstFrame || !m_pStream->Rewind())
+			return 0;
+
+		pData = m_pStream->NextFrame(&DelayMs);
+		if(!pData)
+			return 0;
+	}
+
+	CGifFrame *pFrame = new CGifFrame();
+	pFrame->m_Frame = m_NextFrame++;
+	pFrame->m_DelayMs = DelayMs;
+	pFrame->m_lData.set_size(m_Width * m_Height * 4);
+	mem_copy(pFrame->m_lData.base_ptr(), pData, m_Width * m_Height * 4);
+	return pFrame;
+}
+
+CGifDecoder::CGifDecoder()
+{
+	m_pThread = 0;
+	m_Lock = lock_create();
+	m_Semaphore = 0;
+	m_Shutdown = false;
+
+	sphore_init(&m_Semaphore);
+	m_pThread = thread_init(ThreadEntry, this);
+	if(!m_pThread)
+		dbg_msg("gif", "failed to start the decoder thread, animated avatars stay still");
+}
+
+CGifDecoder::~CGifDecoder()
+{
+	lock_wait(m_Lock);
+	m_Shutdown = true;
+	lock_unlock(m_Lock);
+	sphore_signal(&m_Semaphore);
+
+	if(m_pThread)
+	{
+		thread_wait(m_pThread);
+		m_pThread = 0;
+	}
+
+	for(int i = 0; i < m_lJobs.size(); i++)
+		delete m_lJobs[i];
+	m_lJobs.clear();
+
+	sphore_destroy(&m_Semaphore);
+	lock_destroy(m_Lock);
+}
+
+void CGifDecoder::ThreadEntry(void *pUser)
+{
+	static_cast<CGifDecoder *>(pUser)->Run();
+}
+
+void CGifDecoder::Run()
+{
+	for(;;)
+	{
+		lock_wait(m_Lock);
+		if(m_Shutdown)
+		{
+			lock_unlock(m_Lock);
+			return;
+		}
+
+		// compose one frame of the first stream that has room for it
+		CGifJob *pJob = 0;
+		for(int i = 0; i < m_lJobs.size(); i++)
+		{
+			CGifJob *pCandidate = m_lJobs[i];
+			if(pCandidate->m_bBusy || pCandidate->m_bBroken)
+				continue;
+			if(pCandidate->m_lFrames.size() >= GIF_PREFETCH)
+				continue;
+			pJob = pCandidate;
+			pJob->m_bBusy = true;
+			break;
+		}
+		lock_unlock(m_Lock);
+
+		if(!pJob)
+		{
+			sphore_wait(&m_Semaphore);
+			continue;
+		}
+
+		CGifFrame *pFrame = pJob->DecodeNextFrame();
+
+		bool Stopped = false;
+		lock_wait(m_Lock);
+		pJob->m_bBusy = false;
+		Stopped = pJob->m_bStopped;
+		if(!Stopped)
+		{
+			if(pFrame)
+				pJob->m_lFrames.add(pFrame);
+			else
+				pJob->m_bBroken = true;
+		}
+		lock_unlock(m_Lock);
+
+		if(Stopped)
+		{
+			// Stop() removed the job from the list and left it to us, because
+			// this thread was still composing its frame.
+			delete pFrame;
+			delete pJob;
+		}
+	}
+}
+
+CGifJob *CGifDecoder::FindJob(CGifAnimation *pAnimation)
+{
+	for(int i = 0; i < m_lJobs.size(); i++)
+	{
+		if(m_lJobs[i]->m_pAnimation == pAnimation)
+			return m_lJobs[i];
+	}
+	return 0;
+}
+
+void CGifDecoder::Start(CGifAnimation *pAnimation, CGifStream *pStream, int Width, int Height, int FirstFrame)
+{
+	// a stream that was never stopped belongs to the same animation
+	lock_wait(m_Lock);
+	const bool Exists = FindJob(pAnimation) != 0;
+	lock_unlock(m_Lock);
+	if(Exists)
+		Stop(pAnimation);
+
+	if(!m_pThread)
+	{
+		delete pStream;
+		return;
+	}
+
+	CGifJob *pJob = new CGifJob();
+	pJob->m_pAnimation = pAnimation;
+	pJob->m_pStream = pStream;
+	pJob->m_Width = Width;
+	pJob->m_Height = Height;
+	pJob->m_FirstFrame = FirstFrame;
+	pJob->m_NextFrame = FirstFrame;
+
+	lock_wait(m_Lock);
+	m_lJobs.add(pJob);
+	lock_unlock(m_Lock);
+
+	sphore_signal(&m_Semaphore);
+}
+
+void CGifDecoder::Stop(CGifAnimation *pAnimation)
+{
+	CGifJob *pJob = 0;
+	bool Busy = false;
+
+	lock_wait(m_Lock);
+	pJob = FindJob(pAnimation);
+	if(pJob)
+	{
+		// Taking it out of the list right away keeps the worker from picking it
+		// up again and a new animation at the same address from finding it.
+		m_lJobs.remove(pJob);
+		pJob->m_bStopped = true;
+		Busy = pJob->m_bBusy;
+	}
+	lock_unlock(m_Lock);
+
+	// A busy worker is composing a frame with the job right now; it drops the
+	// job once it is done, so the menu never waits for the decoder here. That
+	// wait used to sleep for a millisecond or more and showed up as a hitch
+	// when a new avatar pushed an old one out of the cache.
+	if(pJob && !Busy)
+		delete pJob;
+}
+
+void CGifDecoder::Notify()
+{
+	if(m_pThread)
+		sphore_signal(&m_Semaphore);
+}
+
+CGifFrame *CGifDecoder::PopFrame(CGifAnimation *pAnimation)
+{
+	CGifFrame *pFrame = 0;
+	lock_wait(m_Lock);
+	CGifJob *pJob = FindJob(pAnimation);
+	if(pJob && pJob->m_lFrames.size())
+	{
+		pFrame = pJob->m_lFrames[0];
+		pJob->m_lFrames.remove_index(0);
+	}
+	lock_unlock(m_Lock);
+	return pFrame;
+}
+
+#else
+
+CGifDecoder::CGifDecoder()
+{
+	m_pThread = 0;
+	m_Lock = 0;
+	m_Semaphore = 0;
+	m_Shutdown = false;
+}
+
+CGifDecoder::~CGifDecoder() {}
+
+void CGifDecoder::Start([[maybe_unused]] CGifAnimation *pAnimation, [[maybe_unused]] CGifStream *pStream, [[maybe_unused]] int Width, [[maybe_unused]] int Height, [[maybe_unused]] int FirstFrame) {}
+
+void CGifDecoder::Stop([[maybe_unused]] CGifAnimation *pAnimation) {}
+
+void CGifDecoder::Notify() {}
+
+void CGifDecoder::ThreadEntry([[maybe_unused]] void *pUser) {}
+
+void CGifDecoder::Run() {}
+
+CGifJob *CGifDecoder::FindJob([[maybe_unused]] CGifAnimation *pAnimation) { return 0; }
+
+CGifFrame *CGifDecoder::PopFrame([[maybe_unused]] CGifAnimation *pAnimation) { return 0; }
+
 #endif
 
-CGifAnimation::CGifAnimation()
+CGifAnimation::CGifAnimation(CGifDecoder *pDecoder)
 {
-	m_pStream = 0;
+	m_pDecoder = pDecoder;
 	m_Width = 0;
 	m_Height = 0;
 	m_CurrentFrame = -1;
@@ -355,14 +631,15 @@ CGifAnimation::CGifAnimation()
 
 CGifAnimation::~CGifAnimation()
 {
-#if defined(CONF_GIFLIB)
-	delete m_pStream;
-#endif
-	m_pStream = 0;
+	if(m_pDecoder)
+		m_pDecoder->Stop(this);
 }
 
 void CGifAnimation::Reset(IGraphics *pGraphics)
 {
+	if(m_pDecoder)
+		m_pDecoder->Stop(this);
+
 	for(int i = 0; i < m_lTextures.size(); i++)
 	{
 		if(m_lTextures[i].IsValid())
@@ -372,26 +649,12 @@ void CGifAnimation::Reset(IGraphics *pGraphics)
 	m_lDelaysMs.clear();
 	m_lFrameIndices.clear();
 
-#if defined(CONF_GIFLIB)
-	delete m_pStream;
-#endif
-	m_pStream = 0;
-
 	m_Width = 0;
 	m_Height = 0;
 	m_CurrentFrame = -1;
 	m_DecodedFrame = -1;
 	m_bAnimated = false;
 	m_FrameTime = 0.0f;
-}
-
-bool CGifAnimation::RewindStream()
-{
-#if defined(CONF_GIFLIB)
-	return m_pStream && m_pStream->Rewind();
-#else
-	return false;
-#endif
 }
 
 void CGifAnimation::UploadTexture(IGraphics *pGraphics, int Frame, int DelayMs, const unsigned char *pData)
@@ -405,43 +668,32 @@ void CGifAnimation::UploadTexture(IGraphics *pGraphics, int Frame, int DelayMs, 
 	m_lFrameIndices[Slot] = Frame;
 }
 
-bool CGifAnimation::DecodeNextFrame([[maybe_unused]] IGraphics *pGraphics)
+bool CGifAnimation::UploadDecodedFrames([[maybe_unused]] IGraphics *pGraphics)
 {
 #if defined(CONF_GIFLIB)
-	if(!m_pStream)
+	if(!m_pDecoder)
 		return false;
 
-	int DelayMs = 100;
-	const unsigned char *pData = m_pStream->NextFrame(&DelayMs);
-	if(!pData)
-		return false;
-
-	const int Frame = m_DecodedFrame + 1;
-	UploadTexture(pGraphics, Frame, DelayMs, pData);
-	m_DecodedFrame = Frame;
-	return true;
+	bool Uploaded = false;
+	CGifFrame *pFrame;
+	// Stay GIF_PREFETCH frames ahead of the one being played: uploading more
+	// would fill the texture ring and overwrite the frame the playback needs.
+	while(m_DecodedFrame - m_CurrentFrame < GIF_PREFETCH && (pFrame = m_pDecoder->PopFrame(this)))
+	{
+		// the second frame turns the image into an animation
+		if(pFrame->m_Frame > 0)
+			m_bAnimated = true;
+		UploadTexture(pGraphics, pFrame->m_Frame, pFrame->m_DelayMs, pFrame->m_lData.base_ptr());
+		m_DecodedFrame = pFrame->m_Frame;
+		delete pFrame;
+		Uploaded = true;
+	}
+	// room for the worker to decode ahead again
+	if(Uploaded)
+		m_pDecoder->Notify();
+	return Uploaded;
 #else
 	return false;
-#endif
-}
-
-void CGifAnimation::Prefetch([[maybe_unused]] IGraphics *pGraphics)
-{
-#if defined(CONF_GIFLIB)
-	const int Target = m_CurrentFrame + GIF_PREFETCH;
-	while(m_DecodedFrame < Target)
-	{
-		// the ring must not overwrite a frame that is about to be played
-		if(m_DecodedFrame - m_CurrentFrame >= GIF_TEXTURE_RING - 1)
-			break;
-
-		if(DecodeNextFrame(pGraphics))
-			continue;
-
-		// the animation is over, start it over
-		if(!RewindStream() || !DecodeNextFrame(pGraphics))
-			break;
-	}
 #endif
 }
 
@@ -475,15 +727,15 @@ bool CGifAnimation::LoadGIF(IGraphics *pGraphics, [[maybe_unused]] const unsigne
 	if(pData[0] != 'G' || pData[1] != 'I' || pData[2] != 'F')
 		return false;
 
-	m_pStream = new CGifStream(pData, DataSize);
-	if(!m_pStream->IsOk())
+	CGifStream *pStream = new CGifStream(pData, DataSize);
+	if(!pStream->IsOk())
 	{
-		Reset(pGraphics);
+		delete pStream;
 		return false;
 	}
 
-	m_Width = m_pStream->Width();
-	m_Height = m_pStream->Height();
+	m_Width = pStream->Width();
+	m_Height = pStream->Height();
 	for(int i = 0; i < GIF_TEXTURE_RING; i++)
 	{
 		m_lTextures.add(IGraphics::CTextureHandle());
@@ -491,18 +743,27 @@ bool CGifAnimation::LoadGIF(IGraphics *pGraphics, [[maybe_unused]] const unsigne
 		m_lFrameIndices.add(-1);
 	}
 
-	if(!DecodeNextFrame(pGraphics))
+	// The first frame is composed right here: the caller has to know whether
+	// the file is usable, and it covers the still avatar while the worker
+	// decodes the rest.
+	int DelayMs = 100;
+	const unsigned char *pFrame = pStream->NextFrame(&DelayMs);
+	if(!pFrame)
 	{
+		delete pStream;
 		Reset(pGraphics);
 		return false;
 	}
 
-	// a second frame tells an animation from a gif that is one image
-	if(DecodeNextFrame(pGraphics))
-		m_bAnimated = true;
-
+	UploadTexture(pGraphics, 0, DelayMs, pFrame);
 	m_CurrentFrame = 0;
+	m_DecodedFrame = 0;
 	m_FrameTime = 0.0f;
+
+	if(m_pDecoder)
+		m_pDecoder->Start(this, pStream, m_Width, m_Height, 1);
+	else
+		delete pStream;
 	return true;
 #else
 	return false;
@@ -511,6 +772,8 @@ bool CGifAnimation::LoadGIF(IGraphics *pGraphics, [[maybe_unused]] const unsigne
 
 void CGifAnimation::Update([[maybe_unused]] IGraphics *pGraphics, float Seconds)
 {
+	UploadDecodedFrames(pGraphics);
+
 	if(!m_bAnimated || !m_lTextures.size() || m_CurrentFrame < 0)
 		return;
 
@@ -521,25 +784,15 @@ void CGifAnimation::Update([[maybe_unused]] IGraphics *pGraphics, float Seconds)
 	int Guard = 0;
 	while(m_FrameTime >= m_lDelaysMs[m_CurrentFrame % GIF_TEXTURE_RING] && Guard++ < GIF_TEXTURE_RING)
 	{
-		m_FrameTime -= m_lDelaysMs[m_CurrentFrame % GIF_TEXTURE_RING];
 		const int NextFrame = m_CurrentFrame + 1;
 
-		if(m_DecodedFrame < NextFrame)
-		{
-			if(!DecodeNextFrame(pGraphics))
-			{
-				// loop, and keep the numbering running so the ring slots of
-				// the previous run are recognised as stale
-				if(!RewindStream() || !DecodeNextFrame(pGraphics))
-				{
-					m_FrameTime = 0.0f;
-					return;
-				}
-			}
-		}
+		// The worker may not have composed it yet; showing the current frame
+		// for another tick is better than skipping ahead or drawing nothing.
+		if(m_lFrameIndices[NextFrame % GIF_TEXTURE_RING] != NextFrame)
+			break;
 
+		m_FrameTime -= m_lDelaysMs[m_CurrentFrame % GIF_TEXTURE_RING];
 		m_CurrentFrame = NextFrame;
-		Prefetch(pGraphics);
 	}
 
 	if(Guard >= GIF_TEXTURE_RING)

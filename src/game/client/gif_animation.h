@@ -4,9 +4,57 @@
 #ifndef GAME_CLIENT_GIF_ANIMATION_H
 #define GAME_CLIENT_GIF_ANIMATION_H
 
+#include <base/system/lock.h>
+#include <base/system/semaphore.h>
 #include <base/tl/array.h>
 
 #include <engine/graphics.h>
+
+class CGifAnimation;
+class CGifFrame;
+class CGifJob;
+class CGifStream;
+
+/*
+	Decodes the frames of animated avatars in the background.
+
+	Compositing a frame walks the canvas pixel by pixel and copies it, and the
+	friends list draws a dozen animations at once, so decoding while the menu
+	is rendered shows up as a hitch. One worker thread decodes the frames of
+	all avatars ahead of their playback; the main thread only uploads the
+	finished frames, which it has to do itself because it creates the textures.
+
+	Only available when the client was built with giflib (CONF_GIFLIB).
+*/
+class CGifDecoder
+{
+public:
+	CGifDecoder();
+	~CGifDecoder();
+
+	// Decodes the stream from the given frame on; ownership moves here.
+	void Start(CGifAnimation *pAnimation, CGifStream *pStream, int Width, int Height, int FirstFrame);
+	// Stops decoding for the animation and drops its stream.
+	void Stop(CGifAnimation *pAnimation);
+	// Wakes the worker after room for another frame was made.
+	void Notify();
+
+private:
+	friend class CGifAnimation;
+
+	// Next decoded frame, or 0 while none is ready; the caller owns the frame.
+	CGifFrame *PopFrame(CGifAnimation *pAnimation);
+	CGifJob *FindJob(CGifAnimation *pAnimation);
+
+	array<CGifJob *> m_lJobs;
+	void *m_pThread;
+	LOCK m_Lock;
+	SEMAPHORE m_Semaphore;
+	volatile bool m_Shutdown;
+
+	static void ThreadEntry(void *pUser);
+	void Run();
+};
 
 /*
 	Plays a GIF as a rolling window of textures.
@@ -17,12 +65,15 @@
 	small window of textures around the current frame is resident, so long
 	animations are streamed like a video and repeating them is cheap.
 
+	The frames themselves are composited by CGifDecoder; the textures are
+	created and uploaded here, on the main thread.
+
 	Only available when the client was built with giflib (CONF_GIFLIB).
 */
 class CGifAnimation
 {
 public:
-	CGifAnimation();
+	explicit CGifAnimation(CGifDecoder *pDecoder = 0);
 	~CGifAnimation();
 
 	// owns textures and a decoder, copying one would double free both
@@ -34,7 +85,7 @@ public:
 	bool LoadGIF(IGraphics *pGraphics, const unsigned char *pData, int DataSize);
 
 	// Advances the playback; call once per frame while the image is visible.
-	// New frames are decoded and uploaded from here.
+	// Frames decoded in the background are uploaded from here.
 	void Update(IGraphics *pGraphics, float Seconds);
 	IGraphics::CTextureHandle Texture() const;
 
@@ -44,7 +95,7 @@ public:
 	bool IsAnimated() const { return m_bAnimated; }
 
 private:
-	class CGifStream *m_pStream;
+	CGifDecoder *m_pDecoder;
 
 	// ring of textures around the frame being played
 	array<IGraphics::CTextureHandle> m_lTextures;
@@ -60,9 +111,7 @@ private:
 	bool m_bAnimated;
 	float m_FrameTime;
 
-	bool DecodeNextFrame(IGraphics *pGraphics);
-	bool RewindStream();
-	void Prefetch(IGraphics *pGraphics);
+	bool UploadDecodedFrames(IGraphics *pGraphics);
 	void UploadTexture(IGraphics *pGraphics, int Frame, int DelayMs, const unsigned char *pData);
 };
 

@@ -43,6 +43,7 @@ CHttpRequest::CHttpRequest(const char *pRequest, const char *pUrl, long TimeoutS
 	m_IPResolve = IPResolve;
 
 	m_IsChecked = false;
+	m_Cancel = false;
 	m_TimeoutSeconds = TimeoutSeconds;
 	m_PostData.clear();
 	m_ReceivedData.clear();
@@ -86,6 +87,16 @@ size_t CHttpRequest::WriteCallback(char *pData, size_t Size, size_t Number, void
 	return TotalSize;
 }
 
+#if LIBCURL_VERSION_NUM >= 0x072000
+static int ProgressCallback(void *pUser, [[maybe_unused]] curl_off_t DownloadTotal, [[maybe_unused]] curl_off_t DownloadNow,
+	[[maybe_unused]] curl_off_t UploadTotal, [[maybe_unused]] curl_off_t UploadNow)
+{
+	// A non-zero return aborts the transfer, which is how a request that is
+	// still running when the client shuts down is stopped.
+	return static_cast<CHttpRequest *>(pUser)->IsCancelled() ? 1 : 0;
+}
+#endif
+
 int CHttpRequest::Run(void *pUser)
 {
 	CHttpRequest *pRequest = static_cast<CHttpRequest *>(pUser);
@@ -123,6 +134,14 @@ int CHttpRequest::Run(void *pUser)
 
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_WRITEFUNCTION, CHttpRequest::WriteCallback);
 	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_WRITEDATA, pRequest);
+
+	// Cancelling needs the transfer to call back now and then; older libcurl
+	// has no such callback object and requests simply run to their timeout.
+#if LIBCURL_VERSION_NUM >= 0x072000
+	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_NOPROGRESS, 0L);
+	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_XFERINFOFUNCTION, ProgressCallback);
+	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_XFERINFODATA, pRequest);
+#endif
 
 	CURLcode Result = curl_easy_perform(pRequest->m_pHandle);
 	if(Result != CURLE_OK)

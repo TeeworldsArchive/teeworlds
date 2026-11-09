@@ -38,6 +38,11 @@ public:
 	virtual void QueryNetLogHandles(IOHANDLE *pHDLSend, IOHANDLE *pHDLRecv) = 0;
 	virtual void HostLookup(CHostLookup *pLookup, const char *pHostname, int Nettype) = 0;
 	virtual void AddJob(CJob *pJob, JOBFUNC pfnFunc, void *pData) = 0;
+
+	// Number of threads that run the jobs added with AddJob(). A job holds on
+	// to its thread until it is done, so long-running jobs have to be limited
+	// to leave the other jobs a thread.
+	int NumJobThreads() const { return m_JobPool.NumThreads(); }
 };
 
 extern IEngine *CreateEngine(const char *pAppname);

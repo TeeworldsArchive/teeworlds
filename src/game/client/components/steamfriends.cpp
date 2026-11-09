@@ -14,6 +14,16 @@ static const int MAX_CACHED_AVATARS = 16;
 CSteamFriends::CSteamFriends()
 {
 	m_pSteamFriendList = 0;
+	m_pDecoder = 0;
+	m_LoadBudgetStart = time_get();
+}
+
+CSteamFriends::~CSteamFriends()
+{
+	// OnShutdown() normally stops this thread already; it must not outlive the
+	// process if the client did not get there.
+	delete m_pDecoder;
+	m_pDecoder = 0;
 }
 
 void CSteamFriends::OnInit()
@@ -29,6 +39,8 @@ void CSteamFriends::OnReset()
 void CSteamFriends::OnShutdown()
 {
 	ResetAvatars();
+	delete m_pDecoder;
+	m_pDecoder = 0;
 }
 
 bool CSteamFriends::Available() const
@@ -88,6 +100,10 @@ void CSteamFriends::Refresh()
 		delete m_lAvatars[Oldest];
 		m_lAvatars.remove_index(Oldest);
 	}
+
+	// The menu calls this once per frame before it draws the list, so it is the
+	// point where a new avatar budget starts.
+	m_LoadBudgetStart = time_get();
 }
 
 int CSteamFriends::NumFriends() const
@@ -100,6 +116,20 @@ const CSteamFriendInfo *CSteamFriends::GetFriend(int Index) const
 	return m_pSteamFriendList ? m_pSteamFriendList->GetFriend(Index) : 0;
 }
 
+bool CSteamFriends::LoadBudgetLeft(int64 Now) const
+{
+	return Now - m_LoadBudgetStart < time_freq() * AVATAR_LOAD_BUDGET_MS / 1000;
+}
+
+CGifDecoder *CSteamFriends::Decoder()
+{
+	// A decoder is a thread of its own, so it is only started once the menu
+	// actually shows an avatar.
+	if(!m_pDecoder)
+		m_pDecoder = new CGifDecoder();
+	return m_pDecoder;
+}
+
 CSteamFriends::CAvatar *CSteamFriends::GetAvatarEntry(unsigned long long SteamID)
 {
 	for(int i = 0; i < m_lAvatars.size(); i++)
@@ -110,7 +140,7 @@ CSteamFriends::CAvatar *CSteamFriends::GetAvatarEntry(unsigned long long SteamID
 
 	// Avatars own textures, so they are allocated once: growing the array must
 	// not copy the animations the menu is drawing right now.
-	CAvatar *pAvatar = new CAvatar();
+	CAvatar *pAvatar = new CAvatar(Decoder());
 	pAvatar->m_SteamID = SteamID;
 	m_lAvatars.add(pAvatar);
 	return pAvatar;
@@ -132,15 +162,22 @@ CGifAnimation *CSteamFriends::Avatar(const CSteamFriendInfo *pInfo)
 		return 0;
 
 	CAvatar *pAvatar = GetAvatarEntry(pInfo->m_SteamID);
-	pAvatar->m_LastUsed = time_get();
+	const int64 Now = time_get();
+	pAvatar->m_LastUsed = Now;
+	const bool BudgetLeft = LoadBudgetLeft(Now);
 
 	// The animation wins over the still avatar Steam keeps for the friend. The
-	// engine hands it out only once the GIF has been downloaded.
+	// engine hands it out only once the GIF has been downloaded, and decoding
+	// it is started here; the first frame is ready right away, the rest is
+	// composed in the background. The lookup itself is cheap, so it runs even
+	// when the frame's load budget is used up, which keeps the download alive.
 	int GifSize = 0, GifRevision = 0;
 	const unsigned char *pGif = 0;
-	if(m_pSteamFriendList && m_pSteamFriendList->GetAnimatedAvatar(pInfo->m_SteamID, &pGif, &GifSize, &GifRevision) &&
-		(pAvatar->m_Source != SOURCE_GIF || GifRevision != pAvatar->m_GifRevision))
+	const bool HaveGif = m_pSteamFriendList && m_pSteamFriendList->GetAnimatedAvatar(pInfo->m_SteamID, &pGif, &GifSize, &GifRevision);
+	if(BudgetLeft && HaveGif && GifRevision != pAvatar->m_GifRevision)
 	{
+		// The revision is remembered even when the file cannot be played, so a
+		// broken download is not opened again on every frame.
 		pAvatar->m_GifRevision = GifRevision;
 		if(pAvatar->m_Animation.LoadGIF(Graphics(), pGif, GifSize))
 			pAvatar->m_Source = SOURCE_GIF;
@@ -159,7 +196,10 @@ CGifAnimation *CSteamFriends::Avatar(const CSteamFriendInfo *pInfo)
 
 	int Width = 0, Height = 0, Revision = 0;
 	const unsigned char *pData = 0;
-	if(!m_pSteamFriendList || !m_pSteamFriendList->GetAvatar(pInfo->m_SteamID, &Width, &Height, &pData, &Revision))
+	// Asking Steam for the still avatar can decode the image on this thread, so
+	// this load is bound to the frame's budget as well; the row keeps whatever
+	// it has for a frame or two longer.
+	if(!BudgetLeft || !m_pSteamFriendList || !m_pSteamFriendList->GetAvatar(pInfo->m_SteamID, &Width, &Height, &pData, &Revision))
 		return pAvatar->m_Animation.IsValid() ? &pAvatar->m_Animation : 0;
 
 	// The still frame is uploaded when it changed, and whenever the animated

@@ -34,6 +34,7 @@ class CHttpRequest
 	curl_slist *m_pHeaderList;
 
 	bool m_IsChecked;
+	volatile bool m_Cancel;
 
 	static size_t WriteCallback(char *pData, size_t Size, size_t Number, void *pUser);
 	static int Run(void *pUser);
@@ -45,6 +46,11 @@ public:
 	void AddHeader(const char *pHeader);
 	void StartRun(class IEngine *pEngine);
 
+	// Aborts a running transfer from another thread; the job then returns
+	// within a moment, so the request can be deleted safely after that.
+	void Cancel() { m_Cancel = true; }
+	bool IsCancelled() const { return m_Cancel; }
+
 	void MarkAsChecked() { m_IsChecked = true; }
 
 	bool IsChecked() const { return m_IsChecked; }
@@ -53,6 +59,9 @@ public:
 	int ResponseCode() const { return m_ResponseCode; }
 	const unsigned char *ReceivedData() const { return m_ReceivedData.base_ptr(); }
 	int ReceivedDataSize() const { return m_ReceivedData.size(); }
+	// Hands the received data over without copying it; a GIF avatar can be a
+	// few megabytes and the caller is done with the request anyway.
+	void MoveReceivedData(array<unsigned char> *pOut) { m_ReceivedData.move(*pOut); }
 };
 
 class CCurlInit

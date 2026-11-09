@@ -1,6 +1,7 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
 #include "steam.h"
 
+#include <base/math.h>
 #include <base/system/debug.h>
 #include <base/system/mem.h>
 #include <base/system/string.h>
@@ -29,9 +30,12 @@ static bool IsGif(const unsigned char *pData, int Size)
 	The equipped items are looked up through the Steamworks API, whose call
 	results arrive in RunCallbacks() and are therefore only usable from the
 	main thread. The GIF itself is then downloaded through CHttpRequest, which
-	runs in a job thread, so neither step stalls the client. Lookups and
-	downloads run one at a time to keep the request count low, and on demand,
-	so only friends whose avatar is actually drawn cost anything.
+	runs in a job thread, so neither step stalls the client.
+
+	Lookups and downloads run a few at a time. One at a time would make a long
+	friends list fill in slowly, as every friend would wait for the lookup and
+	the download of all the friends before them. Both are still started on
+	demand, so only friends whose avatar is actually drawn cost anything.
 */
 class CSteamAvatarFetcher
 {
@@ -72,21 +76,59 @@ private:
 			m_SteamID(0), m_State(STATE_QUEUED), m_Revision(0), m_LastUsed(0), m_LastCheck(0) { m_aUrl[0] = 0; }
 	};
 
+	// how many friends are looked up at the same time; the call results are
+	// cheap, so this only trades Steam round trips against a little memory
+	enum
+	{
+		MAX_PARALLEL_LOOKUPS = 4,
+		// An upper bound for the downloads; Update() uses fewer when the job
+		// pool is small, as a download occupies a job thread for its whole
+		// duration.
+		MAX_PARALLEL_DOWNLOADS = 4,
+	};
+
+	class CDownload
+	{
+	public:
+		unsigned long long m_SteamID;
+		CHttpRequest *m_pRequest;
+
+		CDownload() :
+			m_SteamID(0), m_pRequest(0) {}
+	};
+
+	// A call result cannot be told apart from the outside once it is handed
+	// to Steam, so every lookup that is waiting for one gets a slot of its
+	// own instead of a single pending steam id.
+	class CLookup
+	{
+	public:
+		CSteamAvatarFetcher *m_pFetcher;
+		unsigned long long m_SteamID;
+		int64 m_Started;
+		CCallResult<CLookup, EquippedProfileItems_t> m_Result;
+
+		CLookup() :
+			m_pFetcher(0), m_SteamID(0), m_Started(0) {}
+
+		void OnResult(EquippedProfileItems_t *pResult, bool IOError);
+	};
+
 	IEngine *m_pEngine;
 	array<CEntry> m_lEntries;
-
-	CHttpRequest *m_pRequest;
-	int m_RequestIndex;
-
-	CCallResult<CSteamAvatarFetcher, EquippedProfileItems_t> m_ItemsResult;
-	unsigned long long m_PendingSteamID;
-	int64 m_PendingSince;
+	array<CDownload> m_lDownloads;
+	CLookup m_aLookups[MAX_PARALLEL_LOOKUPS];
 
 	CCallback<CSteamAvatarFetcher, EquippedProfileItemsChanged_t> m_ItemsChangedCallback;
 
 	CEntry *FindEntry(unsigned long long SteamID);
 	CEntry *AddEntry(unsigned long long SteamID);
-	void OnEquippedProfileItems(EquippedProfileItems_t *pResult, bool IOError);
+	bool IsDownloading(unsigned long long SteamID) const;
+	int MaxDownloads() const;
+	void CollectDownload(CDownload *pDownload);
+	void StartDownloads();
+	void StartLookups(int64 Now, bool SteamRunning);
+	void OnLookupResult(CLookup *pLookup, EquippedProfileItems_t *pResult, bool IOError);
 	void OnEquippedProfileItemsChanged(EquippedProfileItemsChanged_t *pResult);
 };
 
@@ -94,28 +136,39 @@ CSteamAvatarFetcher::CSteamAvatarFetcher() :
 	m_ItemsChangedCallback(this, &CSteamAvatarFetcher::OnEquippedProfileItemsChanged)
 {
 	m_pEngine = 0;
-	m_pRequest = 0;
-	m_RequestIndex = -1;
-	m_PendingSteamID = 0;
-	m_PendingSince = 0;
+	for(int i = 0; i < MAX_PARALLEL_LOOKUPS; i++)
+		m_aLookups[i].m_pFetcher = this;
 }
 
 CSteamAvatarFetcher::~CSteamAvatarFetcher()
 {
 	// Deleting a request while its job is still running would free the buffer
-	// curl writes into. Downloads are short, so wait for the running one; if it
-	// does not finish, the request is leaked rather than freeing live data,
-	// because the client is shutting down anyway.
-	if(m_pRequest && m_pRequest->Status() != CJob::STATE_DONE)
+	// curl writes into. Abort the transfers and wait for the jobs to return; a
+	// request that does not come back in time is leaked rather than freeing
+	// live data, because the client is shutting down anyway.
+	for(int i = 0; i < m_lDownloads.size(); i++)
 	{
-		const int64 Start = time_get();
-		while(m_pRequest->Status() != CJob::STATE_DONE && time_get() - Start < 2 * time_freq())
-			thread_sleep(10);
-		if(m_pRequest->Status() != CJob::STATE_DONE)
-			m_pRequest = 0;
+		if(m_lDownloads[i].m_pRequest->Status() != CJob::STATE_DONE)
+			m_lDownloads[i].m_pRequest->Cancel();
 	}
-	delete m_pRequest;
-	m_pRequest = 0;
+
+	bool AllDone = false;
+	const int64 Start = time_get();
+	while(!AllDone && time_get() - Start < time_freq())
+	{
+		AllDone = true;
+		for(int i = 0; i < m_lDownloads.size() && AllDone; i++)
+			AllDone = m_lDownloads[i].m_pRequest->Status() == CJob::STATE_DONE;
+		if(!AllDone)
+			thread_sleep(1);
+	}
+
+	for(int i = 0; i < m_lDownloads.size(); i++)
+	{
+		if(m_lDownloads[i].m_pRequest->Status() == CJob::STATE_DONE)
+			delete m_lDownloads[i].m_pRequest;
+	}
+	m_lDownloads.clear();
 }
 
 void CSteamAvatarFetcher::Init(IEngine *pEngine)
@@ -164,49 +217,36 @@ void CSteamAvatarFetcher::Update()
 	if(!m_pEngine)
 		return;
 
-	// collect the running download before anything new is started
-	if(m_pRequest)
+	// collect the finished downloads before anything new is started
+	for(int i = 0; i < m_lDownloads.size();)
 	{
-		if(m_pRequest->Status() != CJob::STATE_DONE)
-			return;
-
-		CEntry *pEntry = &m_lEntries[m_RequestIndex];
-		const int Size = m_pRequest->ReceivedDataSize();
-		// Only a GIF can be played. Steam answers with a still image for some
-		// items; GetAvatar() keeps covering those.
-		if(m_pRequest->Result() == 0 && m_pRequest->ResponseCode() == 200 && IsGif(m_pRequest->ReceivedData(), Size))
+		if(m_lDownloads[i].m_pRequest->Status() != CJob::STATE_DONE)
 		{
-			pEntry->m_lData.set_size(Size);
-			mem_copy(pEntry->m_lData.base_ptr(), m_pRequest->ReceivedData(), Size);
-			pEntry->m_Revision++;
-			pEntry->m_State = STATE_READY;
+			i++;
+			continue;
 		}
-		else
-		{
-			dbg_msg("steam", "no animated avatar for %llu (result %d, http %d, %d bytes)", pEntry->m_SteamID,
-				m_pRequest->Result(), m_pRequest->ResponseCode(), Size);
-			pEntry->m_State = STATE_NONE;
-		}
-		pEntry->m_LastCheck = time_get();
-
-		delete m_pRequest;
-		m_pRequest = 0;
-		m_RequestIndex = -1;
+		CollectDownload(&m_lDownloads[i]);
+		m_lDownloads.remove_index(i);
 	}
 
 	const int64 Now = time_get();
 
 	// Steam normally answers within a frame or two, but a lost call result
 	// must not block the rest of the list forever.
-	if(m_PendingSteamID && Now - m_PendingSince > 30 * time_freq())
+	for(int i = 0; i < MAX_PARALLEL_LOOKUPS; i++)
 	{
-		CEntry *pEntry = FindEntry(m_PendingSteamID);
+		CLookup *pLookup = &m_aLookups[i];
+		if(!pLookup->m_SteamID || Now - pLookup->m_Started <= 30 * time_freq())
+			continue;
+
+		CEntry *pEntry = FindEntry(pLookup->m_SteamID);
 		if(pEntry && pEntry->m_State == STATE_REQUESTED)
 		{
 			pEntry->m_State = STATE_NONE;
 			pEntry->m_LastCheck = Now;
 		}
-		m_PendingSteamID = 0;
+		pLookup->m_Result.Cancel();
+		pLookup->m_SteamID = 0;
 	}
 
 	const bool SteamRunning = SteamAPI_IsSteamRunning();
@@ -224,8 +264,10 @@ void CSteamAvatarFetcher::Update()
 		}
 
 		const int64 Unused = Now - pEntry->m_LastUsed;
-		if(Unused > 60 * 60 * time_freq() && i != m_RequestIndex)
+		if(Unused > 60 * 60 * time_freq())
 		{
+			// A lookup or download that is still on its way for this friend
+			// simply finds no entry once it is done.
 			m_lEntries.remove_index(i);
 			continue;
 		}
@@ -250,22 +292,46 @@ void CSteamAvatarFetcher::Update()
 		i++;
 	}
 
-	// start the download of the first friend whose url is known
-	for(int i = 0; i < m_lEntries.size(); i++)
+	StartDownloads();
+	StartLookups(Now, SteamRunning);
+}
+
+int CSteamAvatarFetcher::MaxDownloads() const
+{
+	// A download holds on to a job thread until the transfer is over, so leave
+	// the pool room for the other jobs unless it has threads to spare.
+	const int NumThreads = m_pEngine->NumJobThreads();
+	return minimum(maximum(NumThreads - 1, 1), (int) MAX_PARALLEL_DOWNLOADS);
+}
+
+bool CSteamAvatarFetcher::IsDownloading(unsigned long long SteamID) const
+{
+	for(int i = 0; i < m_lDownloads.size(); i++)
+	{
+		if(m_lDownloads[i].m_SteamID == SteamID)
+			return true;
+	}
+	return false;
+}
+
+void CSteamAvatarFetcher::StartDownloads()
+{
+	const int MaxDownloads = this->MaxDownloads();
+	for(int i = 0; i < m_lEntries.size() && m_lDownloads.size() < MaxDownloads; i++)
 	{
 		CEntry *pEntry = &m_lEntries[i];
-		if(pEntry->m_State != STATE_DOWNLOADING)
+		if(pEntry->m_State != STATE_DOWNLOADING || IsDownloading(pEntry->m_SteamID))
 			continue;
 
-		m_pRequest = new CHttpRequest("GET", pEntry->m_aUrl, 20L);
-		m_pRequest->StartRun(m_pEngine);
-		m_RequestIndex = i;
-		return;
+		CDownload *pDownload = &m_lDownloads.emplace();
+		pDownload->m_SteamID = pEntry->m_SteamID;
+		pDownload->m_pRequest = new CHttpRequest("GET", pEntry->m_aUrl, 20L);
+		pDownload->m_pRequest->StartRun(m_pEngine);
 	}
+}
 
-	if(m_PendingSteamID)
-		return;
-
+void CSteamAvatarFetcher::StartLookups(int64 Now, bool SteamRunning)
+{
 	for(int i = 0; i < m_lEntries.size(); i++)
 	{
 		CEntry *pEntry = &m_lEntries[i];
@@ -280,6 +346,18 @@ void CSteamAvatarFetcher::Update()
 			continue;
 		}
 
+		CLookup *pLookup = 0;
+		for(int l = 0; l < MAX_PARALLEL_LOOKUPS; l++)
+		{
+			if(!m_aLookups[l].m_SteamID)
+			{
+				pLookup = &m_aLookups[l];
+				break;
+			}
+		}
+		if(!pLookup)
+			return;
+
 		const SteamAPICall_t Call = SteamFriends()->RequestEquippedProfileItems(CSteamID(pEntry->m_SteamID));
 		if(Call == k_uAPICallInvalid)
 		{
@@ -287,18 +365,51 @@ void CSteamAvatarFetcher::Update()
 			pEntry->m_LastCheck = Now;
 			continue;
 		}
-		m_ItemsResult.Set(Call, this, &CSteamAvatarFetcher::OnEquippedProfileItems);
-		m_PendingSteamID = pEntry->m_SteamID;
-		m_PendingSince = Now;
 		pEntry->m_State = STATE_REQUESTED;
-		return;
+		pLookup->m_SteamID = pEntry->m_SteamID;
+		pLookup->m_Started = Now;
+		pLookup->m_Result.Set(Call, pLookup, &CLookup::OnResult);
 	}
 }
 
-void CSteamAvatarFetcher::OnEquippedProfileItems(EquippedProfileItems_t *pResult, bool IOError)
+void CSteamAvatarFetcher::CollectDownload(CDownload *pDownload)
 {
-	const unsigned long long SteamID = m_PendingSteamID;
-	m_PendingSteamID = 0;
+	CHttpRequest *pRequest = pDownload->m_pRequest;
+	CEntry *pEntry = FindEntry(pDownload->m_SteamID);
+	if(pEntry)
+	{
+		const int Size = pRequest->ReceivedDataSize();
+		// Only a GIF can be played. Steam answers with a still image for some
+		// items; GetAvatar() keeps covering those.
+		if(pRequest->Result() == 0 && pRequest->ResponseCode() == 200 && IsGif(pRequest->ReceivedData(), Size))
+		{
+			// the data is taken over instead of copied; the request is done and
+			// several downloads can finish in the same frame
+			pRequest->MoveReceivedData(&pEntry->m_lData);
+			pEntry->m_Revision++;
+			pEntry->m_State = STATE_READY;
+		}
+		else
+		{
+			dbg_msg("steam", "no animated avatar for %llu (result %d, http %d, %d bytes)", pEntry->m_SteamID,
+				pRequest->Result(), pRequest->ResponseCode(), Size);
+			pEntry->m_State = STATE_NONE;
+		}
+		pEntry->m_LastCheck = time_get();
+	}
+	delete pRequest;
+}
+
+void CSteamAvatarFetcher::CLookup::OnResult(EquippedProfileItems_t *pResult, bool IOError)
+{
+	if(m_pFetcher)
+		m_pFetcher->OnLookupResult(this, pResult, IOError);
+}
+
+void CSteamAvatarFetcher::OnLookupResult(CLookup *pLookup, EquippedProfileItems_t *pResult, bool IOError)
+{
+	const unsigned long long SteamID = pLookup->m_SteamID;
+	pLookup->m_SteamID = 0;
 
 	CEntry *pEntry = SteamID ? FindEntry(SteamID) : 0;
 	if(!pEntry)
