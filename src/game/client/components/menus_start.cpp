@@ -277,38 +277,44 @@ bool CMenus::LoadScreenshot(const char *pName)
 int CMenus::ScreenshotScan(const char *pName, int IsDir, int DirType, void *pUser)
 {
 	CMenus *pSelf = (CMenus *) pUser;
-	const char *pSuffix = str_endswith(pName, "_thumbnail.png");
-	if(IsDir || !pSuffix)
+	// thumbnails are scaled in memory now, but older versions wrote them next
+	// to the screenshots; ignore those files instead of listing them twice
+	if(IsDir || !str_endswith(pName, ".png") || str_endswith(pName, "_thumbnail.png"))
 	{
 		return 0;
 	}
-	char aFilename[IO_MAX_PATH_LENGTH];
-	str_truncate(aFilename, sizeof(aFilename), pName, pSuffix - pName);
-	str_append(aFilename, ".png", sizeof(aFilename));
 
 	for(int i = 0; i < pSelf->m_lScreenshots.size(); i++)
 	{
-		if(str_comp(pSelf->m_lScreenshots[i].m_Name, aFilename) == 0)
+		if(str_comp(pSelf->m_lScreenshots[i].m_Name, pName) == 0)
 		{
 			return 0;
 		}
 	}
+
 	CImageInfo Image;
-	// load thumbnail
 	char aBuf[IO_MAX_PATH_LENGTH];
 	str_format(aBuf, sizeof(aBuf), "screenshots/%s", pName);
 	if(!pSelf->Graphics()->LoadPNG(&Image, aBuf, DirType))
 	{
-		str_format(aBuf, sizeof(aBuf), "failed to load thumbnail '%s'", pName);
+		str_format(aBuf, sizeof(aBuf), "failed to load screenshot '%s'", pName);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", aBuf);
 		return 0;
 	}
 
+	// the list only draws a small preview, so scale the decoded screenshot
+	// down before uploading it; clicking an item loads the full image again
+	const int ThumbWidth = maximum(1, Image.m_Width / 4);
+	const int ThumbHeight = maximum(1, Image.m_Height / 4);
+	void *pThumbData = RescaleImage(Image.m_Width, Image.m_Height, ThumbWidth, ThumbHeight, Image.GetPixelSize(), static_cast<const unsigned char *>(Image.m_pData));
+
 	CScreenshot &Screenshot = pSelf->m_lScreenshots.emplace();
-	Screenshot.m_Texture = pSelf->Graphics()->LoadTextureRaw(Image.m_Width, Image.m_Height, 1, Image.m_Format, Image.m_pData, Image.m_Format, IGraphics::TEXLOAD_NORESAMPLE);
-	Screenshot.m_Width = Image.m_Width;
-	Screenshot.m_Height = Image.m_Height;
-	Screenshot.m_Name = aFilename;
+	Screenshot.m_Texture = pSelf->Graphics()->LoadTextureRaw(ThumbWidth, ThumbHeight, 1, Image.m_Format, pThumbData, Image.m_Format, IGraphics::TEXLOAD_NORESAMPLE);
+	Screenshot.m_Width = ThumbWidth;
+	Screenshot.m_Height = ThumbHeight;
+	Screenshot.m_Name = pName;
+	if(pThumbData != Image.m_pData)
+		mem_free(pThumbData);
 	mem_free(Image.m_pData);
 	return 0;
 }

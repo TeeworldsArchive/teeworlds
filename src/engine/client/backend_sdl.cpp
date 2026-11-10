@@ -214,7 +214,7 @@ void *CCommandProcessorFragment_Texture::PrepareTextureData(const CCommandBuffer
 				Height >>= 1;
 			} while(Width > m_MaxTexSize || Height > m_MaxTexSize);
 
-			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
+			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_PixelSize, static_cast<const unsigned char *>(pCommand->m_pData));
 			if(pTexData != pCommand->m_pData)
 				mem_free(pTexData);
 			pTexData = pTmpData;
@@ -224,7 +224,7 @@ void *CCommandProcessorFragment_Texture::PrepareTextureData(const CCommandBuffer
 			Width >>= 1;
 			Height >>= 1;
 
-			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_Format, static_cast<const unsigned char *>(pCommand->m_pData));
+			void *pTmpData = RescaleImage(pCommand->m_Width, pCommand->m_Height, Width, Height, pCommand->m_PixelSize, static_cast<const unsigned char *>(pCommand->m_pData));
 			if(pTexData != pCommand->m_pData)
 				mem_free(pTexData);
 			pTexData = pTmpData;

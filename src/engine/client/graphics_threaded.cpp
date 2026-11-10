@@ -44,18 +44,13 @@ static unsigned char Sample(int w, [[maybe_unused]] int h, const unsigned char *
 	return Sum / (ScaleW * ScaleH);
 }
 
-void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData)
+void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Bpp, const unsigned char *pData)
 {
 	int ScaleW = Width / NewWidth;
 	int ScaleH = Height / NewHeight;
 
 	if(ScaleW == 1 && ScaleH == 1)
 		return (void *) pData;
-	int Bpp = 3;
-	if(Format == CCommandBuffer::TEXFORMAT_RGBA)
-		Bpp = 4;
-	else if(Format == CCommandBuffer::TEXFORMAT_RG)
-		Bpp = 2;
 
 	unsigned char *pTmpData = (unsigned char *) mem_alloc(NewWidth * NewHeight * Bpp);
 
@@ -770,7 +765,7 @@ void CGraphics_Threaded::KickCommandBuffer()
 	m_pCommandBuffer->Reset();
 }
 
-void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pThumbnail)
+void CGraphics_Threaded::ScreenshotDirect(const char *pFilename)
 {
 	FlushPendingVertices();
 
@@ -840,42 +835,6 @@ void CGraphics_Threaded::ScreenshotDirect(const char *pFilename, const char *pTh
 		}
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client/screenshot", aBuf);
 
-		// thumbnail
-		File = m_pStorage->OpenFile(pThumbnail, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(File)
-		{
-			int NewWidth = Image.m_Width / 4;
-			int NewHeight = Image.m_Height / 4;
-			void *pTmpData = RescaleImage(Image.m_Width, Image.m_Height, NewWidth, NewHeight, ImageFormatToTexFormat(Image.m_Format), static_cast<const unsigned char *>(Image.m_pData));
-			if(pTmpData != Image.m_pData)
-				mem_free(Image.m_pData);
-			Image.m_pData = pTmpData;
-			// save png
-			spng_ctx *pPng = spng_ctx_new(SPNG_CTX_ENCODER);
-			Error = !pPng;
-			if(!Error)
-			{
-				// save png
-				spng_ihdr Info = {
-					.width = (unsigned) NewWidth,
-					.height = (unsigned) NewHeight,
-					.bit_depth = 8,
-					.color_type = ColorType,
-					.compression_method = 0,
-					.filter_method = 0,
-					.interlace_method = 0};
-				if(!(Error = spng_set_ihdr(pPng, &Info)))
-				{
-					spng_set_png_file(pPng, (FILE *) File);
-					spng_encode_image(pPng, Image.m_pData, NewWidth * NewHeight * CImageInfo::GetPixelSize(Image.m_Format), SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
-					io_close(File);
-					File = 0;
-				}
-				spng_ctx_free(pPng);
-			}
-			if(File)
-				io_close(File);
-		}
 		mem_free(Image.m_pData);
 		m_pfnScreenshot = 0;
 	}
@@ -1433,7 +1392,6 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallba
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
 	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
-	str_format(m_aThumbnailName, sizeof(m_aThumbnailName), "screenshots/%s_%s_thumbnail.png", pFilename ? pFilename : "screenshot", aDate);
 	m_DoScreenshot = true;
 	m_pfnScreenshot = pfnCallback;
 	m_pScreenshotUser = pUser;
@@ -1448,7 +1406,7 @@ void CGraphics_Threaded::Swap()
 	if(m_DoScreenshot)
 	{
 		if(WindowActive())
-			ScreenshotDirect(m_aScreenshotName, m_aThumbnailName);
+			ScreenshotDirect(m_aScreenshotName);
 		m_DoScreenshot = false;
 	}
 

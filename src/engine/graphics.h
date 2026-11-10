@@ -58,6 +58,11 @@ public:
 
 typedef void (*FScreenshotCallback)(void *pUser, const char *pPath);
 
+// Rescales uncompressed image data by averaging integer-sized blocks, so a
+// downscale only works by a whole factor. Returns pData when the size is
+// unchanged, otherwise a newly allocated buffer that must be freed with mem_free.
+void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Bpp, const unsigned char *pData);
+
 /*
 	Structure: CVideoMode
 */

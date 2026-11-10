@@ -449,7 +449,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	bool m_SDFArmed;
 	bool m_DoScreenshot;
 	char m_aScreenshotName[128];
-	char m_aThumbnailName[128];
 	FScreenshotCallback m_pfnScreenshot;
 	void *m_pScreenshotUser;
 
@@ -523,7 +522,7 @@ public:
 	virtual int LoadPNGRaw(CImageInfo *pImg, const unsigned char *pData, int Size, const char *pContext) override;
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) override;
 
-	void ScreenshotDirect(const char *pFilename, const char *pThumbnail);
+	void ScreenshotDirect(const char *pFilename);
 
 	virtual void TextureSet(CTextureHandle TextureID) override;
 
@@ -582,8 +581,6 @@ public:
 	virtual void OnWindowPixelResized(int ScreenWidth, int ScreenHeight) override;
 	virtual void *GetWindowHandle() override;
 };
-
-void *RescaleImage(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 
 extern IGraphicsBackend *CreateGraphicsBackend(class IStorage *pStorage, int Backend);
 
