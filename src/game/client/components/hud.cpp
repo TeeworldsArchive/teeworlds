@@ -929,7 +929,7 @@ void CHud::RenderReadyUpNotification()
 
 		s_Cursor.Reset(((int64) g_Localization.Version()) << 32 | KeyID);
 		s_Cursor.m_Align = TEXTALIGN_TC;
-		s_Cursor.MoveTo(150 * Graphics()->ScreenAspect(), 30.0f);
+		s_Cursor.MoveTo(150 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect(), 30.0f * Graphics()->ScreenUIScale());
 		TextRender()->TextOutlined(&s_Cursor, aText, -1);
 	}
 }

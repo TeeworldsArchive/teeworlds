@@ -96,7 +96,7 @@ void CBroadcast::RenderClientBroadcast()
 
 	Graphics()->MapScreen(0, 0, Width, Height);
 
-	m_ClientBroadcastCursor.MoveTo(300 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect() / 2, 40.0f);
+	m_ClientBroadcastCursor.MoveTo(300 * Graphics()->ScreenUIScale() * Graphics()->ScreenAspect() / 2, 40.0f * Graphics()->ScreenUIScale());
 	TextRender()->DrawTextOutlined(&m_ClientBroadcastCursor);
 }
 

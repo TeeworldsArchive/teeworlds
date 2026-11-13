@@ -315,6 +315,7 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 	const vec4 TeamRectColor = Team == TEAM_RED ? vec4(1.0f, 0.0f, 0.0f, 0.25f) : vec4(0.0f, 0.0f, 1.0f, 0.25f);
 
 	const bool ReadyMode = m_pClient->m_Snap.m_pGameData && m_pClient->m_Snap.m_pGameData->m_GameStateEndTick == 0;
+	int RowIndex = 0;
 	for(int i = 0; i < m_pClient->m_aInfoByScore.size(); i++)
 	{
 		const CGameClient::CPlayerInfoItem *pInfo = &m_pClient->m_aInfoByScore[i];
@@ -335,8 +336,9 @@ void CScoreboard::RenderTeamScoreboard(int Team, CUIRect &MainView, float LineHe
 			continue;
 		// highlight the line
 		{
-			if(i % 2 == 0)
+			if(RowIndex % 2 == 0)
 				Playerline.Draw(BackgroundColor, 0.0f, CUIRect::CORNER_NONE);
+			RowIndex++;
 			if(Team != -1)
 				Playerline.Draw(TeamRectColor, 0.0f, CUIRect::CORNER_NONE);
 			if(pInfo->m_ClientID == m_pClient->m_LocalClientID)

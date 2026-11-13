@@ -213,8 +213,14 @@ void CMenus::RenderStartMenuScreenshots(CUIRect View, CUIRect Button)
 			{
 				Item.m_Rect.HSplitTop(5.0f, 0, &Item.m_Rect); // some margin from the top
 
-				const float FinalHeight = 45.0f;
-				const float FinalWidth = s->m_Width / (s->m_Height / FinalHeight);
+				float FinalHeight = 45.0f;
+				float FinalWidth = s->m_Width / (s->m_Height / FinalHeight);
+				const float MaxWidth = Item.m_Rect.w - 10.0f;
+				if(MaxWidth > 0.0f && FinalWidth > MaxWidth)
+				{
+					FinalWidth = MaxWidth;
+					FinalHeight = FinalWidth * s->m_Height / s->m_Width;
+				}
 				{
 					Graphics()->TextureSet(s->m_Texture);
 					Graphics()->WrapClamp();
@@ -249,7 +255,7 @@ void CMenus::RenderStartMenuScreenshots(CUIRect View, CUIRect Button)
 	}
 	else
 	{
-		UI()->DoLabel(&View, Localize("There's no any thumbnail for screenshots"), 20.0f, TEXTALIGN_MC);
+		UI()->DoLabel(&View, Localize("No screenshots found"), 20.0f, TEXTALIGN_MC);
 	}
 }
 

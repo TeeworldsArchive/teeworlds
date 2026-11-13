@@ -1766,8 +1766,13 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	ScreenRight.HSplitTop(Spacing, 0, &ScreenRight);
 	ScreenRight.HSplitTop(ButtonHeight, &Button, &ScreenRight);
 
-	// TODO: greyed out checkbox (not clickable)
-	if(!Config()->m_GfxVsync)
+	// V-Sync implies a frame limit, so show the disabled Limit Fps row
+	// instead of leaving an empty gap.
+	if(Config()->m_GfxVsync)
+	{
+		DoButton_CheckBox(&Config()->m_GfxLimitFps, Localize("Limit Fps"), Config()->m_GfxLimitFps, &Button, true);
+	}
+	else
 	{
 		if(DoButton_CheckBox(&Config()->m_GfxLimitFps, Localize("Limit Fps"), Config()->m_GfxLimitFps, &Button))
 			Config()->m_GfxLimitFps ^= 1;
