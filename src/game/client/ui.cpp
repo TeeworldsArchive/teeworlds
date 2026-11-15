@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
+#include <base/math.h>
 #include <base/system/time.h>
 
 #include <engine/shared/config.h>
@@ -379,6 +380,35 @@ void CUI::DoSmoothScrollLogic(float *pScrollOffset, float *pScrollOffsetChange, 
 	{
 		*pScrollOffset = TotalSize - ViewPortSize;
 		*pScrollOffsetChange = 0.0f;
+	}
+}
+
+void CUI::RenderLoadingSpinner(const CUIRect *pRect, int64 StartTime)
+{
+	enum
+	{
+		NUM_DOTS = 8,
+	};
+
+	const float Elapsed = (time_get() - StartTime) / (float) time_freq();
+	const float Radius = minimum(pRect->w, pRect->h) * 0.3f;
+	const float DotSize = maximum(3.0f, Radius * 0.4f);
+	const int Head = (int) (Elapsed * NUM_DOTS) % NUM_DOTS;
+	const vec2 Center = pRect->Center();
+
+	for(int i = 0; i < NUM_DOTS; i++)
+	{
+		// the dot at Head is the brightest, the ones behind it fade out
+		const int Age = (Head - i + NUM_DOTS) % NUM_DOTS;
+		const float Alpha = 0.15f + 0.85f * (1.0f - Age / (float) NUM_DOTS);
+		const float Angle = 2.0f * pi * i / (float) NUM_DOTS;
+
+		CUIRect Dot;
+		Dot.w = DotSize;
+		Dot.h = DotSize;
+		Dot.x = Center.x + cosf(Angle) * Radius - DotSize / 2.0f;
+		Dot.y = Center.y + sinf(Angle) * Radius - DotSize / 2.0f;
+		Dot.Draw(vec4(1.0f, 1.0f, 1.0f, Alpha), DotSize / 2.0f);
 	}
 }
 

@@ -1,11 +1,17 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
+#include <base/system/mem.h>
+#include <base/system/thread.h>
+#include <base/tl/threading.h>
+
+#include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/textrender.h>
 
 #include <engine/shared/config.h>
+#include <engine/shared/jobs.h>
 
 #include <game/client/ui.h>
 #include <game/version.h>
@@ -174,10 +180,15 @@ void CMenus::RenderStartMenuScreenshots(CUIRect View, CUIRect Button)
 	static CButtonContainer s_RefreshButton;
 	if(DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &Button))
 	{
-		Storage()->ListDirectory(IStorage::TYPE_SAVE, "screenshots", ScreenshotScan, this);
+		StartScreenshotScan();
 		s_InitScreenshotsList = true;
 	}
 
+	if(!m_ScreenshotsScanned)
+		StartScreenshotScan();
+
+	// every entry gets its own spinner until the background scan delivers its
+	// thumbnail, so the list is usable while the images are decoded
 	if(m_lScreenshots.size())
 	{
 		static sorted_array<const CScreenshot *> s_lpList;
@@ -213,15 +224,16 @@ void CMenus::RenderStartMenuScreenshots(CUIRect View, CUIRect Button)
 			{
 				Item.m_Rect.HSplitTop(5.0f, 0, &Item.m_Rect); // some margin from the top
 
-				float FinalHeight = 45.0f;
-				float FinalWidth = s->m_Width / (s->m_Height / FinalHeight);
-				const float MaxWidth = Item.m_Rect.w - 10.0f;
-				if(MaxWidth > 0.0f && FinalWidth > MaxWidth)
+				if(s->m_Texture.IsValid())
 				{
-					FinalWidth = MaxWidth;
-					FinalHeight = FinalWidth * s->m_Height / s->m_Width;
-				}
-				{
+					float FinalHeight = 45.0f;
+					float FinalWidth = s->m_Width / (s->m_Height / FinalHeight);
+					const float MaxWidth = Item.m_Rect.w - 10.0f;
+					if(MaxWidth > 0.0f && FinalWidth > MaxWidth)
+					{
+						FinalWidth = MaxWidth;
+						FinalHeight = FinalWidth * s->m_Height / s->m_Width;
+					}
 					Graphics()->TextureSet(s->m_Texture);
 					Graphics()->WrapClamp();
 					Graphics()->QuadsBegin();
@@ -230,6 +242,16 @@ void CMenus::RenderStartMenuScreenshots(CUIRect View, CUIRect Button)
 					Graphics()->SingleQuadDrawTL(&QuadItem);
 					Graphics()->QuadsEnd();
 					Graphics()->WrapNormal();
+				}
+				else
+				{
+					// the thumbnail is still being decoded on the job thread
+					CUIRect Spinner;
+					Spinner.w = 40.0f;
+					Spinner.h = 40.0f;
+					Spinner.x = Item.m_Rect.Center().x - Spinner.w / 2.0f;
+					Spinner.y = Item.m_Rect.Center().y - 10.0f - Spinner.h / 2.0f;
+					UI()->RenderLoadingSpinner(&Spinner, s->m_LoadStart);
 				}
 
 				CUIRect Label;
@@ -280,47 +302,182 @@ bool CMenus::LoadScreenshot(const char *pName)
 	return true;
 }
 
-int CMenus::ScreenshotScan(const char *pName, int IsDir, int DirType, void *pUser)
+/*
+	Collects the screenshot files and decodes their previews on a job thread.
+	The names are listed before the job starts and are not touched while it
+	runs; finished thumbnails are published under a lock and uploaded by the
+	menu in PollScreenshotScan(), so the client never blocks on a large
+	screenshot library.
+*/
+class CScreenshotLoader
+{
+public:
+	struct CResult
+	{
+		int m_Index;
+		int m_Width;
+		int m_Height;
+		int m_Format;
+		void *m_pData;
+	};
+
+	class CJob m_Job;
+	lock m_Lock;
+	array<string> m_lNames;
+	array<CResult> m_lResults; // guarded by m_Lock
+	class IGraphics *m_pGraphics;
+	volatile bool m_Abort;
+
+	CScreenshotLoader() :
+		m_pGraphics(0),
+		m_Abort(false)
+	{
+	}
+
+	~CScreenshotLoader()
+	{
+		// thumbnails that were not uploaded yet have to be released here
+		for(int i = 0; i < m_lResults.size(); i++)
+			mem_free(m_lResults[i].m_pData);
+		m_lResults.clear();
+	}
+};
+
+static int ScreenshotLoadThread(void *pUser)
+{
+	CScreenshotLoader *pLoader = static_cast<CScreenshotLoader *>(pUser);
+
+	for(int i = 0; i < pLoader->m_lNames.size() && !pLoader->m_Abort; i++)
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		str_format(aPath, sizeof(aPath), "screenshots/%s", pLoader->m_lNames[i].cstr());
+
+		CImageInfo Image;
+		if(!pLoader->m_pGraphics->LoadPNG(&Image, aPath, IStorage::TYPE_SAVE))
+			continue;
+
+		// the list only draws a small preview, so scale the decoded screenshot
+		// down here and leave only the thumbnail to the menu
+		const int ThumbWidth = maximum(1, Image.m_Width / 4);
+		const int ThumbHeight = maximum(1, Image.m_Height / 4);
+		void *pThumbData = RescaleImage(Image.m_Width, Image.m_Height, ThumbWidth, ThumbHeight, Image.GetPixelSize(), static_cast<const unsigned char *>(Image.m_pData));
+		if(pThumbData != Image.m_pData)
+			mem_free(Image.m_pData);
+
+		CScreenshotLoader::CResult Result;
+		Result.m_Index = i;
+		Result.m_Width = ThumbWidth;
+		Result.m_Height = ThumbHeight;
+		Result.m_Format = Image.m_Format;
+		Result.m_pData = pThumbData;
+
+		scope_lock Guard(&pLoader->m_Lock);
+		pLoader->m_lResults.add(Result);
+	}
+
+	return 0;
+}
+
+void CMenus::StartScreenshotScan()
+{
+	StopScreenshotScan();
+	ClearScreenshots();
+
+	// only the names are collected here, the decoding runs on the job thread
+	Storage()->ListDirectory(IStorage::TYPE_SAVE, "screenshots", ScreenshotScan, this);
+
+	m_pScreenshotLoader = new CScreenshotLoader();
+	m_pScreenshotLoader->m_pGraphics = Graphics();
+	for(int i = 0; i < m_lScreenshots.size(); i++)
+		m_pScreenshotLoader->m_lNames.add(m_lScreenshots[i].m_Name);
+
+	m_ScreenshotsScanned = true;
+	m_pClient->Engine()->AddJob(&m_pScreenshotLoader->m_Job, ScreenshotLoadThread, m_pScreenshotLoader);
+}
+
+void CMenus::StopScreenshotScan()
+{
+	if(!m_pScreenshotLoader)
+		return;
+
+	m_pScreenshotLoader->m_Abort = true;
+	// the job may still be decoding one image; wait before its data goes away
+	while(m_pScreenshotLoader->m_Job.Status() != CJob::STATE_DONE)
+		thread_sleep(1);
+
+	delete m_pScreenshotLoader;
+	m_pScreenshotLoader = 0;
+}
+
+void CMenus::ClearScreenshots()
+{
+	for(int i = 0; i < m_lScreenshots.size(); i++)
+	{
+		if(m_lScreenshots[i].m_Texture.IsValid())
+			Graphics()->UnloadTexture(&m_lScreenshots[i].m_Texture);
+	}
+	m_lScreenshots.clear();
+}
+
+void CMenus::PollScreenshotScan()
+{
+	if(!m_pScreenshotLoader)
+		return;
+
+	array<CScreenshotLoader::CResult> vResults;
+	bool Done;
+	{
+		scope_lock Guard(&m_pScreenshotLoader->m_Lock);
+		for(int i = 0; i < m_pScreenshotLoader->m_lResults.size(); i++)
+			vResults.add(m_pScreenshotLoader->m_lResults[i]);
+		m_pScreenshotLoader->m_lResults.clear();
+		// the job adds its last thumbnail before the pool marks it done, so
+		// nothing can be missed once the state is DONE
+		Done = m_pScreenshotLoader->m_Job.Status() == CJob::STATE_DONE;
+	}
+
+	for(int i = 0; i < vResults.size(); i++)
+	{
+		CScreenshotLoader::CResult &Result = vResults[i];
+		if(Result.m_Index < 0 || Result.m_Index >= m_lScreenshots.size())
+		{
+			mem_free(Result.m_pData);
+			continue;
+		}
+
+		CScreenshot &Screenshot = m_lScreenshots[Result.m_Index];
+		Screenshot.m_Width = Result.m_Width;
+		Screenshot.m_Height = Result.m_Height;
+		Screenshot.m_Texture = Graphics()->LoadTextureRaw(Result.m_Width, Result.m_Height, 1, Result.m_Format, Result.m_pData, Result.m_Format, IGraphics::TEXLOAD_NORESAMPLE);
+		mem_free(Result.m_pData);
+	}
+
+	if(Done)
+	{
+		delete m_pScreenshotLoader;
+		m_pScreenshotLoader = 0;
+	}
+}
+
+int CMenus::ScreenshotScan(const char *pName, int IsDir, [[maybe_unused]] int DirType, void *pUser)
 {
 	CMenus *pSelf = (CMenus *) pUser;
 	// thumbnails are scaled in memory now, but older versions wrote them next
 	// to the screenshots; ignore those files instead of listing them twice
 	if(IsDir || !str_endswith(pName, ".png") || str_endswith(pName, "_thumbnail.png"))
-	{
 		return 0;
-	}
 
 	for(int i = 0; i < pSelf->m_lScreenshots.size(); i++)
 	{
 		if(str_comp(pSelf->m_lScreenshots[i].m_Name, pName) == 0)
-		{
 			return 0;
-		}
 	}
-
-	CImageInfo Image;
-	char aBuf[IO_MAX_PATH_LENGTH];
-	str_format(aBuf, sizeof(aBuf), "screenshots/%s", pName);
-	if(!pSelf->Graphics()->LoadPNG(&Image, aBuf, DirType))
-	{
-		str_format(aBuf, sizeof(aBuf), "failed to load screenshot '%s'", pName);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", aBuf);
-		return 0;
-	}
-
-	// the list only draws a small preview, so scale the decoded screenshot
-	// down before uploading it; clicking an item loads the full image again
-	const int ThumbWidth = maximum(1, Image.m_Width / 4);
-	const int ThumbHeight = maximum(1, Image.m_Height / 4);
-	void *pThumbData = RescaleImage(Image.m_Width, Image.m_Height, ThumbWidth, ThumbHeight, Image.GetPixelSize(), static_cast<const unsigned char *>(Image.m_pData));
 
 	CScreenshot &Screenshot = pSelf->m_lScreenshots.emplace();
-	Screenshot.m_Texture = pSelf->Graphics()->LoadTextureRaw(ThumbWidth, ThumbHeight, 1, Image.m_Format, pThumbData, Image.m_Format, IGraphics::TEXLOAD_NORESAMPLE);
-	Screenshot.m_Width = ThumbWidth;
-	Screenshot.m_Height = ThumbHeight;
 	Screenshot.m_Name = pName;
-	if(pThumbData != Image.m_pData)
-		mem_free(pThumbData);
-	mem_free(Image.m_pData);
+	Screenshot.m_Width = 0;
+	Screenshot.m_Height = 0;
+	Screenshot.m_Texture = IGraphics::CTextureHandle();
+	Screenshot.m_LoadStart = time_get();
 	return 0;
 }

@@ -298,6 +298,10 @@ public:
 	bool DoPickerLogic(const void *pID, const CUIRect *pRect, float *pX, float *pY);
 	void DoSmoothScrollLogic(float *pScrollOffset, float *pScrollOffsetChange, float ViewPortSize, float TotalSize, float ScrollSpeed = 10.0f);
 
+	// draws a spinner of dots that turns once per second; StartTime is the
+	// time_get() value of when the loading started
+	void RenderLoadingSpinner(const CUIRect *pRect, int64 StartTime);
+
 	// labels
 	void DoLabel(const CUIRect *pRect, const char *pText, float FontSize, int Align = TEXTALIGN_TL, float LineWidth = -1.0f, bool MultiLine = true);
 	void DoLabelColor(const CUIRect *pRect, const vec4 &TextColor, const char *pText, float FontSize, int Align = TEXTALIGN_TL, float LineWidth = -1.0f, bool MultiLine = true);

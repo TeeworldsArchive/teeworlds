@@ -246,12 +246,23 @@ private:
 		int m_Width;
 		int m_Height;
 		IGraphics::CTextureHandle m_Texture;
+		int64 m_LoadStart; // when the background scan queued this thumbnail
 		bool operator<(const CScreenshot &Other) const { return m_Name < Other.m_Name; }
 	};
 	sorted_array<CScreenshot> m_lScreenshots;
 	CScreenshot m_Screenshot;
 	bool LoadScreenshot(const char *pName);
 	static int ScreenshotScan(const char *pName, int IsDir, int DirType, void *pUser);
+
+	// the screenshot list is listed and decoded in the background, so a large
+	// library does not stall the client; the board shows a spinner until the
+	// thumbnails are there
+	class CScreenshotLoader *m_pScreenshotLoader;
+	bool m_ScreenshotsScanned;
+	void StartScreenshotScan();
+	void StopScreenshotScan();
+	void PollScreenshotScan();
+	void ClearScreenshots();
 
 	int64 m_LastInput;
 

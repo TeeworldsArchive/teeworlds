@@ -74,6 +74,8 @@ CMenus::CMenus()
 	m_KeyReaderWasActive = false;
 	m_KeyReaderIsActive = false;
 	m_StartMenuBoard = STARTMENU_BOARD_SCREENSHOTS;
+	m_pScreenshotLoader = 0;
+	m_ScreenshotsScanned = false;
 
 	// Config() and the camera are not available yet during construction, so
 	// this must not go through SetMenuPage()
@@ -1005,8 +1007,6 @@ void CMenus::OnInit()
 	Storage()->ListDirectory(IStorage::TYPE_ALL, "ui/gametypes", GameIconScan, this);
 	RenderLoading(1);
 
-	Storage()->ListDirectory(IStorage::TYPE_SAVE, "screenshots", ScreenshotScan, this);
-
 	// initial launch preparations
 	if(Config()->m_ClShowWelcome)
 		m_Popup = POPUP_LANGUAGE;
@@ -1897,6 +1897,8 @@ void CMenus::OnConsoleInit()
 
 void CMenus::OnShutdown()
 {
+	StopScreenshotScan();
+
 	// save filters
 	SaveFilters();
 }
@@ -1950,6 +1952,8 @@ void CMenus::OnStateChange(int NewState, int OldState)
 
 void CMenus::OnRender()
 {
+	PollScreenshotScan();
+
 	UI()->StartCheck();
 
 	if(m_KeyReaderIsActive)
