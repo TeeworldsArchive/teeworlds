@@ -834,7 +834,21 @@ void CGlyphMap::SetVariantFaceByName(const char *pFamilyName)
 	if(m_VariantFace != Face)
 	{
 		m_VariantFace = Face;
-		InitTexture(m_TextureSize, m_TextureSize);
+
+		// during startup nothing has been written to the atlas yet, so the
+		// face can simply be swapped; recreating the texture would only
+		// upload the whole empty atlas again
+		bool AtlasUsed = false;
+		for(int i = 0; i < NUM_PAGES_PER_DIM * NUM_PAGES_PER_DIM; ++i)
+		{
+			if(!m_aAtlasPages[i].m_IsEmpty)
+			{
+				AtlasUsed = true;
+				break;
+			}
+		}
+		if(AtlasUsed)
+			InitTexture(m_TextureSize, m_TextureSize);
 	}
 }
 
@@ -1638,8 +1652,12 @@ int CTextRender::LoadFontFiles(IStorage *pStorage, IConsole *pConsole, const jso
 
 			char aFontName[IO_MAX_PATH_LENGTH];
 			str_format(aFontName, sizeof(aFontName), "fonts/%s", (const char *) rFiles[i]);
-			unsigned FileSize;
-			if(pStorage->ReadFile(aFontName, IStorage::TYPE_ALL, &m_apFontData[i], &FileSize))
+			unsigned FileSize = 0;
+			// a font that the download check already read is used from there
+			// instead of reading the file a second time
+			CFontDownload *pDownload = m_Downloader.Find((const char *) rFiles[i]);
+			const bool HaveData = pDownload && pDownload->TakeVerifiedData(&m_apFontData[i], &FileSize);
+			if(HaveData || pStorage->ReadFile(aFontName, IStorage::TYPE_ALL, &m_apFontData[i], &FileSize))
 			{
 				if(LoadFontCollection(aFontName, m_apFontData[i], FileSize))
 				{
@@ -1781,12 +1799,17 @@ bool CTextRender::LoadFontsAsync(IStorage *pStorage, IConsole *pConsole)
 		}
 	}
 
-	// load what is available right away so the UI has a usable font during the download
-	m_NumLoadedFaces = LoadFontFiles(pStorage, pConsole, pJsonData, m_aLoadedFonts);
-
+	// resolve the downloads first: a font that is already in storage is read
+	// and verified once there, and LoadFontFiles reuses that data
 	IHttp *pHttp = Kernel()->RequestInterface<IHttp>();
 	for(int i = 0; i < m_Downloader.NumDownloads(); ++i)
 		m_Downloader.Get(i)->Start(pHttp, pStorage, pConsole);
+
+	// load what is available right away so the UI has a usable font during the download
+	m_NumLoadedFaces = LoadFontFiles(pStorage, pConsole, pJsonData, m_aLoadedFonts);
+
+	// the renderer owns the data it took; drop what was not needed
+	m_Downloader.ReleaseVerifiedData();
 
 	return !m_Downloader.AnyRunning();
 }

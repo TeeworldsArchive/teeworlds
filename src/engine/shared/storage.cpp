@@ -619,8 +619,20 @@ public:
 	virtual bool GetFileTime(const char *pFilename, int StorageType, time_t *pCreated, time_t *pModified) override
 	{
 		char aBuf[IO_MAX_PATH_LENGTH];
-		GetCompletePath(StorageType, pFilename, aBuf, sizeof(aBuf));
 
+		// like the reading functions, TYPE_ALL searches every path in turn
+		if(StorageType == IStorage::TYPE_ALL)
+		{
+			for(int i = 0; i < m_NumPaths; i++)
+			{
+				GetCompletePath(i, pFilename, aBuf, sizeof(aBuf));
+				if(!fs_file_time(aBuf, pCreated, pModified))
+					return true;
+			}
+			return false;
+		}
+
+		GetCompletePath(StorageType, pFilename, aBuf, sizeof(aBuf));
 		return !fs_file_time(aBuf, pCreated, pModified);
 	}
 

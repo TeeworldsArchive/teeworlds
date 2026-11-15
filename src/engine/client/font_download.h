@@ -2,6 +2,8 @@
 #ifndef ENGINE_CLIENT_FONT_DOWNLOAD_H
 #define ENGINE_CLIENT_FONT_DOWNLOAD_H
 
+#include <time.h>
+
 #include <base/hash.h>
 #include <base/tl/array.h>
 
@@ -38,8 +40,16 @@ private:
 	CHttpRequest *m_pLicenseRequest;
 	bool m_LicenseWritten;
 
+	// data of a font that Exists() already read and verified; the renderer
+	// takes it over instead of reading the file a second time
+	void *m_pVerifiedData;
+	unsigned m_VerifiedDataSize;
+
 	bool Verify(const void *pData, unsigned Size) const;
 	bool WriteToStorage(IStorage *pStorage, const char *pFilename, const void *pData, unsigned Size) const;
+	// the digest of an unchanged file was recorded when it was verified last
+	bool VerificationCacheMatches(IStorage *pStorage, unsigned Size, time_t Modified) const;
+	void WriteVerificationCache(IStorage *pStorage, unsigned Size, time_t Modified) const;
 
 public:
 	CFontDownload();
@@ -63,7 +73,13 @@ public:
 	unsigned ExpectedSize() const { return m_ExpectedSize; }
 	// progress of the font body in bytes, 0 while the request is queued
 	unsigned DownloadedBytes() const;
-	bool Exists(IStorage *pStorage) const;
+
+	// true when the file is in storage and matches index.json; reads the file
+	// into the verified buffer on the way
+	bool Exists(IStorage *pStorage);
+	// hands the verified data over, the caller owns and frees it
+	bool TakeVerifiedData(void **ppData, unsigned *pSize);
+	void ReleaseVerifiedData();
 };
 
 // Owns every downloadable font of the current index.json.
@@ -78,6 +94,10 @@ public:
 
 	CFontDownload *Add();
 	void Clear();
+
+	// entry of the file below "fonts/", 0 when it is not downloadable
+	CFontDownload *Find(const char *pName) const;
+	void ReleaseVerifiedData();
 
 	int NumDownloads() const { return m_lDownloads.size(); }
 	CFontDownload *Get(int Index) const { return Index >= 0 && Index < m_lDownloads.size() ? m_lDownloads[Index] : 0; }

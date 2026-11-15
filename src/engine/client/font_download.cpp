@@ -1,4 +1,5 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
+#include <base/system/io.h>
 #include <base/system/mem.h>
 #include <base/system/string.h>
 #include <base/system/thread.h>
@@ -9,6 +10,25 @@
 #include <engine/storage.h>
 
 #include "font_download.h"
+
+// Digest of a font that was already verified, so an unchanged file does not
+// have to be hashed on every start. A file whose size or modification time
+// differs from the record is hashed again.
+class CFontVerificationCache
+{
+public:
+	enum
+	{
+		MAGIC = 0x43465754, // "TWFC"
+		VERSION = 1,
+	};
+
+	unsigned m_Magic;
+	unsigned m_Version;
+	unsigned m_Size;
+	int64 m_Modified;
+	SHA256_DIGEST m_Digest;
+};
 
 CFontDownload::CFontDownload()
 {
@@ -25,12 +45,16 @@ CFontDownload::CFontDownload()
 	m_pFontRequest = 0;
 	m_pLicenseRequest = 0;
 	m_LicenseWritten = false;
+
+	m_pVerifiedData = 0;
+	m_VerifiedDataSize = 0;
 }
 
 CFontDownload::~CFontDownload()
 {
 	delete m_pFontRequest;
 	delete m_pLicenseRequest;
+	ReleaseVerifiedData();
 }
 
 void CFontDownload::Init(const char *pName, const char *pUrl, const char *pLicenseUrl,
@@ -51,26 +75,103 @@ void CFontDownload::Init(const char *pName, const char *pUrl, const char *pLicen
 	m_aError[0] = 0;
 }
 
-bool CFontDownload::Exists(IStorage *pStorage) const
+bool CFontDownload::Exists(IStorage *pStorage)
 {
 	// FindFile matches the base name and searches pPath, so pFilename has no directory
 	char aFound[IO_MAX_PATH_LENGTH];
 	if(!pStorage->FindFile(m_aName, "fonts", IStorage::TYPE_ALL, aFound, sizeof(aFound)))
 		return false;
 
+	void *pData = 0;
+	unsigned Size = 0;
+	if(!pStorage->ReadFile(aFound, IStorage::TYPE_ALL, &pData, &Size))
+		return false;
+
 	// a cached file failing the checksum counts as absent, so a bad download is repaired
 	if(m_HasSha256)
 	{
-		SHA256_DIGEST Sha256;
-		unsigned Crc = 0;
-		unsigned Size = 0;
-		if(!pStorage->GetHashAndSize(aFound, IStorage::TYPE_ALL, &Sha256, &Crc, &Size))
+		if(m_ExpectedSize != 0 && Size != m_ExpectedSize)
+		{
+			mem_free(pData);
 			return false;
-		if(Size != m_ExpectedSize || !(Sha256 == m_Sha256))
-			return false;
+		}
+
+		time_t Created, Modified;
+		const bool HaveTime = pStorage->GetFileTime(aFound, IStorage::TYPE_ALL, &Created, &Modified);
+		if(!HaveTime || !VerificationCacheMatches(pStorage, Size, Modified))
+		{
+			if(!Verify(pData, Size))
+			{
+				mem_free(pData);
+				return false;
+			}
+			if(HaveTime)
+				WriteVerificationCache(pStorage, Size, Modified);
+		}
 	}
 
+	ReleaseVerifiedData();
+	m_pVerifiedData = pData;
+	m_VerifiedDataSize = Size;
 	return true;
+}
+
+bool CFontDownload::VerificationCacheMatches(IStorage *pStorage, unsigned Size, time_t Modified) const
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "fonts/%s.verified", m_aName);
+
+	IOHANDLE File = pStorage->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+
+	CFontVerificationCache Cache;
+	const bool Ok = io_read(File, &Cache, sizeof(Cache)) == (unsigned) sizeof(Cache);
+	io_close(File);
+
+	return Ok && Cache.m_Magic == CFontVerificationCache::MAGIC &&
+	       Cache.m_Version == CFontVerificationCache::VERSION &&
+	       Cache.m_Size == Size && Cache.m_Modified == (int64) Modified &&
+	       Cache.m_Digest == m_Sha256;
+}
+
+void CFontDownload::WriteVerificationCache(IStorage *pStorage, unsigned Size, time_t Modified) const
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "fonts/%s.verified", m_aName);
+
+	CFontVerificationCache Cache;
+	Cache.m_Magic = CFontVerificationCache::MAGIC;
+	Cache.m_Version = CFontVerificationCache::VERSION;
+	Cache.m_Size = Size;
+	Cache.m_Modified = (int64) Modified;
+	Cache.m_Digest = m_Sha256;
+
+	IOHANDLE File = pStorage->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return;
+	io_write(File, &Cache, sizeof(Cache));
+	io_close(File);
+}
+
+bool CFontDownload::TakeVerifiedData(void **ppData, unsigned *pSize)
+{
+	if(!m_pVerifiedData)
+		return false;
+
+	*ppData = m_pVerifiedData;
+	*pSize = m_VerifiedDataSize;
+	m_pVerifiedData = 0;
+	m_VerifiedDataSize = 0;
+	return true;
+}
+
+void CFontDownload::ReleaseVerifiedData()
+{
+	if(m_pVerifiedData)
+		mem_free(m_pVerifiedData);
+	m_pVerifiedData = 0;
+	m_VerifiedDataSize = 0;
 }
 
 bool CFontDownload::Verify(const void *pData, unsigned Size) const
@@ -195,6 +296,11 @@ bool CFontDownload::Update(IStorage *pStorage, IConsole *pConsole)
 		return true;
 	}
 
+	// record the digest, so the next start does not have to hash the file
+	time_t Created, Modified;
+	if(pStorage->GetFileTime(aPath, IStorage::TYPE_SAVE, &Created, &Modified))
+		WriteVerificationCache(pStorage, Size, Modified);
+
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "'%s' downloaded and verified (%.1f MiB)", m_aName, Size / 1024.0f / 1024.0f);
 	pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "fontdownload", aBuf);
@@ -252,6 +358,22 @@ void CFontDownloader::Clear()
 		delete m_lDownloads[i];
 	m_lDownloads.clear();
 	m_Finished = false;
+}
+
+CFontDownload *CFontDownloader::Find(const char *pName) const
+{
+	for(int i = 0; i < m_lDownloads.size(); ++i)
+	{
+		if(str_comp(m_lDownloads[i]->Name(), pName) == 0)
+			return m_lDownloads[i];
+	}
+	return 0;
+}
+
+void CFontDownloader::ReleaseVerifiedData()
+{
+	for(int i = 0; i < m_lDownloads.size(); ++i)
+		m_lDownloads[i]->ReleaseVerifiedData();
 }
 
 bool CFontDownloader::Update(IStorage *pStorage, IConsole *pConsole)
