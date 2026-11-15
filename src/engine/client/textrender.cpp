@@ -8,6 +8,7 @@
 
 #include <engine/engine.h>
 #include <engine/graphics.h>
+#include <engine/http.h>
 #include <engine/textrender.h>
 
 #include <engine/shared/config.h>
@@ -1783,9 +1784,9 @@ bool CTextRender::LoadFontsAsync(IStorage *pStorage, IConsole *pConsole)
 	// load what is available right away so the UI has a usable font during the download
 	m_NumLoadedFaces = LoadFontFiles(pStorage, pConsole, pJsonData, m_aLoadedFonts);
 
-	IEngine *pEngine = Kernel()->RequestInterface<IEngine>();
+	IHttp *pHttp = Kernel()->RequestInterface<IHttp>();
 	for(int i = 0; i < m_Downloader.NumDownloads(); ++i)
-		m_Downloader.Get(i)->Start(pEngine, pStorage, pConsole);
+		m_Downloader.Get(i)->Start(pHttp, pStorage, pConsole);
 
 	return !m_Downloader.AnyRunning();
 }

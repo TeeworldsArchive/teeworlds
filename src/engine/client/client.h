@@ -193,6 +193,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	//
 	class CServerInfo m_CurrentServerInfo;
 	class CHttpRequest *m_pVersionRequest;
+	class IHttp *m_pHttp;
 
 	int64 TickStartTime(int Tick);
 

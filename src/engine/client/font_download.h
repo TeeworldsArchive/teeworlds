@@ -5,7 +5,7 @@
 #include <base/hash.h>
 #include <base/tl/array.h>
 
-class IEngine;
+class IHttp;
 class IStorage;
 class IConsole;
 class CHttpRequest;
@@ -49,7 +49,7 @@ public:
 		const char *pSha256, unsigned ExpectedSize);
 
 	// starts the request; Storage/Console locate an existing file and report problems
-	void Start(IEngine *pEngine, IStorage *pStorage, IConsole *pConsole);
+	void Start(IHttp *pHttp, IStorage *pStorage, IConsole *pConsole);
 
 	// non-blocking poll; true once the entry reached a final state
 	bool Update(IStorage *pStorage, IConsole *pConsole);
@@ -69,7 +69,7 @@ public:
 // Owns every downloadable font of the current index.json.
 class CFontDownloader
 {
-	array<CFontDownload *> m_vDownloads;
+	array<CFontDownload *> m_lDownloads;
 	bool m_Finished;
 
 public:
@@ -79,8 +79,8 @@ public:
 	CFontDownload *Add();
 	void Clear();
 
-	int NumDownloads() const { return m_vDownloads.size(); }
-	CFontDownload *Get(int Index) const { return Index >= 0 && Index < m_vDownloads.size() ? m_vDownloads[Index] : 0; }
+	int NumDownloads() const { return m_lDownloads.size(); }
+	CFontDownload *Get(int Index) const { return Index >= 0 && Index < m_lDownloads.size() ? m_lDownloads[Index] : 0; }
 
 	// true once every entry is in a final state
 	bool Update(IStorage *pStorage, IConsole *pConsole);

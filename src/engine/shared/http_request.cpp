@@ -1,9 +1,10 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include <base/math.h>
+#include <base/system/debug.h>
+#include <base/system/mem.h>
 #include <base/system/string.h>
 #include <base/tl/stream.h>
-#include <engine/engine.h>
-#include <game/version.h>
+
+#include <engine/http.h>
 
 #include "http_request.h"
 
@@ -30,6 +31,11 @@ CCurlInit::~CCurlInit()
 void EscapeUrl(char *pBuf, int Size, const char *pStr)
 {
 	char *pEsc = curl_easy_escape(nullptr, pStr, 0);
+	if(!pEsc)
+	{
+		pBuf[0] = 0;
+		return;
+	}
 	str_copy(pBuf, pEsc, Size);
 	curl_free(pEsc);
 }
@@ -39,14 +45,33 @@ CHttpRequest::CHttpRequest(const char *pRequest, const char *pUrl, long TimeoutS
 	str_copy(m_aRequest, pRequest, sizeof(m_aRequest));
 	str_copy(m_aUrl, pUrl, sizeof(m_aUrl));
 
-	m_pHeaderList = 0;
+	m_TimeoutSeconds = TimeoutSeconds;
 	m_IPResolve = IPResolve;
 
-	m_IsChecked = false;
+	m_ReceivedBytes = 0;
+	m_ResponseCode = 0;
+	m_Result = 0;
+	m_State = STATE_IDLE;
 	m_Cancel = false;
-	m_TimeoutSeconds = TimeoutSeconds;
+
+	m_IsChecked = false;
+	m_pHttp = 0;
+
 	m_PostData.clear();
+	m_lHeaders.clear();
 	m_ReceivedData.clear();
+}
+
+CHttpRequest::~CHttpRequest()
+{
+	// cancels a running transfer and waits until the http thread let go of the
+	// object, so the buffers below can be freed
+	if(m_pHttp)
+		m_pHttp->Abort(this);
+
+	for(int i = 0; i < m_lHeaders.size(); i++)
+		mem_free(m_lHeaders[i]);
+	m_lHeaders.clear();
 }
 
 void CHttpRequest::PostData(const unsigned char *pPost, int Size)
@@ -65,95 +90,31 @@ void CHttpRequest::PostJson(const char *pJson)
 
 void CHttpRequest::AddHeader(const char *pHeader)
 {
-	m_pHeaderList = curl_slist_append(m_pHeaderList, pHeader);
+	const int Length = str_length(pHeader);
+	char *pCopy = (char *) mem_alloc(Length + 1);
+	mem_copy(pCopy, pHeader, Length + 1);
+	m_lHeaders.add(pCopy);
 }
 
-// for windows build
-#ifdef AddJob
-#undef AddJob
-#endif
-
-void CHttpRequest::StartRun(IEngine *pEngine)
+bool CHttpRequest::AppendData(const void *pData, unsigned Size)
 {
-	pEngine->AddJob(&m_Job, CHttpRequest::Run, this);
+	if((unsigned) m_ReceivedData.size() + Size > (unsigned) MAX_RESPONSE_SIZE)
+		return false;
+	memory_stream<unsigned char> Stream(&m_ReceivedData);
+	Stream.write((const unsigned char *) pData, Size);
+	m_ReceivedBytes = m_ReceivedData.size();
+	return true;
 }
 
-size_t CHttpRequest::WriteCallback(char *pData, size_t Size, size_t Number, void *pUser)
+void CHttpRequest::SetFinished(int Result, int ResponseCode)
 {
-	CHttpRequest *pRequest = static_cast<CHttpRequest *>(pUser);
-	size_t TotalSize = Size * Number;
-	memory_stream<unsigned char> Stream(&pRequest->m_ReceivedData);
-	Stream.write((const unsigned char *) pData, TotalSize);
-	return TotalSize;
+	m_Result = Result;
+	m_ResponseCode = ResponseCode;
+	m_State = STATE_DONE;
 }
 
-#if LIBCURL_VERSION_NUM >= 0x072000
-static int ProgressCallback(void *pUser, [[maybe_unused]] curl_off_t DownloadTotal, [[maybe_unused]] curl_off_t DownloadNow,
-	[[maybe_unused]] curl_off_t UploadTotal, [[maybe_unused]] curl_off_t UploadNow)
+void CHttpRequest::MoveReceivedData(array<unsigned char> *pOut)
 {
-	// A non-zero return aborts the transfer, which is how a request that is
-	// still running when the client shuts down is stopped.
-	return static_cast<CHttpRequest *>(pUser)->IsCancelled() ? 1 : 0;
-}
-#endif
-
-int CHttpRequest::Run(void *pUser)
-{
-	CHttpRequest *pRequest = static_cast<CHttpRequest *>(pUser);
-	pRequest->m_pHandle = curl_easy_init();
-	if(!pRequest->m_pHandle)
-		return -1;
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_URL, pRequest->m_aUrl);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_CUSTOMREQUEST, pRequest->m_aRequest);
-
-#if LIBCURL_VERSION_NUM >= 0x075500
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_PROTOCOLS_STR, "https");
-#else
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
-#endif
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_MAXREDIRS, 5L);
-
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_NOSIGNAL, 1L);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_CONNECTTIMEOUT, 5L);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_TIMEOUT, pRequest->m_TimeoutSeconds);
-
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDS, (const char *) pRequest->m_PostData.base_ptr());
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_POSTFIELDSIZE, maximum(0, pRequest->m_PostData.size()));
-
-	switch(pRequest->m_IPResolve)
-	{
-		case HTTP_IPRESOLVE_IPV4ONLY: curl_easy_setopt(pRequest->m_pHandle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); break;
-		case HTTP_IPRESOLVE_IPV6ONLY: curl_easy_setopt(pRequest->m_pHandle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6); break;
-		default: curl_easy_setopt(pRequest->m_pHandle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_WHATEVER); break;
-	}
-
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_USERAGENT, "TeeworldsArchive " GAME_VERSION " (" CONF_PLATFORM_STRING "; " CONF_ARCH_STRING ")");
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_HTTPHEADER, pRequest->m_pHeaderList);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_ACCEPT_ENCODING, "");
-
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_WRITEFUNCTION, CHttpRequest::WriteCallback);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_WRITEDATA, pRequest);
-
-	// Cancelling needs the transfer to call back now and then; older libcurl
-	// has no such callback object and requests simply run to their timeout.
-#if LIBCURL_VERSION_NUM >= 0x072000
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_NOPROGRESS, 0L);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_XFERINFOFUNCTION, ProgressCallback);
-	curl_easy_setopt(pRequest->m_pHandle, CURLOPT_XFERINFODATA, pRequest);
-#endif
-
-	CURLcode Result = curl_easy_perform(pRequest->m_pHandle);
-	if(Result != CURLE_OK)
-		dbg_msg("http", "libcurl error (%u): %s", Result, curl_easy_strerror(Result));
-
-	{
-		long ResponseCode;
-		curl_easy_getinfo(pRequest->m_pHandle, CURLINFO_RESPONSE_CODE, &ResponseCode);
-		pRequest->m_ResponseCode = ResponseCode;
-	}
-
-	curl_slist_free_all(pRequest->m_pHeaderList);
-	curl_easy_cleanup(pRequest->m_pHandle);
-	return Result != CURLE_OK;
+	m_ReceivedData.move(*pOut);
+	m_ReceivedBytes = 0;
 }

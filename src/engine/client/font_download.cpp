@@ -4,7 +4,7 @@
 #include <base/system/thread.h>
 #include <base/system/time.h>
 #include <engine/console.h>
-#include <engine/engine.h>
+#include <engine/http.h>
 #include <engine/shared/http_request.h>
 #include <engine/storage.h>
 
@@ -96,7 +96,7 @@ bool CFontDownload::WriteToStorage(IStorage *pStorage, const char *pFilename, co
 	return Ok;
 }
 
-void CFontDownload::Start(IEngine *pEngine, IStorage *pStorage, IConsole *pConsole)
+void CFontDownload::Start(IHttp *pHttp, IStorage *pStorage, IConsole *pConsole)
 {
 	char aBuf[512];
 
@@ -120,12 +120,12 @@ void CFontDownload::Start(IEngine *pEngine, IStorage *pStorage, IConsole *pConso
 
 	// 0 means "no timeout" for the version check, so the font request always gets a finite one
 	m_pFontRequest = new CHttpRequest("GET", m_aUrl, 120L);
-	m_pFontRequest->StartRun(pEngine);
+	pHttp->Start(m_pFontRequest);
 
 	if(m_aLicenseUrl[0])
 	{
 		m_pLicenseRequest = new CHttpRequest("GET", m_aLicenseUrl, 60L);
-		m_pLicenseRequest->StartRun(pEngine);
+		pHttp->Start(m_pLicenseRequest);
 	}
 
 	m_State = STATE_RUNNING;
@@ -145,7 +145,7 @@ bool CFontDownload::Update(IStorage *pStorage, IConsole *pConsole)
 		return m_State != STATE_RUNNING;
 
 	// the license is best effort; a failed or slow license never fails the font
-	if(m_pLicenseRequest && !m_LicenseWritten && m_pLicenseRequest->Status() == CJob::STATE_DONE)
+	if(m_pLicenseRequest && !m_LicenseWritten && m_pLicenseRequest->Status() == CHttpRequest::STATE_DONE)
 	{
 		if(m_pLicenseRequest->Result() == 0 && m_pLicenseRequest->ResponseCode() == 200 &&
 			m_pLicenseRequest->ReceivedDataSize() > 0)
@@ -163,7 +163,7 @@ bool CFontDownload::Update(IStorage *pStorage, IConsole *pConsole)
 		}
 	}
 
-	if(m_pFontRequest->Status() != CJob::STATE_DONE)
+	if(m_pFontRequest->Status() != CHttpRequest::STATE_DONE)
 		return false;
 
 	const bool Ok = m_pFontRequest->Result() == 0 && m_pFontRequest->ResponseCode() == 200;
@@ -241,25 +241,25 @@ CFontDownloader::~CFontDownloader()
 CFontDownload *CFontDownloader::Add()
 {
 	CFontDownload *pDownload = new CFontDownload();
-	m_vDownloads.add(pDownload);
+	m_lDownloads.add(pDownload);
 	m_Finished = false;
 	return pDownload;
 }
 
 void CFontDownloader::Clear()
 {
-	for(int i = 0; i < m_vDownloads.size(); ++i)
-		delete m_vDownloads[i];
-	m_vDownloads.clear();
+	for(int i = 0; i < m_lDownloads.size(); ++i)
+		delete m_lDownloads[i];
+	m_lDownloads.clear();
 	m_Finished = false;
 }
 
 bool CFontDownloader::Update(IStorage *pStorage, IConsole *pConsole)
 {
 	bool AllFinal = true;
-	for(int i = 0; i < m_vDownloads.size(); ++i)
+	for(int i = 0; i < m_lDownloads.size(); ++i)
 	{
-		CFontDownload *pDownload = m_vDownloads[i];
+		CFontDownload *pDownload = m_lDownloads[i];
 		if(pDownload->State() == CFontDownload::STATE_RUNNING)
 		{
 			pDownload->Update(pStorage, pConsole);
@@ -279,8 +279,8 @@ bool CFontDownloader::Update(IStorage *pStorage, IConsole *pConsole)
 
 bool CFontDownloader::AnyRunning() const
 {
-	for(int i = 0; i < m_vDownloads.size(); ++i)
-		if(m_vDownloads[i]->State() == CFontDownload::STATE_RUNNING)
+	for(int i = 0; i < m_lDownloads.size(); ++i)
+		if(m_lDownloads[i]->State() == CFontDownload::STATE_RUNNING)
 			return true;
 	return false;
 }
@@ -288,15 +288,15 @@ bool CFontDownloader::AnyRunning() const
 unsigned CFontDownloader::TotalDownloadedBytes() const
 {
 	unsigned Total = 0;
-	for(int i = 0; i < m_vDownloads.size(); ++i)
-		Total += m_vDownloads[i]->DownloadedBytes();
+	for(int i = 0; i < m_lDownloads.size(); ++i)
+		Total += m_lDownloads[i]->DownloadedBytes();
 	return Total;
 }
 
 unsigned CFontDownloader::TotalExpectedBytes() const
 {
 	unsigned Total = 0;
-	for(int i = 0; i < m_vDownloads.size(); ++i)
-		Total += m_vDownloads[i]->ExpectedSize();
+	for(int i = 0; i < m_lDownloads.size(); ++i)
+		Total += m_lDownloads[i]->ExpectedSize();
 	return Total;
 }

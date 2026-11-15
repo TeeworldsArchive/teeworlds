@@ -1454,6 +1454,7 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   demo.h
   engine.h
   graphics.h
+  http.h
   input.h
   kernel.h
   keys.h
@@ -1485,6 +1486,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   engine.cpp
   filecollection.cpp
   filecollection.h
+  http.cpp
   http_request.cpp
   http_request.h
   huffman.cpp

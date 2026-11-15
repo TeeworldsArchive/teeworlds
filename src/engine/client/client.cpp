@@ -18,6 +18,7 @@
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/graphics.h>
+#include <engine/http.h>
 #include <engine/input.h>
 #include <engine/keys.h>
 #include <engine/map.h>
@@ -307,6 +308,7 @@ CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotD
 	m_SuppressSnapshots = false;
 
 	m_pVersionRequest = 0;
+	m_pHttp = 0;
 
 	m_pLocalServerProcess = 0;
 }
@@ -2018,12 +2020,15 @@ void CClient::UpdateSteamPresence()
 
 void CClient::VersionUpdate()
 {
+	if(!m_pHttp)
+		return;
+
 	if(!m_pVersionRequest)
 	{
 		m_pVersionRequest = new CHttpRequest("GET", Config()->m_ClVersionUrl, 0L);
-		m_pVersionRequest->StartRun(Engine());
+		m_pHttp->Start(m_pVersionRequest);
 	}
-	else if(m_pVersionRequest->Status() == CJob::STATE_DONE && !m_pVersionRequest->IsChecked())
+	else if(m_pVersionRequest->Status() == CHttpRequest::STATE_DONE && !m_pVersionRequest->IsChecked())
 	{
 		if(m_pVersionRequest->Result() == 0 && m_pVersionRequest->ResponseCode() == 200)
 		{
@@ -2073,6 +2078,7 @@ void CClient::InitInterfaces()
 {
 	// fetch interfaces
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
+	m_pHttp = Kernel()->RequestInterface<IHttp>();
 	// m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	m_pSound = Kernel()->RequestInterface<IEngineSound>();
 	m_pTextRender = Kernel()->RequestInterface<IEngineTextRender>();
@@ -2940,6 +2946,7 @@ int main(int argc, const char **argv)
 	IEngineTextRender *pEngineTextRender = CreateEngineTextRender();
 	IEngineMap *pEngineMap = CreateEngineMap();
 	IEngineMasterServer *pEngineMasterServer = CreateEngineMasterServer();
+	IHttp *pHttp = CreateHttp();
 
 	{
 		bool RegisterFail = false;
@@ -2962,6 +2969,8 @@ int main(int argc, const char **argv)
 
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IEngineMasterServer *>(pEngineMasterServer)); // register as both
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IMasterServer *>(pEngineMasterServer));
+
+		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pHttp);
 
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(CreateGameClient());
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pStorage);
@@ -3039,6 +3048,10 @@ int main(int argc, const char **argv)
 	dbg_msg("client", "starting...");
 	pClient->Run();
 
+	// stop the http thread; requests that are still alive are cancelled and
+	// must not be touched by it anymore
+	pHttp->Shutdown();
+
 	// wait for background jobs to finish
 	pEngine->ShutdownJobs();
 
@@ -3060,6 +3073,8 @@ int main(int argc, const char **argv)
 	delete pEngineSound;
 	delete pEngineInput;
 	delete pEngineTextRender;
+	// the text renderer owns font requests, so the http manager has to outlive it
+	delete pHttp;
 	delete pEngineMap;
 	delete pEngineMasterServer;
 
