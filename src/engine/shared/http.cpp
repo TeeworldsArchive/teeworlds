@@ -57,6 +57,7 @@ class CHttpManager : public IHttp
 	CURLM *m_pMulti;
 	void *m_pThread;
 	bool m_Shutdown;
+	bool m_InitFailed;
 
 	static void ThreadMain(void *pUser);
 	static size_t WriteCallback(char *pData, size_t Size, size_t Number, void *pUser);
@@ -73,6 +74,8 @@ public:
 	CHttpManager();
 	virtual ~CHttpManager();
 
+	bool IsFailed() const { return m_InitFailed; }
+
 	virtual void Start(CHttpRequest *pRequest) override;
 	virtual void Abort(CHttpRequest *pRequest) override;
 	virtual void Shutdown() override;
@@ -80,11 +83,23 @@ public:
 
 CHttpManager::CHttpManager()
 {
+	m_pMulti = 0;
+	m_pThread = 0;
+	m_Shutdown = false;
+
+	// curl's global state has to live as long as any transfer, so the manager
+	// owns it instead of a separate object in main()
+	if(curl_global_init(CURL_GLOBAL_ALL))
+	{
+		dbg_msg("http", "failed to init curl");
+		m_InitFailed = true;
+		return;
+	}
+	m_InitFailed = false;
+
 	m_pMulti = curl_multi_init();
 	if(!m_pMulti)
 		dbg_msg("http", "failed to init curl multi handle");
-	m_pThread = 0;
-	m_Shutdown = false;
 }
 
 CHttpManager::~CHttpManager()
@@ -92,6 +107,8 @@ CHttpManager::~CHttpManager()
 	Shutdown();
 	if(m_pMulti)
 		curl_multi_cleanup(m_pMulti);
+	if(!m_InitFailed)
+		curl_global_cleanup();
 }
 
 void CHttpManager::Start(CHttpRequest *pRequest)
@@ -385,5 +402,11 @@ void CHttpManager::Run()
 
 IHttp *CreateHttp()
 {
-	return new CHttpManager();
+	CHttpManager *pManager = new CHttpManager();
+	if(pManager->IsFailed())
+	{
+		delete pManager;
+		return 0;
+	}
+	return pManager;
 }

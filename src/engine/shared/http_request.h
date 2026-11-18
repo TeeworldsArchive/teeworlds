@@ -95,17 +95,6 @@ public:
 	void MoveReceivedData(array<unsigned char> *pOut);
 };
 
-class CCurlInit
-{
-	bool m_Failed;
-
-public:
-	CCurlInit();
-	~CCurlInit();
-
-	bool IsFailed() const { return m_Failed; }
-};
-
 void EscapeUrl(char *pBuf, int Size, const char *pStr);
 
 #endif // ENGINE_SHARED_HTTP_REQUEST_H

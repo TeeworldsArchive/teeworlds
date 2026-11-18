@@ -1,5 +1,4 @@
 /* (c) Teeworlds Archive Project Contributors. See license.txt. */
-#include <base/system/debug.h>
 #include <base/system/mem.h>
 #include <base/system/string.h>
 #include <base/tl/stream.h>
@@ -9,24 +8,6 @@
 #include "http_request.h"
 
 #include <curl/curl.h>
-
-CCurlInit::CCurlInit()
-{
-	if(curl_global_init(CURL_GLOBAL_ALL))
-	{
-		dbg_msg("http", "failed to init curl");
-		m_Failed = true;
-	}
-	else
-	{
-		m_Failed = false;
-	}
-}
-
-CCurlInit::~CCurlInit()
-{
-	curl_global_cleanup();
-}
 
 void EscapeUrl(char *pBuf, int Size, const char *pStr)
 {

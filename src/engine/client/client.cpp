@@ -2923,10 +2923,6 @@ int main(int argc, const char **argv)
 		return -1;
 	}
 
-	CCurlInit Curl;
-	if(Curl.IsFailed())
-		return -1;
-
 	signal(SIGINT, HandleSigIntTerm);
 	signal(SIGTERM, HandleSigIntTerm);
 
@@ -2947,6 +2943,11 @@ int main(int argc, const char **argv)
 	IEngineMap *pEngineMap = CreateEngineMap();
 	IEngineMasterServer *pEngineMasterServer = CreateEngineMasterServer();
 	IHttp *pHttp = CreateHttp();
+	if(!pHttp)
+	{
+		dbg_msg("client", "couldn't init curl");
+		return -1;
+	}
 
 	{
 		bool RegisterFail = false;
