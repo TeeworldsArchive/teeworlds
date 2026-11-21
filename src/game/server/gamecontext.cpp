@@ -1518,6 +1518,25 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	pEntry->m_pNext->m_pNext = 0;
 }
 
+void CGameContext::ComMutePlayer(IConsole::IResult *pResult, void *pUserData)
+{
+	CCommandManager::SCommandContext *pContext = (CCommandManager::SCommandContext *) pUserData;
+	CGameContext *pSelf = (CGameContext *) pContext->m_pContext;
+	if(!pSelf->Server()->IsAuthed(pContext->m_ClientID))
+	{
+		pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "You are not allowed to use this command");
+		return;
+	}
+	const int ClientID = pResult->GetInteger(0);
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || !pSelf->m_apPlayers[ClientID] || !pSelf->Server()->ClientIngame(ClientID))
+	{
+		pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Invalid client id");
+		return;
+	}
+	pSelf->ConMute(pResult, pSelf);
+	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Mute state updated");
+}
+
 void CGameContext::ConMute(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1815,6 +1834,7 @@ void CGameContext::OnInit()
 		m_pController = new CGameControllerMOD(this);
 
 	m_pController->RegisterChatCommands(CommandManager());
+	CommandManager()->AddCommand("mute_player", "Mute a player's chat", "i[id] ?i[minutes]", ComMutePlayer, this);
 
 	// create all entities from the game layer
 	CMapItemLayerTilemap *pTileMap = m_Layers.GameLayer();
