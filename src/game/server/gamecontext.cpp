@@ -1436,6 +1436,21 @@ void CGameContext::ConRemoveVote(IConsole::IResult *pResult, void *pUserData)
 	pSelf->m_NumVoteOptions = NumVoteOptions;
 }
 
+void CGameContext::ConListVotes([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), "%d vote options", pSelf->m_NumVoteOptions);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+	int Index = 0;
+	for(CVoteOptionServer *pOption = pSelf->m_pVoteOptionFirst; pOption; pOption = pOption->m_pNext)
+	{
+		str_format(aBuf, sizeof(aBuf), "[%02d] %s: %s", Index, pOption->m_aDescription, pOption->m_aCommand);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		Index++;
+	}
+}
+
 void CGameContext::ConClearVotes([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1742,6 +1757,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("add_vote", "s[option] r[command]", CFGFLAG_SERVER, ConAddVote, this, "Add a voting option");
 	Console()->Register("remove_vote", "s[option]", CFGFLAG_SERVER, ConRemoveVote, this, "remove a voting option");
 	Console()->Register("clear_votes", "", CFGFLAG_SERVER, ConClearVotes, this, "Clears the voting options");
+	Console()->Register("list_votes", "", CFGFLAG_SERVER, ConListVotes, this, "List the voting options");
 	Console()->Register("vote", "r['yes'|'no']", CFGFLAG_SERVER, ConVote, this, "Force a vote to yes/no");
 
 	Console()->Register("add_map", "s[group] r[map]", CFGFLAG_SERVER, ConAddMap, this, "Add a map into map group (it will create the group if the group doesn't exist)");
