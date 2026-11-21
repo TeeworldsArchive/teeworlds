@@ -2,7 +2,7 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
-#include <algorithm>
+#include <base/tl/algorithm.h>
 
 #include <base/math.h>
 #include <base/system/net.h>
@@ -730,6 +730,6 @@ bool CompareTime(const CServerInfo::CClient &C1, const CServerInfo::CClient &C2)
 
 void SortClients(CServerInfo *pInfo)
 {
-	std::stable_sort(pInfo->m_aClients, pInfo->m_aClients + pInfo->m_NumClients,
+	sort_array(pInfo->m_aClients, pInfo->m_NumClients,
 		(pInfo->m_Flags & IServerBrowser::FLAG_TIMESCORE) ? CompareTime : CompareScore);
 }

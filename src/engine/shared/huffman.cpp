@@ -2,8 +2,8 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/system/mem.h>
+#include <base/tl/algorithm.h>
 #include "huffman.h"
-#include <algorithm>
 
 const unsigned CHuffman::ms_aFreqTable[HUFFMAN_MAX_SYMBOLS] = {
 	1 << 30, 4545, 2657, 431, 1950, 919, 444, 482, 2244, 617, 838, 542, 715, 1814, 304, 240, 754, 212, 647, 186,
@@ -72,7 +72,7 @@ void CHuffman::ConstructTree(const unsigned *pFrequencies)
 	// construct the table
 	while(NumNodesLeft > 1)
 	{
-		std::stable_sort(apNodesLeft, apNodesLeft + NumNodesLeft, CompareNodesByFrequencyDesc);
+		sort_array(apNodesLeft, NumNodesLeft, CompareNodesByFrequencyDesc);
 
 		m_aNodes[m_NumNodes].m_NumBits = 0;
 		m_aNodes[m_NumNodes].m_aLeafs[0] = apNodesLeft[NumNodesLeft - 1]->m_NodeId;

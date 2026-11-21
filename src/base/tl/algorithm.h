@@ -113,6 +113,15 @@ void sort(R range, Cmp cmp)
 	std::stable_sort(&range.front(), &range.back() + 1, cmp);
 }
 
+// Stable sort of a plain pointer range. Wraps the standard sort so callers
+// outside base do not need to include <algorithm> themselves.
+template<class T, class Cmp>
+void sort_array(T *pData, int Num, Cmp cmp)
+{
+	if(Num > 1)
+		std::stable_sort(pData, pData + Num, cmp);
+}
+
 template<class R>
 void sort(R range)
 {

@@ -1,9 +1,8 @@
 /* (c) Magnus Auvinen. See license.txt in the root of the distribution for more information. */
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
-#include <algorithm> // sort  TODO: remove this
-
 #include <base/math.h>
+#include <base/tl/algorithm.h>
 
 #include <engine/client/contacts.h>
 #include <engine/serverbrowser.h>
@@ -275,25 +274,25 @@ void CServerBrowserFilter::CServerFilter::Sort()
 	switch(Config()->m_BrSort)
 	{
 		case IServerBrowser::SORT_NAME:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareName, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+			sort_array(m_pSortedServerlist, m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareName, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_PING:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortComparePing, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+			sort_array(m_pSortedServerlist, m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortComparePing, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_MAP:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareMap, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+			sort_array(m_pSortedServerlist, m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareMap, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_NUMPLAYERS:
 			if(!(m_FilterInfo.m_SortHash & IServerBrowser::FILTER_BOTS))
-				std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumClients, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+				sort_array(m_pSortedServerlist, m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumClients, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			else
-				std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumRealPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumRealClients, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+				sort_array(m_pSortedServerlist, m_NumSortedServers, SortWrap(this, (m_FilterInfo.m_SortHash & IServerBrowser::FILTER_SPECTATORS) ? &CServerBrowserFilter::CServerFilter::SortCompareNumRealPlayers : &CServerBrowserFilter::CServerFilter::SortCompareNumRealClients, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_GAMETYPE:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareGametype, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+			sort_array(m_pSortedServerlist, m_NumSortedServers, SortWrap(this, &CServerBrowserFilter::CServerFilter::SortCompareGametype, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 		case IServerBrowser::SORT_PLAYERS_PING:
-			std::stable_sort(m_pSortedServerlist, m_pSortedServerlist + m_NumSortedServers, SortWrapPlayersPing(this, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
+			sort_array(m_pSortedServerlist, m_NumSortedServers, SortWrapPlayersPing(this, &CServerBrowserFilter::CServerFilter::SortCompareRecommended));
 			break;
 	}
 
