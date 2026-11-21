@@ -1580,6 +1580,22 @@ void CGameContext::ComMutePlayer(IConsole::IResult *pResult, void *pUserData)
 	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Mute state updated");
 }
 
+void CGameContext::ComUnmutePlayer(IConsole::IResult *pResult, void *pUserData)
+{
+	CCommandManager::SCommandContext *pContext = (CCommandManager::SCommandContext *) pUserData;
+	CGameContext *pSelf = (CGameContext *) pContext->m_pContext;
+	if(!ChatCommandCheck(pSelf, pContext))
+		return;
+	const int ClientID = pResult->GetInteger(0);
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || !pSelf->m_apPlayers[ClientID] || !pSelf->Server()->ClientIngame(ClientID))
+	{
+		pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Invalid client id");
+		return;
+	}
+	pSelf->m_apPlayers[ClientID]->m_MuteTick = 0;
+	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Player unmuted");
+}
+
 void CGameContext::ConMute(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1878,6 +1894,7 @@ void CGameContext::OnInit()
 
 	m_pController->RegisterChatCommands(CommandManager());
 	CommandManager()->AddCommand("mute_player", "Mute a player's chat", "i[id] ?i[minutes]", ComMutePlayer, this);
+	CommandManager()->AddCommand("unmute_player", "Unmute a player's chat", "i[id]", ComUnmutePlayer, this);
 	CommandManager()->AddCommand("pause", "Pause or unpause the game", "?i[seconds]", ComPause, this);
 	CommandManager()->AddCommand("restart", "Restart the round", "?i[seconds]", ComRestart, this);
 	CommandManager()->AddCommand("change_map", "Change to another map", "?r[map]", ComChangeMap, this);
