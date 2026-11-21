@@ -83,6 +83,7 @@ class CGameClient : public IGameClient
 	static void ConServerInfo(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapInfo(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapStats(IConsole::IResult *pResult, void *pUserData);
+	static void ConMapCheck(IConsole::IResult *pResult, void *pUserData);
 	static void ConPlayers(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainSkinChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainFriendUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);

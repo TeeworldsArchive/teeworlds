@@ -326,6 +326,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("serverinfo", "", CFGFLAG_CLIENT, ConServerInfo, this, "Print information about the current server");
 	Console()->Register("mapinfo", "", CFGFLAG_CLIENT, ConMapInfo, this, "Print information about the current map");
 	Console()->Register("map_stats", "", CFGFLAG_CLIENT, ConMapStats, this, "Print per-layer and per-entity statistics of the current map");
+	Console()->Register("map_check", "", CFGFLAG_CLIENT, ConMapCheck, this, "Check the current map for common authoring problems");
 	Console()->Register("players", "", CFGFLAG_CLIENT, ConPlayers, this, "List the players in the current game");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
@@ -2535,6 +2536,153 @@ void CGameClient::ConMapStats([[maybe_unused]] IConsole::IResult *pResult, void 
 		str_format(aBuf, sizeof(aBuf), "entity types: %s", aTypes);
 		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_stats", aBuf);
 	}
+}
+
+static const char *gs_apInfoFieldNames[] = {"author", "version", "credits", "license"};
+
+void CGameClient::ConMapCheck([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	CLayers *pLayers = pClient->Layers();
+	IConsole *pConsole = pClient->Console();
+	if(!pLayers || !pLayers->GameLayer())
+	{
+		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", "no map loaded");
+		return;
+	}
+
+	const CMapItemLayerTilemap *pGameLayer = pLayers->GameLayer();
+	const int GameWidth = pGameLayer->m_Width;
+	const int GameHeight = pGameLayer->m_Height;
+	int Errors = 0;
+	int Warnings = 0;
+	char aBuf[256];
+
+	str_format(aBuf, sizeof(aBuf), "checking '%s'", pClient->Client()->GetCurrentMapName());
+	pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+
+	int ImageStart = 0;
+	int NumImages = 0;
+	pLayers->GetType(MAPITEMTYPE_IMAGE, &ImageStart, &NumImages);
+
+	int GameLayers = 0;
+	int Spawns = 0;
+	int RedSpawns = 0;
+	int BlueSpawns = 0;
+	int RedFlagstands = 0;
+	int BlueFlagstands = 0;
+
+	const int NumItems = pLayers->NumItems();
+	for(int i = 0; i < NumItems; i++)
+	{
+		int Type = 0;
+		int ID = 0;
+		const CMapItemLayer *pLayer = (const CMapItemLayer *)pLayers->GetItem(i, &Type, &ID);
+		if(!pLayer)
+			continue;
+
+		if(Type == MAPITEMTYPE_INFO)
+		{
+			const CMapItemInfo *pInfo = (const CMapItemInfo *)pLayer;
+			const int aOffsets[] = {pInfo->m_Author, pInfo->m_MapVersion, pInfo->m_Credits, pInfo->m_License};
+			char aMissing[64];
+			aMissing[0] = '\0';
+			for(int f = 0; f < 4; f++)
+			{
+				const char *pValue = aOffsets[f] > 0 ? (const char *)pLayers->GetData(aOffsets[f]) : 0;
+				if(pValue && *pValue)
+					continue;
+				if(aMissing[0])
+					str_append(aMissing, ", ", sizeof(aMissing));
+				str_append(aMissing, gs_apInfoFieldNames[f], sizeof(aMissing));
+			}
+			if(aMissing[0])
+			{
+				Warnings++;
+				str_format(aBuf, sizeof(aBuf), "warning: map info is missing %s", aMissing);
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+			}
+		}
+		else if(Type == MAPITEMTYPE_LAYER && pLayer->m_Type == LAYERTYPE_TILES)
+		{
+			const CMapItemLayerTilemap *pTilemap = (const CMapItemLayerTilemap *)pLayer;
+			const CTile *pTiles = (const CTile *)pLayers->GetData(pTilemap->m_Data);
+			if(!pTiles)
+			{
+				Errors++;
+				str_format(aBuf, sizeof(aBuf), "error: tile layer %d has no tile data", i);
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+			}
+			else if(pTilemap->m_Flags & TILESLAYERFLAG_GAME)
+			{
+				GameLayers++;
+				const int NumTiles = pTilemap->m_Width * pTilemap->m_Height;
+				for(int t = 0; t < NumTiles; t++)
+				{
+					if(pTiles[t].m_Index < ENTITY_OFFSET)
+						continue;
+					switch(pTiles[t].m_Index - ENTITY_OFFSET)
+					{
+					case ENTITY_SPAWN: Spawns++; break;
+					case ENTITY_SPAWN_RED: RedSpawns++; break;
+					case ENTITY_SPAWN_BLUE: BlueSpawns++; break;
+					case ENTITY_FLAGSTAND_RED: RedFlagstands++; break;
+					case ENTITY_FLAGSTAND_BLUE: BlueFlagstands++; break;
+					}
+				}
+			}
+			else if(pTilemap->m_Width != GameWidth || pTilemap->m_Height != GameHeight)
+			{
+				Warnings++;
+				str_format(aBuf, sizeof(aBuf), "warning: tile layer %d is %dx%d but the game layer is %dx%d",
+					i, pTilemap->m_Width, pTilemap->m_Height, GameWidth, GameHeight);
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+			}
+
+			if(pTilemap->m_Image >= NumImages)
+			{
+				Errors++;
+				str_format(aBuf, sizeof(aBuf), "error: tile layer %d uses image %d of %d", i, pTilemap->m_Image, NumImages);
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+			}
+		}
+		else if(Type == MAPITEMTYPE_LAYER && pLayer->m_Type == LAYERTYPE_QUADS)
+		{
+			const CMapItemLayerQuads *pQuads = (const CMapItemLayerQuads *)pLayer;
+			if(pQuads->m_NumQuads > 0 && !pLayers->GetData(pQuads->m_Data))
+			{
+				Errors++;
+				str_format(aBuf, sizeof(aBuf), "error: quad layer %d has no quad data", i);
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+			}
+			if(pQuads->m_Image >= NumImages)
+			{
+				Errors++;
+				str_format(aBuf, sizeof(aBuf), "error: quad layer %d uses image %d of %d", i, pQuads->m_Image, NumImages);
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+			}
+		}
+	}
+
+	if(GameLayers != 1)
+	{
+		Errors++;
+		str_format(aBuf, sizeof(aBuf), "error: expected one game layer, found %d", GameLayers);
+		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+	}
+	if(Spawns + RedSpawns + BlueSpawns == 0)
+	{
+		Errors++;
+		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", "error: no spawn points");
+	}
+	else
+	{
+		str_format(aBuf, sizeof(aBuf), "spawns=%d+%d+%d flagstands=%d+%d", Spawns, RedSpawns, BlueSpawns, RedFlagstands, BlueFlagstands);
+		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
+	}
+
+	str_format(aBuf, sizeof(aBuf), "%d error%s, %d warning%s", Errors, Errors == 1 ? "" : "s", Warnings, Warnings == 1 ? "" : "s");
+	pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_check", aBuf);
 }
 
 void CGameClient::ConPlayers([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
