@@ -376,19 +376,22 @@ void CSound::RateConvert(int SampleID)
 
 	for(int i = 0; i < NumFrames; i++)
 	{
-		// resample TODO: this should be done better, like linear at least
-		float a = i / (float) NumFrames;
-		int f = (int) (a * pSample->m_NumFrames);
-		if(f >= pSample->m_NumFrames)
-			f = pSample->m_NumFrames - 1;
+		// linear interpolation between the two nearest input frames
+		const float Pos = i * (float) pSample->m_NumFrames / NumFrames;
+		const int Index0 = (int) Pos;
+		const int Index1 = Index0 + 1 < pSample->m_NumFrames ? Index0 + 1 : pSample->m_NumFrames - 1;
+		const float Frac = Pos - Index0;
 
-		// set new data
 		if(pSample->m_Channels == 1)
-			pNewData[i] = pSample->m_pData[f];
+			pNewData[i] = (short) (pSample->m_pData[Index0] + (pSample->m_pData[Index1] - pSample->m_pData[Index0]) * Frac);
 		else if(pSample->m_Channels == 2)
 		{
-			pNewData[i * 2] = pSample->m_pData[f * 2];
-			pNewData[i * 2 + 1] = pSample->m_pData[f * 2 + 1];
+			for(int c = 0; c < 2; c++)
+			{
+				const short A = pSample->m_pData[Index0 * 2 + c];
+				const short B = pSample->m_pData[Index1 * 2 + c];
+				pNewData[i * 2 + c] = (short) (A + (B - A) * Frac);
+			}
 		}
 	}
 
