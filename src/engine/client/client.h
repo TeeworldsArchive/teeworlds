@@ -308,6 +308,7 @@ public:
 	static void Con_Quit(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Minimize(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Ping(IConsole::IResult *pResult, void *pUserData);
+	static void Con_NetStats(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Rcon(IConsole::IResult *pResult, void *pUserData);
 	static void Con_RconAuth(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Record(IConsole::IResult *pResult, void *pUserData);

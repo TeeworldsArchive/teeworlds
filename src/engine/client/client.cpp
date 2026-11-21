@@ -2492,6 +2492,73 @@ void CClient::Con_Ping([[maybe_unused]] IConsole::IResult *pResult, void *pUserD
 	pSelf->m_PingStartTime = time_get();
 }
 
+void CClient::Con_NetStats([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CClient *pSelf = (CClient *) pUserData;
+	static NETSTATS s_Prev;
+	static int64 s_PrevTime = 0;
+
+	NETSTATS Cur;
+	net_stats(&Cur);
+	const int64 Now = time_get();
+	const float Seconds = s_PrevTime > 0 ? (float)(Now - s_PrevTime) / (float)time_freq() : 0.0f;
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "total: sent %d packets %d KiB, received %d packets %d KiB",
+		Cur.sent_packets, Cur.sent_bytes / 1024, Cur.recv_packets, Cur.recv_bytes / 1024);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_stats", aBuf);
+
+	if(Seconds > 0.01f)
+	{
+		const int SentBytes = Cur.sent_bytes - s_Prev.sent_bytes;
+		const int RecvBytes = Cur.recv_bytes - s_Prev.recv_bytes;
+		str_format(aBuf, sizeof(aBuf), "last %.1fs: sent %d pkt/s %d kbps, received %d pkt/s %d kbps",
+			Seconds,
+			(int)((Cur.sent_packets - s_Prev.sent_packets) / Seconds), (int)(SentBytes * 8 / 1024.0f / Seconds),
+			(int)((Cur.recv_packets - s_Prev.recv_packets) / Seconds), (int)(RecvBytes * 8 / 1024.0f / Seconds));
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_stats", aBuf);
+	}
+	else
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_stats", "call again to get a rate");
+
+	s_Prev = Cur;
+	s_PrevTime = Now;
+
+	int TotalRate = 0;
+	int aBestRate[3] = {0, 0, 0};
+	int aBestItem[3] = {-1, -1, -1};
+	for(int i = 0; i < 256; i++)
+	{
+		const int Rate = pSelf->m_SnapshotDelta.GetDataRate(i);
+		if(!Rate)
+			continue;
+		TotalRate += Rate;
+		for(int k = 0; k < 3; k++)
+		{
+			if(Rate <= aBestRate[k])
+				continue;
+			for(int m = 2; m > k; m--)
+			{
+				aBestRate[m] = aBestRate[m - 1];
+				aBestItem[m] = aBestItem[m - 1];
+			}
+			aBestRate[k] = Rate;
+			aBestItem[k] = i;
+			break;
+		}
+	}
+
+	str_format(aBuf, sizeof(aBuf), "snapshot data: %d bytes", TotalRate / 8);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_stats", aBuf);
+	for(int k = 0; k < 3; k++)
+	{
+		if(aBestItem[k] < 0)
+			continue;
+		str_format(aBuf, sizeof(aBuf), "  %s: %d bytes", pSelf->GameClient()->GetItemName(aBestItem[k]), aBestRate[k] / 8);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_stats", aBuf);
+	}
+}
+
 void CClient::AutoScreenshot_Start()
 {
 	if(Config()->m_ClAutoScreenshot)
@@ -2838,6 +2905,7 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("connect", "s[host|ip]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Connect, this, "Connect to the specified host/ip");
 	m_pConsole->Register("disconnect", "", CFGFLAG_CLIENT, Con_Disconnect, this, "Disconnect from the server");
 	m_pConsole->Register("ping", "", CFGFLAG_CLIENT, Con_Ping, this, "Ping the current server");
+	m_pConsole->Register("net_stats", "", CFGFLAG_CLIENT, Con_NetStats, this, "Print network traffic statistics");
 	m_pConsole->Register("rcon", "r[command]", CFGFLAG_CLIENT, Con_Rcon, this, "Send specified command to rcon");
 	m_pConsole->Register("rcon_auth", "s[password]", CFGFLAG_CLIENT, Con_RconAuth, this, "Authenticate to rcon");
 	m_pConsole->Register("record", "?s[file]", CFGFLAG_CLIENT, Con_Record, this, "Record to the file");
