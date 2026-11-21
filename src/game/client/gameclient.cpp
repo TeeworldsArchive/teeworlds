@@ -315,7 +315,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Respawn");
 	Console()->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange, this, "Change ready state");
 	Console()->Register("screenshot", "?s[name]", CFGFLAG_CLIENT, ConScreenshot, this, "Take a screenshot with an optional name");
-	Console()->Register("demo_pause", "", CFGFLAG_CLIENT, ConDemoPause, this, "Pause or resume demo playback");
+	Console()->Register("demo_pause", "?i[paused]", CFGFLAG_CLIENT, ConDemoPause, this, "Pause, resume or set the demo playback state");
 	Console()->Register("demo_speed", "?f[speed]", CFGFLAG_CLIENT, ConDemoSpeed, this, "Show or set the demo playback speed");
 	Console()->Register("demo_goto", "?f[seconds]", CFGFLAG_CLIENT, ConDemoGoto, this, "Show the position or jump to an absolute or +/- time in the demo");
 	Console()->Register("demo_info", "", CFGFLAG_CLIENT, ConDemoInfo, this, "Print information about the current demo");
@@ -2209,17 +2209,12 @@ void CGameClient::ConDemoPause([[maybe_unused]] IConsole::IResult *pResult, void
 		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
 		return;
 	}
-	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
-	if(pInfo->m_Paused)
-	{
-		pClient->DemoPlayer()->Unpause();
-		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "resumed");
-	}
-	else
-	{
+	const bool Paused = pResult->NumArguments() ? pResult->GetInteger(0) != 0 : !pClient->DemoPlayer()->BaseInfo()->m_Paused;
+	if(Paused)
 		pClient->DemoPlayer()->Pause();
-		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "paused");
-	}
+	else
+		pClient->DemoPlayer()->Unpause();
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", Paused ? "paused" : "resumed");
 }
 
 void CGameClient::ConDemoSpeed(IConsole::IResult *pResult, void *pUserData)
