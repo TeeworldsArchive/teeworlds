@@ -24,6 +24,14 @@ endif()
 
 project(teeworlds-archive LANGUAGES C CXX VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
+# CMake 4.5 diagnoses non-target directives (include_directories, add_link_options,
+# ...) as author warnings. They are used deliberately here and in the GTest
+# sources we embed, and the CI promotes author warnings to errors with
+# -Werror=dev, so keep them from failing the configure step.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.5)
+  cmake_diagnostic(SET CMD_NON_TARGET_DIRECTIVE IGNORE)
+endif()
+
 set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 set(ORIGINAL_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
 set(ORIGINAL_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
