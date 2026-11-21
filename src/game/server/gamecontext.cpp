@@ -3,6 +3,7 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 #include <base/math.h>
 #include <base/system/net.h>
+#include <base/tl/algorithm.h>
 
 #include <engine/map.h>
 #include <engine/shared/config.h>
@@ -1771,17 +1772,29 @@ void CGameContext::ConListMapGroups([[maybe_unused]] IConsole::IResult *pResult,
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
 
-	char aBuf[256];
-	int Index = 0;
-	for(sorted_array<CMapRotationIndex>::range r = pSelf->m_lMapRotations.all(); !r.empty(); r.pop_front())
+	struct CGroupNameLess
 	{
+		bool operator()(const CMapRotationGroup *pA, const CMapRotationGroup *pB) const
+		{
+			return str_comp_nocase(pA->m_pGroupName, pB->m_pGroupName) < 0;
+		}
+	};
+	static array<CMapRotationGroup *> s_aGroups;
+	s_aGroups.clear_size();
+	for(sorted_array<CMapRotationIndex>::range r = pSelf->m_lMapRotations.all(); !r.empty(); r.pop_front())
+		s_aGroups.add(r.front().m_pGroup);
+	sort_array(s_aGroups.base_ptr(), s_aGroups.size(), CGroupNameLess());
+
+	char aBuf[256];
+	for(int Index = 0; Index < s_aGroups.size(); Index++)
+	{
+		const CMapRotationGroup *pGroup = s_aGroups[Index];
 		int NumMaps = 0;
-		for(CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
+		for(CMapRotationGroup::CEntry *pEntry = pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
 			NumMaps++;
-		const bool Active = pSelf->m_pCurMapRotationEntry && pSelf->m_pCurMapRotationEntry->m_pGroup == r.front().m_pGroup;
-		str_format(aBuf, sizeof(aBuf), "[%02d] %s (%d maps)%s", Index, r.front().m_pGroup->m_pGroupName, NumMaps, Active ? " *active*" : "");
+		const bool Active = pSelf->m_pCurMapRotationEntry && pSelf->m_pCurMapRotationEntry->m_pGroup == pGroup;
+		str_format(aBuf, sizeof(aBuf), "[%02d] %s (%d maps)%s", Index, pGroup->m_pGroupName, NumMaps, Active ? " *active*" : "");
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
-		Index++;
 	}
 }
 
