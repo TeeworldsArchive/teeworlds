@@ -208,6 +208,7 @@ void CChat::ConChatCommand(IConsole::IResult *pResult, void *pUserData)
 void CChat::OnInit()
 {
 	m_CommandManager.Init(Console());
+	m_LastChatTimeMode = Config()->m_ClChatTime;
 }
 
 void CChat::OnConsoleInit()
@@ -227,11 +228,14 @@ void CChat::ConchainChatLineSize(IConsole::IResult *pResult, void *pUserData, IC
 {
 	pfnCallback(pResult, pCallbackUserData);
 	if(pResult->NumArguments())
-	{
-		CChat *pSelf = (CChat *) pUserData;
-		for(int i = 0; i < MAX_LINES; i++)
-			pSelf->m_aLines[i].m_Size.y = -1.0f;
-	}
+		((CChat *) pUserData)->InvalidateLineSizes();
+}
+
+void CChat::InvalidateLineSizes()
+{
+	// the timestamp and skin prefixes change the wrap width, so cached heights become stale
+	for(int i = 0; i < MAX_LINES; i++)
+		m_aLines[i].m_Size.y = -1.0f;
 }
 
 void CChat::ClearChatBuffer()
@@ -813,6 +817,13 @@ void CChat::OnRender()
 {
 	if(Client()->State() < IClient::STATE_ONLINE)
 		return;
+
+	// the settings menu writes the config directly, so catch changes made outside the console
+	if(m_LastChatTimeMode != Config()->m_ClChatTime)
+	{
+		m_LastChatTimeMode = Config()->m_ClChatTime;
+		InvalidateLineSizes();
+	}
 
 	if(!Config()->m_ClShowChat)
 		return;

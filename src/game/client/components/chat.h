@@ -38,6 +38,7 @@ class CChat : public CComponent
 
 	CLine m_aLines[MAX_LINES];
 	int m_CurrentLine;
+	int m_LastChatTimeMode;
 
 	// chat sounds
 	enum
@@ -68,6 +69,7 @@ class CChat : public CComponent
 
 	void ClearInput();
 	void ClearChatBuffer();
+	void InvalidateLineSizes();
 
 	bool IsClientIgnored(int ClientID);
 
