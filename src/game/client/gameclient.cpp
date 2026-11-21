@@ -325,6 +325,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("demo_goto_marker", "i[index]", CFGFLAG_CLIENT, ConDemoGotoMarker, this, "Jump to a demo timeline marker by number");
 	Console()->Register("serverinfo", "", CFGFLAG_CLIENT, ConServerInfo, this, "Print information about the current server");
 	Console()->Register("mapinfo", "", CFGFLAG_CLIENT, ConMapInfo, this, "Print information about the current map");
+	Console()->Register("demo_spec", "?s[name|id|free]", CFGFLAG_CLIENT, ConDemoSpec, this, "Follow a player in a server demo");
 	Console()->Register("map_stats", "", CFGFLAG_CLIENT, ConMapStats, this, "Print per-layer and per-entity statistics of the current map");
 	Console()->Register("map_check", "", CFGFLAG_CLIENT, ConMapCheck, this, "Check the current map for common authoring problems");
 	Console()->Register("players", "", CFGFLAG_CLIENT, ConPlayers, this, "List the players in the current game");
@@ -2402,6 +2403,51 @@ void CGameClient::ConServerInfo([[maybe_unused]] IConsole::IResult *pResult, voi
 		Info.m_aName, Info.m_aGameType, Info.m_aMap, Info.m_aAddress, Info.m_Latency,
 		Info.m_NumPlayers, Info.m_MaxPlayers, Info.m_NumClients, Info.m_MaxClients, Info.m_aVersion);
 	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverinfo", aBuf);
+}
+
+void CGameClient::ConDemoSpec([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
+	char aBuf[256];
+	if(pSelf->Client()->State() != IClient::STATE_DEMOPLAYBACK || pSelf->DemoPlayer()->GetDemoType() != IDemoPlayer::DEMOTYPE_SERVER)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_spec", "only available while playing a server demo");
+		return;
+	}
+
+	if(pResult->NumArguments() == 1)
+	{
+		const char *pName = pResult->GetString(0);
+		if(!str_comp_nocase(pName, "free") || !str_comp_nocase(pName, "off"))
+		{
+			pSelf->m_DemoSpecMode = SPEC_FREEVIEW;
+			pSelf->m_DemoSpecID = -1;
+			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_spec", "following the free view");
+			return;
+		}
+
+		const int ID = (*pName >= '0' && *pName <= '9') ? str_toint(pName) : pSelf->GetClientID(pName);
+		const CClientData *pTarget = ID >= 0 && ID < MAX_CLIENTS ? pSelf->GetClientData(ID) : 0;
+		if(!pTarget || !pTarget->m_Active)
+		{
+			str_format(aBuf, sizeof(aBuf), "no active player '%s' in this demo", pName);
+			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_spec", aBuf);
+			return;
+		}
+
+		pSelf->m_DemoSpecMode = SPEC_PLAYER;
+		pSelf->m_DemoSpecID = ID;
+		str_format(aBuf, sizeof(aBuf), "following id=%d '%s'", ID, pTarget->m_aName);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_spec", aBuf);
+		return;
+	}
+
+	const int Current = pSelf->m_DemoSpecMode;
+	if(Current == SPEC_PLAYER && pSelf->m_DemoSpecID >= 0 && pSelf->GetClientData(pSelf->m_DemoSpecID))
+		str_format(aBuf, sizeof(aBuf), "following id=%d '%s'", pSelf->m_DemoSpecID, pSelf->GetClientData(pSelf->m_DemoSpecID)->m_aName);
+	else
+		str_copy(aBuf, "following the free view", sizeof(aBuf));
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_spec", aBuf);
 }
 
 void CGameClient::ConMapInfo([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)

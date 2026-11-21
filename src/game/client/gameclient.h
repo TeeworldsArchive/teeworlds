@@ -82,6 +82,7 @@ class CGameClient : public IGameClient
 	static void ConDemoGotoMarker(IConsole::IResult *pResult, void *pUserData);
 	static void ConServerInfo(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapInfo(IConsole::IResult *pResult, void *pUserData);
+	static void ConDemoSpec(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapStats(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapCheck(IConsole::IResult *pResult, void *pUserData);
 	static void ConPlayers(IConsole::IResult *pResult, void *pUserData);
