@@ -24,6 +24,7 @@ class CChat : public CComponent
 	struct CLine
 	{
 		int64 m_Time;
+		int m_Timestamp;
 		vec2 m_Size;
 		CTeeRenderInfo m_RenderInfo;
 		int m_ClientID;

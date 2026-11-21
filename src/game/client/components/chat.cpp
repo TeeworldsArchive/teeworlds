@@ -2,6 +2,7 @@
 /* (c) Teeworlds Archive Project Contributors.                                               */
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
+#include <base/system/string.h>
 #include <base/tl/array.h>
 
 #include <engine/contacts.h>
@@ -594,6 +595,13 @@ bool CChat::IsClientIgnored(int ClientID)
 	return !Config()->m_ClShowsocial || !pClient || !pClient->m_Active || pClient->m_ChatIgnore || Config()->m_ClFilterchat == 2 || (m_pClient->m_LocalClientID != ClientID && Config()->m_ClFilterchat == 1 && !pClient->m_Friend);
 }
 
+static void FormatChatTime(int Timestamp, char *pBuf, int Size)
+{
+	char aClock[16];
+	str_timestamp_ex((time_t) Timestamp, aClock, sizeof(aClock), "%H:%M");
+	str_format(pBuf, Size, "%s ", aClock);
+}
+
 void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
 {
 	if(*pLine == 0 || (ClientID > 0 && IsClientIgnored(ClientID)))
@@ -653,6 +661,7 @@ void CChat::AddLine(const char *pLine, int ClientID, int Mode, int TargetID)
 		CLine *pCurLine = &m_aLines[m_CurrentLine];
 
 		pCurLine->m_Time = time_get();
+		pCurLine->m_Timestamp = time_timestamp();
 		pCurLine->m_Size.y = -1.0f;
 		pCurLine->m_ClientID = ClientID;
 		pCurLine->m_TargetID = TargetID;
@@ -1092,6 +1101,12 @@ void CChat::OnRender()
 			s_ChatCursor.MoveTo(Begin, 0.0f);
 			s_ChatCursor.Reset();
 			s_ChatCursor.m_Flags = TEXTFLAG_WORD_WRAP | TEXTFLAG_NO_RENDER;
+			if(Config()->m_ClChatTime)
+			{
+				char aTime[16];
+				FormatChatTime(pLine->m_Timestamp, aTime, sizeof(aTime));
+				TextRender()->TextDeferred(&s_ChatCursor, aTime, -1);
+			}
 			if(pLine->m_Mode == CHAT_WHISPER)
 			{
 				TextRender()->TextAdvance(&s_ChatCursor, 12.5f);
@@ -1222,6 +1237,14 @@ void CChat::OnRender()
 		// reset the cursor
 		s_ChatCursor.MoveTo(LineBegin, y);
 		s_ChatCursor.Reset();
+
+		if(Config()->m_ClChatTime)
+		{
+			char aTime[16];
+			FormatChatTime(pLine->m_Timestamp, aTime, sizeof(aTime));
+			TextRender()->TextColor(vec4(0.7f, 0.7f, 0.7f, 0.9f));
+			TextRender()->TextDeferred(&s_ChatCursor, aTime, -1);
+		}
 
 		const vec2 ShadowOffset(0.8f, 1.5f);
 		const vec4 ShadowWhisper(0.09f, 0.f, 0.26f, Blend * 0.9f);
