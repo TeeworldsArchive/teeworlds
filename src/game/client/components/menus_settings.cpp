@@ -851,7 +851,7 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 	Game.Draw(vec4(0.0f, 0.0f, 0.0f, 0.25f));
 
 	// render client menu background
-	NumOptions = 4;
+	NumOptions = 5;
 	BackgroundHeight = (float) (NumOptions + 1) * ButtonHeight + (float) NumOptions * Spacing;
 
 	MainView.HSplitTop(10.0f, 0, &MainView);
@@ -990,6 +990,14 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 	Client.HSplitTop(ButtonHeight, &ClientLeft, &Client);
 	if(DoButton_CheckBox(&Config()->m_ClSkipStartMenu, Localize("Skip the main menu"), Config()->m_ClSkipStartMenu, &ClientLeft))
 		Config()->m_ClSkipStartMenu ^= 1;
+
+	Client.HSplitTop(Spacing, 0, &Client);
+	Client.HSplitTop(ButtonHeight, &ClientLeft, &Client);
+	ClientLeft.VSplitMid(&ClientLeft, &ClientRight, Spacing);
+	if(DoButton_CheckBox(&Config()->m_ClShowSkinChat, Localize("Show skins in chat"), Config()->m_ClShowSkinChat, &ClientLeft))
+		Config()->m_ClShowSkinChat ^= 1;
+	if(DoButton_CheckBox(&Config()->m_ClShowLocalTimeAlways, Localize("Always show local time"), Config()->m_ClShowLocalTimeAlways, &ClientRight))
+		Config()->m_ClShowLocalTimeAlways ^= 1;
 
 	Client.HSplitTop(Spacing, 0, &Client);
 	Client.HSplitTop(ButtonHeight, &Button, &Client);
