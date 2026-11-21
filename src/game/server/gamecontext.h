@@ -70,6 +70,7 @@ class CGameContext : public IGameServer
 	static void ConAddMap(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveMap(IConsole::IResult *pResult, void *pUserData);
 	static void ConMute(IConsole::IResult *pResult, void *pUserData);
+	static void ConSaveMapRotation(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveMapGroup(IConsole::IResult *pResult, void *pUserData);
 	static void ConListMaps(IConsole::IResult *pResult, void *pUserData);
 	static void ConListMapGroups(IConsole::IResult *pResult, void *pUserData);

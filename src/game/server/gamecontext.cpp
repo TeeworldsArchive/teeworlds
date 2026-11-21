@@ -1524,6 +1524,44 @@ void CGameContext::ConMute(IConsole::IResult *pResult, void *pUserData)
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 }
 
+void CGameContext::ConSaveMapRotation(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	char aFilename[128];
+	if(pResult->NumArguments())
+		str_format(aFilename, sizeof(aFilename), "configs/%s.cfg", pResult->GetString(0));
+	else
+		str_copy(aFilename, "configs/map_rotation.cfg", sizeof(aFilename));
+
+	IOHANDLE File = pSelf->Storage()->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+	{
+		char aBuf[192];
+		str_format(aBuf, sizeof(aBuf), "failed to open '%s'", aFilename);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
+		return;
+	}
+
+	int NumGroups = 0;
+	int NumMaps = 0;
+	for(sorted_array<CMapRotationIndex>::range r = pSelf->m_lMapRotations.all(); !r.empty(); r.pop_front())
+	{
+		NumGroups++;
+		for(CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
+		{
+			char aLine[512];
+			str_format(aLine, sizeof(aLine), "add_map \"%s\" \"%s\"\n", r.front().m_pGroup->m_pGroupName, pEntry->m_pMapName);
+			io_write(File, aLine, str_length(aLine));
+			NumMaps++;
+		}
+	}
+	io_close(File);
+
+	char aBuf[192];
+	str_format(aBuf, sizeof(aBuf), "%d groups, %d maps written to '%s'", NumGroups, NumMaps, aFilename);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
+}
+
 void CGameContext::ConRemoveMap(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1687,6 +1725,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("say", "r[text]", CFGFLAG_SERVER, ConSay, this, "Say in chat");
 	Console()->Register("broadcast", "r[text]", CFGFLAG_SERVER, ConBroadcast, this, "Broadcast message");
 	Console()->Register("mute", "i[id] ?i[minutes]", CFGFLAG_SERVER, ConMute, this, "Mute a player's chat, 0 minutes unmutes");
+	Console()->Register("save_map_rotation", "?s[file]", CFGFLAG_SERVER, ConSaveMapRotation, this, "Save the map groups as config commands");
 	Console()->Register("set_team", "i[id] i[team] ?i[delay]", CFGFLAG_SERVER, ConSetTeam, this, "Set team of player to team");
 	Console()->Register("set_team_all", "i[team]", CFGFLAG_SERVER, ConSetTeamAll, this, "Set team of all players to team");
 	Console()->Register("swap_teams", "", CFGFLAG_SERVER, ConSwapTeams, this, "Swap the current teams");
