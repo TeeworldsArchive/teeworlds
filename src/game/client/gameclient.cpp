@@ -325,6 +325,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("demo_goto_marker", "i[index]", CFGFLAG_CLIENT, ConDemoGotoMarker, this, "Jump to a demo timeline marker by number");
 	Console()->Register("serverinfo", "", CFGFLAG_CLIENT, ConServerInfo, this, "Print information about the current server");
 	Console()->Register("mapinfo", "", CFGFLAG_CLIENT, ConMapInfo, this, "Print information about the current map");
+	Console()->Register("players", "", CFGFLAG_CLIENT, ConPlayers, this, "List the players in the current game");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
 	Console()->Chain("remove_friend", ConchainFriendUpdate, this);
@@ -2430,6 +2431,35 @@ void CGameClient::ConMapInfo([[maybe_unused]] IConsole::IResult *pResult, void *
 	else
 		str_format(aBuf, sizeof(aBuf), "name='%s' path='%s'", pName, pPath);
 	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mapinfo", aBuf);
+}
+
+void CGameClient::ConPlayers([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	static array<int> s_aIDs;
+	pClient->CollectActiveTeeIDs(s_aIDs);
+	char aBuf[256];
+	char aCount[32];
+	str_format(aCount, sizeof(aCount), "%d players", s_aIDs.size());
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "players", aCount);
+	for(int k = 0; k < s_aIDs.size(); k++)
+	{
+		const int ID = s_aIDs[k];
+		const CGameClient::CClientData *pData = pClient->GetClientData(ID);
+		const CNetObj_TeeInfo *pInfo = pClient->GetTeeInfo(ID);
+		if(!pData || !pInfo)
+			continue;
+		const char *pTeam = "game";
+		if(pData->m_Team == TEAM_SPECTATORS)
+			pTeam = "spec";
+		else if((pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS) && pData->m_Team == TEAM_RED)
+			pTeam = "red";
+		else if((pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS) && pData->m_Team == TEAM_BLUE)
+			pTeam = "blue";
+		str_format(aBuf, sizeof(aBuf), "[%d] name='%s' clan='%s' team=%s score=%d ping=%d",
+			ID, pData->m_aName, pData->m_aClan, pTeam, pInfo->m_Score, (pInfo->m_LatencyAndCountry >> 16) & 0xffff);
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "players", aBuf);
+	}
 }
 
 void CGameClient::ConchainSkinChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
