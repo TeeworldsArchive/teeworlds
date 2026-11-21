@@ -1474,6 +1474,41 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	pEntry->m_pNext->m_pNext = 0;
 }
 
+void CGameContext::ConRemoveMap(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	CMapRotationIndex GroupIndex;
+	GroupIndex.m_Hash = str_quickhash(pResult->GetString(0));
+	sorted_array<CMapRotationIndex>::range r = ::find_binary(pSelf->m_lMapRotations.all(), GroupIndex);
+	if(r.empty())
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map group doesn't exist");
+		return;
+	}
+
+	const char *pMapName = pResult->GetString(1);
+	CMapRotationGroup::CEntry *pPrev = 0;
+	CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst;
+	for(; pEntry && str_comp(pEntry->m_pMapName, pMapName) != 0; pEntry = pEntry->m_pNext)
+		pPrev = pEntry;
+	if(!pEntry)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map is not in the group");
+		return;
+	}
+
+	if(pSelf->m_pCurMapRotationEntry == pEntry)
+		pSelf->m_pCurMapRotationEntry = pEntry->m_pNext ? pEntry->m_pNext : pPrev;
+	if(pPrev)
+		pPrev->m_pNext = pEntry->m_pNext;
+	else
+		r.front().m_pGroup->m_pFirst = pEntry->m_pNext;
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "removed map '%s' from group '%s'", pEntry->m_pMapName, pResult->GetString(0));
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
+}
+
 void CGameContext::ConRemoveMapGroup(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1485,7 +1520,7 @@ void CGameContext::ConRemoveMapGroup(IConsole::IResult *pResult, void *pUserData
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map group doesn't exist");
 		return;
 	}
-	if(pSelf->m_pCurMapRotationEntry->m_pGroup == r.front().m_pGroup)
+	if(pSelf->m_pCurMapRotationEntry && pSelf->m_pCurMapRotationEntry->m_pGroup == r.front().m_pGroup)
 		pSelf->m_pCurMapRotationEntry = 0;
 
 	pSelf->m_lMapRotations.remove(r.front());
@@ -1611,6 +1646,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("vote", "r['yes'|'no']", CFGFLAG_SERVER, ConVote, this, "Force a vote to yes/no");
 
 	Console()->Register("add_map", "s[group] r[map]", CFGFLAG_SERVER, ConAddMap, this, "Add a map into map group (it will create the group if the group doesn't exist)");
+	Console()->Register("remove_map", "s[group] s[map]", CFGFLAG_SERVER, ConRemoveMap, this, "Remove a map from a map group");
 	Console()->Register("remove_map_group", "s[group]", CFGFLAG_SERVER, ConRemoveMapGroup, this, "remove the map group");
 	Console()->Register("list_maps", "s[group]", CFGFLAG_SERVER, ConListMaps, this, "list all the maps in the group");
 	Console()->Register("list_map_groups", "", CFGFLAG_SERVER, ConListMapGroups, this, "list all the map groups");
