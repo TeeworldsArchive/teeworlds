@@ -314,13 +314,15 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("team", "i[team]", CFGFLAG_CLIENT, ConTeam, this, "Switch team");
 	Console()->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Respawn");
 	Console()->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange, this, "Change ready state");
-	Console()->Register("screenshot", "", CFGFLAG_CLIENT, ConScreenshot, this, "Take a screenshot");
+	Console()->Register("screenshot", "?s[name]", CFGFLAG_CLIENT, ConScreenshot, this, "Take a screenshot with an optional name");
 	Console()->Register("demo_pause", "", CFGFLAG_CLIENT, ConDemoPause, this, "Pause or resume demo playback");
 	Console()->Register("demo_speed", "?f[speed]", CFGFLAG_CLIENT, ConDemoSpeed, this, "Show or set the demo playback speed");
 	Console()->Register("demo_goto", "?f[seconds]", CFGFLAG_CLIENT, ConDemoGoto, this, "Show the position or jump to a time in the demo");
 	Console()->Register("demo_info", "", CFGFLAG_CLIENT, ConDemoInfo, this, "Print information about the current demo");
 	Console()->Register("demo_next_marker", "", CFGFLAG_CLIENT, ConDemoNextMarker, this, "Jump to the next demo timeline marker");
 	Console()->Register("demo_prev_marker", "", CFGFLAG_CLIENT, ConDemoPrevMarker, this, "Jump to the previous demo timeline marker");
+	Console()->Register("demo_markers", "", CFGFLAG_CLIENT, ConDemoMarkers, this, "List the demo timeline markers");
+	Console()->Register("demo_goto_marker", "i[index]", CFGFLAG_CLIENT, ConDemoGotoMarker, this, "Jump to a demo timeline marker by number");
 	Console()->Register("serverinfo", "", CFGFLAG_CLIENT, ConServerInfo, this, "Print information about the current server");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
@@ -2185,10 +2187,16 @@ void CGameClient::ConReadyChange([[maybe_unused]] IConsole::IResult *pResult, vo
 		pClient->SendReadyChange();
 }
 
-void CGameClient::ConScreenshot([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+void CGameClient::ConScreenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
-	pClient->Graphics()->TakeScreenshot(0, ScreenshotCallback, pClient);
+	char aName[64];
+	if(pResult->NumArguments())
+	{
+		str_copy(aName, pResult->GetString(0), sizeof(aName));
+		str_sanitize_filename(aName);
+	}
+	pClient->Graphics()->TakeScreenshot(pResult->NumArguments() ? aName : 0, ScreenshotCallback, pClient);
 }
 
 void CGameClient::ConDemoPause([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
@@ -2285,6 +2293,48 @@ void CGameClient::ConDemoInfo([[maybe_unused]] IConsole::IResult *pResult, void 
 	FormatDemoTicks(aLength, sizeof(aLength), pInfo->m_LastTick - pInfo->m_FirstTick);
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "name='%s' type=%s position=%s/%s speed=x%.2f%s markers=%d", aName, pType, aPosition, aLength, pInfo->m_Speed, pInfo->m_Paused ? " paused" : "", pInfo->m_NumTimelineMarkers);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+}
+
+void CGameClient::ConDemoMarkers([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
+	char aBuf[64];
+	str_format(aBuf, sizeof(aBuf), "%d markers", pInfo->m_NumTimelineMarkers);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+	for(int i = 0; i < pInfo->m_NumTimelineMarkers; i++)
+	{
+		char aTime[16];
+		FormatDemoTicks(aTime, sizeof(aTime), pInfo->m_aTimelineMarkers[i] - pInfo->m_FirstTick);
+		str_format(aBuf, sizeof(aBuf), "[%02d] %s", i + 1, aTime);
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+	}
+}
+
+void CGameClient::ConDemoGotoMarker(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
+	const int Index = pResult->GetInteger(0) - 1;
+	if(Index < 0 || Index >= pInfo->m_NumTimelineMarkers)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "no such marker");
+		return;
+	}
+	pClient->DemoPlayer()->SetPos(pInfo->m_aTimelineMarkers[Index]);
+	char aBuf[64];
+	str_format(aBuf, sizeof(aBuf), "marker %d", Index + 1);
 	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
 }
 
