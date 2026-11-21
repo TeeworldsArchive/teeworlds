@@ -711,6 +711,8 @@ void CGameClient::OnRender()
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_apComponents[i]->OnRender();
 
+	RenderDemoTimeline();
+
 	// clear all events/input for this frame
 	Input()->Clear();
 
@@ -2585,6 +2587,71 @@ void CGameClient::ConMapStats([[maybe_unused]] IConsole::IResult *pResult, void 
 }
 
 static const char *gs_apInfoFieldNames[] = {"author", "version", "credits", "license"};
+
+void CGameClient::RenderDemoTimeline()
+{
+	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		return;
+	if(m_pMenus->IsActive())
+		return;
+
+	const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
+	if(!pInfo || pInfo->m_LastTick <= pInfo->m_FirstTick)
+		return;
+	const int Length = pInfo->m_LastTick - pInfo->m_FirstTick;
+
+	Graphics()->MapScreen(0.0f, 0.0f, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+	const CUIRect Screen = *UI()->Screen();
+
+	CUIRect Bar;
+	Bar.w = Screen.w * 0.5f;
+	Bar.h = 10.0f;
+	Bar.x = (Screen.w - Bar.w) / 2.0f;
+	Bar.y = 76.0f;
+
+	char aPosition[16];
+	char aLength[16];
+	char aBuf[64];
+	FormatDemoTicks(aPosition, sizeof(aPosition), pInfo->m_CurrentTick - pInfo->m_FirstTick);
+	FormatDemoTicks(aLength, sizeof(aLength), Length);
+	str_format(aBuf, sizeof(aBuf), "%s / %s  x%.2f%s", aPosition, aLength, pInfo->m_Speed, pInfo->m_Paused ? " (paused)" : "");
+	CUIRect Label = Bar;
+	Label.h = 16.0f;
+	Label.y -= 19.0f;
+	UI()->DoLabel(&Label, aBuf, 12.0f, TEXTALIGN_MC);
+
+	const vec2 Mouse(UI()->MouseX(), UI()->MouseY());
+	const bool Hovered = Bar.Inside(Mouse);
+	Bar.Draw(vec4(0.0f, 0.0f, 0.0f, Hovered ? 0.55f : 0.4f), 4.0f);
+	const float Progress = clamp((pInfo->m_CurrentTick - pInfo->m_FirstTick) / (float)Length, 0.0f, 1.0f);
+	if(Progress > 0.0f)
+	{
+		CUIRect Fill = Bar;
+		Fill.w = Bar.w * Progress;
+		Fill.Draw(vec4(1.0f, 1.0f, 1.0f, 0.8f), 4.0f);
+	}
+
+	for(int i = 0; i < pInfo->m_NumTimelineMarkers; i++)
+	{
+		const float MarkerPos = clamp((pInfo->m_aTimelineMarkers[i] - pInfo->m_FirstTick) / (float)Length, 0.0f, 1.0f);
+		CUIRect Marker;
+		Marker.x = Bar.x + Bar.w * MarkerPos - 1.0f;
+		Marker.y = Bar.y - 3.0f;
+		Marker.w = 2.0f;
+		Marker.h = Bar.h + 6.0f;
+		Marker.Draw(vec4(1.0f, 0.8f, 0.2f, 0.9f), 1.0f);
+	}
+
+	CUIRect Knob;
+	Knob.w = 12.0f;
+	Knob.h = 12.0f;
+	Knob.x = Bar.x + Bar.w * Progress - Knob.w / 2.0f;
+	Knob.y = Bar.y + Bar.h / 2.0f - Knob.h / 2.0f;
+	Knob.Draw(vec4(1.0f, 1.0f, 1.0f, Hovered ? 1.0f : 0.85f), 6.0f);
+
+	if(Hovered && UI()->MouseButton(0))
+		DemoPlayer()->SetPos(clamp((Mouse.x - Bar.x) / Bar.w, 0.0f, 1.0f));
+}
 
 void CGameClient::ConMapCheck([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
