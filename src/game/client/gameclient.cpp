@@ -324,6 +324,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("demo_markers", "", CFGFLAG_CLIENT, ConDemoMarkers, this, "List the demo timeline markers");
 	Console()->Register("demo_goto_marker", "i[index]", CFGFLAG_CLIENT, ConDemoGotoMarker, this, "Jump to a demo timeline marker by number");
 	Console()->Register("serverinfo", "", CFGFLAG_CLIENT, ConServerInfo, this, "Print information about the current server");
+	Console()->Register("mapinfo", "", CFGFLAG_CLIENT, ConMapInfo, this, "Print information about the current map");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
 	Console()->Chain("remove_friend", ConchainFriendUpdate, this);
@@ -2399,6 +2400,32 @@ void CGameClient::ConServerInfo([[maybe_unused]] IConsole::IResult *pResult, voi
 		Info.m_aName, Info.m_aGameType, Info.m_aMap, Info.m_aAddress, Info.m_Latency,
 		Info.m_NumPlayers, Info.m_MaxPlayers, Info.m_NumClients, Info.m_MaxClients, Info.m_aVersion);
 	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverinfo", aBuf);
+}
+
+void CGameClient::ConMapInfo([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	const char *pName = pClient->Client()->GetCurrentMapName();
+	const char *pPath = pClient->Client()->GetCurrentMapPath();
+	if(!pName[0])
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mapinfo", "no map loaded");
+		return;
+	}
+	int Size = -1;
+	IOHANDLE File = pClient->Storage()->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL);
+	if(File)
+	{
+		io_seek(File, 0, IOSEEK_END);
+		Size = io_tell(File);
+		io_close(File);
+	}
+	char aBuf[256];
+	if(Size >= 0)
+		str_format(aBuf, sizeof(aBuf), "name='%s' path='%s' size=%d KiB", pName, pPath, Size / 1024);
+	else
+		str_format(aBuf, sizeof(aBuf), "name='%s' path='%s'", pName, pPath);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mapinfo", aBuf);
 }
 
 void CGameClient::ConchainSkinChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
