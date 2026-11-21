@@ -781,6 +781,33 @@ void CGameConsole::ConClearRemoteConsole([[maybe_unused]] IConsole::IResult *pRe
 	((CGameConsole *) pUserData)->m_RemoteConsole.ClearBacklog();
 }
 
+void CGameConsole::ConSearchCommands(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameConsole *pSelf = (CGameConsole *) pUserData;
+	const char *pNeedle = pResult->GetString(0);
+	const int Flags = CFGFLAG_CLIENT | CFGFLAG_SERVER;
+	int Found = 0;
+	for(const IConsole::CCommandInfo *pCommand = pSelf->Console()->FirstCommandInfo(IConsole::ACCESS_LEVEL_ADMIN, Flags);
+		pCommand; pCommand = pCommand->NextCommandInfo(IConsole::ACCESS_LEVEL_ADMIN, Flags))
+	{
+		// skip temporary rcon commands, they are not local commands
+		if(!pSelf->Console()->GetCommandInfo(pCommand->m_pName, Flags, false))
+			continue;
+		if(!str_find_nocase(pCommand->m_pName, pNeedle) && (!pCommand->m_pHelp || !str_find_nocase(pCommand->m_pHelp, pNeedle)))
+			continue;
+		char aBuf[512];
+		str_format(aBuf, sizeof(aBuf), "%s %s - %s", pCommand->m_pName, pCommand->m_pParams ? pCommand->m_pParams : "", pCommand->m_pHelp ? pCommand->m_pHelp : "");
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "cmd_search", aBuf);
+		if(++Found >= 100)
+		{
+			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "cmd_search", "more than 100 matches, refine the search");
+			return;
+		}
+	}
+	if(Found == 0)
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "cmd_search", "no matching commands");
+}
+
 void CGameConsole::ConDumpLocalConsole([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameConsole *) pUserData)->Dump(CONSOLETYPE_LOCAL);
@@ -888,6 +915,7 @@ void CGameConsole::OnConsoleInit()
 	Console()->Register("clear_remote_console", "", CFGFLAG_CLIENT, ConClearRemoteConsole, this, "Clear remote console");
 	Console()->Register("dump_local_console", "", CFGFLAG_CLIENT, ConDumpLocalConsole, this, "Write local console contents to a text file");
 	Console()->Register("dump_remote_console", "", CFGFLAG_CLIENT, ConDumpRemoteConsole, this, "Write remote console contents to a text file");
+	Console()->Register("cmd_search", "r[text]", CFGFLAG_CLIENT, ConSearchCommands, this, "List commands whose name or help contains the text");
 
 #ifdef CONF_DEBUG
 	Console()->Register("dump_commands", "", CFGFLAG_CLIENT, ConDumpCommands, this, "Write list of all commands to a text file");

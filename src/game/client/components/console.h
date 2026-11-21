@@ -88,6 +88,7 @@ class CGameConsole : public CComponent
 	static void ConClearRemoteConsole(IConsole::IResult *pResult, void *pUserData);
 	static void ConDumpLocalConsole(IConsole::IResult *pResult, void *pUserData);
 	static void ConDumpRemoteConsole(IConsole::IResult *pResult, void *pUserData);
+	static void ConSearchCommands(IConsole::IResult *pResult, void *pUserData);
 #ifdef CONF_DEBUG
 	static void DumpCommandsCallback(int Index, const char *pStr, void *pUser);
 	static void ConDumpCommands(IConsole::IResult *pResult, void *pUserData);
