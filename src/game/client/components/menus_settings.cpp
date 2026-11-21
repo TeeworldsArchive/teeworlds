@@ -979,7 +979,7 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 	GameRight.HSplitTop(Spacing, 0, &GameRight);
 	GameRight.HSplitTop(ButtonHeight, &Button, &GameRight);
 	if(DoButton_CheckBox(&Config()->m_ClChatTime, Localize("Show chat timestamps"), Config()->m_ClChatTime, &Button))
-		Config()->m_ClChatTime ^= 1;
+		Config()->m_ClChatTime = Config()->m_ClChatTime ? 0 : 1;
 
 	// render client menu
 	Client.HSplitTop(ButtonHeight, &Label, &Client);

@@ -608,10 +608,10 @@ bool CChat::IsClientIgnored(int ClientID)
 	return !Config()->m_ClShowsocial || !pClient || !pClient->m_Active || pClient->m_ChatIgnore || Config()->m_ClFilterchat == 2 || (m_pClient->m_LocalClientID != ClientID && Config()->m_ClFilterchat == 1 && !pClient->m_Friend);
 }
 
-static void FormatChatTime(int Timestamp, char *pBuf, int Size)
+static void FormatChatTime(int Timestamp, char *pBuf, int Size, bool Seconds)
 {
 	char aClock[16];
-	str_timestamp_ex((time_t) Timestamp, aClock, sizeof(aClock), "%H:%M");
+	str_timestamp_ex((time_t) Timestamp, aClock, sizeof(aClock), Seconds ? "%H:%M:%S" : "%H:%M");
 	str_format(pBuf, Size, "%s ", aClock);
 }
 
@@ -1117,7 +1117,7 @@ void CChat::OnRender()
 			if(Config()->m_ClChatTime)
 			{
 				char aTime[16];
-				FormatChatTime(pLine->m_Timestamp, aTime, sizeof(aTime));
+				FormatChatTime(pLine->m_Timestamp, aTime, sizeof(aTime), Config()->m_ClChatTime > 1);
 				TextRender()->TextDeferred(&s_ChatCursor, aTime, -1);
 			}
 			if(pLine->m_Mode == CHAT_WHISPER)
@@ -1254,7 +1254,7 @@ void CChat::OnRender()
 		if(Config()->m_ClChatTime)
 		{
 			char aTime[16];
-			FormatChatTime(pLine->m_Timestamp, aTime, sizeof(aTime));
+			FormatChatTime(pLine->m_Timestamp, aTime, sizeof(aTime), Config()->m_ClChatTime > 1);
 			TextRender()->TextColor(vec4(0.7f, 0.7f, 0.7f, 0.9f));
 			TextRender()->TextDeferred(&s_ChatCursor, aTime, -1);
 		}
