@@ -81,6 +81,7 @@ class CGameContext : public IGameServer
 	static void ConRemoveMapGroup(IConsole::IResult *pResult, void *pUserData);
 	static void ConListMaps(IConsole::IResult *pResult, void *pUserData);
 	static void ConListMapGroups(IConsole::IResult *pResult, void *pUserData);
+	static void ConCheckMapRotation(IConsole::IResult *pResult, void *pUserData);
 	static void ConUseMapGroup(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainSettingUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);

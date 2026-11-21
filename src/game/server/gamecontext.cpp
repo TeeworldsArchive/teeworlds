@@ -1768,6 +1768,38 @@ void CGameContext::ConListMaps(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
+void CGameContext::ConCheckMapRotation([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	IStorage *pStorage = pSelf->Kernel()->RequestInterface<IStorage>();
+	char aBuf[256];
+	int NumGroups = 0;
+	int NumMaps = 0;
+	int NumMissing = 0;
+
+	for(sorted_array<CMapRotationIndex>::range r = pSelf->m_lMapRotations.all(); !r.empty(); r.pop_front())
+	{
+		NumGroups++;
+		const char *pGroupName = r.front().m_pGroup->m_pGroupName;
+		for(CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
+		{
+			NumMaps++;
+			char aMapFile[IO_MAX_PATH_LENGTH];
+			str_format(aMapFile, sizeof(aMapFile), "%s.map", pEntry->m_pMapName);
+			char aFound[IO_MAX_PATH_LENGTH];
+			if(pStorage && pStorage->FindFile(aMapFile, "maps", IStorage::TYPE_ALL, aFound, sizeof(aFound)))
+				continue;
+
+			NumMissing++;
+			str_format(aBuf, sizeof(aBuf), "missing: '%s' in group '%s'", pEntry->m_pMapName, pGroupName);
+			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
+		}
+	}
+
+	str_format(aBuf, sizeof(aBuf), "%d groups, %d maps, %d missing", NumGroups, NumMaps, NumMissing);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
+}
+
 void CGameContext::ConListMapGroups([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1892,6 +1924,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("remove_map_group", "s[group]", CFGFLAG_SERVER, ConRemoveMapGroup, this, "remove the map group");
 	Console()->Register("list_maps", "s[group]", CFGFLAG_SERVER, ConListMaps, this, "list all the maps in the group");
 	Console()->Register("list_map_groups", "", CFGFLAG_SERVER, ConListMapGroups, this, "list all the map groups");
+	Console()->Register("check_map_rotation", "", CFGFLAG_SERVER, ConCheckMapRotation, this, "report maps missing from the rotation");
 	Console()->Register("use_map_group", "s[group]", CFGFLAG_SERVER, ConUseMapGroup, this, "use the map group");
 }
 
