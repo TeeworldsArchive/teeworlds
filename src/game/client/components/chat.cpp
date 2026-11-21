@@ -536,6 +536,7 @@ void CChat::EnableMode(int Mode, const char *pText)
 void CChat::Disable()
 {
 	m_Mode = CHAT_NONE;
+	m_Show = false;
 	m_Input.Deactivate();
 }
 
