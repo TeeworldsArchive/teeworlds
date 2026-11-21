@@ -1596,6 +1596,24 @@ void CGameContext::ComUnmutePlayer(IConsole::IResult *pResult, void *pUserData)
 	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Player unmuted");
 }
 
+void CGameContext::ConListMutes([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	char aBuf[256];
+	int Count = 0;
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!pSelf->m_apPlayers[i] || pSelf->m_apPlayers[i]->m_MuteTick <= pSelf->Server()->Tick())
+			continue;
+		str_format(aBuf, sizeof(aBuf), "[%02d] %s (%d seconds left)", i, pSelf->Server()->ClientName(i),
+			(pSelf->m_apPlayers[i]->m_MuteTick - pSelf->Server()->Tick()) / pSelf->Server()->TickSpeed());
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		Count++;
+	}
+	str_format(aBuf, sizeof(aBuf), "%d muted players", Count);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+}
+
 void CGameContext::ConMute(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1824,6 +1842,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("say", "r[text]", CFGFLAG_SERVER, ConSay, this, "Say in chat");
 	Console()->Register("broadcast", "r[text]", CFGFLAG_SERVER, ConBroadcast, this, "Broadcast message");
 	Console()->Register("mute", "i[id] ?i[minutes]", CFGFLAG_SERVER, ConMute, this, "Mute a player's chat, 0 minutes unmutes");
+	Console()->Register("list_mutes", "", CFGFLAG_SERVER, ConListMutes, this, "List the muted players");
 	Console()->Register("save_map_rotation", "?s[file]", CFGFLAG_SERVER, ConSaveMapRotation, this, "Save the map groups as config commands");
 	Console()->Register("set_team", "i[id] i[team] ?i[delay]", CFGFLAG_SERVER, ConSetTeam, this, "Set team of player to team");
 	Console()->Register("set_team_all", "i[team]", CFGFLAG_SERVER, ConSetTeamAll, this, "Set team of all players to team");

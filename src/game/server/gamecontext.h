@@ -71,6 +71,7 @@ class CGameContext : public IGameServer
 	static void ConAddMap(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveMap(IConsole::IResult *pResult, void *pUserData);
 	static void ConMute(IConsole::IResult *pResult, void *pUserData);
+	static void ConListMutes(IConsole::IResult *pResult, void *pUserData);
 	static void ComMutePlayer(IConsole::IResult *pResult, void *pUserData);
 	static void ComUnmutePlayer(IConsole::IResult *pResult, void *pUserData);
 	static void ComPause(IConsole::IResult *pResult, void *pUserData);
