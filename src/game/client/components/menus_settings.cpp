@@ -978,8 +978,8 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 
 	GameRight.HSplitTop(Spacing, 0, &GameRight);
 	GameRight.HSplitTop(ButtonHeight, &Button, &GameRight);
-	if(DoButton_CheckBox(&Config()->m_ClChatTime, Localize("Show chat timestamps"), Config()->m_ClChatTime, &Button))
-		Config()->m_ClChatTime = Config()->m_ClChatTime ? 0 : 1;
+	const char *apChatTimeLabels[] = {Localize("off", "Chat timestamps"), Localize("minutes", "Chat timestamps"), Localize("seconds", "Chat timestamps")};
+	UI()->DoScrollbarOptionLabeled(&Config()->m_ClChatTime, &Config()->m_ClChatTime, &Button, Localize("Chat timestamps"), apChatTimeLabels, sizeof(apChatTimeLabels) / sizeof(char *));
 
 	// render client menu
 	Client.HSplitTop(ButtonHeight, &Label, &Client);
