@@ -321,6 +321,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("demo_info", "", CFGFLAG_CLIENT, ConDemoInfo, this, "Print information about the current demo");
 	Console()->Register("demo_next_marker", "", CFGFLAG_CLIENT, ConDemoNextMarker, this, "Jump to the next demo timeline marker");
 	Console()->Register("demo_prev_marker", "", CFGFLAG_CLIENT, ConDemoPrevMarker, this, "Jump to the previous demo timeline marker");
+	Console()->Register("serverinfo", "", CFGFLAG_CLIENT, ConServerInfo, this, "Print information about the current server");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
 	Console()->Chain("remove_friend", ConchainFriendUpdate, this);
@@ -2331,6 +2332,23 @@ void CGameClient::ConDemoPrevMarker([[maybe_unused]] IConsole::IResult *pResult,
 		}
 	}
 	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "no previous marker");
+}
+
+void CGameClient::ConServerInfo([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() == IClient::STATE_OFFLINE)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverinfo", "not connected");
+		return;
+	}
+	CServerInfo Info;
+	pClient->Client()->GetServerInfo(&Info);
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), "name='%s' gametype='%s' map='%s' address=%s ping=%d players=%d/%d clients=%d/%d version='%s'",
+		Info.m_aName, Info.m_aGameType, Info.m_aMap, Info.m_aAddress, Info.m_Latency,
+		Info.m_NumPlayers, Info.m_MaxPlayers, Info.m_NumClients, Info.m_MaxClients, Info.m_aVersion);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverinfo", aBuf);
 }
 
 void CGameClient::ConchainSkinChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
