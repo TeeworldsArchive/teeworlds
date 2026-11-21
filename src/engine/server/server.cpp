@@ -1629,6 +1629,8 @@ void CServer::ConStatus([[maybe_unused]] IConsole::IResult *pResult, void *pUser
 	char aAddrStr[NETADDR_MAXSTRSIZE];
 	CServer *pThis = static_cast<CServer *>(pUser);
 	int Count = 0;
+	str_format(aBuf, sizeof(aBuf), "map='%s' gametype='%s'", pThis->GetMapName(), pThis->GameServer()->GameType());
+	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
