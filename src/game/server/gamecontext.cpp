@@ -1518,6 +1518,44 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	pEntry->m_pNext->m_pNext = 0;
 }
 
+static bool ChatCommandCheck(CGameContext *pSelf, CCommandManager::SCommandContext *pContext)
+{
+	if(pSelf->Server()->IsAuthed(pContext->m_ClientID))
+		return true;
+	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "You are not allowed to use this command");
+	return false;
+}
+
+void CGameContext::ComPause(IConsole::IResult *pResult, void *pUserData)
+{
+	CCommandManager::SCommandContext *pContext = (CCommandManager::SCommandContext *) pUserData;
+	CGameContext *pSelf = (CGameContext *) pContext->m_pContext;
+	if(!ChatCommandCheck(pSelf, pContext))
+		return;
+	pSelf->ConPause(pResult, pSelf);
+	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Pause command executed");
+}
+
+void CGameContext::ComRestart(IConsole::IResult *pResult, void *pUserData)
+{
+	CCommandManager::SCommandContext *pContext = (CCommandManager::SCommandContext *) pUserData;
+	CGameContext *pSelf = (CGameContext *) pContext->m_pContext;
+	if(!ChatCommandCheck(pSelf, pContext))
+		return;
+	pSelf->ConRestart(pResult, pSelf);
+	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Restart command executed");
+}
+
+void CGameContext::ComChangeMap(IConsole::IResult *pResult, void *pUserData)
+{
+	CCommandManager::SCommandContext *pContext = (CCommandManager::SCommandContext *) pUserData;
+	CGameContext *pSelf = (CGameContext *) pContext->m_pContext;
+	if(!ChatCommandCheck(pSelf, pContext))
+		return;
+	pSelf->ConChangeMap(pResult, pSelf);
+	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Map change requested");
+}
+
 void CGameContext::ComMutePlayer(IConsole::IResult *pResult, void *pUserData)
 {
 	CCommandManager::SCommandContext *pContext = (CCommandManager::SCommandContext *) pUserData;
@@ -1840,6 +1878,9 @@ void CGameContext::OnInit()
 
 	m_pController->RegisterChatCommands(CommandManager());
 	CommandManager()->AddCommand("mute_player", "Mute a player's chat", "i[id] ?i[minutes]", ComMutePlayer, this);
+	CommandManager()->AddCommand("pause", "Pause or unpause the game", "?i[seconds]", ComPause, this);
+	CommandManager()->AddCommand("restart", "Restart the round", "?i[seconds]", ComRestart, this);
+	CommandManager()->AddCommand("change_map", "Change to another map", "?r[map]", ComChangeMap, this);
 
 	// create all entities from the game layer
 	CMapItemLayerTilemap *pTileMap = m_Layers.GameLayer();
