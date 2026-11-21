@@ -900,6 +900,12 @@ void CGameConsole::PrintLine(int Type, const char *pLine)
 		m_RemoteConsole.PrintLine(pLine, false);
 }
 
+static bool IsSensitiveHistoryLine(const char *pLine)
+{
+	return str_find_nocase(pLine, "password") || str_startswith_nocase(pLine, "rcon_auth") ||
+	       str_startswith_nocase(pLine, "add_favorite") || str_startswith_nocase(pLine, "remove_favorite");
+}
+
 void CGameConsole::OnInit()
 {
 	IOHANDLE File = Storage()->OpenFile("configs/console_history.txt", IOFLAG_READ, IStorage::TYPE_SAVE);
@@ -909,7 +915,7 @@ void CGameConsole::OnInit()
 	Reader.Init(File);
 	while(const char *pLine = Reader.Get())
 	{
-		if(!pLine[0])
+		if(!pLine[0] || IsSensitiveHistoryLine(pLine))
 			continue;
 		const int Length = str_length(pLine);
 		char *pEntry = m_LocalConsole.m_History.Allocate(Length + 1);
@@ -921,13 +927,13 @@ void CGameConsole::OnInit()
 
 void CGameConsole::OnShutdown()
 {
-	if(!m_LocalConsole.m_History.First())
-		return;
 	IOHANDLE File = Storage()->OpenFile("configs/console_history.txt", IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 		return;
 	for(char *pEntry = m_LocalConsole.m_History.First(); pEntry; pEntry = m_LocalConsole.m_History.Next(pEntry))
 	{
+		if(IsSensitiveHistoryLine(pEntry))
+			continue;
 		io_write(File, pEntry, str_length(pEntry));
 		io_write_newline(File);
 	}
