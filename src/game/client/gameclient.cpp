@@ -317,7 +317,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("screenshot", "?s[name]", CFGFLAG_CLIENT, ConScreenshot, this, "Take a screenshot with an optional name");
 	Console()->Register("demo_pause", "", CFGFLAG_CLIENT, ConDemoPause, this, "Pause or resume demo playback");
 	Console()->Register("demo_speed", "?f[speed]", CFGFLAG_CLIENT, ConDemoSpeed, this, "Show or set the demo playback speed");
-	Console()->Register("demo_goto", "?f[seconds]", CFGFLAG_CLIENT, ConDemoGoto, this, "Show the position or jump to a time in the demo");
+	Console()->Register("demo_goto", "?f[seconds]", CFGFLAG_CLIENT, ConDemoGoto, this, "Show the position or jump to an absolute or +/- time in the demo");
 	Console()->Register("demo_info", "", CFGFLAG_CLIENT, ConDemoInfo, this, "Print information about the current demo");
 	Console()->Register("demo_next_marker", "", CFGFLAG_CLIENT, ConDemoNextMarker, this, "Jump to the next demo timeline marker");
 	Console()->Register("demo_prev_marker", "", CFGFLAG_CLIENT, ConDemoPrevMarker, this, "Jump to the previous demo timeline marker");
@@ -2262,9 +2262,13 @@ void CGameClient::ConDemoGoto(IConsole::IResult *pResult, void *pUserData)
 		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
 		return;
 	}
-	const int LengthTicks = pInfo->m_LastTick - pInfo->m_FirstTick;
-	const int WantedTick = pInfo->m_FirstTick + clamp((int) (pResult->GetFloat(0) * SERVER_TICK_SPEED), 0, LengthTicks);
-	pClient->DemoPlayer()->SetPos(WantedTick);
+	const char *pValue = pResult->GetString(0);
+	int WantedTick;
+	if(pValue[0] == '+' || pValue[0] == '-')
+		WantedTick = pInfo->m_CurrentTick + (int) (pResult->GetFloat(0) * SERVER_TICK_SPEED);
+	else
+		WantedTick = pInfo->m_FirstTick + (int) (pResult->GetFloat(0) * SERVER_TICK_SPEED);
+	pClient->DemoPlayer()->SetPos(clamp(WantedTick, pInfo->m_FirstTick, pInfo->m_LastTick));
 	pInfo = pClient->DemoPlayer()->BaseInfo();
 	FormatDemoTicks(aPosition, sizeof(aPosition), pInfo->m_CurrentTick - pInfo->m_FirstTick);
 	char aBuf[64];
