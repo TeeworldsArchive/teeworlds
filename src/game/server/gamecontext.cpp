@@ -1474,8 +1474,16 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	}
 	CMapRotationIndex &Index = r.front();
 	CMapRotationGroup::CEntry *pEntry = Index.m_pGroup->m_pFirst;
-	for(; pEntry->m_pNext; pEntry = pEntry->m_pNext)
-		;
+	for(; pEntry; pEntry = pEntry->m_pNext)
+	{
+		if(str_comp(pEntry->m_pMapName, pResult->GetString(1)) == 0)
+		{
+			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map is already in the group");
+			return;
+		}
+		if(!pEntry->m_pNext)
+			break;
+	}
 	pEntry->m_pNext = static_cast<CMapRotationGroup::CEntry *>(pSelf->m_pMapRotationHeap->Allocate(sizeof(CMapRotationGroup::CEntry), alignof(CMapRotationGroup::CEntry)));
 	pEntry->m_pNext->m_pGroup = Index.m_pGroup;
 	pEntry->m_pNext->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));
@@ -1586,7 +1594,10 @@ void CGameContext::ConListMapGroups([[maybe_unused]] IConsole::IResult *pResult,
 	int Index = 0;
 	for(sorted_array<CMapRotationIndex>::range r = pSelf->m_lMapRotations.all(); !r.empty(); r.pop_front())
 	{
-		str_format(aBuf, sizeof(aBuf), "[%02d] %s", Index, r.front().m_pGroup->m_pGroupName);
+		int NumMaps = 0;
+		for(CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
+			NumMaps++;
+		str_format(aBuf, sizeof(aBuf), "[%02d] %s (%d maps)", Index, r.front().m_pGroup->m_pGroupName, NumMaps);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
 		Index++;
 	}
