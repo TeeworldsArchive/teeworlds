@@ -325,6 +325,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("demo_goto_marker", "i[index]", CFGFLAG_CLIENT, ConDemoGotoMarker, this, "Jump to a demo timeline marker by number");
 	Console()->Register("serverinfo", "", CFGFLAG_CLIENT, ConServerInfo, this, "Print information about the current server");
 	Console()->Register("mapinfo", "", CFGFLAG_CLIENT, ConMapInfo, this, "Print information about the current map");
+	Console()->Register("map_stats", "", CFGFLAG_CLIENT, ConMapStats, this, "Print per-layer and per-entity statistics of the current map");
 	Console()->Register("players", "", CFGFLAG_CLIENT, ConPlayers, this, "List the players in the current game");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
@@ -2429,6 +2430,111 @@ void CGameClient::ConMapInfo([[maybe_unused]] IConsole::IResult *pResult, void *
 	else
 		str_format(aBuf, sizeof(aBuf), "name='%s' path='%s'", pName, pPath);
 	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mapinfo", aBuf);
+}
+
+static const char *gs_apEntityNames[NUM_ENTITIES] = {
+	"none", "spawn", "spawn_red", "spawn_blue", "flagstand_red", "flagstand_blue",
+	"armor", "health", "shotgun", "grenade", "ninja", "laser"};
+
+void CGameClient::ConMapStats([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	CLayers *pLayers = pClient->Layers();
+	if(!pLayers || !pLayers->GameLayer())
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_stats", "no map loaded");
+		return;
+	}
+
+	const int NumItems = pLayers->NumItems();
+	int aTypeCount[MAPITEMTYPE_SOUND + 1] = {0};
+	for(int i = 0; i < NumItems; i++)
+	{
+		int Type = 0;
+		int ID = 0;
+		if(!pLayers->GetItem(i, &Type, &ID))
+			continue;
+		if(Type >= 0 && Type <= MAPITEMTYPE_SOUND)
+			aTypeCount[Type]++;
+	}
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "items=%d groups=%d layers=%d images=%d envelopes=%d sounds=%d",
+		NumItems, pLayers->NumGroups(), pLayers->NumLayers(), aTypeCount[MAPITEMTYPE_IMAGE],
+		aTypeCount[MAPITEMTYPE_ENVELOPE], aTypeCount[MAPITEMTYPE_SOUND]);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_stats", aBuf);
+
+	int EntityCount = 0;
+	int aEntityCount[NUM_ENTITIES] = {0};
+	int TotalTiles = 0;
+	for(int i = 0; i < NumItems; i++)
+	{
+		int Type = 0;
+		int ID = 0;
+		CMapItemLayer *pLayer = (CMapItemLayer *)pLayers->GetItem(i, &Type, &ID);
+		if(!pLayer || Type != MAPITEMTYPE_LAYER)
+			continue;
+
+		if(pLayer->m_Type == LAYERTYPE_TILES)
+		{
+			CMapItemLayerTilemap *pTilemap = (CMapItemLayerTilemap *)pLayer;
+			const bool IsGameLayer = (pTilemap->m_Flags & TILESLAYERFLAG_GAME) != 0;
+			CTile *pTiles = (CTile *)pLayers->GetData(pTilemap->m_Data);
+			int SetTiles = 0;
+			if(pTiles)
+			{
+				const int NumTiles = pTilemap->m_Width * pTilemap->m_Height;
+				for(int t = 0; t < NumTiles; t++)
+				{
+					if(pTiles[t].m_Index == 0)
+						continue;
+					SetTiles++;
+					if(!IsGameLayer || pTiles[t].m_Index < ENTITY_OFFSET)
+						continue;
+					const int EntityType = pTiles[t].m_Index - ENTITY_OFFSET;
+					if(EntityType > 0 && EntityType < NUM_ENTITIES)
+					{
+						aEntityCount[EntityType]++;
+						EntityCount++;
+					}
+				}
+			}
+			TotalTiles += SetTiles;
+			str_format(aBuf, sizeof(aBuf), "tile layer %d%s: %dx%d tiles=%d", i, IsGameLayer ? " (game)" : "",
+				pTilemap->m_Width, pTilemap->m_Height, SetTiles);
+		}
+		else if(pLayer->m_Type == LAYERTYPE_QUADS)
+		{
+			CMapItemLayerQuads *pQuads = (CMapItemLayerQuads *)pLayer;
+			str_format(aBuf, sizeof(aBuf), "quad layer %d: quads=%d", i, pQuads->m_NumQuads);
+		}
+		else if(pLayer->m_Type == LAYERTYPE_SOUNDS)
+		{
+			CMapItemLayerSounds *pSounds = (CMapItemLayerSounds *)pLayer;
+			str_format(aBuf, sizeof(aBuf), "sound layer %d: sounds=%d", i, pSounds->m_NumSources);
+		}
+		else
+			continue;
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_stats", aBuf);
+	}
+
+	str_format(aBuf, sizeof(aBuf), "tiles=%d entities=%d", TotalTiles, EntityCount);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_stats", aBuf);
+	if(EntityCount)
+	{
+		char aTypes[192];
+		aTypes[0] = '\0';
+		for(int i = 1; i < NUM_ENTITIES; i++)
+		{
+			if(!aEntityCount[i])
+				continue;
+			char aPart[48];
+			str_format(aPart, sizeof(aPart), "%s%s=%d", aTypes[0] ? " " : "", gs_apEntityNames[i], aEntityCount[i]);
+			str_append(aTypes, aPart, sizeof(aTypes));
+		}
+		str_format(aBuf, sizeof(aBuf), "entity types: %s", aTypes);
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_stats", aBuf);
+	}
 }
 
 void CGameClient::ConPlayers([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
