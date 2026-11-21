@@ -1639,8 +1639,9 @@ void CServer::ConStatus([[maybe_unused]] IConsole::IResult *pResult, void *pUser
 				const char *pAuthStr = pThis->m_aClients[i].m_Authed == CServer::AUTHED_ADMIN ? "(Admin)" :
 						       pThis->m_aClients[i].m_Authed == CServer::AUTHED_MOD   ? "(Mod)" :
 														"";
-				str_format(aBuf, sizeof(aBuf), "id=%d addr=%s client=%x name='%s' score=%d %s", i, aAddrStr,
-					pThis->m_aClients[i].m_Version, pThis->m_aClients[i].m_aName, pThis->m_aClients[i].m_Score, pAuthStr);
+				str_format(aBuf, sizeof(aBuf), "id=%d addr=%s client=%x name='%s' clan='%s' score=%d ping=%d %s", i, aAddrStr,
+					pThis->m_aClients[i].m_Version, pThis->m_aClients[i].m_aName, pThis->m_aClients[i].m_aClan, pThis->m_aClients[i].m_Score,
+					pThis->m_aClients[i].m_Latency, pAuthStr);
 			}
 			else
 				str_format(aBuf, sizeof(aBuf), "id=%d addr=%s connecting", i, aAddrStr);
