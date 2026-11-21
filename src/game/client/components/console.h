@@ -109,6 +109,8 @@ public:
 
 	virtual void OnStateChange(int NewState, int OldState) override;
 	virtual void OnConsoleInit() override;
+	virtual void OnInit() override;
+	virtual void OnShutdown() override;
 	virtual void OnReset() override;
 	virtual void OnRender() override;
 	virtual bool OnInput(IInput::CEvent Events) override;

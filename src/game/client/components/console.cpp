@@ -11,6 +11,7 @@
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
+#include <engine/shared/linereader.h>
 #include <engine/shared/ringbuffer.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -897,6 +898,40 @@ void CGameConsole::PrintLine(int Type, const char *pLine)
 		m_LocalConsole.PrintLine(pLine, false);
 	else if(Type == CONSOLETYPE_REMOTE)
 		m_RemoteConsole.PrintLine(pLine, false);
+}
+
+void CGameConsole::OnInit()
+{
+	IOHANDLE File = Storage()->OpenFile("configs/console_history.txt", IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(!File)
+		return;
+	CLineReader Reader;
+	Reader.Init(File);
+	while(const char *pLine = Reader.Get())
+	{
+		if(!pLine[0])
+			continue;
+		const int Length = str_length(pLine);
+		char *pEntry = m_LocalConsole.m_History.Allocate(Length + 1);
+		if(pEntry)
+			mem_copy(pEntry, pLine, Length + 1);
+	}
+	io_close(File);
+}
+
+void CGameConsole::OnShutdown()
+{
+	if(!m_LocalConsole.m_History.First())
+		return;
+	IOHANDLE File = Storage()->OpenFile("configs/console_history.txt", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return;
+	for(char *pEntry = m_LocalConsole.m_History.First(); pEntry; pEntry = m_LocalConsole.m_History.Next(pEntry))
+	{
+		io_write(File, pEntry, str_length(pEntry));
+		io_write_newline(File);
+	}
+	io_close(File);
 }
 
 void CGameConsole::OnConsoleInit()
