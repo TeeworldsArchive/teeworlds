@@ -1748,9 +1748,12 @@ void CGameContext::ConListMaps(IConsole::IResult *pResult, void *pUserData)
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "the map group doesn't exist");
 		return;
 	}
+	char aBuf[256];
 	for(CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
 	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", pEntry->m_pMapName);
+		const bool Active = pSelf->m_pCurMapRotationEntry == pEntry;
+		str_format(aBuf, sizeof(aBuf), "%s%s", pEntry->m_pMapName, Active ? " *next*" : "");
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
 	}
 }
 
@@ -1765,7 +1768,8 @@ void CGameContext::ConListMapGroups([[maybe_unused]] IConsole::IResult *pResult,
 		int NumMaps = 0;
 		for(CMapRotationGroup::CEntry *pEntry = r.front().m_pGroup->m_pFirst; pEntry; pEntry = pEntry->m_pNext)
 			NumMaps++;
-		str_format(aBuf, sizeof(aBuf), "[%02d] %s (%d maps)", Index, r.front().m_pGroup->m_pGroupName, NumMaps);
+		const bool Active = pSelf->m_pCurMapRotationEntry && pSelf->m_pCurMapRotationEntry->m_pGroup == r.front().m_pGroup;
+		str_format(aBuf, sizeof(aBuf), "[%02d] %s (%d maps)%s", Index, r.front().m_pGroup->m_pGroupName, NumMaps, Active ? " *active*" : "");
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
 		Index++;
 	}
