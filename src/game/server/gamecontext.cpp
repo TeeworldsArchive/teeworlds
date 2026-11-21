@@ -803,6 +803,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 			pPlayer->m_LastChatTeamTick = Server()->Tick();
 
+			if(pPlayer->m_MuteTick > Server()->Tick())
+			{
+				char aBuf[64];
+				str_format(aBuf, sizeof(aBuf), "You are muted for %d more seconds", (pPlayer->m_MuteTick - Server()->Tick()) / Server()->TickSpeed());
+				SendChat(-1, CHAT_ALL, ClientID, aBuf);
+				return;
+			}
+
 			// don't allow spectators to disturb players during a running game in tournament mode
 			int Mode = pMsg->m_Mode;
 			if((Config()->m_SvTournamentMode == 2) &&
@@ -1474,6 +1482,27 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	pEntry->m_pNext->m_pNext = 0;
 }
 
+void CGameContext::ConMute(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *) pUserData;
+	const int ClientID = pResult->GetInteger(0);
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || !pSelf->m_apPlayers[ClientID] || !pSelf->Server()->ClientIngame(ClientID))
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "invalid client id");
+		return;
+	}
+	const int Minutes = clamp(pResult->NumArguments() > 1 ? pResult->GetInteger(1) : 10, 0, 1440);
+	CPlayer *pPlayer = pSelf->m_apPlayers[ClientID];
+	pPlayer->m_MuteTick = Minutes ? pSelf->Server()->Tick() + Minutes * 60 * pSelf->Server()->TickSpeed() : 0;
+
+	char aBuf[128];
+	if(Minutes)
+		str_format(aBuf, sizeof(aBuf), "muted '%s' for %d minutes", pSelf->Server()->ClientName(ClientID), Minutes);
+	else
+		str_format(aBuf, sizeof(aBuf), "unmuted '%s'", pSelf->Server()->ClientName(ClientID));
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+}
+
 void CGameContext::ConRemoveMap(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
@@ -1633,6 +1662,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("restart", "?i[seconds]", CFGFLAG_SERVER | CFGFLAG_STORE, ConRestart, this, "Restart in x seconds (-1 = abort)");
 	Console()->Register("say", "r[text]", CFGFLAG_SERVER, ConSay, this, "Say in chat");
 	Console()->Register("broadcast", "r[text]", CFGFLAG_SERVER, ConBroadcast, this, "Broadcast message");
+	Console()->Register("mute", "i[id] ?i[minutes]", CFGFLAG_SERVER, ConMute, this, "Mute a player's chat, 0 minutes unmutes");
 	Console()->Register("set_team", "i[id] i[team] ?i[delay]", CFGFLAG_SERVER, ConSetTeam, this, "Set team of player to team");
 	Console()->Register("set_team_all", "i[team]", CFGFLAG_SERVER, ConSetTeamAll, this, "Set team of all players to team");
 	Console()->Register("swap_teams", "", CFGFLAG_SERVER, ConSwapTeams, this, "Swap the current teams");

@@ -78,6 +78,7 @@ public:
 	int m_LastVoteCallTick;
 	int m_LastVoteTryTick;
 	int m_LastChatTeamTick;
+	int m_MuteTick;
 	int m_LastSetTeamTick;
 	int m_LastSetSpectatorModeTick;
 	int m_LastChangeInfoTick;
