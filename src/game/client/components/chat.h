@@ -110,6 +110,7 @@ class CChat : public CComponent
 	static void Com_Whisper(IConsole::IResult *pResult, void *pContext);
 	static void Com_Mute(IConsole::IResult *pResult, void *pContext);
 	static void Com_Befriend(IConsole::IResult *pResult, void *pContext);
+	static void Com_Help(IConsole::IResult *pResult, void *pContext);
 
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
 	static void ConSayTeam(IConsole::IResult *pResult, void *pUserData);

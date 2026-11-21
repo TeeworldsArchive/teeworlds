@@ -3,6 +3,7 @@
 /* This is a modified version of Teeworlds - see license.txt for details.                    */
 
 #include <base/system/string.h>
+#include <base/tl/algorithm.h>
 #include <base/tl/array.h>
 
 #include <engine/contacts.h>
@@ -77,6 +78,7 @@ void CChat::OnReset()
 		m_CommandManager.ClearCommands();
 		m_CommandManager.AddCommand("all", "Switch to all chat", "?r[message]", &Com_All, this);
 		m_CommandManager.AddCommand("friend", "Add player as friend", "s[name]", &Com_Befriend, this);
+		m_CommandManager.AddCommand("help", "List chat commands or show details about one", "?s[name]", &Com_Help, this);
 		m_CommandManager.AddCommand("m", "Mute a player", "s[name]", &Com_Mute, this);
 		m_CommandManager.AddCommand("mute", "Mute a player", "s[name]", &Com_Mute, this);
 		m_CommandManager.AddCommand("r", "Reply to a whisper", "?r[message]", &Com_Reply, this);
@@ -1646,6 +1648,112 @@ bool CChat::CompleteCommand()
 }
 
 // callback functions for commands
+static bool ChatCommandNameLess(const CCommandManager::CCommand *pA, const CCommandManager::CCommand *pB)
+{
+	return str_comp_nocase(pA->m_aName, pB->m_aName) < 0;
+}
+
+static void FormatCommandUsage(const char *pArgsFormat, char *pBuf, int Size)
+{
+	pBuf[0] = '\0';
+
+	while(*pArgsFormat)
+	{
+		bool Optional = false;
+		if(*pArgsFormat == '?')
+		{
+			Optional = true;
+			pArgsFormat++;
+		}
+
+		const char Type = *pArgsFormat;
+		if(!Type)
+			break;
+		pArgsFormat++;
+
+		char aName[32];
+		if(*pArgsFormat == '[')
+		{
+			pArgsFormat++;
+			const int NameLen = minimum(str_span(pArgsFormat, "]"), (int)sizeof(aName) - 1);
+			str_format(aName, sizeof(aName), "%.*s", NameLen, pArgsFormat);
+			pArgsFormat += str_span(pArgsFormat, "]");
+			if(*pArgsFormat == ']')
+				pArgsFormat++;
+		}
+		else
+			str_copy(aName, Type == 'i' ? "int" : Type == 'f' ? "float" : "text", sizeof(aName));
+
+		char aArg[48];
+		str_format(aArg, sizeof(aArg), Optional ? "[%s]" : "<%s>", aName);
+		if(pBuf[0])
+			str_append(pBuf, " ", Size);
+		str_append(pBuf, aArg, Size);
+
+		while(*pArgsFormat == ' ')
+			pArgsFormat++;
+	}
+}
+
+void CChat::Com_Help(IConsole::IResult *pResult, void *pContext)
+{
+	CCommandManager::SCommandContext *pCommandContext = (CCommandManager::SCommandContext *) pContext;
+	CChat *pChatData = (CChat *) pCommandContext->m_pContext;
+
+	char aBuf[256];
+
+	if(pResult->NumArguments())
+	{
+		const char *pName = pResult->GetString(0);
+		while(*pName == '/')
+			pName++;
+
+		const CCommandManager::CCommand *pCommand = pChatData->m_CommandManager.GetCommand(pName);
+		for(int i = 0; !pCommand && i < pChatData->m_CommandManager.CommandCount(); i++)
+		{
+			const CCommandManager::CCommand *pCandidate = pChatData->m_CommandManager.GetCommand(i);
+			if(pCandidate && !str_comp_nocase(pCandidate->m_aName, pName))
+				pCommand = pCandidate;
+		}
+
+		if(!pCommand)
+			str_format(aBuf, sizeof(aBuf), Localize("Unknown chat command '%s'"), pName);
+		else
+		{
+			char aUsage[64];
+			FormatCommandUsage(pCommand->m_aArgsFormat, aUsage, sizeof(aUsage));
+			str_format(aBuf, sizeof(aBuf), aUsage[0] ? Localize("/%s %s - %s") : Localize("/%s - %s"),
+				pCommand->m_aName, aUsage, pCommand->m_aHelpText);
+		}
+		pChatData->AddLine(aBuf, CLIENT_MSG, CHAT_ALL);
+		pChatData->Disable();
+		return;
+	}
+
+	array<const CCommandManager::CCommand *> aSorted;
+	for(int i = 0; i < pChatData->m_CommandManager.CommandCount(); i++)
+	{
+		const CCommandManager::CCommand *pCommand = pChatData->m_CommandManager.GetCommand(i);
+		if(pCommand)
+			aSorted.add(pCommand);
+	}
+	sort_array(aSorted.base_ptr(), aSorted.size(), ChatCommandNameLess);
+
+	str_format(aBuf, sizeof(aBuf), Localize("%d chat commands, /help <name> shows details:"), aSorted.size());
+	pChatData->AddLine(aBuf, CLIENT_MSG, CHAT_ALL);
+
+	for(int i = 0; i < aSorted.size(); i++)
+	{
+		char aUsage[64];
+		FormatCommandUsage(aSorted[i]->m_aArgsFormat, aUsage, sizeof(aUsage));
+		str_format(aBuf, sizeof(aBuf), aUsage[0] ? "/%s %s - %s" : "/%s - %s",
+			aSorted[i]->m_aName, aUsage, aSorted[i]->m_aHelpText);
+		pChatData->AddLine(aBuf, CLIENT_MSG, CHAT_ALL);
+	}
+
+	pChatData->Disable();
+}
+
 void CChat::Com_All(IConsole::IResult *pResult, void *pContext)
 {
 	CCommandManager::SCommandContext *pCommandContext = (CCommandManager::SCommandContext *) pContext;
