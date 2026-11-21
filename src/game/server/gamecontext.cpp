@@ -1214,11 +1214,19 @@ void CGameContext::ConBroadcast(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
-	int ClientID = clamp(pResult->GetInteger(0), 0, (int) MAX_CLIENTS - 1);
-	int Team = clamp(pResult->GetInteger(1), -1, 1);
-	int Delay = pResult->NumArguments() > 2 ? pResult->GetInteger(2) : 0;
-	if(!pSelf->m_apPlayers[ClientID] || !pSelf->m_pController->CanJoinTeam(Team, ClientID))
+	const int ClientID = pResult->GetInteger(0);
+	const int Team = pResult->GetInteger(1);
+	const int Delay = pResult->NumArguments() > 2 ? clamp(pResult->GetInteger(2), 0, 1000) : 0;
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || !pSelf->m_apPlayers[ClientID])
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "invalid client id");
 		return;
+	}
+	if(Team < TEAM_SPECTATORS || Team >= NUM_TEAMS || !pSelf->m_pController->CanJoinTeam(Team, ClientID))
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "invalid team");
+		return;
+	}
 
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "moved client %d to team %d", ClientID, Team);
@@ -1231,7 +1239,12 @@ void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConSetTeamAll(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
-	int Team = clamp(pResult->GetInteger(0), -1, 1);
+	const int Team = pResult->GetInteger(0);
+	if(Team < TEAM_SPECTATORS || Team >= NUM_TEAMS)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "invalid team");
+		return;
+	}
 
 	pSelf->SendGameMsg(GAMEMSG_TEAM_ALL, Team, -1);
 
