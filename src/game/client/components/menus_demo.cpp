@@ -366,6 +366,8 @@ int CMenus::DemolistFetchCallback(const CFsFileInfo *pFileInfo, int IsDir, int S
 	{
 		return 0;
 	}
+	if(!IsDir && pSelf->Config()->m_BrDemoFilter[0] && !str_find_nocase(pName, pSelf->Config()->m_BrDemoFilter))
+		return 0;
 
 	CDemoItem Item;
 	str_copy(Item.m_aFilename, pName, sizeof(Item.m_aFilename));
@@ -422,6 +424,28 @@ void CMenus::RenderDemoList(CUIRect MainView)
 
 	// back button
 	RenderBackButton(MainView);
+
+	// demo search
+	CUIRect FilterRow, FilterLabel, FilterEdit, FilterClear;
+	MainView.HSplitTop(20.0f, &FilterRow, &MainView);
+	MainView.HSplitTop(5.0f, 0, &MainView);
+	FilterRow.VSplitLeft(60.0f, &FilterLabel, &FilterRow);
+	UI()->DoLabel(&FilterLabel, Localize("Search:"), 14.0f, TEXTALIGN_ML);
+	FilterRow.VSplitRight(20.0f, &FilterEdit, &FilterClear);
+	static CLineInput s_DemoFilterInput(Config()->m_BrDemoFilter, sizeof(Config()->m_BrDemoFilter));
+	if(UI()->DoEditBox(&s_DemoFilterInput, &FilterEdit, 14.0f))
+	{
+		DemolistPopulate();
+		DemolistOnUpdate(true);
+	}
+	static CButtonContainer s_ClearFilterButton;
+	if(DoButton_SpriteID(&s_ClearFilterButton, IMAGE_TOOLICONS, SPRITE_TOOL_X_A, false, &FilterClear, CUIRect::CORNER_R, 5.0f, true))
+	{
+		Config()->m_BrDemoFilter[0] = 0;
+		s_DemoFilterInput.Clear();
+		DemolistPopulate();
+		DemolistOnUpdate(true);
+	}
 
 	// cut view
 	MainView.HSplitBottom(80.0f, &MainView, &BottomView);

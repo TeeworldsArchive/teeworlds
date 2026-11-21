@@ -39,6 +39,7 @@ MACRO_CONFIG_INT(BrMaxRequests, br_max_requests, 96, 0, 1000, CFGFLAG_SAVE | CFG
 
 MACRO_CONFIG_INT(BrDemoSort, br_demo_sort, 0, 0, 2, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort criteria for the demo browser")
 MACRO_CONFIG_INT(BrDemoSortOrder, br_demo_sort_order, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort order in the demo browser")
+MACRO_CONFIG_STR(BrDemoFilter, br_demo_filter, 64, "", CFGFLAG_SAVE | CFGFLAG_CLIENT, "Filter demo names by text")
 
 MACRO_CONFIG_INT(SndBufferSize, snd_buffer_size, 512, 128, 32768, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sound buffer size")
 MACRO_CONFIG_INT(SndRate, snd_rate, 48000, 0, 0, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sound mixing rate")
