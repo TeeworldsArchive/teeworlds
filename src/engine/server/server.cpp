@@ -1628,11 +1628,13 @@ void CServer::ConStatus([[maybe_unused]] IConsole::IResult *pResult, void *pUser
 	char aBuf[1024];
 	char aAddrStr[NETADDR_MAXSTRSIZE];
 	CServer *pThis = static_cast<CServer *>(pUser);
+	int Count = 0;
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(pThis->m_aClients[i].m_State != CClient::STATE_EMPTY)
 		{
+			Count++;
 			net_addr_str(pThis->m_NetServer.ClientAddr(i), aAddrStr, sizeof(aAddrStr), true);
 			if(pThis->m_aClients[i].m_State == CClient::STATE_INGAME)
 			{
@@ -1648,6 +1650,8 @@ void CServer::ConStatus([[maybe_unused]] IConsole::IResult *pResult, void *pUser
 			pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 		}
 	}
+	str_format(aBuf, sizeof(aBuf), "%d clients", Count);
+	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 }
 
 void CServer::ConShutdown(IConsole::IResult *pResult, void *pUser)
