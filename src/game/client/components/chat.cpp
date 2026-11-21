@@ -81,6 +81,7 @@ void CChat::OnReset()
 		m_CommandManager.AddCommand("help", "List chat commands or show details about one", "?s[name]", &Com_Help, this);
 		m_CommandManager.AddCommand("m", "Mute a player", "s[name]", &Com_Mute, this);
 		m_CommandManager.AddCommand("mute", "Mute a player", "s[name]", &Com_Mute, this);
+		m_CommandManager.AddCommand("players", "List the players in the game", "", &Com_Players, this);
 		m_CommandManager.AddCommand("r", "Reply to a whisper", "?r[message]", &Com_Reply, this);
 		m_CommandManager.AddCommand("team", "Switch to team chat", "?r[message]", &Com_Team, this);
 		m_CommandManager.AddCommand("w", "Whisper another player", "r[name]", &Com_Whisper, this);
@@ -1693,6 +1694,58 @@ static void FormatCommandUsage(const char *pArgsFormat, char *pBuf, int Size)
 		while(*pArgsFormat == ' ')
 			pArgsFormat++;
 	}
+}
+
+static int ChatPlayerScore(const CNetObj_TeeInfo *pTeeInfo)
+{
+	return pTeeInfo ? pTeeInfo->m_Score : 0;
+}
+
+void CChat::Com_Players([[maybe_unused]] IConsole::IResult *pResult, void *pContext)
+{
+	CCommandManager::SCommandContext *pCommandContext = (CCommandManager::SCommandContext *) pContext;
+	CChat *pChatData = (CChat *) pCommandContext->m_pContext;
+	CGameClient *pClient = pChatData->m_pClient;
+
+	array<int> aIDs;
+	pClient->CollectActiveTeeIDs(aIDs);
+
+	// best score first, ties keep the client order
+	for(int i = 0; i < aIDs.size(); i++)
+		for(int k = i + 1; k < aIDs.size(); k++)
+			if(ChatPlayerScore(pClient->GetTeeInfo(aIDs[k])) > ChatPlayerScore(pClient->GetTeeInfo(aIDs[i])))
+			{
+				const int Tmp = aIDs[i];
+				aIDs[i] = aIDs[k];
+				aIDs[k] = Tmp;
+			}
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), aIDs.size() == 1 ? Localize("1 player:") : Localize("%d players:"), aIDs.size());
+	pChatData->AddLine(aBuf, CLIENT_MSG, CHAT_ALL);
+
+	for(int i = 0; i < aIDs.size(); i++)
+	{
+		const int ID = aIDs[i];
+		const CGameClient::CClientData *pData = pClient->GetClientData(ID);
+		const CNetObj_TeeInfo *pTeeInfo = pClient->GetTeeInfo(ID);
+		if(!pData || !pTeeInfo)
+			continue;
+
+		const char *pTeam = "game";
+		if(pData->m_Team == TEAM_SPECTATORS)
+			pTeam = Localize("spec");
+		else if(pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS && pData->m_Team == TEAM_RED)
+			pTeam = Localize("red");
+		else if(pClient->m_GameInfo.m_GameFlags & GAMEFLAG_TEAMS && pData->m_Team == TEAM_BLUE)
+			pTeam = Localize("blue");
+
+		const char *pName = pData->m_aName[0] ? pData->m_aName : "?";
+		str_format(aBuf, sizeof(aBuf), Localize("%d: %s (%d points, %s, %d ms)"), ID, pName, pTeeInfo->m_Score, pTeam, (pTeeInfo->m_LatencyAndCountry >> 16) & 0xffff);
+		pChatData->AddLine(aBuf, CLIENT_MSG, CHAT_ALL);
+	}
+
+	pChatData->Disable();
 }
 
 void CChat::Com_Help(IConsole::IResult *pResult, void *pContext)
