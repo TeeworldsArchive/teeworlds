@@ -2421,7 +2421,10 @@ void CGameClient::ConMapInfo([[maybe_unused]] IConsole::IResult *pResult, void *
 		io_close(File);
 	}
 	char aBuf[256];
-	if(Size >= 0)
+	const CMapItemLayerTilemap *pGameLayer = pClient->Layers()->GameLayer();
+	if(Size >= 0 && pGameLayer)
+		str_format(aBuf, sizeof(aBuf), "name='%s' path='%s' size=%d KiB tiles=%dx%d", pName, pPath, Size / 1024, pGameLayer->m_Width, pGameLayer->m_Height);
+	else if(Size >= 0)
 		str_format(aBuf, sizeof(aBuf), "name='%s' path='%s' size=%d KiB", pName, pPath, Size / 1024);
 	else
 		str_format(aBuf, sizeof(aBuf), "name='%s' path='%s'", pName, pPath);
