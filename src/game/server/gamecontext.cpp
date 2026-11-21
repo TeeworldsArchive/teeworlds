@@ -1527,13 +1527,19 @@ void CGameContext::ConMute(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConSaveMapRotation(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *) pUserData;
+	IStorage *pStorage = pSelf->Kernel()->RequestInterface<IStorage>();
+	if(!pStorage)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", "storage is not available");
+		return;
+	}
 	char aFilename[128];
 	if(pResult->NumArguments())
 		str_format(aFilename, sizeof(aFilename), "configs/%s.cfg", pResult->GetString(0));
 	else
 		str_copy(aFilename, "configs/map_rotation.cfg", sizeof(aFilename));
 
-	IOHANDLE File = pSelf->Storage()->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	IOHANDLE File = pStorage->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 	{
 		char aBuf[192];
