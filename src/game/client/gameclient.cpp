@@ -315,6 +315,12 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Respawn");
 	Console()->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange, this, "Change ready state");
 	Console()->Register("screenshot", "", CFGFLAG_CLIENT, ConScreenshot, this, "Take a screenshot");
+	Console()->Register("demo_pause", "", CFGFLAG_CLIENT, ConDemoPause, this, "Pause or resume demo playback");
+	Console()->Register("demo_speed", "?f[speed]", CFGFLAG_CLIENT, ConDemoSpeed, this, "Show or set the demo playback speed");
+	Console()->Register("demo_goto", "?f[seconds]", CFGFLAG_CLIENT, ConDemoGoto, this, "Show the position or jump to a time in the demo");
+	Console()->Register("demo_info", "", CFGFLAG_CLIENT, ConDemoInfo, this, "Print information about the current demo");
+	Console()->Register("demo_next_marker", "", CFGFLAG_CLIENT, ConDemoNextMarker, this, "Jump to the next demo timeline marker");
+	Console()->Register("demo_prev_marker", "", CFGFLAG_CLIENT, ConDemoPrevMarker, this, "Jump to the previous demo timeline marker");
 
 	Console()->Chain("add_friend", ConchainFriendUpdate, this);
 	Console()->Chain("remove_friend", ConchainFriendUpdate, this);
@@ -2141,6 +2147,12 @@ void CGameClient::CollectActiveTeeIDs(array<int> &IDs) const
 	}
 }
 
+static void FormatDemoTicks(char *pBuf, int Size, int Ticks)
+{
+	const int Seconds = maximum(0, Ticks) / SERVER_TICK_SPEED;
+	str_format(pBuf, Size, "%d:%02d", Seconds / 60, Seconds % 60);
+}
+
 void CGameClient::ConTeam(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
@@ -2176,6 +2188,149 @@ void CGameClient::ConScreenshot([[maybe_unused]] IConsole::IResult *pResult, voi
 {
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
 	pClient->Graphics()->TakeScreenshot(0, ScreenshotCallback, pClient);
+}
+
+void CGameClient::ConDemoPause([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
+	if(pInfo->m_Paused)
+	{
+		pClient->DemoPlayer()->Unpause();
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "resumed");
+	}
+	else
+	{
+		pClient->DemoPlayer()->Pause();
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "paused");
+	}
+}
+
+void CGameClient::ConDemoSpeed(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	char aBuf[64];
+	if(pResult->NumArguments() == 0)
+	{
+		str_format(aBuf, sizeof(aBuf), "speed x%.2f", pClient->DemoPlayer()->BaseInfo()->m_Speed);
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+		return;
+	}
+	const float Speed = clamp(pResult->GetFloat(0), 0.05f, 8.0f);
+	pClient->DemoPlayer()->SetSpeed(Speed);
+	str_format(aBuf, sizeof(aBuf), "speed x%.2f", Speed);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+}
+
+void CGameClient::ConDemoGoto(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
+	char aPosition[16];
+	char aLength[16];
+	FormatDemoTicks(aPosition, sizeof(aPosition), pInfo->m_CurrentTick - pInfo->m_FirstTick);
+	FormatDemoTicks(aLength, sizeof(aLength), pInfo->m_LastTick - pInfo->m_FirstTick);
+	if(pResult->NumArguments() == 0)
+	{
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), "position %s/%s", aPosition, aLength);
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+		return;
+	}
+	const int LengthTicks = pInfo->m_LastTick - pInfo->m_FirstTick;
+	const int WantedTick = pInfo->m_FirstTick + clamp((int) (pResult->GetFloat(0) * SERVER_TICK_SPEED), 0, LengthTicks);
+	pClient->DemoPlayer()->SetPos(WantedTick);
+	pInfo = pClient->DemoPlayer()->BaseInfo();
+	FormatDemoTicks(aPosition, sizeof(aPosition), pInfo->m_CurrentTick - pInfo->m_FirstTick);
+	char aBuf[64];
+	str_format(aBuf, sizeof(aBuf), "position %s/%s", aPosition, aLength);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+}
+
+void CGameClient::ConDemoInfo([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
+	char aName[64];
+	pClient->DemoPlayer()->GetDemoName(aName, sizeof(aName));
+	const char *pType = "unknown";
+	if(pClient->DemoPlayer()->GetDemoType() == IDemoPlayer::DEMOTYPE_CLIENT)
+		pType = "client";
+	else if(pClient->DemoPlayer()->GetDemoType() == IDemoPlayer::DEMOTYPE_SERVER)
+		pType = "server";
+	char aPosition[16];
+	char aLength[16];
+	FormatDemoTicks(aPosition, sizeof(aPosition), pInfo->m_CurrentTick - pInfo->m_FirstTick);
+	FormatDemoTicks(aLength, sizeof(aLength), pInfo->m_LastTick - pInfo->m_FirstTick);
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "name='%s' type=%s position=%s/%s speed=x%.2f%s markers=%d", aName, pType, aPosition, aLength, pInfo->m_Speed, pInfo->m_Paused ? " paused" : "", pInfo->m_NumTimelineMarkers);
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+}
+
+void CGameClient::ConDemoNextMarker([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
+	for(int i = 0; i < pInfo->m_NumTimelineMarkers; i++)
+	{
+		if(pInfo->m_aTimelineMarkers[i] > pInfo->m_CurrentTick)
+		{
+			pClient->DemoPlayer()->SetPos(pInfo->m_aTimelineMarkers[i]);
+			char aBuf[64];
+			str_format(aBuf, sizeof(aBuf), "marker %d", i + 1);
+			pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+			return;
+		}
+	}
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "no next marker");
+}
+
+void CGameClient::ConDemoPrevMarker([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	if(pClient->Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "not playing a demo");
+		return;
+	}
+	const IDemoPlayer::CInfo *pInfo = pClient->DemoPlayer()->BaseInfo();
+	for(int i = pInfo->m_NumTimelineMarkers - 1; i >= 0; i--)
+	{
+		if(pInfo->m_aTimelineMarkers[i] < pInfo->m_CurrentTick)
+		{
+			pClient->DemoPlayer()->SetPos(pInfo->m_aTimelineMarkers[i]);
+			char aBuf[64];
+			str_format(aBuf, sizeof(aBuf), "marker %d", i + 1);
+			pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", aBuf);
+			return;
+		}
+	}
+	pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo", "no previous marker");
 }
 
 void CGameClient::ConchainSkinChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
