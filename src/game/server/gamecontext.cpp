@@ -1498,6 +1498,9 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 		GroupIndex.m_pGroup->m_pFirst->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));
 		GroupIndex.m_pGroup->m_pFirst->m_pNext = 0;
 		pSelf->m_lMapRotations.add(GroupIndex);
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "created group '%s' with map '%s'", pResult->GetString(0), pResult->GetString(1));
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
 		return;
 	}
 	CMapRotationIndex &Index = r.front();
@@ -1516,6 +1519,9 @@ void CGameContext::ConAddMap(IConsole::IResult *pResult, void *pUserData)
 	pEntry->m_pNext->m_pGroup = Index.m_pGroup;
 	pEntry->m_pNext->m_pMapName = pSelf->m_pMapRotationHeap->StoreString(pResult->GetString(1));
 	pEntry->m_pNext->m_pNext = 0;
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "added map '%s' to group '%s'", pResult->GetString(1), pResult->GetString(0));
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
 }
 
 static bool ChatCommandCheck(CGameContext *pSelf, CCommandManager::SCommandContext *pContext)
@@ -1728,6 +1734,10 @@ void CGameContext::ConRemoveMapGroup(IConsole::IResult *pResult, void *pUserData
 	if(pSelf->m_pCurMapRotationEntry && pSelf->m_pCurMapRotationEntry->m_pGroup == r.front().m_pGroup)
 		pSelf->m_pCurMapRotationEntry = 0;
 
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "removed map group '%s'", r.front().m_pGroup->m_pGroupName);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
+
 	pSelf->m_lMapRotations.remove(r.front());
 	if(pSelf->m_lMapRotations.size() == 0)
 	{
@@ -1787,6 +1797,9 @@ void CGameContext::ConUseMapGroup(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 	pSelf->m_pCurMapRotationEntry = r.front().m_pGroup->m_pFirst;
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "using map group '%s'", r.front().m_pGroup->m_pGroupName);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "maprotation", aBuf);
 }
 
 void CGameContext::ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
