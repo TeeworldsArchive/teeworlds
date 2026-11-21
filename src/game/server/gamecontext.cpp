@@ -1533,6 +1533,11 @@ void CGameContext::ComMutePlayer(IConsole::IResult *pResult, void *pUserData)
 		pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Invalid client id");
 		return;
 	}
+	if(pSelf->Server()->IsAuthed(ClientID))
+	{
+		pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Cannot mute an authenticated player from chat");
+		return;
+	}
 	pSelf->ConMute(pResult, pSelf);
 	pSelf->SendChat(-1, CHAT_ALL, pContext->m_ClientID, "Mute state updated");
 }
