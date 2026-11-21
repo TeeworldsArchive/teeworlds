@@ -219,6 +219,19 @@ void CChat::OnConsoleInit()
 	Console()->Register("chat", "s[text] ?i[whisper-target]", CFGFLAG_CLIENT, ConChat, this, "Enable chat with all/team/whisper mode");
 	Console()->Register("+show_chat", "", CFGFLAG_CLIENT, ConShowChat, this, "Show chat");
 	Console()->Register("chat_command", "s[command] ?r[args]", CFGFLAG_CLIENT, ConChatCommand, this, "Execute a chat command with arguments");
+	Console()->Chain("cl_chat_time", ConchainChatLineSize, this);
+	Console()->Chain("cl_show_skin_chat", ConchainChatLineSize, this);
+}
+
+void CChat::ConchainChatLineSize(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	pfnCallback(pResult, pCallbackUserData);
+	if(pResult->NumArguments())
+	{
+		CChat *pSelf = (CChat *) pUserData;
+		for(int i = 0; i < MAX_LINES; i++)
+			pSelf->m_aLines[i].m_Size.y = -1.0f;
+	}
 }
 
 void CChat::ClearChatBuffer()

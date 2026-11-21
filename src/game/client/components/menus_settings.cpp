@@ -2071,6 +2071,7 @@ void CMenus::ResetSettingsGeneral()
 	Config()->m_ClAutoswitchWeapons = 1;
 	Config()->m_ClShowhud = 1;
 	Config()->m_ClFilterchat = 0;
+	Config()->m_ClChatTime = 0;
 	Config()->m_ClNameplates = 1;
 	Config()->m_ClNameplatesAlways = 1;
 	Config()->m_ClNameplatesSize = 50;
