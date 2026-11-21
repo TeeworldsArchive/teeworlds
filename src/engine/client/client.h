@@ -304,6 +304,7 @@ public:
 	void DoVersionSpecificActions();
 
 	static void Con_Connect(IConsole::IResult *pResult, void *pUserData);
+	static void Con_Reconnect(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Disconnect(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Quit(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Minimize(IConsole::IResult *pResult, void *pUserData);

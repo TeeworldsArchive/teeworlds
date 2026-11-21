@@ -2465,6 +2465,22 @@ void CClient::Con_Connect(IConsole::IResult *pResult, void *pUserData)
 	str_copy(pSelf->m_aCmdConnect, pResult->GetString(0), sizeof(pSelf->m_aCmdConnect));
 }
 
+void CClient::Con_Reconnect([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
+{
+	CClient *pSelf = (CClient *) pUserData;
+	if(!pSelf->m_aServerAddressStr[0])
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", "no server to reconnect to");
+		return;
+	}
+
+	char aAddress[256];
+	str_copy(aAddress, pSelf->m_aServerAddressStr, sizeof(aAddress));
+	if(pSelf->State() != IClient::STATE_OFFLINE)
+		pSelf->Disconnect();
+	str_copy(pSelf->m_aCmdConnect, aAddress, sizeof(pSelf->m_aCmdConnect));
+}
+
 void CClient::Con_Disconnect([[maybe_unused]] IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *) pUserData;
@@ -2904,6 +2920,7 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("minimize", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Minimize, this, "Minimize Teeworlds");
 	m_pConsole->Register("connect", "s[host|ip]", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Connect, this, "Connect to the specified host/ip");
 	m_pConsole->Register("disconnect", "", CFGFLAG_CLIENT, Con_Disconnect, this, "Disconnect from the server");
+	m_pConsole->Register("reconnect", "", CFGFLAG_CLIENT, Con_Reconnect, this, "Reconnect to the last server");
 	m_pConsole->Register("ping", "", CFGFLAG_CLIENT, Con_Ping, this, "Ping the current server");
 	m_pConsole->Register("net_stats", "", CFGFLAG_CLIENT, Con_NetStats, this, "Print network traffic statistics");
 	m_pConsole->Register("rcon", "r[command]", CFGFLAG_CLIENT, Con_Rcon, this, "Send specified command to rcon");
